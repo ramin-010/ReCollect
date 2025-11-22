@@ -1,26 +1,383 @@
-@import "tailwindcss";
+/* ReCollect - Professional Design System */
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
+  /* Default Light Mode - Clean with Subtle Blue Tint */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 214 32% 91%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 20% 85%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 50%;
+    --radius: 0.75rem;
+    --brand-primary: 217 91% 50%;
+    --brand-secondary: 259 84% 55%;
+    --surface-light: 210 40% 99%;
+    --surface-medium: 214 32% 94%;
+    --surface-dark: 210 35% 93%;
+    --text-secondary: 215 16% 47%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --sidebar-bg: 214 32% 95%;
+    --sidebar-hover: 214 32% 92%;
+    --sidebar-active: 214 32% 88%;
+    --divider: 217 20% 88%;
+  }
+
+  /* Dark Mode */
+  html.dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --brand-primary: 259 100% 65%;
+    --brand-secondary: 217 91% 60%;
+    --surface-light: 240 10% 8%;
+    --surface-medium: 240 10% 12%;
+    --surface-dark: 240 10% 5%;
+    --text-secondary: 240 5% 65%;
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --sidebar-bg: 240 10% 6%;
+    --sidebar-hover: 240 10% 10%;
+    --sidebar-active: 240 10% 13%;
+    --divider: 240 3.7% 18%;
+  }
+
+  /* Gray Mode */
+  html.theme-gray {
+    --background: 220 3% 14%;
+    --foreground: 30 3% 93%;
+    --card: 220 3% 16%;
+    --card-foreground: 30 3% 93%;
+    --popover: 220 3% 16%;
+    --popover-foreground: 30 3% 93%;
+    --primary: 220 13% 85%;
+    --primary-foreground: 220 13% 10%;
+    --secondary: 220 3% 20%;
+    --secondary-foreground: 30 3% 93%;
+    --muted: 220 3% 20%;
+    --muted-foreground: 220 3% 60%;
+    --accent: 220 3% 22%;
+    --accent-foreground: 30 3% 93%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 3% 24%;
+    --input: 220 3% 20%;
+    --ring: 220 13% 85%;
+    --brand-primary: 259 84% 65%;
+    --brand-secondary: 217 91% 60%;
+    --surface-light: 220 3% 17%;
+    --surface-medium: 220 3% 19%;
+    --surface-dark: 220 3% 10%;
+    --text-secondary: 220 3% 60%;
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --sidebar-bg: 220 3% 12%;
+    --sidebar-hover: 220 3% 17%;
+    --sidebar-active: 220 3% 20%;
+    --divider: 220 3% 22%;
+  }
+
+  /* Dark Gray Mode - Notion's exact colors */
+  html.theme-dark-gray {
+    /* Notion-like dark monochrome palette */
+    --background: 0 0% 8%;           /* #141414 - Very dark background */
+    --foreground: 0 0% 82%;          /* #E0E0E0 - Light text */
+    --card: 0 0% 10%;                /* #191919 - Card background */
+    --card-foreground: 0 0% 88%;
+    --popover: 0 0% 11%;             /* #1C1C1C - Popover background */
+    --popover-foreground: 0 0% 88%;
+    --primary: 0 0% 88%;             /* Light text for primary */
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 14%;           /* #242424 - Hover/selected state */
+    --secondary-foreground: 0 0% 88%;
+    --muted: 0 0% 14%;               /* Muted backgrounds */
+    --muted-foreground: 0 0% 56%;    /* #8F8F8F - Muted text */
+    --accent: 0 0% 14%;              /* Accent backgrounds */
+    --accent-foreground: 0 0% 88%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;              /* #262626 - Subtle borders */
+    --input: 0 0% 14%;               /* Input field background */
+    --ring: 0 0% 56%;                /* Focus ring color */
+    --brand-primary: 217 91% 60%;;     /* Subtle brand color */
+    --brand-secondary: 0 0% 70%;
+    --surface-light: 0 0% 12%;       /* #1F1F1F - Lighter surface */
+    --surface-medium: 0 0% 14%;      /* #242424 - Medium surface */
+    --surface-dark: 0 0% 9%;         /* #171717 - Darker surface */
+    --text-secondary: 0 0% 56%;      /* Secondary text */
+    --success: 142 35% 50%;
+    --warning: 38 92% 50%;
+   --sidebar-bg: 0 0% 12%;   /* #1D1C1B - Very subtle warm tint */          /* #171717 - Sidebar background */
+    --sidebar-hover: 0 1% 13%;       /* #1F1F1F - Sidebar hover */
+    --sidebar-active: 0 0% 14%;      /* #242424 - Sidebar active */
+    --divider: 0 0% 16%; 
+    --sidebar-foreground : 0 0% 61%;            /* #292929 - Divider lines */
+  }
+
+  /* Base styles */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tiptap Editor Styles */
+.tiptap {
+  min-height: 200px;
+  padding: 1rem;
+}
+
+.tiptap:focus {
+  outline: none;
+}
+
+.tiptap p {
+  margin: 0.5rem 0;
+}
+
+.tiptap h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
+.tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0.75rem 0;
+}
+
+.tiptap h3 {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap li {
+  margin: 0.25rem 0;
+}
+
+.tiptap code {
+  background-color: hsl(var(--muted));
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.tiptap pre {
+  background-color: hsl(var(--muted));
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.tiptap blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.tiptap a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Professional Card Styles */
+.pro-card {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pro-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* Professional Shadows */
+.shadow-xs {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Hover Effects */
+.hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.file-preview {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Page background patterns */
+.bg-pattern {
+  background-image: 
+    radial-gradient(at 40% 20%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsl(var(--brand-primary) / 0.02) 0px, transparent 50%);
+}
+
+/* Dialog styles */
+.dialog-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dialog-content {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Tag dropdown */
+.tag-dropdown {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: hsl(var(--background) / 0.95);
+  border: 1px solid hsl(var(--border) / 0.5);
+  box-shadow: 
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 
+    0 8px 10px -6px rgb(0 0 0 / 0.1),
+    0 0 0 1px hsl(var(--border) / 0.05);
+}
+
+/* File drag states */
+.drag-active {
+  transform: scale(1.02);
+  border-color: hsl(var(--brand-primary));
+  background-color: hsl(var(--brand-primary) / 0.05);
+}
+
+/* Privacy toggle */
+.privacy-toggle-selected {
+  background: hsl(var(--background));
+  box-shadow: 
+    0 1px 3px 0 rgb(0 0 0 / 0.1), 
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Transitions */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid hsl(var(--brand-primary));
+  outline-offset: 2px;
 }
