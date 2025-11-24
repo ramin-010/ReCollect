@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Content } from '@/lib/utils/types';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { contentApi } from '@/lib/api/content';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui-base/Card';
+import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { Badge } from '@/components/ui-base/Badge';
 import {
@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
-import { MoreVertical, Edit, Trash2, Pin, Link as LinkIcon, Share2, Clock, Globe, Lock, Eye, FileText } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Pin, Link as LinkIcon, Share2, Clock, Globe, Lock, Eye, FileText, AlignLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { UpdateContentDialog } from './UpdateContentDialog';
@@ -76,32 +76,34 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
   };
 
   const stripHtml = (html: string) => {
+    if (!html) return '';
     const tmp = document.createElement('DIV');
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || '';
   };
 
-  const summaryText = () => {
-    const textBlocks = content.body?.filter(block => block.type === 'text' && block.content) || [];
-    if (textBlocks.length === 0) return 'No preview available yet.';
-    return stripHtml(textBlocks[0].content || '').slice(0, 160);
-  };
+  const safeBody = useMemo(() => {
+    if (!content.body || !Array.isArray(content.body)) return [];
+    return content.body.filter(b => typeof b === 'object' && b !== null && 'type' in b);
+  }, [content.body]);
 
-  // Calculate bounding box and scaled positions for all blocks
+  const safeTags = useMemo(() => {
+    if (!content.tags || !Array.isArray(content.tags)) return [];
+    return content.tags.filter(t => typeof t === 'object' && t !== null && 'name' in t);
+  }, [content.tags]);
+
   const previewData = useMemo(() => {
-    if (!content.body || content.body.length === 0) return null;
+    if (safeBody.length === 0) return null;
 
-    const blocks = content.body.filter(b => (b.type === 'text' && b.content) || b.type === 'image');
+    const blocks = safeBody.filter(b => (b.type === 'text' && b.content) || b.type === 'image');
     if (blocks.length === 0) return null;
 
-    // Get bounds for each block
-    const blockBounds: (BlockBounds & { block: typeof blocks[0] })[] = blocks.map(block => {
+    const blockBounds = blocks.map(block => {
       const x = typeof block.x === 'number' ? block.x : parseFloat(block.x as string) || 0;
       const y = typeof block.y === 'number' ? block.y : parseFloat(block.y as string) || 0;
       let w = typeof block.width === 'number' ? block.width : parseFloat(block.width as string) || 0;
       let h = typeof block.height === 'number' ? block.height : parseFloat(block.height as string) || 0;
 
-      // Default dimensions based on type
       if (block.type === 'text') {
         w = w || DEFAULT_TEXT_WIDTH;
         h = h || DEFAULT_TEXT_HEIGHT;
@@ -115,7 +117,7 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
 
     // Calculate bounding box of all elements
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
+
     blockBounds.forEach(({ x, y, width, height }) => {
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
@@ -128,18 +130,17 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
 
     // Preview container dimensions (accounting for padding)
     const previewWidth = 400 - PREVIEW_PADDING * 2;
-    const previewHeight = 220 - PREVIEW_PADDING * 2;
+    const previewHeight = 200 - PREVIEW_PADDING * 2;
 
-    // Calculate scale to fit content in preview
-    const scaleX = contentWidth > 0 ? previewWidth / contentWidth : 1;
-    const scaleY = contentHeight > 0 ? previewHeight / contentHeight : 1;
-    const scale = Math.min(scaleX, scaleY, 1.5); // Cap scale at 1.5x to prevent huge single elements
+    // Calculate scale to fit content width exactly
+    // User requirement: "take that total widht and decide the size of the blocks so that they can fit inside the fixed canvas preview width"
+    const scale = contentWidth > 0 ? previewWidth / contentWidth : 1;
 
     // Calculate scaled dimensions
     const scaledWidth = contentWidth * scale;
     const scaledHeight = contentHeight * scale;
 
-    // Center offset
+    // Center offset (Vertical only, horizontal will be 0 if we fit width)
     const offsetX = (previewWidth - scaledWidth) / 2;
     const offsetY = (previewHeight - scaledHeight) / 2;
 
@@ -153,16 +154,16 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
     }));
 
     return { transformedBlocks, scale };
-  }, [content.body]);
+  }, [safeBody]);
 
   const renderCanvasPreview = () => {
     if (!previewData) {
       return (
-        <div className="min-h-[220px] bg-gradient-to-br from-[#111111] via-[#1a1a1a] to-[#111111]/90 rounded-2xl flex items-center justify-center border border-[hsl(var(--border))] shadow-lg">
-          <div className="flex flex-col items-center gap-2 text-white/40">
-            <FileText className="h-8 w-8" />
-            <span className="text-xs">No content blocks</span>
+        <div className="h-[200px] w-full bg-gradient-to-br from-[hsl(var(--muted))]/30 to-[hsl(var(--muted))]/10 rounded-xl flex flex-col items-center justify-center border border-dashed border-[hsl(var(--border))]/60 group-hover:border-[hsl(var(--brand-primary))]/30 transition-all duration-300">
+          <div className="w-12 h-12 rounded-full bg-[hsl(var(--muted))]/40 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-500">
+            <FileText className="h-6 w-6 text-[hsl(var(--muted-foreground))]/50" />
           </div>
+          <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]/50 uppercase tracking-widest">Empty Canvas</span>
         </div>
       );
     }
@@ -170,38 +171,44 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
     const { transformedBlocks, scale } = previewData;
 
     return (
-      <div className="min-h-[220px] bg-gradient-to-br from-[#111111] via-[#1a1a1a] to-[#111111]/90 rounded-2xl relative overflow-hidden border border-[hsl(var(--border))] shadow-lg">
-        {/* Content area with padding */}
+      <div className="h-[200px] w-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/30 rounded-xl relative overflow-hidden border border-[hsl(var(--border))]/50 shadow-sm group-hover:shadow-md group-hover:border-[hsl(var(--brand-primary))]/20 transition-all duration-500">
+        {/* Subtle dot pattern background */}
+        <div
+          className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, #000 0.5px, transparent 0.5px)',
+            backgroundSize: '12px 12px'
+          }}
+        />
+
         <div className="absolute inset-0" style={{ padding: PREVIEW_PADDING }}>
           <div className="relative w-full h-full">
             {transformedBlocks.map(({ block, left, top, width, height }, index) => {
               if (block.type === 'text') {
-                // Scale font size based on overall scale
-                const fontSize = Math.max(8, Math.min(14, 12 * scale));
+                const fontSize = Math.max(7, Math.min(13, 11 * scale));
                 return (
                   <div
                     key={block._id || index}
-                    className="absolute text-white/80 bg-white/10 rounded px-2 py-1 overflow-hidden"
+                    className="absolute bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/80 rounded-lg px-2.5 py-1.5 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
                     style={{
                       left: `${left}px`,
                       top: `${top}px`,
                       width: `${width}px`,
                       height: `${height}px`,
                       fontSize: `${fontSize}px`,
-                      lineHeight: '1.3',
+                      lineHeight: '1.4',
                     }}
                   >
-                    <div className="line-clamp-3">{stripHtml(block.content || '')}</div>
+                    <div className="line-clamp-3 text-gray-700 dark:text-gray-300 font-medium opacity-90">{stripHtml(block.content || '')}</div>
                   </div>
                 );
               }
 
-              // Image block
               const hasImage = Boolean(block.url);
               return (
                 <div
                   key={block._id || index}
-                  className="absolute bg-white/20 rounded border border-white/30 flex items-center justify-center overflow-hidden"
+                  className="absolute bg-gray-100/60 dark:bg-gray-700/40 rounded-lg border border-gray-200/80 dark:border-gray-600/80 flex items-center justify-center overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
                   style={{
                     left: `${left}px`,
                     top: `${top}px`,
@@ -210,9 +217,13 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
                   }}
                 >
                   {hasImage ? (
-                    <img src={block.url!} alt="note preview" className="w-full h-full object-cover" />
+                    <img
+                      src={block.url!}
+                      alt="note preview"
+                      className="w-full h-full object-cover opacity-95 hover:opacity-100 transition-opacity duration-300"
+                    />
                   ) : (
-                    <Eye className="h-3 w-3 text-white/60" />
+                    <Eye className="h-4 w-4 text-[hsl(var(--muted-foreground))]/40" />
                   )}
                 </div>
               );
@@ -220,107 +231,144 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
           </div>
         </div>
 
-        {/* Block count indicator */}
-        <div className="absolute bottom-2 right-2 text-xs text-white/60 bg-black/30 rounded px-2 py-1">
-          {content.body?.length || 0} block{(content.body?.length || 0) !== 1 ? 's' : ''}
-        </div>
+        {/* Subtle vignette effect */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/5 via-transparent to-transparent dark:from-black/20" />
 
-        {/* Scale indicator for debugging (optional, can remove) */}
-        {/* <div className="absolute top-2 left-2 text-[10px] text-white/40">
-          {(scale * 100).toFixed(0)}%
-        </div> */}
+        {/* Item count badge */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 shadow-sm">
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--brand-primary))]" />
+          {safeBody.length} {safeBody.length === 1 ? 'ITEM' : 'ITEMS'}
+        </div>
       </div>
     );
   };
 
+
   return (
     <>
-      <Card className="pro-card hover-lift group h-full flex flex-col min-h-[380px] md:min-h-[460px] gap-4">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+      <Card className="group h-full flex flex-col min-h-[450px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card))] hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl">
+        {/* Header Section */}
+        <div className="p-1 pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
                 {content.isPinned && (
-                  <Pin className="h-4 w-4 text-[hsl(var(--primary))] fill-current shrink-0" />
+                  <Pin className="h-3.5 w-3.5 text-[hsl(var(--brand-primary))] fill-current shrink-0" />
                 )}
-                <CardTitle className="text-lg font-semibold truncate">{content.title}</CardTitle>
-                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                  content.visibility === 'Public' 
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                }`}>
-                  {content.visibility === 'Public' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  <span>{content.visibility}</span>
-                </div>
+                <h3 className="text-lg font-bold text-[hsl(var(--foreground))] truncate tracking-tight group-hover:text-[hsl(var(--brand-primary))] transition-colors duration-300">
+                  {content.title}
+                </h3>
               </div>
-              {content.updatedAt && (
-                <div className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
+
+              <div className="flex items-center gap-3 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
+                <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${content.visibility === 'Public'
+                  ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                  }`}>
+                  {content.visibility === 'Public' ? <Globe className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                  {content.visibility}
+                </span>
+                <span className="text-[hsl(var(--border))]">|</span>
+                <span className="flex items-center gap-1.5 opacity-80">
                   <Clock className="h-3 w-3" />
-                  <span>{format(new Date(content.updatedAt), 'MMM d, yyyy')}</span>
-                </div>
-              )}
+                  {content.updatedAt ? format(new Date(content.updatedAt), 'MMM d') : 'Just now'}
+                </span>
+              </div>
             </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0 hover:bg-[hsl(var(--muted))] rounded-lg">
+                  <MoreVertical className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-                  <Edit className="mr-2 h-4 w-4" />Edit
+              <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl border-[hsl(var(--border))] shadow-xl bg-[hsl(var(--popover))]/95 backdrop-blur-sm">
+                <DropdownMenuItem onClick={() => setIsEditOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                  <Edit className="mr-2 h-3.5 w-3.5 opacity-70" />Edit Note
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleTogglePin}>
-                  <Pin className="mr-2 h-4 w-4" />{content.isPinned ? 'Unpin' : 'Pin'}
+                <DropdownMenuItem onClick={handleTogglePin} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                  <Pin className="mr-2 h-3.5 w-3.5 opacity-70" />{content.isPinned ? 'Unpin Note' : 'Pin Note'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
-                  <Share2 className="mr-2 h-4 w-4" />Share
+                <DropdownMenuItem onClick={() => setIsShareOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                  <Share2 className="mr-2 h-3.5 w-3.5 opacity-70" />Share
                 </DropdownMenuItem>
-                <DropdownMenuItem destructive onClick={() => setIsDeleteOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />Delete
+                <div className="h-px bg-[hsl(var(--border))]/50 my-1" />
+                <DropdownMenuItem destructive onClick={() => setIsDeleteOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-500/10">
+                  <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" />Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </CardHeader>
-
-        <div className="flex flex-col space-y-4">
-          <div className="flex-1">{renderCanvasPreview()}</div>
-          <div className="space-y-1 mt-auto">
-            <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed line-clamp-3">{summaryText()}</p>
-          </div>
         </div>
 
-        <CardContent className="flex-1 flex flex-col space-y-4">
-          <div className="space-y-3">
-            {content.tags && content.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {content.tags.slice(0, 4).map((tag, index) => (
-                  <Badge key={tag._id ?? `${tag.name}-${index}`} variant="secondary" className="text-xs">#{tag.name}</Badge>
-                ))}
-                {content.tags.length > 4 && <Badge variant="secondary" className="text-xs">+{content.tags.length - 4}</Badge>}
-              </div>
-            )}
-            {content.links && content.links.length > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
-                  <LinkIcon className="h-3 w-3" />
-                  <span>{content.links.length} {content.links.length === 1 ? 'link' : 'links'}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  {content.links.slice(0, 2).map((link, index) => (
-                    <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:text-blue-600 truncate max-w-full block">{link}</a>
-                  ))}
-                  {content.links.length > 2 && <span className="text-xs text-[hsl(var(--muted-foreground))]">+{content.links.length - 2} more</span>}
-                </div>
-              </div>
-            )}
+        {/* Description Section */}
+        {content.description && (
+          <div className="px-1 pb-4">
+            <div className="flex items-start gap-2.5 text-xs text-[hsl(var(--muted-foreground))] rounded-lg ">
+              {/* <AlignLeft className="h-4 w-4 mt-0.5 shrink-0 text-[hsl(var(--brand-primary))] opacity-60" /> */}
+              <p className="line-clamp-2 leading-relaxed font-medium opacity-90">{content.description}</p>
+            </div>
           </div>
-        </CardContent>
+        )}
+
+        {/* Preview Section */}
+        <div className="px-1 flex-1 min-h-0 flex flex-col">
+          {renderCanvasPreview()}
+        </div>
+
+        {/* Footer Section */}
+        <div className="p-1 mt-auto space-y-4 bg-gradient-to-b from-transparent to-[hsl(var(--muted))]/10">
+          {/* Tags */}
+          {safeTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {safeTags.slice(0, 3).map((tag, index) => (
+                <Badge
+                  key={tag._id ?? `${tag.name}-${index}`}
+                  variant="secondary"
+                  className="text-[10px] font-semibold px-2.5 py-1 h-6 bg-[hsl(var(--surface-light))] border border-[hsl(var(--border))] hover:border-[hsl(var(--brand-primary))]/30 text-[hsl(var(--muted-foreground))] transition-colors"
+                >
+                  #{tag.name}
+                </Badge>
+              ))}
+              {safeTags.length > 3 && (
+                <Badge variant="secondary" className="text-[10px] font-semibold px-2 py-1 h-6 bg-[hsl(var(--surface-light))] border border-[hsl(var(--border))]">
+                  +{safeTags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Links */}
+          {content.links && content.links.length > 0 && (
+            <div className="pt-3 border-t border-[hsl(var(--border))]/40">
+              <div className="flex flex-col gap-2">
+                {content.links.slice(0, 2).map((link, index) => (
+                  <a
+                    key={index}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-primary))] transition-colors group/link w-full"
+                  >
+                    <div className="p-1 rounded-md bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] group-hover/link:bg-[hsl(var(--brand-primary))] group-hover/link:text-white transition-colors">
+                      <LinkIcon className="h-3 w-3" />
+                    </div>
+                    <span className="truncate font-medium opacity-80 group-hover/link:opacity-100">{link}</span>
+                  </a>
+                ))}
+                {content.links.length > 2 && (
+                  <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]/60 pl-8">
+                    +{content.links.length - 2} more links
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
       <UpdateContentDialog
-        content={{ ...content, tags: content.tags || [], links: content.links || [] }}
+        content={{ ...content, tags: safeTags, links: content.links || [] }}
         dashboardId={dashboardId}
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}

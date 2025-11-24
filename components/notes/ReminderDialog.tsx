@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui-base/Modal';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
-import { 
-  Clock, 
+import {
+  Clock,
   Calendar,
   Check,
   Bell
@@ -40,7 +40,7 @@ const toLocalInputValue = (utcString: string) => {
 };
 // Format for UI display
 const formatDate = (dateString: string) => {
-//  console.log("coming string", dateString)
+  //  console.log("coming string", dateString)
   if (!dateString) return '';
   const date = new Date(dateString);
   return (
@@ -64,6 +64,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
       ? toLocalInputValue(existingReminder.reminderDate)
       : ''
   );
+  const [message, setMessage] = useState(existingReminder?.message || '');
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -97,8 +98,8 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
     const localDate = new Date(reminderDate);
 
     // Convert to UTC ISO for backend
-    
-const utcISO = localDate.toISOString();
+
+    const utcISO = localDate.toISOString();
 
     if (new Date(utcISO) <= new Date()) {
       toast.error('Reminder date must be in the future');
@@ -108,7 +109,8 @@ const utcISO = localDate.toISOString();
     setIsLoading(true);
     try {
       await onSave({
-        reminderDate: utcISO // 🟢 ALWAYS send UTC ISO
+        reminderDate: utcISO, // 🟢 ALWAYS send UTC ISO
+        message: message.trim()
       });
 
       toast.success(existingReminder ? 'Reminder updated' : 'Reminder set');
@@ -143,18 +145,17 @@ const utcISO = localDate.toISOString();
         </div>
 
         {/* Quick Options */}
-       <div>
+        <div>
           <label className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] mb-3 block">Quick Select</label>
           <div className="grid grid-cols-2 gap-2">
             {quickOptions.map((option) => (
               <button
                 key={option.label}
                 onClick={() => handleQuickSelect(option.hours)}
-                className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                  reminderDate && formatDate(reminderDate).includes(option.label)
+                className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${reminderDate && formatDate(reminderDate).includes(option.label)
                     ? 'bg-[hsl(var(--brand-primary))] text-white border-[hsl(var(--brand-primary))]'
                     : 'bg-[hsl(var(--surface-light))] border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/50'
-                }`}
+                  }`}
               >
                 <Clock className="w-3.5 h-3.5 inline mr-1" />
                 {option.label}
@@ -179,6 +180,19 @@ const utcISO = localDate.toISOString();
               📅 {formatDate(reminderDate)}
             </p>
           )}
+        </div>
+
+        {/* Message Input */}
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] mb-2 block">
+            Message (Optional)
+          </label>
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Add a note for this reminder..."
+            className="w-full"
+          />
         </div>
       </ModalBody>
 

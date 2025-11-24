@@ -9,20 +9,25 @@ import { imageStorage } from '@/lib/storage/imageStorage';
 
 interface DialogState {
   title: string;
+  description: string;
   canvasBlocks: BlockType[];
   selectedTags: string[];
   visibility: 'Public' | 'Private';
-  reminderData: any;
-  links : string[]
+  reminderData: {
+    reminderDate: string;
+    message?: string;
+  } | null;
+  links: string[]
 }
-
+// description-03: we need to add the description in the state
 const DEFAULT_STATE: DialogState = {
   title: '',
+  description: '',
   canvasBlocks: [],
   selectedTags: [],
   visibility: 'Public', // Changed default to Public
   reminderData: null,
-  links : []
+  links: []
 };
 
 const STORAGE_KEY = 'recollect_note_draft_';
@@ -36,11 +41,11 @@ export function useCreateNoteState(dashboardId: string) {
     const loadState = async () => {
       try {
         const storageKey = STORAGE_KEY + dashboardId;
-        const savedState = localStorage.getItem(storageKey); 
-        
+        const savedState = localStorage.getItem(storageKey);
+
         if (savedState) {
           const parsedState = JSON.parse(savedState);
-        
+
           const blocksWithUrls = await Promise.all(
             parsedState.canvasBlocks.map(async (block: BlockType) => {
               if (block.type === 'image' && block.imageId && !block.isUploaded) {
@@ -56,7 +61,7 @@ export function useCreateNoteState(dashboardId: string) {
               return block;
             })
           );
-          
+
           setState({
             ...parsedState,
             canvasBlocks: blocksWithUrls
@@ -72,7 +77,7 @@ export function useCreateNoteState(dashboardId: string) {
     };
 
     loadState();
-    
+
     // #change3: Cleanup blob URLs on unmount
     return () => {
       state.canvasBlocks.forEach(block => {
@@ -84,38 +89,38 @@ export function useCreateNoteState(dashboardId: string) {
   }, [dashboardId]);
 
   // #change4: Save state to localStorage (blocks with imageId references only)
-useEffect(() => {
-  if (!isLoaded) return;
+  useEffect(() => {
+    if (!isLoaded) return;
 
-  const saveToLocalStorage = () => {
-    try {
-      const storageKey = STORAGE_KEY + dashboardId;
-      const stateToSave = {
-        ...state,
-        canvasBlocks: state.canvasBlocks.map(block => {
-          if (block.type === 'image' && block.url?.startsWith('blob:')) {
-            return {
-              ...block,
-              url: undefined
-            };
-          }
-          return block;
-        })
-      };
-      //console.log('state to save', stateToSave)
-      // Only save if state has actually changed
-      const previousState = localStorage.getItem(storageKey);
-      if (previousState !== JSON.stringify(stateToSave)) {
-        localStorage.setItem(storageKey, JSON.stringify(stateToSave));
+    const saveToLocalStorage = () => {
+      try {
+        const storageKey = STORAGE_KEY + dashboardId;
+        const stateToSave = {
+          ...state,
+          canvasBlocks: state.canvasBlocks.map(block => {
+            if (block.type === 'image' && block.url?.startsWith('blob:')) {
+              return {
+                ...block,
+                url: undefined
+              };
+            }
+            return block;
+          })
+        };
+        //console.log('state to save', stateToSave)
+        // Only save if state has actually changed
+        const previousState = localStorage.getItem(storageKey);
+        if (previousState !== JSON.stringify(stateToSave)) {
+          localStorage.setItem(storageKey, JSON.stringify(stateToSave));
+        }
+      } catch (error) {
+        console.error('Failed to save note state:', error);
       }
-    } catch (error) {
-      console.error('Failed to save note state:', error);
-    }
-  };
+    };
 
-  const timer = setTimeout(saveToLocalStorage, 1000);
-  return () => clearTimeout(timer);
-}, [state, dashboardId, isLoaded]); // Keep these dependencies
+    const timer = setTimeout(saveToLocalStorage, 1000);
+    return () => clearTimeout(timer);
+  }, [state, dashboardId, isLoaded]); // Keep these dependencies
 
   type UpdateArg = Partial<DialogState> | ((prev: DialogState) => Partial<DialogState>);
 
@@ -131,7 +136,7 @@ useEffect(() => {
     try {
       const storageKey = STORAGE_KEY + dashboardId;
       localStorage.removeItem(storageKey);
-      
+
       // NEW CODE: Cleanup IndexedDB images and blob URLs
       for (const block of state.canvasBlocks) {
         if (block.type === 'image') {

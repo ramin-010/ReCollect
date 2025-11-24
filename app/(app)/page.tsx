@@ -228,7 +228,7 @@ export default function HomePage() {
                     <Sparkles className="h-5 w-5 text-[hsl(var(--primary))]" />
                     <h2 className="text-xl font-semibold">Pinned</h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {pinnedContents.map((content, index) => (
                       <motion.div
                         key={content._id}
@@ -259,7 +259,7 @@ export default function HomePage() {
                   {pinnedContents.length > 0 && (
                     <h2 className="text-xl font-semibold mb-4">All Notes</h2>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {regularContents.map((content, index) => (
                       <motion.div
                         key={content._id}

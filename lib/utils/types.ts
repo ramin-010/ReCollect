@@ -44,6 +44,7 @@ export interface Content {
   visibility: 'Public' | 'Private';
   createdAt: string;
   updatedAt: string;
+  description?: string;
 }
 
 export interface Dashboard {
