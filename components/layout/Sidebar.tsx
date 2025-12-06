@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Dashboard } from '@/lib/utils/types';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useViewStore } from '@/lib/store/viewStore';
 import { authApi } from '@/lib/api/auth';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { Button } from '@/components/ui-base/Button';
@@ -31,9 +32,10 @@ import {
   Edit,
   Trash2,
   Share2,
+  CheckSquare,
+  Wallet,
 } from 'lucide-react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
-import { ExcalidrawDashboard } from '@/components/drawing/ExcalidrawDashboard';
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { DeleteConfirmDialog } from '../shared/DeleteConfirmDialog';
@@ -48,7 +50,7 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isExcalidrawOpen, setIsExcalidrawOpen] = useState(false);
+
   const [dialogAction, setDialogAction] = useState<DashboardAction | null>(null);
   const [contextDashboard, setContextDashboard] = useState<Dashboard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -59,6 +61,8 @@ export function Sidebar() {
   const removeDashboard = useDashboardStore((state) => state.removeDashboard);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const currentView = useViewStore((state) => state.currentView);
+  const setCurrentView = useViewStore((state) => state.setCurrentView);
 
   const dashboardsInitialAnimationCompleted = useRef(false);
 
@@ -79,6 +83,7 @@ export function Sidebar() {
 
   const handleDashboardClick = (dashboard: Dashboard) => {
     setCurrentDashboard(dashboard);
+    setCurrentView('dashboard');
     setIsMobileOpen(false);
   };
 
@@ -164,14 +169,28 @@ export function Sidebar() {
                 user={user}
                 dashboards={dashboards}
                 currentDashboard={currentDashboard}
+                currentView={currentView}
                 onDashboardClick={handleDashboardClick}
                 onDashboardAction={handleDashboardActionOpen}
                 onAllDashboardsClick={() => {
                   setCurrentDashboard(null);
+                  setCurrentView('dashboard');
                   setIsMobileOpen(false);
                 }}
-                onDrawingBoardClick={() => setIsExcalidrawOpen(true)}
+                onDrawingBoardClick={() => {
+                  setCurrentView('drawing');
+                  setIsMobileOpen(false);
+                }}
+                onTodoClick={() => {
+                  setCurrentView('todo');
+                  setIsMobileOpen(false);
+                }}
+                onExpensesClick={() => {
+                  setCurrentView('expenses');
+                  setIsMobileOpen(false);
+                }}
                 onNewDashboardClick={() => setIsCreateOpen(true)}
+                onSettingsClick={() => setCurrentView('settings')}
                 onLogout={handleLogout}
                 getInitials={getInitials}
                 dashboardsInitialAnimationCompleted={dashboardsInitialAnimationCompleted.current}
@@ -183,7 +202,7 @@ export function Sidebar() {
 
       {/* Desktop Sidebar */}
       <motion.aside
-        animate={{ width: isCollapsed ? 80 : 256 }}
+        animate={{ width: isCollapsed ? 80 : 246 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="hidden lg:block relative z-30"
       >
@@ -195,11 +214,25 @@ export function Sidebar() {
           user={user}
           dashboards={dashboards}
           currentDashboard={currentDashboard}
+          currentView={currentView}
           onDashboardClick={handleDashboardClick}
           onDashboardAction={handleDashboardActionOpen}
-          onAllDashboardsClick={() => setCurrentDashboard(null)}
-          onDrawingBoardClick={() => setIsExcalidrawOpen(true)}
+          onAllDashboardsClick={() => {
+            setCurrentDashboard(null);
+            setCurrentView('dashboard');
+          }}
+          onDrawingBoardClick={() => {
+            setCurrentDashboard(null);
+            setCurrentView('drawing');
+          }}
+          onTodoClick={() => {
+             setCurrentDashboard(null);
+            setCurrentView('todo')}}
+          onExpensesClick={() => {
+             setCurrentDashboard(null);
+             setCurrentView('expenses')}}
           onNewDashboardClick={() => setIsCreateOpen(true)}
+          onSettingsClick={() => setCurrentView('settings')}
           onLogout={handleLogout}
           getInitials={getInitials}
           dashboardsInitialAnimationCompleted={dashboardsInitialAnimationCompleted.current}
@@ -212,10 +245,7 @@ export function Sidebar() {
         onClose={() => setIsCreateOpen(false)} 
       />
       
-      <ExcalidrawDashboard 
-        isOpen={isExcalidrawOpen} 
-        onClose={() => setIsExcalidrawOpen(false)} 
-      />
+
 
       {contextDashboard && (
         <>
@@ -259,11 +289,15 @@ interface SidebarContentProps {
   user: any;
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
+  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses';
   onDashboardClick: (dashboard: Dashboard) => void;
   onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
   onAllDashboardsClick: () => void;
   onDrawingBoardClick: () => void;
+  onTodoClick: () => void;
+  onExpensesClick: () => void;
   onNewDashboardClick: () => void;
+  onSettingsClick: () => void;
   onLogout: () => void;
   getInitials: (name?: string) => string;
   dashboardsInitialAnimationCompleted: boolean;
@@ -277,11 +311,15 @@ function SidebarContent({
   user,
   dashboards,
   currentDashboard,
+  currentView,
   onDashboardClick,
   onDashboardAction,
   onAllDashboardsClick,
   onDrawingBoardClick,
+  onTodoClick,
+  onExpensesClick,
   onNewDashboardClick,
+  onSettingsClick,
   onLogout,
   getInitials,
   dashboardsInitialAnimationCompleted,
@@ -292,8 +330,8 @@ function SidebarContent({
       <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--divider))] shrink-0">
         {!isCollapsed && (
           <button
-            className="flex items-center gap-3 p-2 hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors flex-1 min-w-0"
-            onClick={() => toast.info('Profile settings coming soon!')}
+            className="flex items-center gap-2 p-[6px] hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors flex-1 min-w-0"
+            onClick={onSettingsClick}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-semibold shrink-0">
               {getInitials(user?.name)}
@@ -319,32 +357,110 @@ function SidebarContent({
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 px-3 py-4 overflow-y-auto">
+      <div className="flex-1 px-2 py-4 overflow-y-auto">
         <nav className="space-y-1">
           {/* All Dashboards */}
-          <Button
-            variant={!currentDashboard ? "outline" : "ghost"}
-            className="w-full justify-start hover:bg-[hsl(var(--sidebar-hover))]"
-            onClick={onAllDashboardsClick}
-            leftIcon={<Home className="h-5 w-5" />}
-          >
-            {!isCollapsed && <span>All Dashboards</span>}
-          </Button>
+          <motion.div className="relative">
+            {/* Active Indicator Background */}
+            {currentView === 'dashboard' && !currentDashboard && (
+              <motion.div
+                layoutId="viewActiveIndicator"
+                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <MotionButton
+              variant={currentView === 'dashboard' && !currentDashboard ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'dashboard' && !currentDashboard && "border-l-4 border-blue-600/100 pl-2 bg-black/1"
+              )}
+              onClick={onAllDashboardsClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<Home className="h-4 w-4" />}
+            >
+              {!isCollapsed && <span className="text-[15px] tracking-wide text-white">All Dashboards</span>}
+            </MotionButton>
+          </motion.div>
 
           {/* Drawing Board */}
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-blue-600 dark:text-blue-400 hover:bg-purple-50 dark:hover:bg-blue-950/30"
-            onClick={onDrawingBoardClick}
-            leftIcon={<PenTool className="h-5 w-5" />}
-          >
-            {!isCollapsed && <span>Drawing Board</span>}
-          </Button>
+          <motion.div className="relative">
+            {/* Active Indicator Background */}
+            {currentView === 'drawing' && (
+              <motion.div
+                layoutId="viewActiveIndicator"
+                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <MotionButton
+              variant={currentView === 'drawing' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start  hover:bg-purple-50 dark:hover:bg-blue-950/30 transition-all duration-200",
+                currentView === 'drawing' && "border-l-4 border-blue-600 pl-2 bg-black/1"
+              )}
+              onClick={onDrawingBoardClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<PenTool className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+            >
+              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">Drawing Board</span>}
+            </MotionButton>
+          </motion.div>
+
+
+
+          {/* Todo List */}
+          <motion.div className="relative">
+            {/* Active Indicator Background */}
+            {currentView === 'todo' && (
+              <motion.div
+                layoutId="viewActiveIndicator"
+                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <MotionButton
+              variant={currentView === 'todo' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all duration-200",
+                currentView === 'todo' && "border-l-4 border-emerald-600 pl-2 bg-black/1"
+              )}
+              onClick={onTodoClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+            >
+              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">To-Do List</span>}
+            </MotionButton> 
+          </motion.div>
+
+          {/* Expenses */}
+          <motion.div className="relative">
+            {/* Active Indicator Background */}
+            {currentView === 'expenses' && (
+              <motion.div
+                layoutId="viewActiveIndicator"
+                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <MotionButton
+              variant={currentView === 'expenses' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-all duration-200",
+                currentView === 'expenses' && "border-l-4 border-violet-600 pl-2 bg-black/1"
+              )}
+              onClick={onExpensesClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<Wallet className="h-4 w-4 text-violet-600 dark:text-violet-400" />}
+            >
+              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">Expenses</span>}
+            </MotionButton>
+          </motion.div>
 
           {/* Dashboards Section */}
           {!isCollapsed && (
             <div className="pt-4 pb-2">
-              <p className="px-3 text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+              <p className="px-3 text-xs font-semibold text-white uppercase tracking-wider">
                 Dashboards
               </p>
             </div>
@@ -385,7 +501,7 @@ function SidebarContent({
         <div className="p-4 shrink-0">
           <button
             className="flex items-center justify-center w-full p-2 hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors"
-            onClick={() => toast.info('Profile settings coming soon!')}
+            onClick={onSettingsClick}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-semibold">
               {getInitials(user?.name)}
@@ -461,7 +577,7 @@ function DashboardItem({
           leftIcon={<LayoutDashboard className="h-4 w-4" />}
         >
           {!isCollapsed && (
-            <span className="truncate text-sm">{dashboard.name}</span>
+            <span className="truncate text-[14px]  text-[hsl(var(--muted-foreground))] tracking-wide">{dashboard.name}</span>
           )}
         </MotionButton>
 

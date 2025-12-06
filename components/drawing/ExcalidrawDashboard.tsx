@@ -1,22 +1,29 @@
 // ReCollect - Excalidraw Dashboard Integration
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
-import { Modal, ModalBody, ModalFooter } from '@/components/ui-base/Modal';
+import { useTheme } from 'next-themes';
+import { debounce } from 'lodash';
+
 import { 
   PenTool, 
   Save, 
   Download, 
-  Upload, 
   Trash2, 
   Plus,
   FileImage,
-  Palette
+  Palette,
+  Edit2,
+  Copy,
+  Clock,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CreateDrawingDialog } from './CreateDrawingDialog';
+import { useViewStore } from '@/lib/store/viewStore';
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
@@ -33,17 +40,23 @@ interface Drawing {
   updatedAt: string;
 }
 
-interface ExcalidrawDashboardProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProps) {
+export function ExcalidrawDashboard() {
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [currentDrawing, setCurrentDrawing] = useState<Drawing | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [renamingDrawing, setRenamingDrawing] = useState<Drawing | null>(null);
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { setCurrentView } = useViewStore();
+  const { resolvedTheme } = useTheme();
+  
+  // Use refs to capture latest Excalidraw state
+  const excalidrawStateRef = useRef<any>({
+    elements: [],
+    appState: {},
+    files: {}
+  });
 
   // Load saved drawings on mount
   useEffect(() => {
@@ -72,14 +85,16 @@ export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProp
     }
   };
 
-  const createNewDrawing = () => {
+  const createNewDrawing = (name: string) => {
+    const isDark = resolvedTheme === 'dark' || resolvedTheme === 'theme-dark-gray';
     const newDrawing: Drawing = {
       id: Date.now().toString(),
-      name: `Drawing ${drawings.length + 1}`,
+      name: name,
       data: {
         elements: [],
         appState: {
-          viewBackgroundColor: '#ffffff'
+          viewBackgroundColor: isDark ? '#ffffff' : '#18181b',
+          theme: isDark ? 'dark' : 'light'
         }
       },
       createdAt: new Date().toISOString(),
@@ -88,6 +103,7 @@ export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProp
     
     setCurrentDrawing(newDrawing);
     setShowEditor(true);
+    toast.success(`Created "${name}"`);
   };
 
   const openDrawing = (drawing: Drawing) => {
@@ -95,27 +111,63 @@ export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProp
     setShowEditor(true);
   };
 
-  const saveCurrentDrawing = async () => {
-    if (!currentDrawing || !excalidrawAPI) return;
+  const generateThumbnail = async () => {
+    if (!excalidrawAPI) return '';
+    
+    try {
+      const { elements, appState, files } = excalidrawStateRef.current;
+      
+      // Use Excalidraw's renderStaticScene to generate thumbnail
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 300;
+      
+      const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#18181b'; // Dark background color
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      // Export as image using Excalidraw's built-in export
+      const { exportToCanvas } = await import('@excalidraw/excalidraw');
+      const exportedCanvas = await exportToCanvas({
+        elements,
+        appState,
+        files,
+        canvas,
+        maxWidthOrHeight: 300
+      });
+      
+      return exportedCanvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Thumbnail generation failed:', error);
+    }
+    return '';
+  };
+
+  const saveCurrentDrawing = async (silent = false, generateThumbnail_flag = false) => {
+    if (!currentDrawing) return;
 
     setIsLoading(true);
     try {
-      const elements = excalidrawAPI.getSceneElements();
-      const appState = excalidrawAPI.getAppState();
+      const { elements, appState, files } = excalidrawStateRef.current;
       
-      // Generate thumbnail
-      const canvas = await excalidrawAPI.exportToCanvas({
-        elements,
-        appState,
-        files: excalidrawAPI.getFiles(),
-        getDimensions: () => ({ width: 300, height: 200 })
-      });
-      
-      const thumbnail = canvas.toDataURL('image/png');
+      // Only generate thumbnail if explicitly requested (e.g., on close)
+      let thumbnail = currentDrawing.thumbnail || '';
+      if (generateThumbnail_flag) {
+        console.log("hit thumnail genration")
+        try {
+          const generatedThumbnail = await generateThumbnail();
+          if (generatedThumbnail) {
+            thumbnail = generatedThumbnail;
+          }
+        } catch (error) {
+          console.error('Thumbnail generation failed:', error);
+        }
+      }
       
       const updatedDrawing = {
         ...currentDrawing,
-        data: { elements, appState },
+        data: { elements, appState, files },
         thumbnail,
         updatedAt: new Date().toISOString()
       };
@@ -132,39 +184,119 @@ export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProp
 
       saveDrawings(updatedDrawings);
       setCurrentDrawing(updatedDrawing);
-      toast.success('Drawing saved successfully!');
+      if (!silent) {
+        toast.success('Drawing saved successfully!');
+      }
     } catch (error) {
       console.error('Failed to save drawing:', error);
-      toast.error('Failed to save drawing');
+      if (!silent) {
+        toast.error('Failed to save drawing');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Ref to hold the latest save function to avoid closure staleness in debounce
+  const saveCurrentDrawingRef = useRef(saveCurrentDrawing);
+  useEffect(() => {
+    saveCurrentDrawingRef.current = saveCurrentDrawing;
+  }, [saveCurrentDrawing]);
+
+  // Debounced auto-save
+  const debouncedSave = useMemo(
+    () => debounce(() => {
+      saveCurrentDrawingRef.current(true);
+    }, 1000),
+    []
+  );
+
+  // Sync theme with Excalidraw background
+  useEffect(() => {
+    if (excalidrawAPI && showEditor) {
+      const isDark = resolvedTheme === 'dark' || resolvedTheme === 'theme-dark-gray';
+      const bgColor = isDark ? '#18181b' : '#ffffff';
+      
+      // Only update if the background color is significantly different (e.g. switching modes)
+      // We don't want to override user's custom background color if they changed it manually to something else
+      // But the requirement says "sync with current theme", so we'll enforce it for now or check against defaults.
+      // For now, we'll update it to match the theme.
+      const currentBg = excalidrawStateRef.current?.appState?.viewBackgroundColor;
+      
+      // Update scene if the background color doesn't match the theme default
+      // This might override custom colors, but it fulfills the "sync" requirement.
+      // To be safer, we could only switch if the current bg is white or the dark default.
+      if (currentBg !== bgColor) {
+         excalidrawAPI.updateScene({
+            appState: {
+              viewBackgroundColor: bgColor,
+              theme: isDark ? 'dark' : 'light'
+            }
+         });
+      }
+    }
+  }, [resolvedTheme, excalidrawAPI, showEditor]);
+
   const deleteDrawing = (drawingId: string) => {
-    const updatedDrawings = drawings.filter(d => d.id !== drawingId);
+    const drawing = drawings.find(d => d.id === drawingId);
+    if (!drawing) return;
+    
+    if (confirm(`Delete "${drawing.name}"? This action cannot be undone.`)) {
+      const updatedDrawings = drawings.filter(d => d.id !== drawingId);
+      saveDrawings(updatedDrawings);
+      toast.success(`"${drawing.name}" deleted`);
+    }
+  };
+
+  const handleDuplicate = (drawing: Drawing, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newDrawing: Drawing = {
+      ...drawing,
+      id: Date.now().toString(),
+      name: `${drawing.name} (Copy)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const updatedDrawings = [...drawings, newDrawing];
     saveDrawings(updatedDrawings);
-    toast.success('Drawing deleted');
+    toast.success(`Duplicated "${drawing.name}"`);
+  };
+
+  const handleRenameClick = (drawing: Drawing, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingDrawing(drawing);
+    setShowCreateDialog(true);
+  };
+
+  const handleRenameConfirm = (newName: string) => {
+    if (renamingDrawing) {
+      const updatedDrawings = drawings.map(d => 
+        d.id === renamingDrawing.id ? { ...d, name: newName, updatedAt: new Date().toISOString() } : d
+      );
+      saveDrawings(updatedDrawings);
+      toast.success(`Renamed to "${newName}"`);
+      setRenamingDrawing(null);
+    } else {
+      createNewDrawing(newName);
+    }
+    setShowCreateDialog(false);
   };
 
   const exportDrawing = async () => {
     if (!excalidrawAPI) return;
 
     try {
-      const elements = excalidrawAPI.getSceneElements();
-      const appState = excalidrawAPI.getAppState();
+      const { elements, appState } = excalidrawStateRef.current;
       
-      const canvas = await excalidrawAPI.exportToCanvas({
-        elements,
-        appState,
-        files: excalidrawAPI.getFiles()
-      });
-      
-      // Create download link
+      // For now, just save the drawing data as JSON
+      const dataStr = JSON.stringify({ elements, appState }, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `${currentDrawing?.name || 'drawing'}.png`;
-      link.href = canvas.toDataURL();
+      link.download = `${currentDrawing?.name || 'drawing'}.excalidraw`;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
       
       toast.success('Drawing exported successfully!');
     } catch (error) {
@@ -173,186 +305,238 @@ export function ExcalidrawDashboard({ isOpen, onClose }: ExcalidrawDashboardProp
     }
   };
 
-  const closeEditor = () => {
+  const closeEditor = async () => {
+    // Save with thumbnail generation before closing
+    if (currentDrawing) {
+      await saveCurrentDrawing(true, true);
+    }
     setShowEditor(false);
     setCurrentDrawing(null);
     setExcalidrawAPI(null);
   };
 
   if (showEditor) {
+    const isDark =resolvedTheme === 'theme-dark-gray';
+    
     return (
-      <Modal
-        isOpen={showEditor}
-        onClose={closeEditor}
-        title={currentDrawing?.name || 'New Drawing'}
-        size="full"
-      >
-        <ModalBody className="p-0 h-[80vh]">
-          <div className="h-full relative">
-            <Excalidraw
-              initialData={currentDrawing?.data}
-              onChange={(elements, appState, files) => {
-                // Store the API reference from onChange
-                if (!excalidrawAPI) {
-                  const api = {
-                    getSceneElements: () => elements,
-                    getAppState: () => appState,
-                    getFiles: () => files,
-                    exportToCanvas: async (opts: any) => {
-                      // Simplified export - you may need to adjust this
-                      const canvas = document.createElement('canvas');
-                      return canvas;
-                    }
-                  };
-                  setExcalidrawAPI(api);
-                }
-              }}
-              UIOptions={{
-                canvasActions: {
-                  loadScene: false,
-                  saveToActiveFile: false,
-                  export: false,
-                  saveAsImage: false
-                }
-              }}
-            />
+      <div className={`fixed inset-0 z-[100] bg-white ${isDark ? 'dark:bg-zinc-900' : ''} flex flex-col`}>
+        {/* Editor Header */}
+        <div className="h-14 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 bg-[hsl(var(--surface))]">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={closeEditor}
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Back
+            </Button>
+            <span className="font-medium">{currentDrawing?.name}</span>
           </div>
-        </ModalBody>
-        
-        <ModalFooter>
-          <div className="flex items-center justify-between w-full">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={exportDrawing}
-                leftIcon={<Download className="w-4 h-4" />}
-              >
-                Export PNG
-              </Button>
+          
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-muted-foreground mr-2">
+              Auto-save enabled
             </div>
-            
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                onClick={closeEditor}
-              >
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                onClick={saveCurrentDrawing}
-                isLoading={isLoading}
-                leftIcon={<Save className="w-4 h-4" />}
-              >
-                Save Drawing
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportDrawing}
+              leftIcon={<Download className="w-4 h-4" />}
+            >
+              Export
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => saveCurrentDrawing(false)}
+              isLoading={isLoading}
+              leftIcon={<Save className="w-4 h-4" />}
+            >
+              Save
+            </Button>
           </div>
-        </ModalFooter>
-      </Modal>
+        </div>
+
+        {/* Editor Canvas */}
+        <div className="flex-1 relative">
+          <Excalidraw
+            excalidrawAPI={(api) => setExcalidrawAPI(api)}
+            theme={isDark ? 'dark' : 'light'}
+            initialData={currentDrawing?.data ? {
+              elements: currentDrawing.data.elements || [],
+              appState: {
+                ...currentDrawing.data.appState,
+                collaborators: new Map(),
+                viewBackgroundColor: currentDrawing.data.appState?.viewBackgroundColor || (isDark ? '#18181b' : '#ffffff')
+              },
+              scrollToContent: true
+            } : undefined}
+            onChange={(elements, appState, files) => {
+              // Update ref with latest state
+              excalidrawStateRef.current = {
+                elements,
+                appState,
+                files
+              };
+              
+              // Trigger auto-save
+              debouncedSave();
+            }}
+            UIOptions={{
+              canvasActions: {
+                loadScene: false,
+                saveToActiveFile: false,
+                export: false,
+                saveAsImage: false
+              }
+            }}
+          />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Drawing Dashboard"
-      description="Create and manage your drawings with Excalidraw"
-      size="lg"
-    >
-      <ModalBody>
-        {/* Header Actions */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <PenTool className="w-5 h-5 text-brand-primary" />
-            <span className="font-medium">Your Drawings</span>
-          </div>
-          
-          <Button
-            variant="primary"
-            onClick={createNewDrawing}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            New Drawing
-          </Button>
+    <div className="h-full flex flex-col p-6 overflow-y-auto max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Drawing Board</h1>
+          <p className="text-[hsl(var(--muted-foreground))]">
+            Create and manage your visual notes and diagrams
+          </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => setCurrentView('dashboard')}
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Back to Dashboard
+        </Button>
+      </div>
 
-        {/* Drawings Grid */}
-        {drawings.length === 0 ? (
-          <Card variant="outlined" padding="lg" className="text-center border-dashed">
-            <div className="py-8">
-              <Palette className="w-16 h-16 text-[hsl(var(--muted-foreground))] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No drawings yet</h3>
-              <p className="text-[hsl(var(--muted-foreground))] mb-6">
-                Create your first drawing to get started with visual note-taking
-              </p>
-              <Button
-                variant="primary"
-                onClick={createNewDrawing}
-                leftIcon={<Plus className="w-4 h-4" />}
-              >
-                Create First Drawing
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {drawings.map((drawing) => (
-              <Card
-                key={drawing.id}
-                variant="interactive"
-                padding="sm"
-                className="cursor-pointer group"
-                onClick={() => openDrawing(drawing)}
-              >
-                {/* Thumbnail */}
-                <div className="aspect-video bg-[hsl(var(--surface-light))] rounded-lg mb-3 overflow-hidden">
-                  {drawing.thumbnail ? (
-                    <img
-                      src={drawing.thumbnail}
-                      alt={drawing.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FileImage className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
-                    </div>
-                  )}
+      {/* Drawings Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Create New Card */}
+        <Card
+          variant="interactive"
+          padding="none"
+          className="cursor-pointer group border border-2 hover:border-brand-primary/50 flex flex-col items-center justify-start min-h-[200px] relative overflow-hidden flex justify-center items-center "
+          onClick={() => setShowCreateDialog(true)}
+          style={{ 
+            backgroundImage: `url(/drawing_board/draw2.png)`, 
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
+          <div className="bg-black/20 w-full h-full absolute top-0 left-0"></div>
+          <div className="w-12 h-12 rounded-full bg-[hsl(var(--brand-primary))]/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Plus className="w-7 h-7 text-white font-bold bg-[hsl(var(--brand-primary))] p-2 rounded-full" />
+          </div>
+          {/* <div className="absolute bottom-1/5 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <p className="text-md text-black font-bold">Create New</p>
+          </div> */}
+        </Card>
+
+        {/* Existing Drawings */}
+        {drawings.map((drawing) => (
+          <Card
+            key={drawing.id}
+            variant="interactive"
+            padding="none"
+            className="cursor-pointer group overflow-hidden flex flex-col h-[250px] relative"
+            onClick={() => openDrawing(drawing)}
+          >
+            {/* Thumbnail */}
+            <div className="w-full h-full bg-[hsl(var(--surface-light))] relative">
+              {drawing.thumbnail ? (
+                <img
+                  src={drawing.thumbnail}
+                  alt={drawing.name}
+                  className="w-full h-full object-cover bg-center"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <FileImage className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
                 </div>
+              )}
+              
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDrawing(drawing);
+                  }}
+                  leftIcon={<Edit2 className="w-4 h-4" />}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => handleRenameClick(drawing, e)}
+                  leftIcon={<PenTool className="w-4 h-4" />}
+                >
+                  Rename
+                </Button>
+              </div>
+            </div>
 
-                {/* Drawing Info */}
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-medium text-sm truncate">{drawing.name}</h4>
-                    <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                      {new Date(drawing.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
+            {/* Drawing Info - Positioned at Bottom with Dark Background */}
+            <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 via-black/50 to-transparent pt-8 pb-3 px-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h4 className="font-medium text-sm truncate flex-1 text-white" title={drawing.name}>
+                  {drawing.name}
+                </h4>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-gray-200">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>{new Date(drawing.updatedAt).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    className="p-1 hover:bg-white/20 rounded transition-colors"
+                    onClick={(e) => handleDuplicate(drawing, e)}
+                    title="Duplicate"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-white" />
+                  </button>
+                  <button
+                    className="p-1 hover:bg-red-500/30 rounded transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteDrawing(drawing.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </button>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </ModalBody>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
-      <ModalFooter>
-        <Button variant="ghost" onClick={onClose}>
-          Close
-        </Button>
-      </ModalFooter>
-    </Modal>
+      <CreateDrawingDialog
+        isOpen={showCreateDialog}
+        onClose={() => {
+          setShowCreateDialog(false);
+          setRenamingDrawing(null);
+        }}
+        onConfirm={handleRenameConfirm}
+        existingNames={drawings.map(d => d.name)}
+        initialName={renamingDrawing?.name}
+        mode={renamingDrawing ? 'rename' : 'create'}
+      />
+    </div>
   );
 }

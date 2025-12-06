@@ -1,6 +1,6 @@
 // lib/api/user.ts
 import axiosInstance from '../utils/axios';
-import { ApiResponse, User } from '../utils/types';
+import { ApiResponse, User, GetUserSettingsResponse } from '../utils/types';
 
 interface UserProfileInput {
   name?: string;
@@ -33,6 +33,11 @@ export const userApi = {
 
   deleteAccount: async (): Promise<ApiResponse<null>> => {
     const response = await axiosInstance.delete('/api/user/account');
+    return response.data;
+  },
+
+  getSettings: async (): Promise<ApiResponse<GetUserSettingsResponse>> => {
+    const response = await axiosInstance.get('/api/user/settings');
     return response.data;
   },
 };

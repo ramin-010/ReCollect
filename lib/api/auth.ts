@@ -1,6 +1,6 @@
 // lib/api/auth.ts
 import axiosInstance from '../utils/axios';
-import { ApiResponse, User, SignupInput, LoginInput } from '../utils/types';
+import { ApiResponse, User, SignupInput, LoginInput, GetMeResponse } from '../utils/types';
 
 export const authApi = {
   signup: async (data: SignupInput): Promise<ApiResponse<User>> => {
@@ -13,7 +13,7 @@ export const authApi = {
     return response.data;
   },
 
-  getMe: async (): Promise<ApiResponse<any>> => {
+  getMe: async (): Promise<ApiResponse<GetMeResponse>> => {
     const response = await axiosInstance.get('/api/get-me');
     return response.data;
   },

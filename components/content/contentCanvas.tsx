@@ -444,6 +444,12 @@ export function ContentCanvas({
     return Math.max(400, maxY + 100) + 'px';
   };
 
+  const calculateMinWidth = () => {
+    if (blocks.length === 0) return '100%';
+    const maxX = Math.max(...blocks.map(b => b.x + b.width));
+    return `max(100%, ${maxX + 100}px)`;
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#1a1a1a]">
       <div
@@ -461,7 +467,8 @@ export function ContentCanvas({
           onDoubleClick={handleCanvasDoubleClick}
           style={{
             minHeight: calculateMinHeight(),
-            width: '100%'
+            minWidth: calculateMinWidth(),
+            width: 'fit-content'
           }}
         >
           {blocks.length === 0 && !readOnly && (
@@ -524,8 +531,13 @@ export function ContentCanvas({
                     }
                     onDimensionsChange={(newWidth, newHeight) => {
                        const updates: Partial<Block> = {};
-                       if (Math.abs(newHeight - block.height) > 1) updates.height = newHeight;
+                       // Only update width if it changed (auto-width expansion)
                        if (Math.abs(newWidth - block.width) > 1) updates.width = newWidth;
+                       // Only update height if content actually changed (not just initial measurement)
+                       // Skip height updates during initial load - let the stored height be used
+                       if (editingBlock === block.blockId && Math.abs(newHeight - block.height) > 1) {
+                          updates.height = newHeight;
+                       }
                        
                        if (Object.keys(updates).length > 0) {
                           updateBlock(block.blockId, updates);

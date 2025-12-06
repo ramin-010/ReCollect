@@ -10,6 +10,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Navbar } from '@/components/layout/Navbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateNoteProvider } from '@/lib/context/CreateNoteContext';
+import { useViewStore } from '@/lib/store/viewStore';
 
 export default function AppLayout({
   children,
@@ -19,26 +20,20 @@ export default function AppLayout({
   const router = useRouter();
   const { isAuthenticated, isLoading, setUser, setIsLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
+  const currentView = useViewStore((state) => state.currentView);
 
+  
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await authApi.getMe();
         if (response.success && response.data) {
-       
-          setUser(response.data);
-
-          // Derive dashboards from payload defensively
-          let dashboards: any = [];
-          const payload: any = response.data as any;
-          if (Array.isArray(payload)) {
-            dashboards = payload;
-          } else if (Array.isArray(payload?.dashboards)) {
-            dashboards = payload.dashboards;
-          } else if (Array.isArray(payload?.data)) {
-            dashboards = payload.data;
-          }
-
+          const { user, dashboards } = response.data;
+          
+          // Set user in auth store
+          setUser(user);
+          
+          // Set dashboards in dashboard store
           if (Array.isArray(dashboards)) {
             setDashboards(dashboards);
             setCurrentDashboard(null);
@@ -87,8 +82,8 @@ export default function AppLayout({
       <div className="min-h-screen flex bg-pattern">
         <Sidebar />
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))]">
+         <Navbar />
+          <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
             {children}
           </main>
         </div>

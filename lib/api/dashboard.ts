@@ -1,6 +1,6 @@
 // lib/api/dashboard.ts
 import axiosInstance from '../utils/axios';
-import { ApiResponse, Dashboard, DashboardInput } from '../utils/types';
+import { ApiResponse, Dashboard, DashboardInput, GetDashboardContentsResponse } from '../utils/types';
 
 export const dashboardApi = {
   create: async (data: DashboardInput): Promise<ApiResponse<Dashboard>> => {
@@ -15,6 +15,11 @@ export const dashboardApi = {
 
   delete: async (id: string): Promise<ApiResponse<null>> => {
     const response = await axiosInstance.delete(`/api/delete-dash/${id}`);
+    return response.data;
+  },
+
+  getContents: async (id: string): Promise<ApiResponse<GetDashboardContentsResponse>> => {
+    const response = await axiosInstance.get(`/api/dashboard/${id}/contents`);
     return response.data;
   },
 };

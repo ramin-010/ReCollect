@@ -12,11 +12,27 @@ import { Plus, FileText, Sparkles, PenTool } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
 import { CreateContentDialog } from '@/components/content/CreateContentDialog';
+import { UpdateContentDialog } from '@/components/content/UpdateContentDialog';
 import { AlertDialog } from '@/components/ui-base/Dialog';
+import { Content, Tag } from '@/lib/utils/types';
+import { UserSettings } from '@/components/settings/UserSettings';
+import { ExcalidrawDashboard } from '@/components/drawing/ExcalidrawDashboard';
+import { TodoView } from '@/components/todo/TodoView';
+import { ExpenseView } from '@/components/expenses/ExpenseView';
+import { useViewStore } from '@/lib/store/viewStore';
+import { dashboardApi } from '@/lib/api/dashboard';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ContentCardSkeleton } from '@/components/content/ContentCardSkeleton';
 
 export default function HomePage() {
   const dashboards = useDashboardStore((state) => state.dashboards);
   const currentDashboard = useDashboardStore((state) => state.currentDashboard);
+  const getDashboardContents = useDashboardStore((state) => state.getDashboardContents);
+  const setDashboardContents = useDashboardStore((state) => state.setDashboardContents);
+  const setLoadingContents = useDashboardStore((state) => state.setLoadingContents);
+  const isLoadingContents = useDashboardStore((state) => state.isLoadingContents);
+  
   const { triggerCreateNote, requestSignal, requestedDashboardId } = useCreateNote();
   const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false);
   
@@ -24,7 +40,12 @@ export default function HomePage() {
     [dashId: string]: boolean;
   }>({});
   
+  // Edit state
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
+  
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const currentView = useViewStore((state) => state.currentView);
+  const setCurrentView = useViewStore((state) => state.setCurrentView);
 
   // Get current inline dialog state based on dashboard
   const showInlineCreate = currentDashboard 
@@ -32,15 +53,22 @@ export default function HomePage() {
     : false;
 
   const inlineStateRef = useRef(showInlineCreate);
+  const editingContentRef = useRef(editingContent);
   const lastHandledSignalRef = useRef(0);
+  
   useEffect(() => {
     inlineStateRef.current = showInlineCreate;
   }, [showInlineCreate]);
+
+  useEffect(() => {
+    editingContentRef.current = editingContent;
+  }, [editingContent]);
 
   
   // When dashboard changes, reset unsaved warning
   useEffect(() => {
     setShowUnsavedWarning(false);
+    setEditingContent(null); // Close edit dialog when switching dashboards
   }, [currentDashboard?._id]);
 
   const setShowInlineCreate = (value: boolean) => {
@@ -55,7 +83,8 @@ export default function HomePage() {
     setShowUnsavedWarning(false);
     
     // Close create form if switching to a dashboard that already has content
-    if (currentDashboard && currentDashboard.contents.length > 0) {
+    const contents = currentDashboard ? getDashboardContents(currentDashboard._id) : [];
+    if (currentDashboard && contents && contents.length > 0) {
       setShowInlineCreate(false);
     }
   }, [currentDashboard?._id]);
@@ -63,7 +92,9 @@ export default function HomePage() {
   useEffect(() => {
     if (requestSignal === 0 || requestSignal <= lastHandledSignalRef.current) return;
     if (!currentDashboard || requestedDashboardId !== currentDashboard._id) return;
-    if (inlineStateRef.current) {
+    
+    // Check if user is currently creating or editing a note
+    if (inlineStateRef.current || editingContentRef.current) {
       setShowUnsavedWarning(true);
     } else {
       setShowInlineCreate(true);
@@ -71,9 +102,40 @@ export default function HomePage() {
     lastHandledSignalRef.current = requestSignal;
   }, [requestSignal, requestedDashboardId, currentDashboard?._id]);
 
+  // Lazy load dashboard contents
+  useEffect(() => {
+    if (!currentDashboard) return;
+
+    // Check if already cached (undefined means not loaded yet, empty array means loaded but empty)
+    const cached = getDashboardContents(currentDashboard._id);
+    if (cached !== undefined) {
+      return; // Already loaded (even if empty)
+    }
+
+    // Fetch contents for this dashboard
+    const fetchContents = async () => {
+      setLoadingContents(currentDashboard._id, true);
+      try {
+       // await new Promise((resolve) => setTimeout(resolve, 30000));
+        const response = await dashboardApi.getContents(currentDashboard._id);
+        if (response.success && response.data) {
+          setDashboardContents(currentDashboard._id, response.data.contents);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard contents:', error);
+        toast.error('Failed to load notes');
+      } finally {
+        setLoadingContents(currentDashboard._id, false);
+      }
+    };
+
+    fetchContents();
+  }, [currentDashboard?._id]);
+
   const handleConfirmNew = () => {
     setShowUnsavedWarning(false);
     setShowInlineCreate(false);
+    setEditingContent(null); // Close edit dialog
     // Open new inline dialog after brief delay
     setTimeout(() => {
       setShowInlineCreate(true);
@@ -83,6 +145,34 @@ export default function HomePage() {
   const handleCancelNew = () => {
     setShowUnsavedWarning(false);
   };
+
+  // Handle edit request from ContentCard
+  const handleEditContent = (content: Content) => {
+    // Close create dialog if open
+    setShowInlineCreate(false);
+    // Open edit dialog
+    setEditingContent(content);
+  };
+
+  // Render Settings View
+  if (currentView === 'settings') {
+    return <UserSettings />;
+  }
+
+  // Render Drawing View
+  if (currentView === 'drawing') {
+    return <ExcalidrawDashboard />;
+  }
+
+  // Render Todo View
+  if (currentView === 'todo') {
+    return <TodoView />;
+  }
+
+  // Render Expense View
+  if (currentView === 'expenses') {
+    return <ExpenseView />;
+  }
 
   // All Dashboards View
   if (!currentDashboard) {
@@ -156,15 +246,35 @@ export default function HomePage() {
   }
 
   // Single Dashboard View
-  const pinnedContents = currentDashboard.contents.filter(c => c.isPinned);
-  const regularContents = currentDashboard.contents.filter(c => !c.isPinned && !c.isArchived);
-  const hasContent = currentDashboard.contents.length > 0;
+  const contents = currentDashboard ? (getDashboardContents(currentDashboard._id) || []) : [];
+  const isLoading = currentDashboard ? isLoadingContents(currentDashboard._id) : false;
+  const pinnedContents = contents.filter(c => c.isPinned);
+  const regularContents = contents.filter(c => !c.isPinned && !c.isArchived);
+  let hasContent = contents.length > 0;
+
+  // Show skeleton while loading
+  if (isLoading) {
+    const skeletonCount = currentDashboard?.contents?.length || 4;
+
+    return (
+       <div className="p-4 lg:p-8 min-h-screen">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* <Skeleton className="h-12 w-64" /> */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <ContentCardSkeleton key={index} />
+            ))}
+          </div>
+        </div>
+      </div>                
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
-          {showInlineCreate  ? (
+          {showInlineCreate ? (
             // Create Note Form (animated)
             <motion.div
               key="create-form"
@@ -180,6 +290,26 @@ export default function HomePage() {
                 isOpen={true}
                 onClose={() => setShowInlineCreate(false)}
                 dashboardId={currentDashboard._id}
+                inline={true}
+              />
+            </motion.div>
+          ) : editingContent ? (
+            // Edit Note Form (animated)
+            <motion.div
+              key="edit-form"
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ 
+                duration: 0.3, 
+                ease: [0.4, 0, 0.2, 1] 
+              }}
+            >
+              <UpdateContentDialog
+                isOpen={true}
+                onClose={() => setEditingContent(null)}
+                dashboardId={currentDashboard._id}
+                content={editingContent}
                 inline={true}
               />
             </motion.div>
@@ -239,6 +369,7 @@ export default function HomePage() {
                         <ContentCard
                           content={content}
                           dashboardId={currentDashboard._id}
+                          onEdit={handleEditContent}
                         />
                       </motion.div>
                     ))}
@@ -270,6 +401,7 @@ export default function HomePage() {
                         <ContentCard
                           content={content}
                           dashboardId={currentDashboard._id}
+                          onEdit={handleEditContent}
                         />
                       </motion.div>
                     ))}
@@ -285,8 +417,12 @@ export default function HomePage() {
       <AlertDialog
         open={showUnsavedWarning}
         onOpenChange={setShowUnsavedWarning}
-        title="Unsaved Note"
-        description="You have an unsaved note in progress. Are you sure you want to discard it and create a new one?"
+        title={editingContentRef.current ? "Unsaved Edits" : "Unsaved Note"}
+        description={
+          editingContentRef.current 
+            ? "You have unsaved edits in progress. Are you sure you want to discard them and create a new note?"
+            : "You have an unsaved note in progress. Are you sure you want to discard it and create a new one?"
+        }
         confirmText="Discard & Create New"
         cancelText="Keep Editing"
         onConfirm={handleConfirmNew}

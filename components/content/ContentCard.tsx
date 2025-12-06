@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Content } from '@/lib/utils/types';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { contentApi } from '@/lib/api/content';
@@ -13,16 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
-import { MoreVertical, Edit, Trash2, Pin, Link as LinkIcon, Share2, Clock, Globe, Lock, Eye, FileText, AlignLeft } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Heart, Archive, Link as LinkIcon, Share2, Clock, Globe, Lock, Eye, FileText, AlignLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { UpdateContentDialog } from './UpdateContentDialog';
 import { DeleteConfirmDialog } from '../shared/DeleteConfirmDialog';
 import { ShareContentDialog } from './ShareContentDialog';
+import { ContentPreviewModal } from './ContentPreviewModal';
 
 interface ContentCardProps {
   content: Content;
   dashboardId: string;
+  onEdit?: (content: Content) => void;
 }
 
 interface BlockBounds {
@@ -38,14 +39,32 @@ const DEFAULT_IMAGE_WIDTH = 100;
 const DEFAULT_IMAGE_HEIGHT = 100;
 const PREVIEW_PADDING = 16;
 
-export function ContentCard({ content, dashboardId }: ContentCardProps) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
+export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const updateContent = useDashboardStore((state) => state.updateContent);
   const removeContent = useDashboardStore((state) => state.removeContent);
+
+  // Handle Escape key to close preview
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isPreviewOpen) {
+        setIsPreviewOpen(false);
+      }
+    };
+    
+    if (isPreviewOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isPreviewOpen]);
+
+  const handleDoubleClick = () => {
+    setIsPreviewOpen(true);
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -63,12 +82,28 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
     }
   };
 
-  const handleTogglePin = async () => {
+  const handleToggleFavorite = async () => {
     try {
       const response = await contentApi.update(content._id, { isPinned: !content.isPinned, DashId: dashboardId });
       if (response.success && response.data) {
         updateContent(dashboardId, content._id, { isPinned: !content.isPinned });
-        toast.success(content.isPinned ? 'Unpinned' : 'Pinned', { description: `Note has been ${content.isPinned ? 'unpinned' : 'pinned'}.` });
+        toast.success(content.isPinned ? 'Removed from favorites' : 'Added to favorites', { 
+          description: `Note has been ${content.isPinned ? 'removed from' : 'added to'} favorites.` 
+        });
+      }
+    } catch (error: any) {
+      toast.error('Failed to update', { description: error.response?.data?.message || 'Something went wrong.' });
+    }
+  };
+
+  const handleToggleArchive = async () => {
+    try {
+      const response = await contentApi.update(content._id, { isArchived: !content.isArchived, DashId: dashboardId });
+      if (response.success && response.data) {
+        updateContent(dashboardId, content._id, { isArchived: !content.isArchived });
+        toast.success(content.isArchived ? 'Unarchived' : 'Archived', { 
+          description: `Note has been ${content.isArchived ? 'unarchived' : 'archived'}.` 
+        });
       }
     } catch (error: any) {
       toast.error('Failed to update', { description: error.response?.data?.message || 'Something went wrong.' });
@@ -129,12 +164,13 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
     const contentHeight = maxY - minY;
 
     // Preview container dimensions (accounting for padding)
-    const previewWidth = 400 - PREVIEW_PADDING * 2;
-    const previewHeight = 200 - PREVIEW_PADDING * 2;
+    const previewWidth = 500 - PREVIEW_PADDING * 2;
+    const previewHeight = 200 - PREVIEW_PADDING * 1;
 
-    // Calculate scale to fit content width exactly
+    // Calculate scale to fit content width exactly, but don't scale up (max 1.0)
     // User requirement: "take that total widht and decide the size of the blocks so that they can fit inside the fixed canvas preview width"
-    const scale = contentWidth > 0 ? previewWidth / contentWidth : 1;
+    // Also: "it should not increase the hiegt and widht of the block if the conent is lesss"
+    const scale = contentWidth > 0 ? Math.min(previewWidth / contentWidth, 1) : 1;
 
     // Calculate scaled dimensions
     const scaledWidth = contentWidth * scale;
@@ -185,11 +221,13 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
           <div className="relative w-full h-full">
             {transformedBlocks.map(({ block, left, top, width, height }, index) => {
               if (block.type === 'text') {
-                const fontSize = Math.max(7, Math.min(13, 11 * scale));
+                const baseFontSize = typeof block.fontSize === 'number' ? block.fontSize : parseFloat(block.fontSize as any) || 20;
+                const fontSize = Math.max(4, baseFontSize * scale);
+                const content = block.content?.trim() || '';
                 return (
                   <div
                     key={block._id || index}
-                    className="absolute bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-700/80 rounded-lg px-2.5 py-1.5 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+                    className="absolute   shadow-sm hover:shadow-md transition-shadow duration-300"
                     style={{
                       left: `${left}px`,
                       top: `${top}px`,
@@ -197,9 +235,10 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
                       height: `${height}px`,
                       fontSize: `${fontSize}px`,
                       lineHeight: '1.4',
+                      whiteSpace: 'pre-wrap', // #fix: Respect newlines
                     }}
                   >
-                    <div className="line-clamp-3 text-gray-700 dark:text-gray-300 font-medium opacity-90">{stripHtml(block.content || '')}</div>
+                    <div className="line-clamp-3 backdrop-blur-sm bg-white/80 dark:bg-gray-800/100 text-gray-700 dark:text-gray-300 font-medium rounded-sm p-1 border border-gray-200/30 dark:border-gray-700/30 opacity-90">{stripHtml(content)}</div>
                   </div>
                 );
               }
@@ -246,14 +285,20 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
 
   return (
     <>
-      <Card className="group h-full flex flex-col min-h-[450px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card))] hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl">
+      <Card 
+        className="group h-full flex flex-col min-h-[450px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card))] hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl cursor-pointer"
+        onDoubleClick={handleDoubleClick}
+      >
         {/* Header Section */}
         <div className="p-1 pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2">
                 {content.isPinned && (
-                  <Pin className="h-3.5 w-3.5 text-[hsl(var(--brand-primary))] fill-current shrink-0" />
+                  <Heart className="h-3.5 w-3.5 text-[hsl(var(--brand-primary))] fill-current shrink-0" />
+                )}
+                {content.isArchived && (
+                  <Archive className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 )}
                 <h3 className="text-lg font-bold text-[hsl(var(--foreground))] truncate tracking-tight group-hover:text-[hsl(var(--brand-primary))] transition-colors duration-300">
                   {content.title}
@@ -283,11 +328,16 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl border-[hsl(var(--border))] shadow-xl bg-[hsl(var(--popover))]/95 backdrop-blur-sm">
-                <DropdownMenuItem onClick={() => setIsEditOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+              <DropdownMenuItem onClick={() => onEdit?.(content)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
                   <Edit className="mr-2 h-3.5 w-3.5 opacity-70" />Edit Note
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleTogglePin} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                  <Pin className="mr-2 h-3.5 w-3.5 opacity-70" />{content.isPinned ? 'Unpin Note' : 'Pin Note'}
+                <DropdownMenuItem onClick={handleToggleFavorite} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                  <Heart className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isPinned ? 'fill-current text-[hsl(var(--brand-primary))]' : ''}`} />
+                  {content.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleToggleArchive} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                  <Archive className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isArchived ? 'text-amber-500' : ''}`} />
+                  {content.isArchived ? 'Unarchive' : 'Archive'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsShareOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
                   <Share2 className="mr-2 h-3.5 w-3.5 opacity-70" />Share
@@ -317,7 +367,7 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
         </div>
 
         {/* Footer Section */}
-        <div className="p-1 mt-auto space-y-4 bg-gradient-to-b from-transparent to-[hsl(var(--muted))]/10">
+        <div className="p-1 mt-2 space-y-4 bg-gradient-to-b from-transparent to-[hsl(var(--muted))]/10">
           {/* Tags */}
           {safeTags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -367,12 +417,6 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
         </div>
       </Card>
 
-      <UpdateContentDialog
-        content={{ ...content, tags: safeTags, links: content.links || [] }}
-        dashboardId={dashboardId}
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-      />
       <ShareContentDialog content={content} open={isShareOpen} onOpenChange={setIsShareOpen} />
       <DeleteConfirmDialog
         open={isDeleteOpen}
@@ -381,6 +425,11 @@ export function ContentCard({ content, dashboardId }: ContentCardProps) {
         isLoading={isDeleting}
         title="Delete Note"
         description={`Are you sure you want to delete "${content.title}"? This action cannot be undone.`}
+      />
+      <ContentPreviewModal 
+        content={content} 
+        isOpen={isPreviewOpen} 
+        onClose={() => setIsPreviewOpen(false)} 
       />
     </>
   );

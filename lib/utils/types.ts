@@ -4,6 +4,8 @@ export interface User {
   _id: string;
   name: string;
   email: string;
+  phone?: string;
+  reminderEmail?: string;
   avatar?: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +32,8 @@ export interface Block {
   isUploaded?: boolean;
   createdAt: string;
   updatedAt: string;
+  fontSize?: number;
+  autoWidth?: boolean;
 }
 
 export interface Content {
@@ -45,6 +49,10 @@ export interface Content {
   createdAt: string;
   updatedAt: string;
   description?: string;
+  reminderData?: {
+    reminderDate: string;
+    message?: string;
+  };
 }
 
 export interface Dashboard {
@@ -52,7 +60,7 @@ export interface Dashboard {
   name: string;
   description: string;
   user: string;
-  contents: Content[];
+  contents?: Content[]; // Optional since we're lazy loading
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +83,21 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: any;
+}
+
+export interface GetMeResponse {
+  user: User;
+  dashboards: Dashboard[]; // Dashboards without contents
+}
+
+export interface GetDashboardContentsResponse {
+  contents: Content[];
+}
+
+export interface GetUserSettingsResponse {
+  user: User;
+  archivedNotes: Content[];
+  favoriteNotes: Content[];
 }
 
 // Form Input Types

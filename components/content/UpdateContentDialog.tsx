@@ -8,7 +8,9 @@ import {
   Bell,
   X,
   Link2,
-  Trash2
+  Trash2,
+  Edit,
+  Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,6 +31,7 @@ interface ReminderData {
 interface ContentToEdit {
   _id: string;
   title: string;
+  description?: string;
   body: ApiBlock[];
   tags: Tag[];
   links: string[];
@@ -65,6 +68,7 @@ const toCanvasBlock = (block: ApiBlock): CanvasBlock => ({
   url: block.url,
   imageId: block.imageId,
   isUploaded: block.isUploaded,
+  fontSize:block.fontSize || 20,
 });
 
 const mapBodyToCanvas = (body: ApiBlock[] | undefined): CanvasBlock[] =>
@@ -75,7 +79,7 @@ export function UpdateContentDialog({
   onClose, 
   dashboardId,
   content,
-  inline = false 
+  inline = true 
 }: EditContentDialogProps) {
   const updateContentInStore = useDashboardStore((state) => state.updateContent);
   
@@ -84,8 +88,8 @@ export function UpdateContentDialog({
   const [newTagInput, setNewTagInput] = useState('');
   const [newLinkInput, setNewLinkInput] = useState('');
   
-  // State initialized from content prop
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<'Public' | 'Private'>('Private');
@@ -93,23 +97,50 @@ export function UpdateContentDialog({
   const [links, setLinks] = useState<string[]>([]);
   const [sampleTags, setSampleTags] = useState(DEFAULT_TAGS);
 
-  // Initialize state from content prop when dialog opens
+  const [originalValues, setOriginalValues] = useState<{
+    title: string;
+    description: string;
+    bodyJSON: string;
+    bodyBlocks: CanvasBlock[];
+    tags: string[];
+    visibility: 'Public' | 'Private';
+    reminderData?: ReminderData;
+    links: string[];
+  } | null>(null);
+
   useEffect(() => {
     if (isOpen && content) {
-      setTitle(content.title || '');
-      setCanvasBlocks(mapBodyToCanvas(content.body));
+      const initialTitle = content.title || '';
+      const initialDescription = content.description || '';
+      const initialBody = mapBodyToCanvas(content.body);
+      const initialTags = content.tags?.map(tag => tag.name) ?? [];
+      const initialVisibility = content.visibility || 'Private';
+      const initialReminderData = content.reminderData;
+      const initialLinks = content.links || [];
 
-      setSelectedTags(content.tags?.map(tag => tag.name) ?? []);
-
-      setVisibility(content.visibility || 'Private');
-      setReminderData(content.reminderData);
-      setLinks(content.links || []);
+      setTitle(initialTitle);
+      setDescription(initialDescription);
+      setCanvasBlocks(initialBody);
+      setSelectedTags(initialTags);
+      setVisibility(initialVisibility);
+      setReminderData(initialReminderData);
+      setLinks(initialLinks);
       
-      // Merge custom tags into sample tags
+      setOriginalValues({
+        title: initialTitle,
+        description: initialDescription,
+        bodyJSON: JSON.stringify(initialBody),
+        bodyBlocks: JSON.parse(JSON.stringify(initialBody)),
+        tags: [...initialTags],
+        visibility: initialVisibility,
+        reminderData: initialReminderData ? { ...initialReminderData } : undefined,
+        links: [...initialLinks],
+      });
+      
       const customTags = (content.tags || [])
         .map(tag => tag.name)
         .filter(tagName => !DEFAULT_TAGS.includes(tagName));
-      setSampleTags([...DEFAULT_TAGS, ...customTags]);
+      setSampleTags(Array.from(new Set([...DEFAULT_TAGS, ...customTags])));
     }
   }, [isOpen, content]);
 
@@ -186,63 +217,169 @@ export function UpdateContentDialog({
     setLinks(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Helper function to detect which blocks have changed
+  const getChangedBlocks = (currentBlocks: CanvasBlock[], originalBlocks: CanvasBlock[]): { added: CanvasBlock[], modified: CanvasBlock[], deleted: string[] } => {
+    const originalMap = new Map(originalBlocks.map(b => [b.blockId, b]));
+    const currentMap = new Map(currentBlocks.map(b => [b.blockId, b]));
+    
+    const added: CanvasBlock[] = [];
+    const modified: CanvasBlock[] = [];
+    const deleted: string[] = [];
+
+    // Check for added and modified blocks
+    for (const [blockId, currentBlock] of currentMap) {
+      if (!originalMap.has(blockId)) {
+        added.push(currentBlock);
+      } else {
+        const originalBlock = originalMap.get(blockId)!;
+        if (JSON.stringify(currentBlock) !== JSON.stringify(originalBlock)) {
+          modified.push(currentBlock);
+        }
+      }
+    }
+
+    // Check for deleted blocks
+    for (const blockId of originalMap.keys()) {
+      if (!currentMap.has(blockId)) {
+        deleted.push(blockId);
+      }
+    }
+
+    return { added, modified, deleted };
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error('Please enter a title');
       return;
     }
 
+    if (!originalValues) {
+      toast.error('Original values not loaded');
+      return;
+    }
+
+    const titleChanged = title.trim() !== originalValues.title;
+    const descriptionChanged = description.trim() !== originalValues.description;
+    const changedBlocksInfo = getChangedBlocks(canvasBlocks, originalValues.bodyBlocks);
+    const bodyChanged = changedBlocksInfo.added.length > 0 || changedBlocksInfo.modified.length > 0 || changedBlocksInfo.deleted.length > 0;
+    const tagsChanged = JSON.stringify([...selectedTags].sort()) !== JSON.stringify([...originalValues.tags].sort());
+    const visibilityChanged = visibility !== originalValues.visibility;
+    const linksChanged = JSON.stringify([...links].sort()) !== JSON.stringify([...originalValues.links].sort());
+    const reminderChanged = JSON.stringify(reminderData) !== JSON.stringify(originalValues.reminderData);
+
+    const hasAnyChanges = titleChanged || descriptionChanged || bodyChanged || tagsChanged || visibilityChanged || linksChanged || reminderChanged;
+
+    if (!hasAnyChanges) {
+      toast.info('No changes detected');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const formData = new FormData();
-      const blocksToSave = [...canvasBlocks];
-      const imageBlockIds: string[] = [];
-      
-      for (let i = blocksToSave.length - 1; i >= 0; i--) {
-        const block = blocksToSave[i];
-
-        if (block.type === 'image' && !block.isUploaded && block.imageId) {
-          const blob = await imageStorage.getImage(block.imageId);
-
-          if (blob) {
-            const file = new File([blob], `image.png`, { type: blob.type });
-            formData.append(`image_${block.blockId}`, file);
-            imageBlockIds.push(block.blockId);
-
-            blocksToSave[i] = {
-              ...block,
-              url: `PENDING_UPLOAD`,
-            };
-          }
-        } else if (block.type === 'text' && block.content === '') {
-          blocksToSave.splice(i, 1); 
-        }
-      }
-      
-      formData.append('imageBlockIds', JSON.stringify(imageBlockIds));
-      formData.append('title', title.trim());
-      formData.append('body', JSON.stringify(blocksToSave));
-      formData.append('tags', JSON.stringify(selectedTags));
-      formData.append('visibility', visibility);
-      formData.append('links', JSON.stringify(links));
       formData.append('DashId', dashboardId);
-      
-      if (reminderData) {
-        formData.append('reminderData', JSON.stringify(reminderData));
+
+      if (titleChanged) {
+        formData.append('title', title.trim());
       }
 
-      const response = await axiosInstance.put(
+      if (descriptionChanged) {
+        formData.append('description', description.trim());
+      }
+
+      if (tagsChanged) {
+        formData.append('tags', JSON.stringify(selectedTags));
+      }
+
+      if (visibilityChanged) {
+        formData.append('visibility', visibility);
+      }
+
+      if (linksChanged) {
+        formData.append('links', JSON.stringify(links));
+      }
+
+      if (reminderChanged) {
+        formData.append('reminderData', JSON.stringify(reminderData || null));
+      }
+
+      if (bodyChanged) {
+        // 1. Prepare Upsert Blocks (Added + Modified)
+        const upsertBlocks = [...changedBlocksInfo.added, ...changedBlocksInfo.modified].filter(
+          block => !(block.type === 'text' && (!block.content || block.content.trim() === ''))
+        );
+
+        console.log('📤 upsertBlocks:', upsertBlocks);
+        
+        // 2. Prepare Final Block Order (All current block IDs)
+        const finalBlockOrder = canvasBlocks.map(b => b.blockId);
+
+        const imageBlockIds: string[] = [];
+        
+        // Process images for blocks that need uploading
+        for (let i = upsertBlocks.length - 1; i >= 0; i--) {
+          const block = upsertBlocks[i];
+
+          if (block.type === 'image' && !block.isUploaded && block.imageId) {
+            const blob = await imageStorage.getImage(block.imageId);
+
+            if (blob) {
+              const file = new File([blob], `image_${block.blockId}.png`, { type: blob.type });
+              formData.append(`image_${block.blockId}`, file);
+              imageBlockIds.push(block.blockId);
+
+              upsertBlocks[i] = {
+                ...block,
+                url: 'PENDING_UPLOAD',
+              };
+            }
+          }
+        }
+        
+        if (imageBlockIds.length > 0) {
+          formData.append('imageBlockIds', JSON.stringify(imageBlockIds));
+        }
+        
+        // Send optimized block data
+        formData.append('upsertBlocks', JSON.stringify(upsertBlocks));
+        formData.append('finalBlockOrder', JSON.stringify(finalBlockOrder));
+      }
+
+      console.log('📤 UPDATE REQUEST PAYLOAD:');
+      console.log('─────────────────────────────────');
+      console.log('Changes Detected:', {
+        titleChanged,
+        descriptionChanged,
+        bodyChanged,
+        tagsChanged,
+        visibilityChanged,
+        linksChanged,
+        reminderChanged
+      });
+      if (bodyChanged) {
+        console.log('Block Optimization:', {
+          upsertCount: changedBlocksInfo.added.length + changedBlocksInfo.modified.length,
+          totalBlocksInOrder: canvasBlocks.length
+        });
+
+      }
+      
+      const response = await axiosInstance.patch(
         `/api/update-content/${content._id}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
+      console.log('📤 UPDATE RESPONSE:', response.data);
 
       if (response.data?.success && response.data?.data) {
         updateContentInStore(dashboardId, content._id, response.data.data);
+        toast.success('Note updated successfully!');
+        handleClose();
+      } else {
+        throw new Error('Invalid response from server');
       }
       
-      toast.success('Note updated successfully!');
-      handleClose();
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
         ? error.response?.data?.message ?? error.message
@@ -262,6 +399,7 @@ export function UpdateContentDialog({
     });
     
     setTitle('');
+    setDescription('');
     setCanvasBlocks([]);
     setSelectedTags([]);
     setVisibility('Private');
@@ -270,6 +408,7 @@ export function UpdateContentDialog({
     setNewTagInput('');
     setNewLinkInput('');
     setSampleTags(DEFAULT_TAGS);
+    setOriginalValues(null);
     onClose();
   };
 
@@ -285,7 +424,7 @@ export function UpdateContentDialog({
   if (!isOpen && !inline) return null;
 
   const containerClass = inline
-    ? 'w-full max-w-7xl mx-auto bg-[hsl(var(--card))] rounded-2xl shadow-lg border border-[hsl(var(--border))] flex flex-col'
+    ? 'w-full max-w-7xl mx-auto bg-[hsl(var(--card))] rounded-2xl shadow-lg border-2 border-[hsl(var(--brand-primary))]/30 flex flex-col'
     : 'fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none';
     
   const innerClass = inline
@@ -306,18 +445,27 @@ export function UpdateContentDialog({
           className={innerClass} 
           onClick={inline ? undefined : (e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className={inline 
-            ? 'p-5 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] flex items-center justify-between' 
+            ? 'p-5 border-b border-[hsl(var(--border))] bg-gradient-to-r from-[hsl(var(--brand-primary))]/5 to-transparent flex items-center justify-between' 
             : 'flex items-center justify-between p-5 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]'
           }>
-            <div>
-              <h2 className="text-2xl font-semibold text-[hsl(var(--foreground))]">
-                Update Note
-              </h2>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
-                Edit your note details
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[hsl(var(--brand-primary))]/10 flex items-center justify-center">
+                <Pencil className="w-5 h-5 text-[hsl(var(--brand-primary))]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-[hsl(var(--foreground))]">
+                    Edit Note
+                  </h2>
+                  <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] border border-[hsl(var(--brand-primary))]/30">
+                    Editing
+                  </span>
+                </div>
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
+                  Make changes to your note
+                </p>
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
@@ -345,7 +493,7 @@ export function UpdateContentDialog({
                 onClick={handleSubmit} 
                 isLoading={isLoading} 
                 disabled={!title.trim()}
-                className="bg-brand-primary hover:bg-brand-primary/90 text-white shadow-lg h-9"
+                className="bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90 text-white shadow-lg h-9"
                 size="sm"
               >
                 Save Changes
@@ -353,10 +501,8 @@ export function UpdateContentDialog({
             </div>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-5 pt-4 space-y-6">
             <div className="flex flex-col gap-2">
-              {/* Title & Links Row */}
               <div className='flex w-full gap-4'>
                 <div className="w-[70%] pr-10">
                   <input
@@ -365,6 +511,14 @@ export function UpdateContentDialog({
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     className="w-full text-[40px] pb-4 font-semibold bg-transparent text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Add a brief description..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="w-full text-sm pb-4 bg-transparent text-[hsl(var(--muted-foreground))] placeholder:text-[hsl(var(--muted-foreground))/60] focus:outline-none focus:text-[hsl(var(--foreground))]"
                   />
                 </div>
                 
@@ -398,7 +552,6 @@ export function UpdateContentDialog({
                 </div>
               </div>
 
-              {/* Tags Section */}
               <div className="flex flex-col gap-3">
                 <label className="text-[15px] font-semibold tracking-wide text-[hsl(var(--muted-foreground))]">
                   Tags
@@ -423,7 +576,6 @@ export function UpdateContentDialog({
                     </div>
                   </div>
                   
-                  {/* Action Buttons */}
                   <div className="w-[30%] flex items-end gap-2">
                     <button
                       type="button"
@@ -460,7 +612,6 @@ export function UpdateContentDialog({
                   </div>
                 </div>
 
-                {/* Custom Tag Input */}
                 <div className="flex gap-2 items-end mt-2">
                   <input
                     type="text"
@@ -481,7 +632,6 @@ export function UpdateContentDialog({
                 </div>
               </div>
               
-              {/* Links Input */}
               <div className="flex gap-3 items-center w-full">
                 <div className="w-full">
                   <div className="flex gap-2 items-center">
@@ -506,7 +656,6 @@ export function UpdateContentDialog({
               </div>
             </div>
 
-            {/* Canvas */}
             <div 
               className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl overflow-hidden transition-colors"
               style={inline 
