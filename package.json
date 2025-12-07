@@ -9,8 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@blocknote/core": "^0.44.0",
+    "@blocknote/mantine": "^0.44.0",
+    "@blocknote/react": "^0.44.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@hookform/resolvers": "^5.2.2",
+    "@mantine/core": "^8.3.9",
+    "@mantine/hooks": "^8.3.9",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -59,6 +64,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
+    "baseline-browser-mapping": "^2.9.4",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.1",
     "tailwindcss": "^4.1.17",

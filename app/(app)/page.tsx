@@ -19,6 +19,7 @@ import { UserSettings } from '@/components/settings/UserSettings';
 import { ExcalidrawDashboard } from '@/components/drawing/ExcalidrawDashboard';
 import { TodoView } from '@/components/todo/TodoView';
 import { ExpenseView } from '@/components/expenses/ExpenseView';
+import { DocsView } from '@/components/docs/DocsView';
 import { useViewStore } from '@/lib/store/viewStore';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
@@ -174,6 +175,11 @@ export default function HomePage() {
     return <ExpenseView />;
   }
 
+  // Render Docs View
+  if (currentView === 'docs') {
+    return <DocsView />;
+  }
+
   // All Dashboards View
   if (!currentDashboard) {
     return (
@@ -270,9 +276,18 @@ export default function HomePage() {
     );
   }
 
+  const archivedCount = contents.filter(c => c.isArchived).length;
+
   return (
     <div className="p-4 lg:p-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
+        {archivedCount > 0 && (
+          <div className="flex justify-end mb-2">
+            <span className="text-sm text-[hsl(var(--muted-foreground))]">
+              Archived: {archivedCount}
+            </span>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {showInlineCreate ? (
             // Create Note Form (animated)

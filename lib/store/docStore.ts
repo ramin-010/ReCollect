@@ -1,0 +1,53 @@
+// lib/store/docStore.ts
+import { create } from 'zustand';
+
+export interface Doc {
+  _id: string;
+  title: string;
+  content: string;
+  emoji: string;
+  isPinned: boolean;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DocState {
+  docs: Doc[];
+  currentDoc: Doc | null;
+  isLoading: boolean;
+  setDocs: (docs: Doc[]) => void;
+  addDoc: (doc: Doc) => void;
+  updateDoc: (id: string, updates: Partial<Doc>) => void;
+  removeDoc: (id: string) => void;
+  setCurrentDoc: (doc: Doc | null) => void;
+  setLoading: (loading: boolean) => void;
+}
+
+export const useDocStore = create<DocState>((set) => ({
+  docs: [],
+  currentDoc: null,
+  isLoading: false,
+  
+  setDocs: (docs) => set({ docs }),
+  
+  addDoc: (doc) => set((state) => ({ 
+    docs: [doc, ...state.docs] 
+  })),
+  
+  updateDoc: (id, updates) => set((state) => ({
+    docs: state.docs.map((d) => d._id === id ? { ...d, ...updates } : d),
+    currentDoc: state.currentDoc?._id === id 
+      ? { ...state.currentDoc, ...updates } 
+      : state.currentDoc
+  })),
+  
+  removeDoc: (id) => set((state) => ({
+    docs: state.docs.filter((d) => d._id !== id),
+    currentDoc: state.currentDoc?._id === id ? null : state.currentDoc
+  })),
+  
+  setCurrentDoc: (doc) => set({ currentDoc: doc }),
+  
+  setLoading: (isLoading) => set({ isLoading }),
+}));

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui-base/Button';
 import { Card } from '@/components/ui-base/Card';
@@ -8,11 +8,11 @@ import {
   Plus,
   CheckSquare,
   Calendar,
-  Clock,
   MoreVertical,
   Edit,
   Trash2,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -23,44 +23,49 @@ import {
 import { TodoDialog } from './TodoDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import axiosInstance from '@/lib/utils/axios';
 
 interface Todo {
-  id: string;
+  _id: string;
   text: string;
   isCompleted: boolean;
   createdAt: string;
   reminderDate?: string;
 }
 
-// Dummy initial data
-const INITIAL_TODOS: Todo[] = [
-  {
-    id: '1',
-    text: 'Review project proposal',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-    reminderDate: new Date(Date.now() + 3600000).toISOString() // Due in 1 hour
-  },
-  {
-    id: '2',
-    text: 'Update documentation',
-    isCompleted: true,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: '3',
-    text: 'Team meeting preparation',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-    reminderDate: new Date(Date.now() + 86400000 * 2).toISOString() // Due in 2 days
-  }
-];
+interface ApiTodo {
+  _id: string;
+  text: string;
+  isCompleted: boolean;
+  createdAt: string;
+  reminderDate?: string;
+}
 
 export function TodoView() {
-  const [todos, setTodos] = useState<Todo[]>(INITIAL_TODOS);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | undefined>(undefined);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Fetch todos from API
+  const fetchTodos = useCallback(async () => {
+    try {
+      const response = await axiosInstance.get('/api/todos');
+      if (response.data.success) {
+        setTodos(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch todos:', error);
+      toast.error('Failed to load tasks');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
 
   // Update current time every minute to refresh due status
   useEffect(() => {
@@ -71,34 +76,78 @@ export function TodoView() {
   }, []);
 
   const handleSaveTodo = async (data: { text: string; reminderDate?: string }) => {
-    if (editingTodo) {
-      setTodos(prev => prev.map(t => 
-        t.id === editingTodo.id 
-          ? { ...t, text: data.text, reminderDate: data.reminderDate }
-          : t
-      ));
-    } else {
-      const newTodo: Todo = {
-        id: Math.random().toString(36).substr(2, 9),
-        text: data.text,
-        isCompleted: false,
-        createdAt: new Date().toISOString(),
-        reminderDate: data.reminderDate
-      };
-      setTodos(prev => [newTodo, ...prev]);
+    try {
+      if (editingTodo) {
+        // Update existing todo
+        const response = await axiosInstance.patch(`/api/todos/${editingTodo._id}`, {
+          text: data.text,
+          reminderDate: data.reminderDate || null
+        });
+        
+        if (response.data.success) {
+          setTodos(prev => prev.map(t => 
+            t._id === editingTodo._id ? response.data.data : t
+          ));
+          toast.success('Task updated');
+        }
+      } else {
+        // Create new todo
+        const response = await axiosInstance.post('/api/todos', {
+          text: data.text,
+          reminderDate: data.reminderDate
+        });
+        
+        if (response.data.success) {
+          setTodos(prev => [response.data.data, ...prev]);
+          toast.success('Task created');
+        }
+      }
+      setEditingTodo(undefined);
+    } catch (error: any) {
+      console.error('Failed to save todo:', error);
+      toast.error(error.response?.data?.message || 'Failed to save task');
+      throw error; // Re-throw so dialog knows it failed
     }
-    setEditingTodo(undefined);
   };
 
-  const handleDeleteTodo = (id: string) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
-    toast.success('Todo deleted');
+  const handleDeleteTodo = async (id: string) => {
+    try {
+      const response = await axiosInstance.delete(`/api/todos/${id}`);
+      
+      if (response.data.success) {
+        setTodos(prev => prev.filter(t => t._id !== id));
+        toast.success('Task deleted');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete todo:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete task');
+    }
   };
 
-  const toggleComplete = (id: string) => {
+  const toggleComplete = async (id: string, currentStatus: boolean) => {
+    // Optimistic update
     setTodos(prev => prev.map(t => 
-      t.id === id ? { ...t, isCompleted: !t.isCompleted } : t
+      t._id === id ? { ...t, isCompleted: !currentStatus } : t
     ));
+
+    try {
+      const response = await axiosInstance.patch(`/api/todos/${id}`, {
+        isCompleted: !currentStatus
+      });
+      
+      if (!response.data.success) {
+        // Revert on failure
+        setTodos(prev => prev.map(t => 
+          t._id === id ? { ...t, isCompleted: currentStatus } : t
+        ));
+      }
+    } catch (error) {
+      // Revert on error
+      setTodos(prev => prev.map(t => 
+        t._id === id ? { ...t, isCompleted: currentStatus } : t
+      ));
+      toast.error('Failed to update task');
+    }
   };
 
   const openEditDialog = (todo: Todo) => {
@@ -130,6 +179,24 @@ export function TodoView() {
       isOverdue
     };
   };
+
+  // Map for TodoDialog compatibility (uses 'id' instead of '_id')
+  const editingTodoForDialog = editingTodo ? {
+    id: editingTodo._id,
+    text: editingTodo.text,
+    reminderDate: editingTodo.reminderDate
+  } : undefined;
+
+  if (isLoading) {
+    return (
+      <div className="p-4 lg:p-14 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <p className="text-[hsl(var(--muted-foreground))]">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-14 min-h-screen">
@@ -187,8 +254,8 @@ export function TodoView() {
                 
                 return (
                   <motion.div
-                    key={todo.id}
-                    layoutId={todo.id}
+                    key={todo._id}
+                    layoutId={todo._id}
                     initial={{ opacity: 0, y: 20, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
@@ -204,7 +271,7 @@ export function TodoView() {
                     <div className="flex items-start gap-4">
                       {/* Checkbox */}
                       <button
-                        onClick={() => toggleComplete(todo.id)}
+                        onClick={() => toggleComplete(todo._id, todo.isCompleted)}
                         className={cn(
                           "mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors",
                           todo.isCompleted 
@@ -262,7 +329,7 @@ export function TodoView() {
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             destructive 
-                            onClick={() => handleDeleteTodo(todo.id)}
+                            onClick={() => handleDeleteTodo(todo._id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
@@ -281,7 +348,7 @@ export function TodoView() {
       <TodoDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        existingTodo={editingTodo}
+        existingTodo={editingTodoForDialog}
         onSave={handleSaveTodo}
       />
     </div>

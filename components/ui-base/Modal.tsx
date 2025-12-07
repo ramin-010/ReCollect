@@ -79,7 +79,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div 
         ref={modalRef}
         className={cn(
-          "relative w-full bg-[hsl(var(--card))] rounded-2xl shadow-2xl",
+          "relative w-full bg-[hsl(var(--card))] rounded-xl shadow-2xl overflow-hidden",
           "animate-in zoom-in-90 duration-200",
           "max-h-[90vh] flex flex-col",
           sizes[size],

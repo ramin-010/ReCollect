@@ -2,7 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Calendar, IndianRupee, FileText, Wallet, Pencil } from 'lucide-react';
+import { 
+  X, Check, Calendar, IndianRupee, FileText, Wallet,
+  Car, ShoppingBag, Zap, ShoppingCart, Dumbbell, Pill, 
+  Cookie, Package, MoreHorizontal
+} from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -19,16 +23,16 @@ interface AddTransactionDialogProps {
   }) => void;
 }
 
-const CATEGORIES = [
-  { id: 'food', label: 'Food', icon: '🍔' },
-  { id: 'transport', label: 'Transport', icon: '🚗' },
-  { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { id: 'entertainment', label: 'Fun', icon: '🎬' },
-  { id: 'bills', label: 'Bills', icon: '💡' },
-  { id: 'health', label: 'Health', icon: '💪' },
-  { id: 'travel', label: 'Travel', icon: '✈️' },
-  { id: 'education', label: 'Study', icon: '📚' },
-  { id: 'other', label: 'Other', icon: '✏️', isCustom: true },
+const DEFAULT_CATEGORIES = [
+  { id: 'transport', label: 'Transport', Icon: Car, color: '#3b82f6' },
+  { id: 'grocery', label: 'Grocery', Icon: ShoppingCart, color: '#22c55e' },
+  { id: 'bills', label: 'Bills', Icon: Zap, color: '#eab308' },
+  { id: 'shopping', label: 'Shopping', Icon: ShoppingBag, color: '#ec4899' },
+  { id: 'gym_health', label: 'Gym/Health', Icon: Dumbbell, color: '#10b981' },
+  { id: 'medicine', label: 'Medicine', Icon: Pill, color: '#ef4444' },
+  { id: 'treats', label: 'Treats', Icon: Cookie, color: '#f97316' },
+  { id: 'miscellaneous', label: 'Miscellaneous', Icon: Package, color: '#64748b' },
+  { id: 'other', label: 'Other', Icon: MoreHorizontal, color: '#8b5cf6', isCustom: true },
 ];
 
 export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
@@ -38,65 +42,60 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
 }) => {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [customCategory, setCustomCategory] = useState('Others');
-  const [isEditingCustom, setIsEditingCustom] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const customInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus custom input when editing
   useEffect(() => {
-    if (isEditingCustom && customInputRef.current) {
+    if (category === 'other' && customInputRef.current) {
       customInputRef.current.focus();
     }
-  }, [isEditingCustom]);
+  }, [category]);
 
-  // Reset when dialog closes
   useEffect(() => {
     if (!isOpen) {
       setAmount('');
       setCategory('');
-      setCustomCategory('Others');
-      setIsEditingCustom(false);
+      setCustomCategory('');
       setNote('');
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
-  const handleCategoryClick = (catId: string, isCustom?: boolean) => {
-    setCategory(catId);
-    if (isCustom) {
-      setIsEditingCustom(true);
-    } else {
-      setIsEditingCustom(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !category) {
       toast.error('Please fill in amount and category');
       return;
     }
 
-    // Use custom category name if "other" is selected and custom name is provided
+    if (category === 'other' && !customCategory.trim()) {
+      toast.error('Please enter a custom category name');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     const finalCategory = category === 'other' && customCategory.trim() 
-      ? customCategory.trim() 
+      ? customCategory.trim().toLowerCase()
       : category;
 
-    onSave({
-      amount: parseFloat(amount),
-      type: 'expense',
-      category: finalCategory,
-      date: new Date(date),
-      note,
-    });
-    
-    setAmount('');
-    setCategory('');
-    setCustomCategory('');
-    setIsEditingCustom(false);
-    setNote('');
-    onClose();
+    try {
+      await onSave({
+        amount: parseFloat(amount),
+        type: 'expense',
+        category: finalCategory,
+        date: new Date(date),
+        note,
+      });
+      onClose();
+    } catch (error) {
+      // Error handled in parent
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -124,7 +123,7 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-violet-500/10 text-violet-500">
+                  <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500">
                     <Wallet className="w-4 h-4" />
                   </div>
                   Add Expense
@@ -137,12 +136,13 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
                 </button>
               </div>
 
-              {/* Body - Two Column Layout */}
+              {/* Body - Horizontal Two Column Layout */}
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
                   {/* Left Column - Amount, Date, Note */}
                   <div className="space-y-4">
-                    {/* Amount Input */}
+                    {/* Amount */}
                     <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))] flex items-center gap-2">
                         <IndianRupee className="w-3 h-3" />
@@ -151,11 +151,11 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[hsl(var(--muted-foreground))]">₹</span>
                         <input
-                          type="text"
+                          type="number"
                           value={amount}
                           onChange={(e) => setAmount(e.target.value)}
                           placeholder="0"
-                          className="w-full text-2xl font-bold py-3 pl-10 pr-4 bg-[hsl(var(--muted))] border-transparent focus:border-violet-500 focus:bg-[hsl(var(--background))] rounded-xl transition-all outline-none border"
+                          className="w-full text-2xl font-bold py-3 pl-10 pr-4 bg-[hsl(var(--muted))] border border-transparent focus:border-violet-500 focus:bg-[hsl(var(--background))] rounded-xl transition-all outline-none"
                           autoFocus
                         />
                       </div>
@@ -193,6 +193,32 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
                         </div>
                       </div>
                     </div>
+
+                    {/* Custom Category Input */}
+                    <AnimatePresence>
+                      {category === 'other' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-violet-400">
+                              Custom Category
+                            </label>
+                            <input
+                              ref={customInputRef}
+                              type="text"
+                              value={customCategory}
+                              onChange={(e) => setCustomCategory(e.target.value)}
+                              placeholder="e.g. Subscriptions, Rent..."
+                              className="w-full px-4 py-2.5 rounded-lg bg-[hsl(var(--muted))] border border-violet-500/30 text-sm font-medium outline-none focus:border-violet-500 transition-colors placeholder:text-[hsl(var(--muted-foreground))]"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Right Column - Categories */}
@@ -201,41 +227,33 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
                       Category
                     </label>
                     <div className="grid grid-cols-3 gap-2">
-                      {CATEGORIES.map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => handleCategoryClick(cat.id, cat.isCustom)}
-                          className={cn(
-                            "px-2 py-2.5 rounded-lg border text-sm font-medium transition-all flex flex-col items-center justify-center gap-1 relative",
-                            category === cat.id
-                              ? "bg-violet-500/10 border-violet-500 text-white"
-                              : "bg-[hsl(var(--muted))] border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-violet-500/50 hover:bg-[hsl(var(--muted))]"
-                          )}
-                        >
-                          <span className="text-lg">{cat.icon}</span>
-                          {/* Show editable input for "Other" when selected */}
-                          {cat.isCustom && category === 'other' && isEditingCustom ? (
-                            <input
-                              ref={customInputRef}
-                              type="text"
-                              value={customCategory}
-                              onChange={(e) => setCustomCategory(e.target.value)}
-                              placeholder="Type name..."
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full text-[11px] text-center bg-transparent border-none outline-none font-medium placeholder:text-violet-400/60 text-white"
-                            />
-                          ) : (
-                            <span className="text-[11px] text-white">
-                              {cat.isCustom && customCategory ? customCategory : cat.label}
-                            </span>
-                          )}
-                          {/* Edit indicator for Other */}
-                          {cat.isCustom && category === 'other' && (
-                            <Pencil className="w-2.5 h-2.5 absolute top-1 right-1 text-violet-400" />
-                          )}
-                        </button>
-                      ))}
+                      {DEFAULT_CATEGORIES.map((cat) => {
+                        const IconComponent = cat.Icon;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setCategory(cat.id)}
+                            className={cn(
+                              "px-2 py-3 rounded-lg border text-sm font-medium transition-all flex flex-col items-center justify-center gap-1.5",
+                              category === cat.id
+                                ? "bg-violet-500/10 border-violet-500"
+                                : "bg-[hsl(var(--muted))] border-[hsl(var(--border))] hover:border-violet-500/50"
+                            )}
+                          >
+                            <div 
+                              className="w-8 h-8 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: `${cat.color}15` }}
+                            >
+                              <IconComponent 
+                                className="w-4 h-4" 
+                                style={{ color: cat.color }}
+                              />
+                            </div>
+                            <span className="text-[11px] text-[hsl(var(--foreground))]">{cat.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -247,16 +265,18 @@ export const AddTransactionDialog: React.FC<AddTransactionDialogProps> = ({
                   variant="ghost" 
                   onClick={onClose} 
                   className="hover:bg-[hsl(var(--muted))]"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="primary"
                   onClick={handleSubmit}
-                  rightIcon={<Check className="w-4 h-4" />}
+                  rightIcon={isSubmitting ? undefined : <Check className="w-4 h-4" />}
                   className="bg-violet-600 hover:bg-violet-700 text-white min-w-[120px]"
+                  disabled={isSubmitting || !amount || !category}
                 >
-                  Add Expense
+                  {isSubmitting ? 'Adding...' : 'Add Expense'}
                 </Button>
               </div>
             </motion.div>

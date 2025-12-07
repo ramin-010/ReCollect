@@ -34,6 +34,7 @@ import {
   Share2,
   CheckSquare,
   Wallet,
+  FileText,
 } from 'lucide-react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
@@ -189,6 +190,10 @@ export function Sidebar() {
                   setCurrentView('expenses');
                   setIsMobileOpen(false);
                 }}
+                onDocsClick={() => {
+                  setCurrentView('docs');
+                  setIsMobileOpen(false);
+                }}
                 onNewDashboardClick={() => setIsCreateOpen(true)}
                 onSettingsClick={() => setCurrentView('settings')}
                 onLogout={handleLogout}
@@ -231,6 +236,9 @@ export function Sidebar() {
           onExpensesClick={() => {
              setCurrentDashboard(null);
              setCurrentView('expenses')}}
+          onDocsClick={() => {
+             setCurrentDashboard(null);
+             setCurrentView('docs')}}
           onNewDashboardClick={() => setIsCreateOpen(true)}
           onSettingsClick={() => setCurrentView('settings')}
           onLogout={handleLogout}
@@ -289,13 +297,14 @@ interface SidebarContentProps {
   user: any;
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
-  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses';
+  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
   onDashboardClick: (dashboard: Dashboard) => void;
   onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
   onAllDashboardsClick: () => void;
   onDrawingBoardClick: () => void;
   onTodoClick: () => void;
   onExpensesClick: () => void;
+  onDocsClick: () => void;
   onNewDashboardClick: () => void;
   onSettingsClick: () => void;
   onLogout: () => void;
@@ -318,6 +327,7 @@ function SidebarContent({
   onDrawingBoardClick,
   onTodoClick,
   onExpensesClick,
+  onDocsClick,
   onNewDashboardClick,
   onSettingsClick,
   onLogout,
@@ -334,7 +344,13 @@ function SidebarContent({
             onClick={onSettingsClick}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-semibold shrink-0">
-              {getInitials(user?.name)}
+              {user.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user.name} 
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : getInitials(user?.name)}
             </div>
             {user && (
               <div className="flex-1 text-left min-w-0">
@@ -359,9 +375,8 @@ function SidebarContent({
       {/* Navigation */}
       <div className="flex-1 px-2 py-4 overflow-y-auto">
         <nav className="space-y-1">
-          {/* All Dashboards */}
+          {/* PRIMARY: All Dashboards - Always at top */}
           <motion.div className="relative">
-            {/* Active Indicator Background */}
             {currentView === 'dashboard' && !currentDashboard && (
               <motion.div
                 layoutId="viewActiveIndicator"
@@ -377,97 +392,83 @@ function SidebarContent({
               )}
               onClick={onAllDashboardsClick}
               whileTap={{ scale: 0.98 }}
-              leftIcon={<Home className="h-4 w-4" />}
+              leftIcon={<Home className="h-5 w-5" />}
             >
-              {!isCollapsed && <span className="text-[15px] tracking-wide text-white">All Dashboards</span>}
+              {!isCollapsed && <span className="text-[15px] font-medium tracking-wide text-white">All Dashboards</span>}
             </MotionButton>
           </motion.div>
 
-          {/* Drawing Board */}
-          <motion.div className="relative">
-            {/* Active Indicator Background */}
-            {currentView === 'drawing' && (
-              <motion.div
-                layoutId="viewActiveIndicator"
-                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
+          {/* WORKSPACE: Features */}
+          <div className="space-y-1 pt-1">
+            {/* Docs */}
             <MotionButton
-              variant={currentView === 'drawing' ? "secondary" : "ghost"}
+              variant={currentView === 'docs' ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start  hover:bg-purple-50 dark:hover:bg-blue-950/30 transition-all duration-200",
-                currentView === 'drawing' && "border-l-4 border-blue-600 pl-2 bg-black/1"
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'docs' && "bg-amber-500/15 border-l-4 border-amber-500 pl-2"
               )}
-              onClick={onDrawingBoardClick}
+              onClick={onDocsClick}
               whileTap={{ scale: 0.98 }}
-              leftIcon={<PenTool className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+              leftIcon={<FileText className="h-4 w-4 text-amber-500" />}
             >
-              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">Drawing Board</span>}
+              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Docs</span>}
             </MotionButton>
-          </motion.div>
 
-
-
-          {/* Todo List */}
-          <motion.div className="relative">
-            {/* Active Indicator Background */}
-            {currentView === 'todo' && (
-              <motion.div
-                layoutId="viewActiveIndicator"
-                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
+            {/* To-Do List */}
             <MotionButton
               variant={currentView === 'todo' ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all duration-200",
-                currentView === 'todo' && "border-l-4 border-emerald-600 pl-2 bg-black/1"
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'todo' && "bg-emerald-500/15 border-l-4 border-emerald-500 pl-2"
               )}
               onClick={onTodoClick}
               whileTap={{ scale: 0.98 }}
-              leftIcon={<CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+              leftIcon={<CheckSquare className="h-4 w-4 text-emerald-500" />}
             >
-              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">To-Do List</span>}
-            </MotionButton> 
-          </motion.div>
+              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">To-Do List</span>}
+            </MotionButton>
 
-          {/* Expenses */}
-          <motion.div className="relative">
-            {/* Active Indicator Background */}
-            {currentView === 'expenses' && (
-              <motion.div
-                layoutId="viewActiveIndicator"
-                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
+            {/* Drawing Board */}
+            <MotionButton
+              variant={currentView === 'drawing' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'drawing' && "bg-blue-500/15 border-l-4 border-blue-500 pl-2"
+              )}
+              onClick={onDrawingBoardClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<PenTool className="h-4 w-4 text-blue-500" />}
+            >
+              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Whiteboard</span>}
+            </MotionButton>
+
+            {/* Expenses */}
             <MotionButton
               variant={currentView === 'expenses' ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-all duration-200",
-                currentView === 'expenses' && "border-l-4 border-violet-600 pl-2 bg-black/1"
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'expenses' && "bg-violet-500/15 border-l-4 border-violet-500 pl-2"
               )}
               onClick={onExpensesClick}
               whileTap={{ scale: 0.98 }}
-              leftIcon={<Wallet className="h-4 w-4 text-violet-600 dark:text-violet-400" />}
+              leftIcon={<Wallet className="h-4 w-4 text-violet-500" />}
             >
-              {!isCollapsed && <span className="text-[15px] tracking-wide text-white/60">Expenses</span>}
+              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Expenses</span>}
             </MotionButton>
-          </motion.div>
+          </div>
 
-          {/* Dashboards Section */}
+          {/* YOUR DASHBOARDS: List - can scroll */}
           {!isCollapsed && (
-            <div className="pt-4 pb-2">
-              <p className="px-3 text-xs font-semibold text-white uppercase tracking-wider">
-                Dashboards
+            <div className="pt-4 pb-2 border-t border-[hsl(var(--divider))]">
+              <p className="px-3 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+                Your Dashboards
               </p>
             </div>
           )}
+          {isCollapsed && <div className="pt-4 border-t border-[hsl(var(--divider))]" />}
 
           {/* Dashboard List */}
-          <div className="space-y-1 pt-2">
+          <div className="space-y-0.5">
             {dashboards.map((dashboard, index) => (
               <DashboardItem
                 key={dashboard._id}
@@ -483,14 +484,14 @@ function SidebarContent({
           </div>
 
           {/* New Dashboard Button */}
-          <div className="pt-2">
+          <div className="pt-1">
             <Button
-              variant="outline"
-              className="w-full justify-start"
+              variant="ghost"
+              className="w-full justify-start text-[hsl(var(--muted-foreground))] hover:text-white text-sm"
               onClick={onNewDashboardClick}
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className="h-3.5 w-3.5" />}
             >
-              {!isCollapsed && <span>New Dashboard</span>}
+              {!isCollapsed && <span className="text-[13px]">New Dashboard</span>}
             </Button>
           </div>
         </nav>

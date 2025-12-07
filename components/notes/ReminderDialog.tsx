@@ -128,7 +128,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={existingReminder ? 'Update Reminder' : 'Set Reminder'}
-      size="sm"
+      size="lg"
     >
       <ModalBody className="space-y-4">
         {/* Info Card */}

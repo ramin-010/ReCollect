@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
@@ -8,7 +8,7 @@ import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
 import { ContentCard } from '@/components/content/ContentCard';
-import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft } from 'lucide-react';
+import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft, Lock, KeyRound, CheckCircle2, X, Edit, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -17,6 +17,7 @@ import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
 
 type TabType = 'profile' | 'archived' | 'favorites';
+type PasswordChangeStep = 'idle' | 'sending-otp' | 'otp-sent' | 'verifying' | 'verified' | 'changing';
 
 export function UserSettings() {
   const user = useAuthStore((state) => state.user);
@@ -28,9 +29,19 @@ export function UserSettings() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [archivedNotesData, setArchivedNotesData] = useState<ContentType[]>([]);
   const [favoriteNotesData, setFavoriteNotesData] = useState<ContentType[]>([]);
   
+  // Password change state
+  const [passwordChangeStep, setPasswordChangeStep] = useState<PasswordChangeStep>('idle');
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Profile form state
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -109,6 +120,53 @@ export function UserSettings() {
     }
   };
 
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (e.g., 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const response = await axiosInstance.post('/api/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data?.success) {
+        const newAvatarUrl = response.data.data.avatar;
+        if (user) {
+          setUser({ ...user, avatar: newAvatarUrl });
+        }
+        toast.success('Profile picture updated successfully');
+      }
+    } catch (error: any) {
+      toast.error('Failed to upload profile picture', {
+        description: error.response?.data?.message || 'Please try again'
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset input value so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleCancelEdit = () => {
     setFormData({
       name: user?.name || '',
@@ -117,6 +175,101 @@ export function UserSettings() {
       reminderEmail: user?.reminderEmail || user?.email || '',
     });
     setIsEditing(false);
+  };
+
+  // Password change handlers
+  const handleSendOtp = async () => {
+    setPasswordChangeStep('sending-otp');
+    try {
+      const response = await axiosInstance.post('/api/otp/generate-auth');
+      if (response.data?.success) {
+        setPasswordChangeStep('otp-sent');
+        toast.success('OTP sent to your email');
+      }
+    } catch (error: any) {
+      setPasswordChangeStep('idle');
+      toast.error('Failed to send OTP', {
+        description: error.response?.data?.message || 'Please try again'
+      });
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    
+    // Auto-focus next input
+    if (value && index < 3) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const otpString = otp.join('');
+    if (otpString.length !== 4) {
+      toast.error('Please enter all 4 digits');
+      return;
+    }
+    
+    setPasswordChangeStep('verifying');
+    try {
+      const response = await axiosInstance.post('/api/otp/verify', {
+        email: user?.email,
+        otp: otpString
+      });
+      if (response.data?.success) {
+        setPasswordChangeStep('verified');
+        toast.success('OTP verified successfully');
+      }
+    } catch (error: any) {
+      setPasswordChangeStep('otp-sent');
+      toast.error('Invalid OTP', {
+        description: error.response?.data?.message || 'Please try again'
+      });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setPasswordChangeStep('changing');
+    try {
+      const response = await axiosInstance.post('/api/change-password', {
+        newPassword,
+        confirmPassword
+      });
+      if (response.data?.success) {
+        toast.success('Password changed successfully');
+        resetPasswordFlow();
+      }
+    } catch (error: any) {
+      setPasswordChangeStep('verified');
+      toast.error('Failed to change password', {
+        description: error.response?.data?.message || 'Please try again'
+      });
+    }
+  };
+
+  const resetPasswordFlow = () => {
+    setPasswordChangeStep('idle');
+    setOtp(['', '', '', '']);
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const getInitials = (name?: string) => {
@@ -253,9 +406,45 @@ export function UserSettings() {
                     <div className="relative px-6 pb-6">
                       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-12">
                         <div className="flex items-end gap-4">
-                          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] flex items-center justify-center text-white text-3xl font-bold shadow-xl ring-4 ring-[hsl(var(--card))]">
-                            {getInitials(user?.name)}
+                          <div className="relative group">
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleAvatarFileChange}
+                              disabled={isUploadingAvatar}
+                            /> 
+                            
+                            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] flex items-center justify-center text-white text-3xl font-bold shadow-xl ring-4 ring-[hsl(var(--card))] overflow-hidden relative">
+                              {user?.avatar ? (
+                                <img 
+                                  src={user.avatar} 
+                                  alt={user.name} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                getInitials(user?.name)
+                              )}
+                              
+                              {/* Overlay loading state */}
+                              {isUploadingAvatar && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                  <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Edit Button - Only visible when editing or hovering */}
+                            <button
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isUploadingAvatar}
+                              className="absolute -top-2 -right-2 p-1.5 rounded-full bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--brand-primary))] shadow-sm transition-all z-10"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
                           </div>
+                          
                           <div className="pb-2">
                             <h2 className="text-2xl font-bold mb-1">{user?.name}</h2>
                             <p className="text-sm text-[hsl(var(--muted-foreground))] flex items-center gap-2">
@@ -281,11 +470,21 @@ export function UserSettings() {
 
                   {/* Profile Form Card */}
                   <Card variant="elevated" padding="lg">
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-1">Personal Information</h3>
-                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                        Update your personal details and contact information
-                      </p>
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-1">Personal Information</h3>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                          Update your personal details and contact information
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleSendOtp}
+                        leftIcon={<KeyRound className="h-4 w-4" />}
+                        className="border-[hsl(var(--brand-primary))]/30 hover:bg-[hsl(var(--brand-primary))]/10 text-sm h-9"
+                      >
+                        Change Password
+                      </Button>
                     </div>
 
                     <div className="space-y-5">
@@ -357,6 +556,8 @@ export function UserSettings() {
                       )}
                     </div>
                   </Card>
+
+
                 </motion.div>
               )}
 
@@ -471,6 +672,180 @@ export function UserSettings() {
           </div>
         </div>
       </div>
+
+      {/* Password Change Modal Overlay */}
+      <AnimatePresence>
+        {passwordChangeStep !== 'idle' && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={resetPasswordFlow}
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-md px-4"
+            >
+              <Card variant="elevated" padding="lg" className="shadow-2xl border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+                <div className="mb-6 flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                      <Lock className="h-5 w-5 text-[hsl(var(--brand-primary))]" />
+                      Change Password
+                    </h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      Secure your account with a new password
+                    </p>
+                  </div>
+                  <button onClick={resetPasswordFlow} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {/* Sending OTP */}
+                  {passwordChangeStep === 'sending-otp' && (
+                    <motion.div
+                      key="sending"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center py-8 gap-4 text-[hsl(var(--muted-foreground))]"
+                    >
+                      <div className="animate-spin h-8 w-8 border-2 border-[hsl(var(--brand-primary))] border-t-transparent rounded-full" />
+                      <span>Sending OTP to your email...</span>
+                    </motion.div>
+                  )}
+
+                  {/* OTP Input State */}
+                  {(passwordChangeStep === 'otp-sent' || passwordChangeStep === 'verifying') && (
+                    <motion.div
+                      key="otp"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-6"
+                    >
+                      <div className="bg-[hsl(var(--muted))]/30 rounded-xl p-4 text-center">
+                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                          Enter the 4-digit code sent to <span className="font-medium text-[hsl(var(--foreground))]">{user?.email}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex justify-center gap-3">
+                        {[0, 1, 2, 3].map((index) => (
+                          <input
+                            key={index}
+                            ref={(el) => { otpInputRefs.current[index] = el; }}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={otp[index]}
+                            onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ''))}
+                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                            className="w-14 h-14 text-center text-2xl font-bold rounded-xl border-2 border-[hsl(var(--border))] bg-[hsl(var(--surface-light))] focus:border-[hsl(var(--brand-primary))] focus:ring-2 focus:ring-[hsl(var(--brand-primary))]/20 outline-none transition-all"
+                            disabled={passwordChangeStep === 'verifying'}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="space-y-3">
+                        <Button
+                          variant="primary"
+                          onClick={handleVerifyOtp}
+                          isLoading={passwordChangeStep === 'verifying'}
+                          className="w-full bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90 h-10"
+                        >
+                          Verify OTP
+                        </Button>
+                        <p className="text-center text-xs text-[hsl(var(--muted-foreground))]">
+                          OTP expires in 3 minutes.{' '}
+                          <button
+                            onClick={handleSendOtp}
+                            className="text-[hsl(var(--brand-primary))] hover:underline"
+                            disabled={passwordChangeStep === 'verifying'}
+                          >
+                            Resend OTP
+                          </button>
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Password Change Form */}
+                  {(passwordChangeStep === 'verified' || passwordChangeStep === 'changing') && (
+                    <motion.div
+                      key="password"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-5"
+                    >
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400">
+                          OTP verified! Enter new password.
+                        </span>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Input
+                          label="New Password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          leftIcon={<Lock className="h-4 w-4" />}
+                          placeholder="Minimum 8 characters"
+                          disabled={passwordChangeStep === 'changing'}
+                          autoComplete="new-password"
+                          className="bg-[hsl(var(--surface-light))]"
+                        />
+                        <Input
+                          label="Confirm Password"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          leftIcon={<Lock className="h-4 w-4" />}
+                          placeholder="Re-enter password"
+                          disabled={passwordChangeStep === 'changing'}
+                          autoComplete="new-password"
+                          className="bg-[hsl(var(--surface-light))]"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          variant="primary"
+                          onClick={handleChangePassword}
+                          isLoading={passwordChangeStep === 'changing'}
+                          leftIcon={<Save className="h-4 w-4" />}
+                          className="flex-1 bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90"
+                        >
+                          Update Password
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={resetPasswordFlow}
+                          disabled={passwordChangeStep === 'changing'}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // lib/store/viewStore.ts
 import { create } from 'zustand';
 
-export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses';
+export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
 
 interface ViewState {
   currentView: ViewType;

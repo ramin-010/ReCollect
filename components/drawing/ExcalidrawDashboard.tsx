@@ -19,11 +19,15 @@ import {
   Edit2,
   Copy,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
+import { CloudSyncModal } from './CloudSyncModal';
 import { useViewStore } from '@/lib/store/viewStore';
+import axiosInstance from '@/lib/utils/axios';
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
@@ -38,6 +42,7 @@ interface Drawing {
   thumbnail?: string;
   createdAt: string;
   updatedAt: string;
+  isCloudSynced?: boolean;
 }
 
 export function ExcalidrawDashboard() {
@@ -48,6 +53,9 @@ export function ExcalidrawDashboard() {
   const [renamingDrawing, setRenamingDrawing] = useState<Drawing | null>(null);
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCloudSyncModal, setShowCloudSyncModal] = useState(false);
+  const [drawingToSync, setDrawingToSync] = useState<Drawing | null>(null);
+  const [cloudSyncedIds, setCloudSyncedIds] = useState<Set<string>>(new Set());
   const { setCurrentView } = useViewStore();
   const { resolvedTheme } = useTheme();
   
@@ -65,11 +73,33 @@ export function ExcalidrawDashboard() {
 
   const loadDrawings = async () => {
     try {
-      // Load from localStorage for now (can be replaced with API)
+      // Load from localStorage
       const saved = localStorage.getItem('recollect-drawings');
+      let localDrawings: Drawing[] = [];
       if (saved) {
-        setDrawings(JSON.parse(saved));
+        localDrawings = JSON.parse(saved);
       }
+
+      // Load cloud-synced drawings
+      try {
+        const response = await axiosInstance.get('/api/drawings');
+        if (response.data?.success) {
+          const cloudDrawings: Drawing[] = response.data.data;
+          const cloudIds = new Set(cloudDrawings.map((d: Drawing) => d.id));
+          setCloudSyncedIds(cloudIds);
+
+          // Merge: cloud drawings override local ones with the same id
+          const mergedMap = new Map<string, Drawing>();
+          localDrawings.forEach(d => mergedMap.set(d.id, d));
+          cloudDrawings.forEach(d => mergedMap.set(d.id, { ...d, isCloudSynced: true }));
+          localDrawings = Array.from(mergedMap.values());
+        }
+      } catch (cloudError) {
+        // Cloud fetch failed, just use local drawings
+        console.log('Cloud drawings not available, using local only');
+      }
+
+      setDrawings(localDrawings);
     } catch (error) {
       console.error('Failed to load drawings:', error);
     }
@@ -370,6 +400,7 @@ export function ExcalidrawDashboard() {
                 collaborators: new Map(),
                 viewBackgroundColor: currentDrawing.data.appState?.viewBackgroundColor || (isDark ? '#18181b' : '#ffffff')
               },
+              files: currentDrawing.data.files || {},
               scrollToContent: true
             } : undefined}
             onChange={(elements, appState, files) => {
@@ -502,6 +533,20 @@ export function ExcalidrawDashboard() {
                 </div>
                 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Cloud Sync Button */}
+                  <button
+                    className={`p-1 rounded transition-colors ${cloudSyncedIds.has(drawing.id) ? 'text-green-400' : 'hover:bg-blue-500/30 text-blue-400'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!cloudSyncedIds.has(drawing.id)) {
+                        setDrawingToSync(drawing);
+                        setShowCloudSyncModal(true);
+                      }
+                    }}
+                    title={cloudSyncedIds.has(drawing.id) ? 'Synced to Cloud' : 'Sync to Cloud'}
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     className="p-1 hover:bg-white/20 rounded transition-colors"
                     onClick={(e) => handleDuplicate(drawing, e)}
@@ -536,6 +581,22 @@ export function ExcalidrawDashboard() {
         existingNames={drawings.map(d => d.name)}
         initialName={renamingDrawing?.name}
         mode={renamingDrawing ? 'rename' : 'create'}
+      />
+
+      <CloudSyncModal
+        isOpen={showCloudSyncModal}
+        onClose={() => {
+          setShowCloudSyncModal(false);
+          setDrawingToSync(null);
+        }}
+        drawing={drawingToSync}
+        onSyncComplete={(drawingId) => {
+          setCloudSyncedIds(prev => new Set([...prev, drawingId]));
+          // Update the drawing in the list to mark as synced
+          setDrawings(prev => prev.map(d => 
+            d.id === drawingId ? { ...d, isCloudSynced: true } : d
+          ));
+        }}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -10,7 +10,8 @@ import {
   ArrowDownRight,
   Filter,
   Trash2,
-  PiggyBank
+  PiggyBank,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Card } from '@/components/ui-base/Card';
@@ -26,28 +27,10 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { format, subDays, isSameDay, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-
-// Dummy Data (Expense-focused)
-const INITIAL_TRANSACTIONS = [
-  { id: '1', amount: 450, type: 'expense', category: 'food', date: new Date().toISOString(), note: 'Lunch' },
-  { id: '2', amount: 250, type: 'expense', category: 'transport', date: subDays(new Date(), 1).toISOString(), note: 'Uber' },
-  { id: '3', amount: 1500, type: 'expense', category: 'shopping', date: subDays(new Date(), 2).toISOString(), note: 'Groceries' },
-  { id: '4', amount: 800, type: 'expense', category: 'entertainment', date: subDays(new Date(), 3).toISOString(), note: 'Movie Night' },
-  { id: '5', amount: 1200, type: 'expense', category: 'bills', date: subDays(new Date(), 5).toISOString(), note: 'Internet Bill' },
-  { id: '6', amount: 5000, type: 'expense', category: 'shopping', date: subDays(new Date(), 10).toISOString(), note: 'New Headphones' },
-  { id: '7', amount: 2000, type: 'expense', category: 'food', date: subDays(new Date(), 15).toISOString(), note: 'Dinner Date' },
-  { id: '8', amount: 1500, type: 'expense', category: 'transport', date: subDays(new Date(), 20).toISOString(), note: 'Fuel' },
-  { id: '9', amount: 3500, type: 'expense', category: 'bills', date: subDays(new Date(), 35).toISOString(), note: 'Electricity' },
-  { id: '10', amount: 8000, type: 'expense', category: 'shopping', date: subDays(new Date(), 45).toISOString(), note: 'Clothes' },
-  { id: '11', amount: 2200, type: 'expense', category: 'food', date: subDays(new Date(), 60).toISOString(), note: 'Groceries' },
-  { id: '12', amount: 4500, type: 'expense', category: 'entertainment', date: subDays(new Date(), 75).toISOString(), note: 'Concert' },
-  { id: '13', amount: 6000, type: 'expense', category: 'travel', date: subDays(new Date(), 90).toISOString(), note: 'Weekend Trip' },
-  { id: '14', amount: 3000, type: 'expense', category: 'health', date: subDays(new Date(), 110).toISOString(), note: 'Gym Membership' },
-  { id: '15', amount: 7500, type: 'expense', category: 'bills', date: subDays(new Date(), 130).toISOString(), note: 'Insurance' },
-] as const;
+import axiosInstance from '@/lib/utils/axios';
 
 type Transaction = {
-  id: string;
+  _id: string;
   amount: number;
   type: 'income' | 'expense';
   category: string;
@@ -56,32 +39,54 @@ type Transaction = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  food: '#f97316',
   transport: '#3b82f6',
-  shopping: '#ec4899',
-  entertainment: '#8b5cf6',
+  grocery: '#22c55e',
   bills: '#eab308',
-  health: '#22c55e',
-  travel: '#06b6d4',
-  education: '#6366f1',
-  other: '#64748b',
+  shopping: '#ec4899',
+  gym_health: '#10b981',
+  medicine: '#ef4444',
+  treats: '#f97316',
+  miscellaneous: '#573b3bff',
+  other: '#8b5cf6',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  food: 'Food & Dining',
   transport: 'Transport',
+  grocery: 'Grocery',
+  bills: 'Bills',
   shopping: 'Shopping',
-  entertainment: 'Entertainment',
-  bills: 'Bills & Utilities',
-  health: 'Health',
-  travel: 'Travel',
-  education: 'Education',
+  gym_health: 'Gym/Health',
+  medicine: 'Medicine',
+  treats: 'Treats',
+  miscellaneous: 'Misc',
   other: 'Other',
 };
 
 export function ExpenseView() {
-  const [transactions, setTransactions] = useState<Transaction[]>([...INITIAL_TRANSACTIONS]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // Fetch expenses on mount
+  const fetchExpenses = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.get('/api/expenses');
+      if (response.data.success) {
+        setTransactions(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch expenses:', error);
+      toast.error('Failed to load expenses');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchExpenses();
+  }, [fetchExpenses]);
 
   // Calculate Summary (Expense-focused)
   const summary = useMemo(() => {
@@ -142,19 +147,40 @@ export function ExpenseView() {
       .sort((a, b) => b.amount - a.amount);
   }, [transactions]);
 
-  const handleAddTransaction = (data: any) => {
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      ...data,
-      date: data.date.toISOString(),
-    };
-    setTransactions([newTransaction, ...transactions]);
-    toast.success('Expense added');
+  const handleAddTransaction = async (data: any) => {
+    try {
+      const response = await axiosInstance.post('/api/expenses', {
+        amount: data.amount,
+        category: data.category,
+        date: data.date.toISOString(),
+        note: data.note
+      });
+      
+      if (response.data.success) {
+        setTransactions([response.data.data, ...transactions]);
+        toast.success('Expense added');
+      }
+    } catch (error) {
+      console.error('Failed to add expense:', error);
+      toast.error('Failed to add expense');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setTransactions(transactions.filter(t => t.id !== id));
-    toast.success('Expense deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      setIsDeleting(id);
+      const response = await axiosInstance.delete(`/api/expenses/${id}`);
+      
+      if (response.data.success) {
+        setTransactions(transactions.filter(t => t._id !== id));
+        toast.success('Expense deleted');
+      }
+    } catch (error) {
+      console.error('Failed to delete expense:', error);
+      toast.error('Failed to delete expense');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -164,6 +190,17 @@ export function ExpenseView() {
       maximumFractionDigits: 0
     }).format(amount);
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading expenses...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col p-8 overflow-hidden bg-[hsl(var(--background))] max-w-7xl mx-auto">
@@ -229,9 +266,11 @@ export function ExpenseView() {
                   <BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickFormatter={(v) => `₹${v/1000}k`} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickFormatter={(v) => v >= 5000 ? `₹${(v/1000).toFixed(1)}k` : `₹${v}`} />
                     <Tooltip 
+                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                       contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Spent']}
                     />
                     <Bar dataKey="amount" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={28} />
@@ -251,9 +290,11 @@ export function ExpenseView() {
                   <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickFormatter={(v) => `₹${v/1000}k`} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickFormatter={(v) => v >= 5000 ? `₹${(v/1000).toFixed(1)}k` : `₹${v}`} />
                     <Tooltip 
+                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                       contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
                       formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Spent']}
                     />
                     <Bar dataKey="amount" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={28} />
@@ -307,7 +348,7 @@ export function ExpenseView() {
             <AnimatePresence mode="popLayout">
               {transactions.slice(0, 15).map((t) => (
                 <motion.div
-                  key={t.id}
+                  key={t._id}
                   layout
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -322,7 +363,7 @@ export function ExpenseView() {
                       <ArrowDownRight className="w-4 h-4" style={{ color: CATEGORY_COLORS[t.category] || '#64748b' }} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium capitalize truncate">{t.category}</p>
+                      <p className="text-sm font-medium capitalize truncate">{CATEGORY_LABELS[t.category] || t.category}</p>
                       <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">
                         {format(new Date(t.date), 'MMM dd')} • {t.note || 'No note'}
                       </p>
@@ -333,10 +374,15 @@ export function ExpenseView() {
                       -{formatCurrency(t.amount)}
                     </span>
                     <button 
-                      onClick={() => handleDelete(t.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded transition-all"
+                      onClick={() => handleDelete(t._id)}
+                      disabled={isDeleting === t._id}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded transition-all disabled:opacity-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {isDeleting === t._id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
                 </motion.div>
