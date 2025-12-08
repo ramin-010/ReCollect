@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
+import { useDocStore } from '@/lib/store/docStore';
 import { authApi } from '@/lib/api/auth';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Navbar } from '@/components/layout/Navbar';
@@ -21,6 +22,10 @@ export default function AppLayout({
   const { isAuthenticated, isLoading, setUser, setIsLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
   const currentView = useViewStore((state) => state.currentView);
+  const currentDoc = useDocStore((state) => state.currentDoc);
+  
+  // Hide navbar when editing a document (docs view with editor open)
+  const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
 
   
   useEffect(() => {
@@ -82,7 +87,7 @@ export default function AppLayout({
       <div className="min-h-screen flex bg-pattern">
         <Sidebar />
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
-         <Navbar />
+          {!isDocEditorOpen && <Navbar />}
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
             {children}
           </main>

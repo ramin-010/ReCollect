@@ -220,7 +220,7 @@ function ContentCard({ content }: { content: any }) {
     });
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    blockBounds.forEach(({ x, y, width, height }) => {
+    blockBounds.forEach(({ x, y, width, height }: { x: number; y: number; width: number; height: number }) => {
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + width);

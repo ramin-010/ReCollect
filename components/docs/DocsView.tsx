@@ -4,7 +4,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, FileText, Search, Loader2, MoreHorizontal, 
-  Trash2, Pin, PinOff, ChevronLeft
+  Trash2, Pin, PinOff
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Card } from '@/components/ui-base/Card';
@@ -25,7 +25,6 @@ export function DocsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch docs on mount
   const fetchDocs = useCallback(async () => {
     try {
       setLoading(true);
@@ -49,8 +48,8 @@ export function DocsView() {
     try {
       setIsCreating(true);
       const response = await axiosInstance.post('/api/docs', {
-        title: 'Untitled',
-        emoji: '📄'
+        title: '',
+        emoji: ''
       });
       if (response.data.success) {
         addDoc(response.data.data);
@@ -96,14 +95,12 @@ export function DocsView() {
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Show editor if a doc is selected
   if (currentDoc) {
     return <DocEditor doc={currentDoc} onBack={() => setCurrentDoc(null)} />;
   }
 
   return (
     <div className="h-full flex flex-col p-8 overflow-hidden bg-[hsl(var(--background))] max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h1 className="text-3xl font-semibold flex items-center gap-2">
@@ -125,7 +122,6 @@ export function DocsView() {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative mb-6 shrink-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
         <input
@@ -137,7 +133,6 @@ export function DocsView() {
         />
       </div>
 
-      {/* Docs Grid */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-48">
