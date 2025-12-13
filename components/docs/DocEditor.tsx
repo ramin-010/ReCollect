@@ -12,13 +12,15 @@ import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import {TextStyle} from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
+import { DragHandle } from '@tiptap/extension-drag-handle-react';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SlashCommands } from './SlashCommands';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { toast } from 'sonner';
 import { ImageUploadDialog } from './ImageUploadDialog';
-import { offlineStorage } from '@/lib/utils/offlineStorage';
+import { offlineStorage, OfflineDoc } from '@/lib/utils/offlineStorage';
+import { docApi, ServerDoc } from '@/lib/api/docApi';
+import { SyncConflictDialog } from './SyncConflictDialog';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { 
   ChevronLeft, Save, Bold, Italic, List, ListOrdered, Quote, Code, 
@@ -29,12 +31,18 @@ import { Button } from '@/components/ui-base/Button';
 
 // Available cover images
 const COVER_OPTIONS = [
-  { id: 'cover1', src: '/cover/cover1.png', name: 'Gradient 1' },
-  { id: 'cover2', src: '/cover/download (5).jpeg', name: 'Abstract 1' },
-  { id: 'cover3', src: '/cover/download (6).jpeg', name: 'Abstract 2' },
-  { id: 'cover4', src: '/cover/download (7).jpeg', name: 'Abstract 3' },
-  { id: 'cover5', src: '/cover/ni.jpeg', name: 'Minimal' },
+  
+  { id: 'cover1', src: '/cover/cov2.png', name: 'Abstract 1' },
+  { id: 'cover2', src: '/cover/cov3.png', name: 'Abstract 2' },
+ 
+  { id: 'cover3', src: '/cover/cov6.png', name: 'Minimal' },
 ];
+
+const coverUrl = [
+  { url : 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_fxnzpofxnzpofxnz_PhotoGrid_ic5rhc.webp', name: 'Abstract 1' },
+  { url : 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_bpqvsrbpqvsrbpqv_ytl1rg.webp', name: 'Abstract 2' },
+  { url : 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_s2w1wds2w1wds2w1_zvupog.webp', name: 'Minimal' },
+]
 
 interface DocEditorProps {
   doc: Doc;
@@ -42,7 +50,7 @@ interface DocEditorProps {
 }
 
 export function DocEditor({ doc, onBack }: DocEditorProps) {
-  const { updateDoc } = useDocStore();
+  const { updateDoc, addDoc } = useDocStore();
   const [title, setTitle] = useState(doc.title);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -56,6 +64,15 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const contentRef = useRef<string>(doc.content);
   const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  
+  // Sync conflict state
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictData, setConflictData] = useState<{
+    localUpdatedAt: number;
+    serverUpdatedAt: number;
+    serverDoc: ServerDoc;
+  } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const getInitialContent = useCallback(() => {
     try {
@@ -103,10 +120,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       Underline,
       TextStyle,
       Color,
-      GlobalDragHandle.configure({
-        dragHandleWidth: 24,
-        scrollTreshold: 100,
-      }),
+      // DragHandleExtension is NOT added here - the <DragHandle> React component handles it
       AutoJoiner.configure({
         elementsToJoin: ['bulletList', 'orderedList'],
       }),
@@ -171,32 +185,93 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     };
   }, []);
 
-  // Load content when editor is ready
+  // Load content when editor is ready - with conflict detection
   useEffect(() => {
-    if (mounted && editor) {
-      const loadContent = async () => {
-         // Try offline first
-         if (doc._id) {
-            try {
-              const offlineData = await offlineStorage.loadDoc(doc._id);
-              if (offlineData) {
-                 editor.commands.setContent(offlineData.content);
-                 setTitle(offlineData.title);
-                 if (offlineData.coverImage) setCoverImage(offlineData.coverImage);
-                 return;
-              }
-            } catch (e) {
-              console.error("Failed to load offline doc", e);
-            }
-         }
-         
-         // Fallback to initial props
-         const content = getInitialContent();
-         if (content) {
+    if (mounted && editor && doc._id) {
+      const loadContentWithSync = async () => {
+        let localData: OfflineDoc | null = null;
+        let serverData: ServerDoc | null = null;
+
+        // Step 1: Load from IndexedDB first (instant UI)
+        try {
+          localData = await offlineStorage.loadDoc(doc._id);
+          if (localData) {
+            editor.commands.setContent(localData.content);
+            contentRef.current = JSON.stringify(localData.content);
+            setTitle(localData.title);
+            if (localData.coverImage) setCoverImage(localData.coverImage);
+          }
+        } catch (e) {
+          console.error("Failed to load offline doc", e);
+        }
+
+        // Step 2: Fetch from server (async)
+        setIsSyncing(true);
+        try {
+          serverData = await docApi.fetchDoc(doc._id);
+        } catch (e) {
+          console.error("Failed to fetch from server", e);
+        }
+        setIsSyncing(false);
+
+        // Step 3: Compare timestamps and handle conflicts
+        if (localData && serverData) {
+          const serverUpdatedAt = new Date(serverData.updatedAt).getTime();
+          const localUpdatedAt = localData.updatedAt;
+
+          // REVISED LOGIC: Show conflict when SERVER is newer AND local has pending changes
+          // This means another device/user updated the doc, and we have unsaved local changes
+          if (serverUpdatedAt > localUpdatedAt && localData.syncStatus === 'pending') {
+            // CONFLICT: Server has newer changes but local has unsaved work
+            setConflictData({
+              localUpdatedAt,
+              serverUpdatedAt,
+              serverDoc: serverData,
+            });
+            setShowConflictDialog(true);
+          } else if (serverUpdatedAt > localUpdatedAt) {
+            // Server is newer, no local pending changes - silently update
+            editor.commands.setContent(serverData.content);
+            contentRef.current = JSON.stringify(serverData.content);
+            setTitle(serverData.title);
+            setCoverImage(serverData.coverImage);
+            
+            // Update IndexedDB with server data
+            await offlineStorage.saveDoc(
+              doc._id,
+              serverData.content,
+              serverData.title,
+              serverData.coverImage,
+              'synced',
+              serverUpdatedAt
+            );
+          }
+          // If local > server: User just hasn't saved yet - no warning, keep local
+        } else if (!localData && serverData) {
+          // No local data, use server
+          editor.commands.setContent(serverData.content);
+          contentRef.current = JSON.stringify(serverData.content);
+          setTitle(serverData.title);
+          setCoverImage(serverData.coverImage);
+          
+          await offlineStorage.saveDoc(
+            doc._id,
+            serverData.content,
+            serverData.title,
+            serverData.coverImage,
+            'synced',
+            new Date(serverData.updatedAt).getTime()
+          );
+        } else if (!localData && !serverData) {
+          // New doc - use initial props
+          const content = getInitialContent();
+          if (content) {
             editor.commands.setContent(content, { emitUpdate: false });
-         }
+          }
+        }
       };
-      loadContent();
+
+      loadContentWithSync();
     }
   }, [mounted, editor, doc._id]); // removed getInitialContent dependency
 
@@ -205,6 +280,13 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     
     saveTimeoutRef.current = setTimeout(async () => {
       if (!doc._id) return;
+      
+      // Guard: Don't save if contentRef hasn't been populated yet
+      if (!contentRef.current || contentRef.current === 'undefined') {
+        console.log("Skipping auto-save: no content yet");
+        return;
+      }
+      
       console.log("Auto-saving to offline storage...");
       try {
         await offlineStorage.saveDoc(doc._id, JSON.parse(contentRef.current), title, coverImage);
@@ -214,6 +296,13 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       }
     }, 2000);
   }, [doc._id, title, coverImage]);
+
+  // Auto-save when coverImage or title changes (not just content)
+  useEffect(() => {
+    if (mounted && doc._id) {
+      debouncedSave();
+    }
+  }, [coverImage, title, mounted, doc._id, debouncedSave]);
 
 
   // Expose dialog opener to editor storage for SlashCommands
@@ -272,40 +361,176 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   }, [editor]);
 
   const saveDocument = useCallback(async () => {
-    // if (!hasUnsavedChanges) return; // Allow forcing save even if no changes detected by simple flag?
+    if (!doc._id) return;
 
     try {
       setIsSaving(true);
-      // Backend call disabled for Offline Persistence
-      /*
-      await axiosInstance.patch(`/api/docs/${doc._id}`, {
-        content: contentRef.current,
-        title
-      });
-      */
       
-      // Save to Offline Storage
-      if (doc._id) {
-         await offlineStorage.saveDoc(doc._id, JSON.parse(contentRef.current), title, coverImage);
+      const content = JSON.parse(contentRef.current);
+      
+      // Step 1: Save to IndexedDB first (with 'pending' status)
+      await offlineStorage.saveDoc(doc._id, content, title, coverImage, 'pending');
+      
+      // Step 2: Call server API (it extracts images and uploads to cloud)
+      const result = await docApi.saveDoc(doc._id, {
+        content,
+        title,
+        coverImage,
+      });
+      
+      // Step 3: Update with server response (contains cloud URLs instead of data URLs)
+      if (result.success && result.data) {
+        const serverContent = result.data.content;
+        const serverUpdatedAt = new Date(result.updatedAt).getTime();
+        
+        // Update editor with content that has cloud URLs
+        if (editor && serverContent) {
+          editor.commands.setContent(serverContent);
+          contentRef.current = JSON.stringify(serverContent);
+        }
+        
+        // Save to IndexedDB with 'synced' status and cloud URLs
+        await offlineStorage.saveDoc(doc._id, serverContent || content, title, coverImage, 'synced', serverUpdatedAt);
+        updateDoc(doc._id, { content: contentRef.current, title });
+        setHasUnsavedChanges(false);
+        toast.success('Saved to cloud');
       }
-
-      updateDoc(doc._id, { content: contentRef.current, title });
-      setHasUnsavedChanges(false);
-      toast.success('Saved locally');
     } catch (error) {
       console.error('Failed to save:', error);
-      toast.error('Failed to save');
+      toast.error('Failed to save to cloud');
     } finally {
       setIsSaving(false);
     }
-  }, [doc._id, title, coverImage, hasUnsavedChanges, updateDoc]);
+  }, [doc._id, title, coverImage, updateDoc, editor]);
+
+  // Conflict resolution handlers
+  const handleKeepMine = useCallback(async () => {
+    // User chose to keep their local changes - mark as pending, will overwrite server on next save
+    if (doc._id) {
+      await offlineStorage.saveDoc(
+        doc._id,
+        JSON.parse(contentRef.current),
+        title,
+        coverImage,
+        'pending'
+      );
+      setHasUnsavedChanges(true);
+      toast.success('Keeping your changes. Save to sync to cloud.');
+    }
+    setShowConflictDialog(false);
+    setConflictData(null);
+  }, [doc._id, title, coverImage]);
+
+  const handleAcceptServer = useCallback(async () => {
+    if (conflictData?.serverDoc && editor) {
+      // User chose server version - load it and update IndexedDB
+      const server = conflictData.serverDoc;
+      
+      editor.commands.setContent(server.content);
+      contentRef.current = JSON.stringify(server.content);
+      setTitle(server.title);
+      setCoverImage(server.coverImage);
+      
+      await offlineStorage.saveDoc(
+        doc._id,
+        server.content,
+        server.title,
+        server.coverImage,
+        'synced',
+        conflictData.serverUpdatedAt
+      );
+      
+      setHasUnsavedChanges(false);
+      toast.success('Server version loaded');
+    }
+    setShowConflictDialog(false);
+    setConflictData(null);
+  }, [conflictData, editor, doc._id]);
+
+  const handleSaveAsNew = useCallback(async () => {
+    if (doc._id && conflictData?.serverDoc && editor) {
+      const localContent = JSON.parse(contentRef.current);
+      const localTitle = `${title} (Local Copy)`;
+      
+      // Generate a local ID (will be used until user saves to server)
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Save to IndexedDB only (not pushed to server until user manually saves)
+      await offlineStorage.saveDoc(
+        localId,
+        localContent,
+        localTitle,
+        coverImage,
+        'pending'  // Marked as pending = not yet on server
+      );
+      
+      // Add to the doc store so it appears in the list immediately
+      addDoc({
+        _id: localId,
+        title: localTitle,
+        content: JSON.stringify(localContent),
+        isPinned: false,
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      
+      toast.success(`Local copy saved as "${localTitle}". Save it to push to cloud.`);
+      
+      // Load server version into current doc
+      const server = conflictData.serverDoc;
+      editor.commands.setContent(server.content);
+      contentRef.current = JSON.stringify(server.content);
+      setTitle(server.title);
+      setCoverImage(server.coverImage);
+      
+      await offlineStorage.saveDoc(
+        doc._id,
+        server.content,
+        server.title,
+        server.coverImage,
+        'synced',
+        conflictData.serverUpdatedAt
+      );
+      
+      setHasUnsavedChanges(false);
+    }
+    setShowConflictDialog(false);
+    setConflictData(null);
+  }, [doc._id, conflictData, editor, title, coverImage, addDoc]);
 
   const handleBack = useCallback(async () => {
-    if (hasUnsavedChanges) {
-      await saveDocument();
+    // Always save current state to offline storage before going back
+    // This ensures the preview on the docs list is up-to-date
+    if (doc._id && contentRef.current && contentRef.current !== 'undefined') {
+      try {
+        // Clear any pending debounced save
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        
+        // Save to offline storage immediately
+        await offlineStorage.saveDoc(
+          doc._id, 
+          JSON.parse(contentRef.current), 
+          title, 
+          coverImage, 
+          'pending'
+        );
+        
+        // Update the store's content so the preview is correct
+        updateDoc(doc._id, { 
+          content: contentRef.current, 
+          title,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('Failed to save before navigating back:', e);
+      }
     }
     onBack();
-  }, [hasUnsavedChanges, saveDocument, onBack]);
+  }, [doc._id, title, coverImage, updateDoc, onBack]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -349,6 +574,19 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">
+      {/* Sync Conflict Dialog */}
+      {conflictData && (
+        <SyncConflictDialog
+          open={showConflictDialog}
+          onClose={() => setShowConflictDialog(false)}
+          localUpdatedAt={conflictData.localUpdatedAt}
+          serverUpdatedAt={conflictData.serverUpdatedAt}
+          onAcceptServer={handleAcceptServer}
+          onKeepMine={handleKeepMine}
+          onSaveAsNew={handleSaveAsNew}
+        />
+      )}
+
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
         <Button
           variant="ghost"
@@ -360,6 +598,9 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           Back
         </Button>
         <div className="flex items-center gap-3">
+          {isSyncing && (
+            <span className="text-xs text-blue-400/80 animate-pulse">Syncing...</span>
+          )}
           {hasUnsavedChanges && (
             <span className="text-xs text-amber-400/80">Unsaved changes</span>
           )}
@@ -388,7 +629,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
             <img 
               src={coverImage} 
               alt="Document cover" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-[0_50%]"
             />
             {/* Cover Controls - appear on hover */}
             <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -443,22 +684,22 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {COVER_OPTIONS.map((cover) => (
+                {coverUrl.map((cover, index) => (
                   <button
-                    key={cover.id}
+                    key={index}
                     onClick={() => {
-                      setCoverImage(cover.src);
+                      setCoverImage(cover.url);
                       setShowCoverPicker(false);
                       setHasUnsavedChanges(true);
                     }}
                     className={`relative h-16 rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                      coverImage === cover.src 
+                      coverImage === cover.url 
                         ? 'border-amber-500 ring-2 ring-amber-500/30' 
                         : 'border-transparent hover:border-[hsl(var(--border))]'
                     }`}
                   >
                     <img 
-                      src={cover.src} 
+                      src={cover.url} 
                       alt={cover.name}
                       className="w-full h-full object-cover"
                     />
@@ -593,8 +834,20 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
             </div>
           )}
 
-          {/* Editor */}
-          <div className="notion-editor">
+          {/* Editor with Drag Handle */}
+          <div className="notion-editor relative">
+            <DragHandle editor={editor}>
+              <div className="drag-handle-icon cursor-grab active:cursor-grabbing p-1 rounded hover:bg-white/10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <circle cx="9" cy="12" r="1"/>
+                  <circle cx="9" cy="5" r="1"/>
+                  <circle cx="9" cy="19" r="1"/>
+                  <circle cx="15" cy="12" r="1"/>
+                  <circle cx="15" cy="5" r="1"/>
+                  <circle cx="15" cy="19" r="1"/>
+                </svg>
+              </div>
+            </DragHandle>
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -609,27 +862,31 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       {/* Global Notion-like Styles */}
       <style jsx global>{`
         /* Drag Handle - from Novel */
+        /* Drag Handle - Notion Style */
         .drag-handle {
-          position: fixed;
-          opacity: 1;
-          transition: opacity ease-in 0.2s;
-          border-radius: 0.25rem;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' style='fill: rgba(255, 255, 255, 0.5)'%3E%3Cpath d='M3,2 C2.44771525,2 2,1.55228475 2,1 C2,0.44771525 2.44771525,0 3,0 C3.55228475,0 4,0.44771525 4,1 C4,1.55228475 3.55228475,2 3,2 Z M3,6 C2.44771525,6 2,5.55228475 2,5 C2,4.44771525 2.44771525,4 3,4 C3.55228475,4 4,4.44771525 4,5 C4,5.55228475 3.55228475,6 3,6 Z M3,10 C2.44771525,10 2,9.55228475 2,9 C2,8.44771525 2.44771525,8 3,8 C3.55228475,8 4,8.44771525 4,9 C4,9.55228475 3.55228475,10 3,10 Z M7,2 C6.44771525,2 6,1.55228475 6,1 C6,0.44771525 6.44771525,0 7,0 C7.55228475,0 8,0.44771525 8,1 C8,1.55228475 7.55228475,2 7,2 Z M7,6 C6.44771525,6 6,5.55228475 6,5 C6,4.44771525 6.44771525,4 7,4 C7.55228475,4 8,4.44771525 8,5 C8,5.55228475 7.55228475,6 7,6 Z M7,10 C6.44771525,10 6,9.55228475 6,9 C6,8.44771525 6.44771525,8 7,8 C7.55228475,8 8,8.44771525 8,9 C8,9.55228475 7.55228475,10 7,10 Z'%3E%3C/path%3E%3C/svg%3E");
-          background-size: calc(0.5em + 0.375rem) calc(0.5em + 0.375rem);
-          background-repeat: no-repeat;
-          background-position: center;
-          width: 1.2rem;
-          height: 1.5rem;
+          /* proper box model */
+          width: 24px;
+          height: 24px;
           z-index: 50;
           cursor: grab;
+          color : white;
+          
+          /* aesthetics */
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
+          background-size: 20px 20px;
+          background-repeat: no-repeat;
+          background-position: center;
+          
+          transition: background-color 0.2s;
+          border-radius: 4px;
         }
         .drag-handle:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-          transition: background-color 0.2s;
+          background-color: rgba(255, 255, 255, 0.08);
+          stroke: #ffffff !important;
         }
         .drag-handle:active {
-          background-color: rgba(255, 255, 255, 0.2);
           cursor: grabbing;
+          background-color: rgba(255, 255, 255, 0.15);
         }
         .drag-handle.hide {
           opacity: 0;

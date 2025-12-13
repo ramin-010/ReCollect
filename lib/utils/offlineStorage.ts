@@ -1,13 +1,15 @@
 export const DB_NAME = 'RecollectDB_Doc';
 export const STORE_NAME = 'docs';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2; // Bumped for schema change
 
-interface OfflineDoc {
+export interface OfflineDoc {
   id: string;
   content: any;
   title: string;
   coverImage: string | null;
-  updatedAt: number;
+  updatedAt: number;             // Local timestamp
+  serverUpdatedAt?: number;      // Last known server timestamp
+  syncStatus: 'synced' | 'pending' | 'conflict';
 }
 
 export const offlineStorage = {
@@ -27,7 +29,14 @@ export const offlineStorage = {
     });
   },
 
-  async saveDoc(id: string, content: any, title: string, coverImage: string | null): Promise<void> {
+  async saveDoc(
+    id: string, 
+    content: any, 
+    title: string, 
+    coverImage: string | null,
+    syncStatus: 'synced' | 'pending' | 'conflict' = 'pending',
+    serverUpdatedAt?: number
+  ): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -38,6 +47,8 @@ export const offlineStorage = {
         title,
         coverImage,
         updatedAt: Date.now(),
+        syncStatus,
+        serverUpdatedAt,
       };
 
       const request = store.put(doc);
@@ -55,6 +66,50 @@ export const offlineStorage = {
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result || null);
+    });
+  },
+
+  async deleteDoc(id: string): Promise<void> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(id);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  },
+
+  async getAllPendingDocs(): Promise<OfflineDoc[]> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const allDocs = request.result as OfflineDoc[];
+        // Filter for docs with 'pending' status (local-only docs)
+        const pendingDocs = allDocs.filter(doc => doc.syncStatus === 'pending');
+        resolve(pendingDocs);
+      };
+    });
+  },
+
+  // Get ALL docs from offline storage (for merging content with server docs)
+  async getAllOfflineDocs(): Promise<OfflineDoc[]> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        resolve(request.result as OfflineDoc[]);
+      };
     });
   },
 };

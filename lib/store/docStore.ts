@@ -5,7 +5,6 @@ export interface Doc {
   _id: string;
   title: string;
   content: string;
-  emoji: string;
   isPinned: boolean;
   isArchived: boolean;
   createdAt: string;

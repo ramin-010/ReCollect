@@ -280,7 +280,7 @@ export default function HomePage() {
 
   return (
     <div className="p-4 lg:p-8 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1200px] mx-auto">
         {archivedCount > 0 && (
           <div className="flex justify-end mb-2">
             <span className="text-sm text-[hsl(var(--muted-foreground))]">

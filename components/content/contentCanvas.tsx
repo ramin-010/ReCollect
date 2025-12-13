@@ -37,6 +37,7 @@ interface ContentCanvasProps {
 // ============================================================
 // EDITABLE TEXT BLOCK COMPONENT (Textarea)
 // ============================================================
+
 type EditableTextBlock = {
   content: string;
   onChange: (newContent: string) => void;
@@ -69,6 +70,7 @@ function EditableTextBlock({
 }: EditableTextBlock) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null); // #change: Ghost element for width measurement
+  const isMountedRef = useRef(false); // Track if first render completed
 
   // #change: Measure width and height
   useLayoutEffect(() => {
@@ -83,7 +85,6 @@ function EditableTextBlock({
       
       const measuredWidth = ghost.scrollWidth;
       // Add a small buffer for cursor/padding
-      // #change: Respect manual width as minimum, but allow expansion
       newWidth = Math.max(width, measuredWidth + 10); 
     }
 
@@ -92,14 +93,21 @@ function EditableTextBlock({
     const newHeight = el.scrollHeight;
     el.style.height = `${newHeight}px`;
 
-    // Notify parent
-    if (autoWidth && Math.abs(newWidth - width) > 1) {
-        onDimensionsChange?.(newWidth, newHeight);
-    } else {
-        onDimensionsChange?.(newWidth, newHeight);
+    // #fix: Skip first render to prevent immediate loop, compare against props
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
     }
 
-  }, [content, width, textSize, autoWidth]);
+    // Only notify if there's a meaningful change from the current block dimensions
+    const widthChanged = autoWidth && Math.abs(newWidth - width) > 1;
+    // Note: height comparison is handled by the parent's onDimensionsChange callback
+    
+    if (widthChanged) {
+      onDimensionsChange?.(newWidth, newHeight);
+    }
+
+  }, [content, textSize, autoWidth]); // Removed 'width' from deps to prevent loop
 
   // Handle autofocus
   useEffect(() => {
