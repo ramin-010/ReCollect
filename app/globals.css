@@ -111,9 +111,10 @@
   /* Dark Gray Mode - Notion's exact colors */
   html.theme-dark-gray {
     /* Notion-like dark monochrome palette */
-    --background: 0 0% 8%;           /* #141414 - Very dark background */
+    --background: 0 0% 9%;           /* #141414 - Very dark background */
     --foreground: 0 0% 82%;          /* #E0E0E0 - Light text */
     --card: 0 0% 10%;                /* #191919 - Card background */
+    --card-bg: 0 0% 16%;             /* #212121 - Lifted card background */
     --card-foreground: 0 0% 88%;
     --popover: 0 0% 11%;             /* #1C1C1C - Popover background */
     --popover-foreground: 0 0% 88%;
@@ -138,7 +139,7 @@
     --text-secondary: 0 0% 56%;      /* Secondary text */
     --success: 142 35% 50%;
     --warning: 38 92% 50%;
-   --sidebar-bg: 0 0% 12%;   /* #1D1C1B - Very subtle warm tint */          /* #171717 - Sidebar background */
+   --sidebar-bg: 0 0% 13%;   /* #1D1C1B - Very subtle warm tint */          /* #171717 - Sidebar background */
     --sidebar-hover: 0 1% 13%;       /* #1F1F1F - Sidebar hover */
     --sidebar-active: 0 0% 14%;      /* #242424 - Sidebar active */
     --divider: 0 0% 16%; 

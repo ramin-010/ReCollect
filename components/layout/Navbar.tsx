@@ -1,6 +1,8 @@
 // components/layout/Navbar.tsx
 'use client';
 
+//import { ThemeSwitcher } from './ThemeSwitcher';
+import { useViewStore } from '@/lib/store/viewStore';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
@@ -10,10 +12,28 @@ import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { Logo } from '@/components/brand/Logo';
 
+
 export function Navbar() {
   const currentDashboard = useDashboardStore((state) => state.currentDashboard);
+  const currentView = useViewStore((state) => state.currentView);
   const { triggerCreateNote } = useCreateNote();
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  // Determine title based on view state
+  const getTitle = () => {
+    if (currentDashboard) return currentDashboard.name;
+    
+    switch (currentView) {
+      case 'docs': return 'Documents';
+      case 'todo': return 'To-Do List';
+      case 'drawing': return 'Whiteboard';
+      case 'expenses': return 'Expenses';
+      case 'settings': return 'Settings';
+      default: return 'All Dashboards';
+    }
+  };
+
+  const title = getTitle();
 
   return (
     <>
@@ -24,17 +44,13 @@ export function Navbar() {
             <Logo size="lg" showText={true} className="text-[hsl(var(--foreground))]" />
           </div>
 
-          {/* Dashboard info - centered */}
+          {/* Title - centered */}
           <div className="flex-1 flex items-center justify-center">
-            {currentDashboard ? (
-              <div className="text-center">
-                <h2 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
-                  {currentDashboard.name}
-                </h2>
-              </div>
-            ) : (
-              <h2 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">All Dashboards</h2>
-            )}
+            <div className="text-center">
+              <h2 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                {title}
+              </h2>
+            </div>
           </div>
 
           {/* Actions */}

@@ -45,6 +45,7 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
         },
+        'card-bg': 'hsl(var(--card-bg))',
         // Custom brand colors
         'brand-primary': 'hsl(var(--brand-primary))',
         'brand-secondary': 'hsl(var(--brand-secondary))',

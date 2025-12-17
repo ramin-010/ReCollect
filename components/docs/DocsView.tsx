@@ -121,7 +121,6 @@ const getDocPreview = (contentStr: string | object | null | undefined): { text: 
   }
 };
 
-// Simplified renderer for TipTap JSON content
 const MiniDocRenderer = ({ content }: { content: any }) => {
   if (!content) return null;
 
@@ -131,97 +130,191 @@ const MiniDocRenderer = ({ content }: { content: any }) => {
     nodes = json.content || [];
   } catch (e) {
     // Fallback for plain text
-    return <p className="text-[10px] text-[hsl(var(--muted-foreground))] line-clamp-4">{typeof content === 'string' ? content.substring(0, 150) : ''}</p>;
+    return (
+      <p className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-4 font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
+        {typeof content === 'string' ? content.substring(0, 150) : ''}
+      </p>
+    );
   }
 
   if (!Array.isArray(nodes) || !nodes.length) {
-    // Attempt to extract text if structure is invalid but content exists
-    const { text } = getDocPreview(content);
-    return text ? <p className="text-[10px] text-[hsl(var(--muted-foreground))] line-clamp-4">{text}</p> : null;
+    return null;
   }
 
+  const getText = (n: any): string => {
+    if (!n) return '';
+    if (typeof n === 'string') return n;
+    if (n.text) return n.text;
+    if (n.content && Array.isArray(n.content)) return n.content.map(getText).join('');
+    return '';
+  };
+
+  const nodesToShow = nodes.slice(0, 8);
+  const totalNodes = nodesToShow.filter((n: any) => {
+    const text = getText(n);
+    return text || n.type === 'image' || n.type === 'codeBlock';
+  }).length;
+
   return (
-    <div className="space-y-1.5 font-sans select-none" style={{ fontSize: '10px' }}>
-      {nodes.slice(0, 6).map((node: any, i: number) => {
+    <div className="space-y-[2px] select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif] -mt-1">
+      {nodesToShow.map((node: any, i: number) => {
         if (!node) return null;
-        
-        // Helper to get text from nested nodes
-        const getText = (n: any): string => {
-          if (!n) return '';
-          if (typeof n === 'string') return n;
-          if (n.text) return n.text;
-          if (n.content && Array.isArray(n.content)) return n.content.map(getText).join('');
-          return '';
-        };
 
         const text = getText(node);
-        // Skip empty nodes unless they are images or code blocks which might validly be empty/visual
         if (!text && node.type !== 'image' && node.type !== 'codeBlock') return null;
 
         switch (node.type) {
           case 'heading':
-            // Scale headings down
-            const size = node.attrs?.level === 1 ? 'text-[13px] font-bold mb-1.5 mt-0.5' : 
-                         node.attrs?.level === 2 ? 'text-[11px] font-bold mt-0.5' : 'text-[10px] font-semibold';
-            return <h4 key={i} className={`${size} text-[hsl(var(--foreground))] line-clamp-1`}>{text}</h4>;
-          
-          case 'paragraph':
-            return <p key={i} className="text-[hsl(var(--muted-foreground))] leading-relaxed line-clamp-2">{text}</p>;
+            const level = node.attrs?.level || 1;
+            let headingClass = '';
             
+            if (level === 1) {
+              headingClass = 'text-[1.55em] leading-[1.2] font-bold mt-[2px] mb-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
+            } else if (level === 2) {
+              headingClass = 'text-[1.45em] leading-[1.3] font-semibold mt-[2px] mb-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
+            } else if (level === 3) {
+              headingClass = 'text-[1.25em] leading-[1.3] font-semibold mt-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
+            } else {
+              headingClass = 'text-[1.125em] leading-[1.4] font-semibold mt-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
+            }
+            
+            return (
+              <h4 key={i} className={`${headingClass} line-clamp-1 tracking-[-0.003em] pb-1`}>
+                {text}
+              </h4>
+            );
+
+          case 'paragraph':
+            const paragraphClamp = totalNodes <= 2 ? 'line-clamp-6' : totalNodes <= 4 ? 'line-clamp-4' : 'line-clamp-2';
+            return (
+              <p 
+                key={i} 
+                className={`text-[12px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] ${paragraphClamp} tracking-[-0.003em]`}
+              >
+                {text}
+              </p>
+            );
+
           case 'bulletList':
           case 'orderedList':
+            const isOrdered = node.type === 'orderedList';
             return (
-               <div key={i} className="pl-1">
+              <div key={i} className="space-y-[1px] my-[2px]">
                 {node.content?.slice(0, 3).map((li: any, j: number) => (
-                   <div key={j} className="flex gap-1.5 items-start mb-0.5">
-                     <span className="text-[hsl(var(--muted-foreground))] leading-relaxed text-[8px] mt-0.5">•</span>
-                     <span className="text-[hsl(var(--muted-foreground))] leading-relaxed line-clamp-1 flex-1">{getText(li)}</span>
-                   </div>
-                 ))}
-               </div>
+                  <div key={j} className="flex gap-[6px] items-start">
+                    <span className="text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[14px] leading-[1.5] mt-[1px] min-w-[16px]">
+                      {isOrdered ? `${j + 1}.` : '•'}
+                    </span>
+                    <span className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-1 flex-1 tracking-[-0.003em]">
+                      {getText(li)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             );
-          
+
           case 'taskList':
             return (
-               <div key={i} className="pl-0">
-                {node.content?.slice(0, 3).map((li: any, j: number) => (
-                   <div key={j} className="flex gap-1.5 items-center mb-0.5">
-                     <div className={`w-2 h-2 rounded-[2px] border ${li.attrs?.checked ? 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]' : 'border-[hsl(var(--muted-foreground))]'}`} />
-                     <span className={`text-[hsl(var(--muted-foreground))] leading-relaxed line-clamp-1 flex-1 ${li.attrs?.checked ? 'line-through opacity-70' : ''}`}>{getText(li)}</span>
-                   </div>
-                 ))}
-               </div>
+              <div key={i} className="space-y-[2px] my-[2px]">
+                {node.content?.slice(0, 3).map((li: any, j: number) => {
+                  const isChecked = li.attrs?.checked;
+                  return (
+                    <div key={j} className="flex gap-[8px] items-center">
+                      <div 
+                        className={`
+                          w-[16px] h-[16px] rounded-[3px] border flex-shrink-0
+                          ${isChecked 
+                            ? 'bg-[rgb(46,170,220)] border-[rgb(46,170,220)] dark:bg-[rgb(46,170,220)] dark:border-[rgb(46,170,220)]' 
+                            : 'border-[rgba(55,53,47,0.16)] dark:border-[rgba(255,255,255,0.16)]'
+                          }
+                        `}
+                      >
+                        {isChecked && (
+                          <svg className="w-full h-full p-[2px]" viewBox="0 0 14 14" fill="none">
+                            <path d="M5.5 7.5L7 9L10.5 5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span 
+                        className={`
+                          text-[14px] leading-[1.5] line-clamp-1 flex-1 tracking-[-0.003em]
+                          ${isChecked 
+                            ? 'line-through text-[rgba(55,53,47,0.375)] dark:text-[rgba(255,255,255,0.375)]' 
+                            : 'text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)]'
+                          }
+                        `}
+                      >
+                        {getText(li)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             );
-            
+
           case 'codeBlock':
             return (
-              <div key={i} className="bg-[hsl(var(--muted))]/50 p-1.5 rounded-md border border-[hsl(var(--border))]/50 text-[9px] font-mono text-[hsl(var(--muted-foreground))] line-clamp-2 my-1.5">
-                {text || <span className="italic opacity-50">Code block</span>}
+              <div 
+                key={i} 
+                className="bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] px-[12px] py-[9px] rounded-[3px] text-[85%] font-mono text-[rgb(235,87,87)] dark:text-[rgb(255,142,114)] line-clamp-2 my-[4px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]"
+              >
+                {text || <span className="italic opacity-40 text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)]">Empty code block</span>}
               </div>
             );
-            
+
           case 'image':
             return (
-              <div key={i} className="h-20 w-full bg-[hsl(var(--muted))]/30 rounded-md overflow-hidden relative my-1.5 border border-[hsl(var(--border))]/50">
-                 {node.attrs?.src ? (
-                    <img src={node.attrs.src} alt="Preview" className="w-full h-full object-cover opacity-90" />
-                 ) : (
-                    <div className="flex items-center justify-center h-full text-[hsl(var(--muted-foreground))] text-[9px] gap-1">
-                      <ImageIcon className="w-3 h-3" /> Image
-                    </div>
-                 )}
+              <div 
+                key={i} 
+                className="h-[150px] w-full bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] rounded-[3px] overflow-hidden relative my-[6px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]"
+              >
+                {node.attrs?.src ? (
+                  <img 
+                    src={node.attrs.src} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[12px] gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                      <polyline points="21 15 16 10 5 21" strokeWidth="2"/>
+                    </svg>
+                    <span>Image</span>
+                  </div>
+                )}
               </div>
             );
-            
+
           case 'blockquote':
-             return (
-              <div key={i} className="border-l-2 border-[hsl(var(--muted-foreground))]/30 pl-2 my-1 italic text-[hsl(var(--muted-foreground))]">
+            return (
+              <div 
+                key={i} 
+                className="border-l-[3px] border-[rgb(55,53,47)] dark:border-[rgb(255,255,255)] pl-[14px] my-[4px] text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] tracking-[-0.003em]"
+              >
                 {text}
               </div>
-             );
+            );
+
+          case 'horizontalRule':
+            return (
+              <hr 
+                key={i} 
+                className="border-t border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)] my-[6px]"
+              />
+            );
 
           default:
-            return <p key={i} className="text-[hsl(var(--muted-foreground))] leading-relaxed line-clamp-1">{text}</p>;
+            // Default text rendering for any other node type
+            return (
+              <p 
+                key={i} 
+                className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-1 tracking-[-0.003em]"
+              >
+                {text}
+              </p>
+            );
         }
       })}
     </div>
@@ -404,14 +497,14 @@ export function DocsView() {
         transition={{ duration: 0.15, delay: index * 0.02 }}
         onClick={() => setCurrentDoc(doc)}
         className="group relative cursor-pointer
-                   bg-[hsl(var(--card))] 
-                   border border-[hsl(var(--border))] rounded-xl
+                   bg-[hsl(var(--background))] 
+                   border border-[hsl(var(--background))]/50 rounded-xl
                    hover:border-[hsl(var(--muted-foreground))]/40
                    hover:shadow-sm
-                   transition-all duration-200 overflow-hidden flex flex-col h-[280px]"
+                   transition-all duration-200 overflow-hidden flex flex-col h-[300px]"
       >
         {/* Top Section: Content Preview (The "Inside" Paper) */}
-        <div className="flex-1 p-3 relative overflow-hidden bg-[hsl(var(--background))]">
+        <div className="flex-1 p-3  relative overflow-hidden bg-[hsl(var(--card-bg))]">
           {/* Hover Actions - Top Right */}
           <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-fit">
             <button
@@ -457,22 +550,22 @@ export function DocsView() {
             )}
             
             {/* Fade gradient at bottom of preview */}
-            <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none" />
+            {/* <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none" /> */}
           </div>
         </div>
         
         {/* Bottom Section: Footer with Title & Meta (Distinct Background) */}
-        <div className="bg-[hsl(var(--muted))]/30 border-t border-[hsl(var(--border))] p-3 flex flex-col gap-2">
+        <div className="bg-[hsl(var(--muted))]/30  border-[hsl(var(--background))] p-3 flex flex-col gap-1">
           {/* Title Row */}
           <div className="flex items-start gap-2">
-             <h3 className={`font-semibold text-sm leading-snug line-clamp-2
+             <h3 className={`font-semibold text-md leading-snug line-clamp-1
                            ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}>
               {doc.title || 'Untitled'}
             </h3>
           </div>
 
           {/* Meta Row: Date & Tags */}
-          <div className="flex items-center justify-between pl-[26px]">
+          <div className="flex items-center justify-between">
             <span className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
               {format(new Date(doc.createdAt), 'MMM d, yyyy')}
             </span>
@@ -556,9 +649,9 @@ export function DocsView() {
       animate={{ opacity: 1 }}
       onClick={handleCreateDoc}
       disabled={isCreating}
-      className="group flex items-center justify-center gap-2 p-4 min-h-[180px]
+      className="group flex items-center justify-center gap-2 p-4 min-h-[180px]  bg-[hsl(var(--card-bg))]
                  border border-dashed border-[hsl(var(--border))] rounded-lg
-                 hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[hsl(var(--muted))]/30
+                 hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[hsl(var(--card-bg))]
                  transition-all duration-200 text-[hsl(var(--muted-foreground))]
                  hover:text-[hsl(var(--foreground))]"
     >
@@ -596,10 +689,10 @@ export function DocsView() {
       </div>
 
       {/* View Tabs and Controls - Notion Style */}
-      <div className="shrink-0 px-8 pb-4 border-b border-[hsl(var(--border))]">
+      <div className="shrink-0 px-8 pb-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           {/* View Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-[hsl(var(--muted))]/50 rounded-lg">
+          <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
             <button
               onClick={() => setViewMode('gallery')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
@@ -632,9 +725,9 @@ export function DocsView() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[hsl(var(--muted))]/50 
+                className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[hsl(var(--card-bg))] 
                            border border-transparent focus:border-[hsl(var(--border))] 
-                           focus:bg-[hsl(var(--background))] text-sm outline-none 
+                           focus:bg-[hsl(var(--card-bg))]/50 text-sm outline-none 
                            transition-all placeholder:text-[hsl(var(--muted-foreground))]"
               />
             </div>
@@ -643,7 +736,7 @@ export function DocsView() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm 
-                                 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/50 
+                                 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))]
                                  transition-colors">
                   <ArrowUpDown className="w-4 h-4" />
                   Sort
@@ -669,7 +762,7 @@ export function DocsView() {
             <Button
               onClick={handleCreateDoc}
               disabled={isCreating}
-              className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm border-0 gap-1.5"
+              className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5"
               size="sm"
             >
               {isCreating ? (
