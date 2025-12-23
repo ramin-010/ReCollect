@@ -200,6 +200,14 @@
   margin: 0.5rem 0;
 }
 
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
 .tiptap li {
   margin: 0.25rem 0;
 }
@@ -229,6 +237,20 @@
 .tiptap a {
   color: hsl(var(--primary));
   text-decoration: underline;
+}
+
+/* Node-level Placeholder */
+.tiptap p.is-empty::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Hide placeholder in lists to reduce noise */
+.tiptap li p.is-empty::before {
+  content: none;
 }
 
 /* Custom Scrollbar */

@@ -195,7 +195,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
   const renderCanvasPreview = () => {
     if (!previewData) {
       return (
-        <div className="h-[200px] w-full bg-gradient-to-br from-[hsl(var(--muted))]/30 to-[hsl(var(--muted))]/10 rounded-xl flex flex-col items-center justify-center border border-dashed border-[hsl(var(--border))]/60 group-hover:border-[hsl(var(--brand-primary))]/30 transition-all duration-300">
+        <div className="h-[280px] w-full bg-gradient-to-br from-[hsl(var(--muted))]/30 to-[hsl(var(--muted))]/10 flex flex-col items-center justify-center border-b border-[hsl(var(--border))]/40 group-hover:bg-[hsl(var(--muted))]/20 transition-all duration-300">
           <div className="w-12 h-12 rounded-full bg-[hsl(var(--muted))]/40 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-500">
             <FileText className="h-6 w-6 text-[hsl(var(--muted-foreground))]/50" />
           </div>
@@ -207,7 +207,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
     const { transformedBlocks, scale } = previewData;
 
     return (
-      <div className="h-[200px] w-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/30 rounded-xl relative overflow-hidden border border-[hsl(var(--border))]/50 shadow-sm group-hover:shadow-md group-hover:border-[hsl(var(--brand-primary))]/20 transition-all duration-500">
+      <div className="h-[280px] w-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/30 relative overflow-hidden border-b border-[hsl(var(--border))]/40 group-hover:shadow-inner transition-all duration-500">
         {/* Subtle dot pattern background */}
         <div
           className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
@@ -227,7 +227,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
                 return (
                   <div
                     key={block._id || index}
-                    className="absolute   shadow-sm hover:shadow-md transition-shadow duration-300"
+                    className="absolute shadow-sm hover:shadow-md transition-shadow duration-300"
                     style={{
                       left: `${left}px`,
                       top: `${top}px`,
@@ -235,7 +235,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
                       height: `${height}px`,
                       fontSize: `${fontSize}px`,
                       lineHeight: '1.4',
-                      whiteSpace: 'pre-wrap', // #fix: Respect newlines
+                      whiteSpace: 'pre-wrap',
                     }}
                   >
                     <div className="line-clamp-3 backdrop-blur-sm bg-white/80 dark:bg-gray-800/100 text-gray-700 dark:text-gray-300 font-medium rounded-sm p-1 border border-gray-200/30 dark:border-gray-700/30 opacity-90">{stripHtml(content)}</div>
@@ -273,7 +273,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
         {/* Subtle vignette effect */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/5 via-transparent to-transparent dark:from-black/20" />
 
-        {/* Item count badge */}
+        {/* Item count badge - Floating bottom right */}
         <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 shadow-sm">
           <div className="w-1 h-1 rounded-full bg-[hsl(var(--brand-primary))]" />
           {safeBody.length} {safeBody.length === 1 ? 'ITEM' : 'ITEMS'}
@@ -286,134 +286,108 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
   return (
     <>
       <Card 
-        className="group h-full flex flex-col min-h-[450px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card))] hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl cursor-pointer"
+        className="group h-full flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl cursor-pointer"
         onDoubleClick={handleDoubleClick}
       >
-        {/* Header Section */}
-        <div className="p-1 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex items-center gap-2">
-                {content.isPinned && (
-                  <Heart className="h-3.5 w-3.5 text-[hsl(var(--brand-primary))] fill-current shrink-0" />
-                )}
-                {content.isArchived && (
-                  <Archive className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                )}
-                <h3 className="text-lg font-bold text-[hsl(var(--foreground))] truncate tracking-tight group-hover:text-[hsl(var(--brand-primary))] transition-colors duration-300">
-                  {content.title}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-3 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-                <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${content.visibility === 'Public'
-                  ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400'
-                  }`}>
-                  {content.visibility === 'Public' ? <Globe className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
-                  {content.visibility}
-                </span>
-                <span className="text-[hsl(var(--border))]">|</span>
-                <span className="flex items-center gap-1.5 opacity-80">
-                  <Clock className="h-3 w-3" />
-                  {content.updatedAt ? format(new Date(content.updatedAt), 'MMM d') : 'Just now'}
-                </span>
-              </div>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0 hover:bg-[hsl(var(--muted))] rounded-lg">
-                  <MoreVertical className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl border-[hsl(var(--border))] shadow-xl bg-[hsl(var(--popover))]/95 backdrop-blur-sm">
-              <DropdownMenuItem onClick={() => onEdit?.(content)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                  <Edit className="mr-2 h-3.5 w-3.5 opacity-70" />Edit Note
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleToggleFavorite} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                  <Heart className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isPinned ? 'fill-current text-[hsl(var(--brand-primary))]' : ''}`} />
-                  {content.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleToggleArchive} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                  <Archive className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isArchived ? 'text-amber-500' : ''}`} />
-                  {content.isArchived ? 'Unarchive' : 'Archive'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsShareOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                  <Share2 className="mr-2 h-3.5 w-3.5 opacity-70" />Share
-                </DropdownMenuItem>
-                <div className="h-px bg-[hsl(var(--border))]/50 my-1" />
-                <DropdownMenuItem destructive onClick={() => setIsDeleteOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-500/10">
-                  <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" />Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Description Section */}
-        {content.description && (
-          <div className="px-1 pb-4">
-            <div className="flex items-start gap-2.5 text-xs text-[hsl(var(--muted-foreground))] rounded-lg ">
-              {/* <AlignLeft className="h-4 w-4 mt-0.5 shrink-0 text-[hsl(var(--brand-primary))] opacity-60" /> */}
-              <p className="line-clamp-2 leading-relaxed font-medium opacity-90">{content.description}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Preview Section */}
-        <div className="px-1 flex-1 min-h-0 flex flex-col">
+        {/* 1. Canvas Preview (Top) - Tall Hero */}
+        <div className="relative">
           {renderCanvasPreview()}
+
+          {/* Action Overlay - Top Right */}
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white rounded-lg border border-white/10 shadow-sm">
+                   <MoreVertical className="h-4 w-4" />
+                 </Button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl border-[hsl(var(--border))] shadow-xl bg-[hsl(var(--popover))]/95 backdrop-blur-sm">
+                 {/* Menu Items */}
+                 <DropdownMenuItem onClick={() => onEdit?.(content)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Edit className="mr-2 h-3.5 w-3.5 opacity-70" />Edit Note
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleToggleFavorite} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Heart className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isPinned ? 'fill-current text-[hsl(var(--brand-primary))]' : ''}`} />
+                   {content.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleToggleArchive} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Archive className={`mr-2 h-3.5 w-3.5 opacity-70 ${content.isArchived ? 'text-amber-500' : ''}`} />
+                   {content.isArchived ? 'Unarchive' : 'Archive'}
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => setIsShareOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Share2 className="mr-2 h-3.5 w-3.5 opacity-70" />Share
+                 </DropdownMenuItem>
+                 <div className="h-px bg-[hsl(var(--border))]/50 my-1" />
+                 <DropdownMenuItem destructive onClick={() => setIsDeleteOpen(true)} className="rounded-lg text-xs font-medium py-2 cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-500/10">
+                   <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" />Delete
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+          </div>
+
+          {/* Status Overlay - Top Left */}
+          <div className="absolute top-3 left-3 flex gap-1.5 pointer-events-none">
+             {content.isPinned && (
+               <div className="bg-rose-500/90 text-white p-1 rounded-md shadow-sm backdrop-blur-sm">
+                 <Heart className="h-3 w-3 fill-current" />
+               </div>
+             )}
+             {content.isArchived && (
+               <div className="bg-amber-500/90 text-white p-1 rounded-md shadow-sm backdrop-blur-sm">
+                 <Archive className="h-3 w-3" />
+               </div>
+             )}
+          </div>
         </div>
 
-        {/* Footer Section */}
-        <div className="p-1 mt-2 space-y-4 bg-gradient-to-b from-transparent to-[hsl(var(--muted))]/10">
-          {/* Tags */}
-          {safeTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {safeTags.slice(0, 3).map((tag, index) => (
-                <Badge
-                  key={tag._id ?? `${tag.name}-${index}`}
-                  variant="secondary"
-                  className="text-[10px] font-semibold px-2.5 py-1 h-6 bg-[hsl(var(--surface-light))] border border-[hsl(var(--border))] hover:border-[hsl(var(--brand-primary))]/30 text-[hsl(var(--muted-foreground))] transition-colors"
-                >
-                  #{tag.name}
-                </Badge>
-              ))}
-              {safeTags.length > 3 && (
-                <Badge variant="secondary" className="text-[10px] font-semibold px-2 py-1 h-6 bg-[hsl(var(--surface-light))] border border-[hsl(var(--border))]">
-                  +{safeTags.length - 3}
-                </Badge>
-              )}
-            </div>
+        {/* 2. Content Body (Clean & Minimal) */}
+        <div className="flex flex-col flex-1 p-5 gap-3">
+          
+          {/* Title Row */}
+          <div className="flex items-start justify-between gap-3">
+             <h3 className="text-xl font-bold text-[hsl(var(--foreground))] line-clamp-1 group-hover:text-[hsl(var(--brand-primary))] transition-colors duration-300">
+               {content.title}
+             </h3>
+          </div>
+
+          {/* Description */}
+          {content.description && (
+             <p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2 leading-relaxed font-medium opacity-90">
+                {content.description}
+             </p>
           )}
 
-          {/* Links */}
-          {content.links && content.links.length > 0 && (
-            <div className="pt-3 border-t border-[hsl(var(--border))]/40">
-              <div className="flex flex-col gap-2">
-                {content.links.slice(0, 2).map((link, index) => (
-                  <a
-                    key={index}
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-primary))] transition-colors group/link w-full"
-                  >
-                    <div className="p-1 rounded-md bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] group-hover/link:bg-[hsl(var(--brand-primary))] group-hover/link:text-white transition-colors">
-                      <LinkIcon className="h-3 w-3" />
-                    </div>
-                    <span className="truncate font-medium opacity-80 group-hover/link:opacity-100">{link}</span>
-                  </a>
-                ))}
-                {content.links.length > 2 && (
-                  <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]/60 pl-8">
-                    +{content.links.length - 2} more links
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Footer Row: Meta & Tags */}
+          <div className="flex items-center justify-between pt-1 gap-2 border-t border-transparent">
+             {/* Meta Info */}
+             <div className="flex items-center gap-3 text-[11px] font-medium text-[hsl(var(--muted-foreground))] opacity-80">
+               <span className="flex items-center gap-1.5">
+                 {content.updatedAt ? format(new Date(content.updatedAt), 'MMM d') : 'Just now'}
+               </span>
+               <span className="text-[hsl(var(--border))]">|</span>
+                <span className={`flex items-center gap-1`}>
+                   {content.visibility === 'Public' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                   {content.visibility}
+                 </span>
+             </div>
+
+             {/* Minimal Tags */}
+             {safeTags.length > 0 && (
+               <div className="flex items-center gap-1.5">
+                 {safeTags.slice(0, 2).map((tag, index) => (
+                   <span key={tag._id || index} className="text-[10px] font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] px-2 py-0.5 rounded-md">
+                     #{tag.name}
+                   </span>
+                 ))}
+                 {safeTags.length > 2 && (
+                   <span className="text-[10px] text-[hsl(var(--muted-foreground))]">+{safeTags.length - 2}</span>
+                 )}
+               </div>
+             )}
+          </div>
         </div>
       </Card>
 

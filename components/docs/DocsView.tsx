@@ -200,7 +200,7 @@ const MiniDocRenderer = ({ content }: { content: any }) => {
             const isOrdered = node.type === 'orderedList';
             return (
               <div key={i} className="space-y-[1px] my-[2px]">
-                {node.content?.slice(0, 3).map((li: any, j: number) => (
+                {node.content?.slice(0, 10).map((li: any, j: number) => (
                   <div key={j} className="flex gap-[6px] items-start">
                     <span className="text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[14px] leading-[1.5] mt-[1px] min-w-[16px]">
                       {isOrdered ? `${j + 1}.` : '•'}
