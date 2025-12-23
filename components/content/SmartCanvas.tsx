@@ -300,6 +300,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
             type: 'stack',
             stackItems: newStackItems,
             content: '', // Container content unused
+            width: 450, // Increased width for better visibility
             height: 'auto' // Force auto height so it grows
         };
 

@@ -168,9 +168,9 @@ function SmartBlockComponent({
                  </div>
 
                  {/* Vertical Stream of Items */}
-                 {/* Vertical Stream of Items */}
+                {/* Vertical Stream of Items */}
                  <div 
-                    className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-2 relative"
+                    className="flex-1 overflow-y-auto overflow-x-hidden p-2  space-y-2 relative"
                     onDragOver={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -342,17 +342,17 @@ function SmartBlockComponent({
                                 }}
                                 className="bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50 rounded-lg p-3 shadow-sm relative group/item hover:border-[hsl(var(--brand-primary))]/30 transition-colors cursor-grab active:cursor-grabbing"
                              >
-                                {/* Connector Line (The "Interconnected" feel) */}
-                                {index !== stackItems.length - 1 && (
-                                    <div className="absolute left-[1.3rem] top-[calc(100%-10px)] h-[20px] w-[2px] bg-[hsl(var(--border))]/50 z-0 pointer-events-none" />
-                                )}
+                                {/* Stack Index Number - Top Left Outside */}
+                                <div className="absolute top-0 right-1 text-[8px] font-mono font-medium text-[hsl(var(--muted-foreground))] opacity-50 select-none pointer-events-none">
+                                    {index < 9 ? `0${index + 1}` : index + 1}
+                                </div>
 
                                  {item.type === 'text' && (
-                                    <div className="prose prose-sm dark:prose-invert line-clamp-[8] text-xs" dangerouslySetInnerHTML={{ __html: item.content }} />
+                                    <div className="prose prose-sm dark:prose-invert line-clamp-[8] text-sm" dangerouslySetInnerHTML={{ __html: item.content }} />
                                  )}
                                  {item.type === 'image' && (
-                                    <div className="rounded-md overflow-hidden h-32 w-full mt-1">
-                                        <img src={item.url || item.content} className="w-full h-full object-cover" />
+                                    <div className="rounded-md overflow-hidden w-full mt-1">
+                                        <img src={item.url || item.content} className="w-full h-auto object-contain" />
                                     </div>
                                  )}
                                  {item.type === 'embed' && (
