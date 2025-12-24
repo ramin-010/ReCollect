@@ -10,6 +10,7 @@ export interface SmartBlockProps {
   y: number;
   isSelected?: boolean;
   onUpdate: (content: string) => void;
+  onUpdateBlock?: (id: string, data: any) => void; // Generic update handler
   onDelete?: () => void;
   onFocus?: () => void;
   onUnstack?: () => void;
@@ -19,6 +20,7 @@ export interface SmartBlockProps {
   onDimensionsChange?: (id: string, width: number, height: number) => void;
   isConnectionDragging?: boolean;
   readOnly?: boolean;
+  color?: string; // Background color class
 }
 
 export interface TaskStats {

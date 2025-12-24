@@ -13,6 +13,7 @@ export interface Connection {
   // No, absolute is best for "molding". We just update them when blocks move.
   controlPoint1?: { x: number, y: number }; 
   controlPoint2?: { x: number, y: number };
+  color?: string;
 }
 
 export interface BlockDims {

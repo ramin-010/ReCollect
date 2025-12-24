@@ -8,6 +8,7 @@ import { calculateTaskStats, handleStackDrop, handleStackItemDrop } from './util
 import {
   DragHandle,
   ControlsOverlay,
+  ColorControl,
   AnchorPoints,
   TaskProgressBar,
   BlockContent,
@@ -26,6 +27,7 @@ function SmartBlockComponent({
   y,
   isSelected = false,
   onUpdate,
+  onUpdateBlock,
   onDelete,
   onFocus,
   onUnstack,
@@ -34,12 +36,16 @@ function SmartBlockComponent({
   onAnchorMouseUp,
   onDimensionsChange,
   readOnly,
-  isConnectionDragging
+  isConnectionDragging,
+  color // Background color class
 }: SmartBlockProps) {
   // console.log('[SmartBlock] Render', id); // Commented out to avoid spam, uncomment if deep debugging needed
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [bgColor, setBgColor] = useState('bg-[hsl(var(--card-bg))]/70'); 
+  
+  // Use prop color or default
+  const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
+
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
   
@@ -100,7 +106,7 @@ function SmartBlockComponent({
         "relative rounded-xl border transition-all duration-200 group flex flex-col",
         "backdrop-blur-md shadow-sm hover:shadow-md",
         isSelected ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20" : "border-[hsl(var(--border))]/50",
-        !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing", // Enable dragging on entire card when not editing
+        !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
         bgColor
       )}
       style={{
@@ -114,11 +120,10 @@ function SmartBlockComponent({
         setIsEditing(true);
       }}
     >
-      {/* Drag Handle - Only visible on hover */}
       <DragHandle isVisible={isHovered || isSelected} />
-
-      {/* Controls Overlay - Top Right */}
-      <ControlsOverlay isVisible={isHovered} onDelete={onDelete} />
+      
+      {/* Controls Overlay (Delete) - Top Right (Outside) */}
+      <ControlsOverlay isVisible={isHovered || isSelected} onDelete={onDelete} />
 
       {/* Anchor Points (Visible on Hover or dragging) */}
       <AnchorPoints 
@@ -128,6 +133,15 @@ function SmartBlockComponent({
         onAnchorMouseDown={onAnchorMouseDown}
         onAnchorMouseUp={onAnchorMouseUp}
       />
+
+      {/* Color Control - Floating "Inside" Top Right (Only when Editing) */}
+      {isEditing && (
+            <ColorControl 
+            isVisible={true} 
+            currentColor={color}
+            onUpdateColor={(c) => onUpdateBlock?.(id, { color: c })}
+        />
+      )}
 
       {/* Content Area */}
       <div className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-4' : 'p-0')}>

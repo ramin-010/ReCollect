@@ -261,7 +261,7 @@ export function ConnectionLayer({
                         }}>
                             <path 
                                 d={path} 
-                                stroke={isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))"} 
+                                stroke={conn.color || (isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))")} 
                                 strokeWidth={isSelected ? 3 : 2}
                                 fill="none"
                                 className="transition-colors duration-200 cursor-pointer hover:stroke-[hsl(var(--foreground))]"
@@ -275,13 +275,44 @@ export function ConnectionLayer({
                      const { cp1, cp2 } = getControlPoints(conn);
                      const start = getAnchorPos(conn.fromBlock, conn.fromSide);
                      const end = getAnchorPos(conn.toBlock, conn.toSide);
+                     
+                     // Calculate midpoint for Color Picker (between CP1 and CP2 is usually the visual center)
+                     const midX = (cp1.x + cp2.x) / 2;
+                     const midY = (cp1.y + cp2.y) / 2;
+
+                     const COLORS = [
+                         { name: 'Default', value: 'hsl(var(--muted-foreground))' },
+                         { name: 'Red', value: '#ef4444' },
+                         { name: 'Blue', value: '#3b82f6' },
+                         { name: 'Green', value: '#22c55e' },
+                         { name: 'Amber', value: '#f59e0b' },
+                     ];
+
                      return (
                         <g 
                             key={`${conn.id}-controls`} 
                             className="pointer-events-auto"
                             onClick={(e) => e.stopPropagation()} // Prevent canvas click (deselect)
                         >
-                             {/* Guide Lines Removed - Handles are on the path now */}
+                             {/* Color Picker Toolbar */}
+                             <foreignObject x={midX - 60} y={midY - 40} width="90" height="10" opacity={0.7} className="overflow-visible">
+                                 <div className="flex items-center justify-center gap-1 bg-background/90 border border-border rounded-full p-1 shadow-sm backdrop-blur-sm">
+                                     {COLORS.map((c) => (
+                                         <button
+                                             key={c.name}
+                                             className={`w-3 h-3 rounded-full border border-border transition-transform hover:scale-110 ${conn.color === c.value ? 'ring-2 ring-foreground ring-offset-1' : ''}`}
+                                             style={{ backgroundColor: c.value }}
+                                             onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 setConnections(prev => prev.map(cn => 
+                                                     cn.id === conn.id ? { ...cn, color: c.value === 'hsl(var(--muted-foreground))' ? undefined : c.value } : cn
+                                                 ));
+                                             }}
+                                             title={c.name}
+                                         />
+                                     ))}
+                                 </div>
+                             </foreignObject>
 
                              {/* Handle 1 - No scaling on hover to prevent jitter */}
                              <circle 
@@ -349,8 +380,16 @@ export function ConnectionLayer({
 
             {variant === 'default' && (
                 <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="context-stroke" />
+                    <marker 
+                        id="arrowhead" 
+                        markerWidth="16" 
+                        markerHeight="16" 
+                        refX="16" 
+                        refY="7" 
+                        orient="auto"
+                        markerUnits="userSpaceOnUse"
+                    >
+                        <polygon points="0 0, 19 7, 0 14" fill="context-stroke" />
                     </marker>
                 </defs>
             )}

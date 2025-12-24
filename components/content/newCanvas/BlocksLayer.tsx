@@ -76,15 +76,20 @@ const BlocksLayerComponent = ({
                         y={block.y}
                         isSelected={selectedId === block.blockId}
                         onUpdate={(content) => onUpdateBlock(block.blockId, { content })}
+                        onUpdateBlock={onUpdateBlock}
                         onDelete={() => onDeleteBlock(block.blockId)}
-                        onFocus={() => onDragStart(block.blockId)} // Re-using drag start for focus/select
-                        onUnstack={() => onUnstack(block)}
+                        onFocus={() => {
+                           // Logic handled by SmartCanvas click mainly, 
+                           // but we could lift specific focus logic here if needed.
+                        }}
+                        onUnstack={() => onUnstack(block.blockId)}
                         onStackUpdate={(items) => onUpdateBlock(block.blockId, { stackItems: items })}
-                        onAnchorMouseDown={(side, e) => onAnchorMouseDown(block.blockId, side, e)}
-                        onAnchorMouseUp={(side, e) => onAnchorMouseUp(block.blockId, side, e)}
+                        onAnchorMouseDown={(side, e) => onAnchorMouseDown && onAnchorMouseDown(block.blockId, side, e, block)}
+                        onAnchorMouseUp={(side, e) => onAnchorMouseUp && onAnchorMouseUp(block.blockId, side, e)}
                         onDimensionsChange={onDimensionsChange}
                         readOnly={readOnly}
                         isConnectionDragging={isConnectionDragging}
+                        color={block.color}
                     />
                 </Rnd>
             ))}
