@@ -209,12 +209,13 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} 
         />
 
-        {/* Connection Layer */}
+        {/* Connection Layer (LINES - Background) */}
         <ConnectionLayer 
+          variant="default"
           connections={connections}
           setConnections={setConnections} 
-          blocks={blockDims} // Pass simplified blocks for snapping logic
-          fullBlocks={blocks} // Pass full blocks for useConnectionDrag logic
+          blocks={blockDims} 
+          fullBlocks={blocks} 
           onUpdateConnection={handleConnectionUpdate}
           onRemoveConnection={handleConnectionRemove}
           activeDragStart={activeDragStart}
@@ -223,7 +224,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           selectedConnectionId={selectedConnectionId}
           onSelectConnection={(id) => {
               setSelectedConnectionId(id);
-              setSelectedId(null); // Deselect block when clicking connection
+              setSelectedId(null);
           }}
         />
 
@@ -244,6 +245,21 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onAnchorMouseUp={() => {}} 
           onDimensionsChange={handleDimensionsChange}
           isConnectionDragging={!!activeDragStart}
+        />
+
+        {/* Connection Layer (CONTROLS - Foreground) */}
+        <ConnectionLayer 
+          variant="controls"
+          connections={connections}
+          setConnections={setConnections} 
+          blocks={blockDims} 
+          // dragStart not needed for controls
+          activeDragStart={null} 
+          onDragComplete={() => {}} 
+          getCanvasPoint={getCanvasPoint}
+          selectedConnectionId={selectedConnectionId}
+          onSelectConnection={() => {}} // Controls don't trigger selection (handles handle their own drag)
+          onUpdateConnection={handleConnectionUpdate}
         />
 
         {/* FAB to add Note */}
