@@ -259,7 +259,7 @@ export const AbstractDash = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.3 }}
               >
-                Collect Everything.
+                Capture Everything.
               </motion.h2>
               <motion.p 
                 className="text-zinc-400 text-xl"
