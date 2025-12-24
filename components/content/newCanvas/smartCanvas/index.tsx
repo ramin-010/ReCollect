@@ -49,6 +49,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const [connections, setConnections] = useState<Connection[]>([]);
   // Optimization: Only track the START of a drag here. The continuous updates happen in ConnectionLayer.
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
+  const [draggingBlock, setDraggingBlock] = useState<{ id: string, x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +59,18 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, []);
 
   // Helper: Prepare Blocks data for ConnectionLayer
-  const blockDims = useMemo(() => prepareBlockDims(blocks, renderedDims), [blocks, renderedDims]);
+  // Merge ephemeral dragging state
+  const blockDims = useMemo(() => {
+    const dims = prepareBlockDims(blocks, renderedDims);
+    if (draggingBlock) {
+       const target = dims.find(b => b.id === draggingBlock.id);
+       if (target) {
+         target.x = draggingBlock.x;
+         target.y = draggingBlock.y;
+       }
+    }
+    return dims;
+  }, [blocks, renderedDims, draggingBlock]);
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
     setRenderedDims(prev => {
@@ -86,7 +98,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     setConnections,
     getCanvasPoint,
     connections,
-    activeDragStart // Renamed
+    activeDragStart, // Renamed
+    setDraggingBlock
   );
 
   // Custom Hooks

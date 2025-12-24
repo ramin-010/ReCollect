@@ -84,7 +84,7 @@ const BlocksLayerComponent = ({
                         }}
                         onUnstack={() => onUnstack(block.blockId)}
                         onStackUpdate={(items) => onUpdateBlock(block.blockId, { stackItems: items })}
-                        onAnchorMouseDown={(side, e) => onAnchorMouseDown && onAnchorMouseDown(block.blockId, side, e, block)}
+                        onAnchorMouseDown={(side, e) => onAnchorMouseDown && onAnchorMouseDown(block.blockId, side, e)}
                         onAnchorMouseUp={(side, e) => onAnchorMouseUp && onAnchorMouseUp(block.blockId, side, e)}
                         onDimensionsChange={onDimensionsChange}
                         readOnly={readOnly}

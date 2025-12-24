@@ -16,12 +16,12 @@ export const useCanvasHandlers = (
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>,
   getCanvasPoint: (e: { clientX: number; clientY: number }) => { x: number; y: number },
   connections: Connection[], 
-  activeDragStart: ActiveDragStart | null // Updated type
+  activeDragStart: ActiveDragStart | null,
+  setDraggingBlock: React.Dispatch<React.SetStateAction<{ id: string, x: number, y: number } | null>>
 ) => {
   const lastResizeTime = useRef<number>(0);
   const resizeTimeout = useRef<any>(null);
-  const lastDragTime = useRef<number>(0);
-  const dragTimeout = useRef<any>(null);
+  const dragRafId = useRef<number | null>(null);
   
   // We no longer need to strictly sync a ref for 'draftConnection' here because 
   // the continuous dragging is handled in ConnectionLayer. 
@@ -62,7 +62,14 @@ export const useCanvasHandlers = (
   }, [updateBlock]);
 
   const handleDragStop = useCallback((blockId: string, x: number, y: number) => {
-    // ... existing handleDragStop logic ...
+    // Cancel any pending drag frame
+    if (dragRafId.current) {
+        cancelAnimationFrame(dragRafId.current);
+        dragRafId.current = null;
+    }
+    // Clear ephemeral drag state immediately
+    setDraggingBlock(null);
+
     setBlocks(prevBlocks => {
       const draggedBlock = prevBlocks.find(b => b.blockId === blockId);
       if (!draggedBlock) return prevBlocks;
@@ -110,20 +117,17 @@ export const useCanvasHandlers = (
 
       return prevBlocks.map(b => b.blockId === blockId ? { ...b, x: finalX, y: y } : b);
     });
-  }, [setBlocks]);
+  }, [setBlocks, setDraggingBlock]);
 
   const handleDragThrottled = useCallback((blockId: string, x: number, y: number) => {
-    const now = Date.now();
-    if (now - lastDragTime.current > 30) { // ~30fps visual update for connections
-      updateBlock(blockId, { x, y });
-      lastDragTime.current = now;
-    } else {
-      if (dragTimeout.current) clearTimeout(dragTimeout.current);
-      dragTimeout.current = setTimeout(() => {
-        updateBlock(blockId, { x, y });
-      }, 30);
-    }
-  }, [updateBlock]);
+    // rAF Throttling: Update strictly next frame (60fps/144fps sync)
+    if (dragRafId.current) return;
+
+    dragRafId.current = requestAnimationFrame(() => {
+        setDraggingBlock({ id: blockId, x, y });
+        dragRafId.current = null;
+    });
+  }, [setDraggingBlock]);
 
   const handleUnstack = useCallback((stackBlock: BlockData) => {
     if (!stackBlock.stackItems) return;

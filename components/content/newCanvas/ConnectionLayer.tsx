@@ -3,6 +3,7 @@ import { Connection, BlockDims } from '@/types/canvas';
 import { ActiveDragStart, BlockData } from './smartCanvas/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useConnectionDrag } from './smartCanvas/useConnectionDrag';
+import { ConnectionLine } from './ConnectionLine';
 
 interface ConnectionLayerProps {
     connections: Connection[];
@@ -252,23 +253,19 @@ export function ConnectionLayer({
                 const isSelected = selectedConnectionId === conn.id;
 
                 if (variant === 'default') {
-                    // RENDER LINES
-                    const path = getPath(conn);
+                    // RENDER LINE (Memoized)
+                    const fromBlock = blocks.find(b => b.id === conn.fromBlock);
+                    const toBlock = blocks.find(b => b.id === conn.toBlock);
+                    
                     return (
-                        <g key={conn.id} className="pointer-events-auto" onClick={(e) => {
-                            e.stopPropagation(); 
-                            onSelectConnection(conn.id);
-                        }}>
-                            <path 
-                                d={path} 
-                                stroke={conn.color || (isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))")} 
-                                strokeWidth={isSelected ? 3 : 2}
-                                fill="none"
-                                className="transition-colors duration-200 cursor-pointer hover:stroke-[hsl(var(--foreground))]"
-                                markerEnd="url(#arrowhead)"
-                            />
-                            <path d={path} stroke="transparent" strokeWidth={15} fill="none" className="cursor-pointer" />
-                        </g>
+                        <ConnectionLine
+                            key={conn.id}
+                            connection={conn}
+                            fromBlock={fromBlock}
+                            toBlock={toBlock}
+                            isSelected={isSelected}
+                            onSelect={onSelectConnection}
+                        />
                     );
                 } else if (variant === 'controls' && isSelected) {
                     // RENDER CONTROLS
