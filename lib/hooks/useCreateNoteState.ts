@@ -46,8 +46,9 @@ export function useCreateNoteState(dashboardId: string) {
         if (savedState) {
           const parsedState = JSON.parse(savedState);
 
+          const blocks: BlockType[] = Array.isArray(parsedState.canvasBlocks) ? parsedState.canvasBlocks : [];
           const blocksWithUrls = await Promise.all(
-            parsedState.canvasBlocks.map(async (block: BlockType) => {
+            blocks.map(async (block: BlockType) => {
               if (block.type === 'image' && block.imageId && !block.isUploaded) {
                 // Load from IndexedDB and create object URL
                 const blob = await imageStorage.getImage(block.imageId);
@@ -64,7 +65,7 @@ export function useCreateNoteState(dashboardId: string) {
 
           setState({
             ...parsedState,
-            canvasBlocks: blocksWithUrls
+            canvasBlocks: Array.isArray(blocksWithUrls) ? blocksWithUrls : []
           });
         } else {
           setState(DEFAULT_STATE);
@@ -97,7 +98,7 @@ export function useCreateNoteState(dashboardId: string) {
         const storageKey = STORAGE_KEY + dashboardId;
         const stateToSave = {
           ...state,
-          canvasBlocks: state.canvasBlocks.map(block => {
+          canvasBlocks: (Array.isArray(state.canvasBlocks) ? state.canvasBlocks : []).map(block => {
             if (block.type === 'image' && block.url?.startsWith('blob:')) {
               return {
                 ...block,

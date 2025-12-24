@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -12,6 +12,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import { Bold, Italic, Underline as UnderlineIcon, CheckSquare, Highlighter, Link as LinkIcon, Trash2, Code } from 'lucide-react';
 import { SlashCommands } from './SlashCommands';
+import { debounce } from 'lodash';
 
 interface BlockEditorProps {
   content: string;
@@ -36,6 +37,21 @@ export function BlockEditor({
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [bubbleMenuPos, setBubbleMenuPos] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Debounced handler needs to be defined BEFORE useEditor so it can be used inside onUpdate
+  const debouncedOnChange = useMemo(
+    () => debounce((html: string) => {
+      onChange(html);
+    }, 500), 
+    [onChange]
+  );
+  
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedOnChange.cancel();
+    };
+  }, [debouncedOnChange]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -88,7 +104,7 @@ export function BlockEditor({
       }
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      debouncedOnChange(editor.getHTML());
     },
     onFocus: () => onFocus?.(),
     onBlur: () => onBlur?.(),

@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from './SmartBlock';
 import { v4 as uuidv4 } from 'uuid';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { imageStorage } from '@/lib/storage/imageStorage';
+import { ConnectionLayer } from './ConnectionLayer';
+import { BlocksLayer } from './BlocksLayer';
+import { Connection } from '@/types/canvas';
 
 export interface SmartCanvasProps {
   initialContent?: string; // JSON string of blocks
@@ -39,6 +42,55 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const COLUMN_WIDTH = 300;
   const GAP = 24;
   const SNAP_THRESHOLD = 50; // px distance to trigger snap
+
+  // Connection State
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [draftConnection, setDraftConnection] = useState<{
+      fromBlock: string;
+      fromSide: 'top' | 'right' | 'bottom' | 'left';
+      currentX: number;
+      currentY: number;
+  } | null>(null);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Helper: Get mouse/touch coordinates relative to the canvas container
+  const getCanvasPoint = useCallback((e: { clientX: number, clientY: number }) => {
+      if (!containerRef.current) return { x: 0, y: 0 };
+      const rect = containerRef.current.getBoundingClientRect();
+      return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+      };
+  }, []);
+
+  // Helper: Prepare Blocks data for ConnectionLayer (simple map)
+  const blockDims = useMemo(() => blocks.map(b => ({
+      id: b.blockId,
+      x: b.x,
+      y: b.y,
+      width: b.width,
+      height: typeof b.height === 'number' ? b.height : 200 // Approx if auto, but connection layer needs real dims. 
+      // Ideally we should track real dims. 
+      // For now, let's assume auto height is roughly trackable or we update it?
+      // Rnd updates width/height in state? 
+      // Checking `handleResizeStop`: it updates width/height.
+      // But initial height 'auto' is tricky. 
+      // We might need to use a ref to get actual DOM rects? 
+      // Or just default to a reasonable value if 'auto'.
+  })), [blocks]);
+
+
+  const handleAnchorMouseDown = useCallback((blockId: string, side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => {
+      // Start connection drag
+      const { x, y } = getCanvasPoint(e);
+      setDraftConnection({
+          fromBlock: blockId,
+          fromSide: side,
+          currentX: x, 
+          currentY: y
+      });
+  }, [getCanvasPoint]);
 
   // Handle Global Paste (Image / URL detection)
   useEffect(() => {
@@ -146,9 +198,42 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }
     };
 
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
   }, []);
+
+  // Connection Drag Global Listeners
+  useEffect(() => {
+      const handleMouseMove = (e: MouseEvent) => {
+          if (draftConnection) {
+             const { x, y } = getCanvasPoint(e);
+             setDraftConnection(prev => prev ? ({ ...prev, currentX: x, currentY: y }) : null);
+          }
+      };
+
+      const handleMouseUp = (e: MouseEvent) => {
+          if (draftConnection) {
+              // End drag.
+              // If dropped on a valid anchor, SmartBlock's onMouseUp would trigger? 
+              // Or we detect intersection?
+              // Easier: Add onMouseUp to Anchors in SmartBlock.
+              // But SmartBlock anchors can just call a "onConnect" handler passed down.
+              // If we drop here, we cancel.
+              setDraftConnection(null);
+          }
+      };
+
+      if (draftConnection) {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+      }
+
+      return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+      };
+  }, [draftConnection]);
+
 
   const handleCanvasDrop = (e: React.DragEvent) => {
       const stackData = e.dataTransfer.getData('application/recollect-stack-item');
@@ -192,14 +277,17 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
       }
   };
 
-  // Initialize blocks
+  // Initialize blocks and connections
   useEffect(() => {
     if (initialContent) {
       try {
         const parsed = JSON.parse(initialContent);
         if (Array.isArray(parsed)) {
-          // Ensure legacy blocks map to new structure if needed, or just validate
           setBlocks(parsed);
+        } else if (parsed && typeof parsed === 'object') {
+            // New format { blocks, connections }
+            if (parsed.blocks) setBlocks(parsed.blocks);
+            if (parsed.connections) setConnections(parsed.connections);
         }
       } catch (e) {
         // If simple string, create one block
@@ -216,19 +304,54 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }
       }
     }
-  }, []);
+  }, []); // Run once on mount
 
-  // Optimization: Commit-on-Stop for Drag, Debounce for Resize
+  // Debounced Save for Blocks and Connections
+  const isLoaded = useRef(false);
+  useEffect(() => {
+      // Skip the very first render if we want, or just wait for load
+      // But typically we want to save subsequent changes.
+      // We'll use a timeout to debounce.
+      const timer = setTimeout(() => {
+           if (blocks.length > 0 || connections.length > 0) {
+              // We save as an object now.
+              // Logic check: if initialContent was array, we upgrade to object.
+             onChange?.(JSON.stringify({ blocks, connections }));
+           }
+      }, 1000); // 1s debounce for "arrow states" and block moves
+
+      return () => clearTimeout(timer);
+  }, [blocks, connections, onChange]);
+
+  // Stable Handlers for BlocksLayer optimization ---------------------------
+
   const updateBlock = useCallback((blockId: string, updates: Partial<BlockData>) => {
     setBlocks(prev => prev.map(b => b.blockId === blockId ? { ...b, ...updates } : b));
-    if (onChange) {
-         // Naive onChange sync
-         setBlocks(prev => {
-             // Side-effect only, returning same
-             return prev;
-         });
-    }
-  }, [onChange]);
+  }, []);
+
+  const handleDeleteBlock = useCallback((blockId: string) => {
+      setBlocks(prev => prev.filter(b => b.blockId !== blockId));
+      // Also remove connections attached to this block
+      setConnections(prev => prev.filter(c => c.fromBlock !== blockId && c.toBlock !== blockId));
+  }, []);
+
+  const handleResize = useCallback((id: string, ref: any, position: any) => {
+      // This is for live resize if we want live updates in state (throttled)
+      // For now Rnd handles visual ref, we update state on Stop typically.
+      // But we have `handleResizeThrottled` below.
+      // We'll leave the throttled logic or move it here.
+  }, []);
+
+  const handleResizeStop = useCallback((id: string, ref: any, position: any) => {
+      updateBlock(id, { 
+        width: ref.offsetWidth,
+        height: ref.offsetHeight,
+        x: position.x,
+        y: position.y
+     });
+  }, [updateBlock]);
+
+  // ------------------------------------------------------------------------
 
   // Debounced Resize Updater
   const lastResizeTime = useRef<number>(0);
@@ -263,92 +386,114 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     setSelectedId(newBlock.blockId);
   };
 
-  const handleDragStop = (blockId: string, x: number, y: number) => {
-    // Check for collision with other blocks to form a Stack
-    const draggedBlock = blocks.find(b => b.blockId === blockId);
-    if (!draggedBlock) return;
-
-    // Calculate center of dragged block (assuming min height 150 if auto)
-    const draggedHeight = typeof draggedBlock.height === 'number' ? draggedBlock.height : 150;
-    const draggedCenterX = x + (draggedBlock.width / 2);
-    const draggedCenterY = y + (draggedHeight / 2);
-
-    const targetBlock = blocks.find(b => {
-        if (b.blockId === blockId) return false;
-        
-        // Calculate center of target block
-        const bHeight = typeof b.height === 'number' ? b.height : 150;
-        const bCenterX = b.x + (b.width / 2);
-        const bCenterY = b.y + (bHeight / 2);
-        
-        // Simple Euclidean distance check
-        // If centers are within 150px of each other -> Stack 'em
-        const dist = Math.sqrt(Math.pow(draggedCenterX - bCenterX, 2) + Math.pow(draggedCenterY - bCenterY, 2));
-        return dist < 150;
-    });
-
-    if (targetBlock) {
-        console.log("Collision detected! Merging into stack.", targetBlock.blockId);
-        // Merge into stack!
-        const newStackItems = [
-            ...(targetBlock.type === 'stack' ? (targetBlock.stackItems || []) : [targetBlock]),
-            draggedBlock
-        ];
-
-        const newStackBlock: BlockData = {
-            ...targetBlock,
-            type: 'stack',
-            stackItems: newStackItems,
-            content: '', // Container content unused
-            width: 450, // Increased width for better visibility
-            height: 'auto' // Force auto height so it grows
-        };
-
-        // Remove both old blocks and add new stack
-        const newBlocks = blocks.filter(b => b.blockId !== blockId && b.blockId !== targetBlock.blockId);
-        setBlocks([...newBlocks, newStackBlock]);
-        onChange?.(JSON.stringify([...newBlocks, newStackBlock]));
-        return;
-    }
-
-    let closestX = x;
-    let minDistance = Infinity;
+  const handleDragStop = useCallback((blockId: string, x: number, y: number) => {
+    // We must access current blocks state. 
+    // Since we are in a useCallback with [blocks], this updates when blocks update.
+    // This implies BlocksLayer WILL re-render when blocks change (fine).
+    // It WILL NOT re-render when 'draftConnection' changes (Goal met).
     
-    // Check reasonable number of columns (e.g., 10 columns width)
-    for (let i = 0; i < 10; i++) {
-        const colX = GAP + i * (COLUMN_WIDTH + GAP);
-        const dist = Math.abs(x - colX);
-        if (dist < minDistance) {
-            minDistance = dist;
-            closestX = colX;
+    // Logic collision check ...
+    setBlocks(prevBlocks => {
+        const draggedBlock = prevBlocks.find(b => b.blockId === blockId);
+        if (!draggedBlock) return prevBlocks;
+
+        const draggedHeight = typeof draggedBlock.height === 'number' ? draggedBlock.height : 150;
+        const draggedCenterX = x + (draggedBlock.width / 2);
+        const draggedCenterY = y + (draggedHeight / 2);
+
+        const targetBlock = prevBlocks.find(b => {
+            if (b.blockId === blockId) return false;
+            const bHeight = typeof b.height === 'number' ? b.height : 150;
+            const bCenterX = b.x + (b.width / 2);
+            const bCenterY = b.y + (bHeight / 2);
+            const dist = Math.sqrt(Math.pow(draggedCenterX - bCenterX, 2) + Math.pow(draggedCenterY - bCenterY, 2));
+            return dist < 150;
+        });
+
+        if (targetBlock) {
+            // Stack logic
+            const newStackItems = [
+                ...(targetBlock.type === 'stack' ? (targetBlock.stackItems || []) : [targetBlock]),
+                draggedBlock
+            ];
+             const newStackBlock: BlockData = {
+                ...targetBlock,
+                type: 'stack',
+                stackItems: newStackItems,
+                content: '',
+                width: 450,
+                height: 'auto'
+            };
+            return [...prevBlocks.filter(b => b.blockId !== blockId && b.blockId !== targetBlock.blockId), newStackBlock];
         }
-    }
 
-    // Apply snap if within threshold
-    const finalX = minDistance < SNAP_THRESHOLD ? closestX : x;
-    
-    updateBlock(blockId, { x: finalX, y: y });
-  };
+        // Snap Logic
+        let closestX = x;
+        let minDistance = Infinity;
+        for (let i = 0; i < 10; i++) {
+            const colX = GAP + i * (COLUMN_WIDTH + GAP);
+            const dist = Math.abs(x - colX);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestX = colX;
+            }
+        }
+        const finalX = minDistance < SNAP_THRESHOLD ? closestX : x;
 
-  const handleUnstack = (stackBlock: BlockData) => {
+        return prevBlocks.map(b => b.blockId === blockId ? { ...b, x: finalX, y: y } : b);
+    });
+  }, [COLUMN_WIDTH, GAP, SNAP_THRESHOLD]); // Removed 'blocks' dependency by using functional state update! 
+  // Optimization: handleDragStop is now truly stable!
+
+  /* Handler for Unstacking - Stable */
+  const handleUnstack = useCallback((stackBlock: BlockData) => {
     if (!stackBlock.stackItems) return;
     
-    // Fan out items around the stack position
     const unstackedItems = stackBlock.stackItems.map((item, index) => ({
         ...item,
-        x: stackBlock.x + (index * 20) + 20, // Offset each item slightly
+        x: stackBlock.x + (index * 20) + 20, 
         y: stackBlock.y + (index * 20) + 20,
     }));
     
-    // Remove stack, add items
-    const newBlocks = blocks.filter(b => b.blockId !== stackBlock.blockId).concat(unstackedItems);
-    setBlocks(newBlocks);
-    onChange?.(JSON.stringify(newBlocks));
-  };
+    setBlocks(prev => prev.filter(b => b.blockId !== stackBlock.blockId).concat(unstackedItems));
+  }, []);
+
+  // Handler for adding block (FAB)
+  const handleAddBlock = useCallback((x?: number, y?: number) => {
+      const newBlock: BlockData = {
+          blockId: uuidv4(),
+          type: 'text',
+          content: '',
+          x: x ?? 100, 
+          y: y ?? 100,
+          width: 300,
+          height: 'auto'
+      };
+      setBlocks(prev => [...prev, newBlock]);
+      setSelectedId(newBlock.blockId);
+  }, []);
+
+  
+  // Ref approach for Draft Connection to keep handlers stable
+  const draftConnectionRef = useRef(draftConnection);
+  useEffect(() => { draftConnectionRef.current = draftConnection; }, [draftConnection]);
+
+  const handleAnchorMouseUpStable = useCallback((blockId: string, side: 'top' | 'right' | 'bottom' | 'left', e: any) => {
+       const draft = draftConnectionRef.current;
+       if (draft && draft.fromBlock !== blockId) {
+            setConnections(prev => [...prev, {
+                id: uuidv4(),
+                fromBlock: draft.fromBlock,
+                fromSide: draft.fromSide,
+                toBlock: blockId,
+                toSide: side
+            }]);
+            setDraftConnection(null);
+       }
+  }, []);
 
   /* Canvas Expansion Logic */
   const [canvasSize, setCanvasSize] = useState({ width: '100%', height: '100%' }); // Start relative
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (blocks.length === 0) return;
@@ -364,26 +509,16 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         if (bBottom > maxY) maxY = bBottom;
     });
 
-    // 2. Check against current container size
     if (containerRef.current) {
         const currentW = containerRef.current.clientWidth;
         const currentH = containerRef.current.clientHeight;
-
-        // Thresholds (80%)
         const thresholdX = currentW * 0.8;
         const thresholdY = currentH * 0.8;
-
         let newW = currentW;
         let newH = currentH;
         let needsUpdate = false;
 
-        // If content pushes past 80%, expand to give 20% more padding relative to content
-        // Or simply expand the container by a chunk.
-        // User asked: "when more than 70-80% full"
-        
         if (maxX > thresholdX) {
-            // New width = maxX + 20% buffer (or just ensure maxX is at 80% marks?)
-            // let's just add 500px buffer to ensure smooth drag space
             newW = Math.max(currentW, maxX + 400); 
             needsUpdate = true;
         }
@@ -394,8 +529,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }
 
         if (needsUpdate) {
-            // Apply new size as pixel values
-            // We switch from % to px once we start expanding
             setCanvasSize({ 
                 width: `${newW}px`, 
                 height: `${newH}px` 
@@ -405,7 +538,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, [blocks]); // Run whenever blocks move/resize
 
   return (
-    <div className="relative w-full h-full bg-[hsl(var(--background))] overflow-auto" id="smart-canvas-viewport">
+    <div className="relative w-full h-full bg-[hsl(var(--background))]/50 overflow-auto" id="smart-canvas-viewport">
       <div 
         ref={containerRef}
         className="relative min-w-full min-h-full transition-[width,height] duration-300 ease-out"
@@ -414,78 +547,42 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleCanvasDrop}
         onDoubleClick={(e) => {
-           // Only allow if clicking directly on the background
            if (e.target === containerRef.current) {
-               addBlock(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+               handleAddBlock(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
            }
         }}
       >
       
-      {/* Background Dots/Grid for reference */}
+      {/* Background Dots */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} 
       />
 
-      {/* Magnetic Columns Guides (Visible only when needed? Or subtle always?) */}
-      <div className="absolute inset-0 pointer-events-none flex gap-[24px] pl-[24px]">
-         {/* Generate guides based on width? Fixed 6 for now */}
-         {[...Array(12)].map((_, i) => (
-            <div key={i} className="h-full border-r border-dashed border-primary/5 last:border-0" style={{ width: 300 }} />
-         ))}
-      </div>
+      {/* Connection Layer */}
+      <ConnectionLayer 
+          connections={connections}
+          blocks={blockDims} // Correct type: BlockDims[]
+          onUpdateConnection={(updated) => setConnections(prev => prev.map(c => c.id === updated.id ? updated : c))}
+          onRemoveConnection={(id) => setConnections(prev => prev.filter(c => c.id !== id))}
+          currentDraftConnection={draftConnection}
+      />
 
-      {blocks.map(block => (
-        <Rnd
-          key={block.blockId}
-          position={{ x: block.x, y: block.y }}
-          size={{ width: block.width, height: block.height === 'auto' ? 'auto' : block.height }}
-          onDragStop={(e, d) => handleDragStop(block.blockId, d.x, d.y)}
-          onDragStart={() => setSelectedId(block.blockId)}
-          dragHandleClassName="smart-block-drag-handle"
-          bounds="parent"
-          enableResizing={{ 
-            top:false, right:true, bottom:true, left:false, 
-            topRight:false, bottomRight:true, bottomLeft:false, topLeft:false 
-          }}
-          onResize={(e, direction, ref, delta, position) => {
-              handleResizeThrottled(block.blockId, { 
-                width: ref.offsetWidth,
-                height: ref.offsetHeight,
-                x: position.x,
-                y: position.y
-             });
-          }}
-          onResizeStop={(e, direction, ref, delta, position) => {
-             updateBlock(block.blockId, { 
-                width: ref.offsetWidth,
-                height: ref.offsetHeight,
-                x: position.x,
-                y: position.y
-             });
-          }}
-          className="z-10" // Blocks
-          style={{ zIndex: selectedId === block.blockId ? 20 : 10 }}
-        >
-          <SmartBlock
-            id={block.blockId}
-            type={block.type}
-            content={block.content}
-            url={block.url}
-            width={block.width}
-            height={block.height}
-            x={block.x}
-            y={block.y}
-            isSelected={selectedId === block.blockId}
-            stackItems={block.stackItems}
-            onUpdate={(content) => updateBlock(block.blockId, { content })}
-            onStackUpdate={(items) => updateBlock(block.blockId, { stackItems: items })}
-            onDelete={() => setBlocks(blocks.filter(b => b.blockId !== block.blockId))}
-            onUnstack={() => handleUnstack(block)}
-            onFocus={() => setSelectedId(block.blockId)}
-            readOnly={readOnly}
-          />
-        </Rnd>
-      ))}
+      {/* Blocks Layer (Memoized) */}
+      <BlocksLayer 
+          blocks={blocks}
+          selectedId={selectedId}
+          readOnly={readOnly}
+          onDragStop={handleDragStop}
+          onDragStart={(id) => setSelectedId(id)}
+          onResize={(id, ref, pos) => { /* Optional live update */ }}
+          onResizeStop={handleResizeStop}
+          onUpdateBlock={updateBlock}
+          onDeleteBlock={handleDeleteBlock}
+          onUnstack={handleUnstack}
+          onAnchorMouseDown={handleAnchorMouseDown}
+          onAnchorMouseUp={handleAnchorMouseUpStable}
+      />
+
 
       {/* FAB to add Note */}
       <div className="fixed bottom-6 right-6 z-50">

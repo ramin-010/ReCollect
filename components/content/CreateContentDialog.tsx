@@ -1,7 +1,7 @@
 'use client';
 
 import '@excalidraw/excalidraw/index.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useCallback} from 'react';
 import {
   FileText,
   Lock,
@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui-base/Button';
 import { TagSelector } from '@/components/shared/TagSelector';
 import { ReminderDialog } from '@/components/notes/ReminderDialog';
-import { SmartCanvas } from './SmartCanvas';
+import { SmartCanvas } from './newCanvas/smartCanvas/index';
 import { ContentCanvas } from './contentCanvas';
 import axios from 'axios';
 import { useCreateNoteState } from '@/lib/hooks/useCreateNoteState';
@@ -411,14 +411,14 @@ export function CreateContentDialog({
                 
                 <SmartCanvas
                   initialContent={JSON.stringify(canvasBlocks)}
-                  onChange={(content) => {
+                  onChange={useCallback((content) => {
                       try {
                           const blocks = JSON.parse(content);
                           setCanvasBlocks(blocks);
                       } catch (e) {
                           console.error("Failed to parse canvas blocks", e);
                       }
-                  }}
+                  }, [updateState])} // updateState is stable from hook
                   readOnly={false}
                   />
 

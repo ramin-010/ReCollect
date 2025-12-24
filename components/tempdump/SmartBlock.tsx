@@ -25,6 +25,8 @@ interface SmartBlockProps {
   onFocus?: () => void;
   onUnstack?: () => void;
   onStackUpdate?: (items: any[]) => void;
+  onAnchorMouseDown?: (side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
+  onAnchorMouseUp?: (side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
   readOnly?: boolean;
 }
 
@@ -44,12 +46,14 @@ function SmartBlockComponent({
   onFocus,
   onUnstack,
   onStackUpdate,
+  onAnchorMouseDown,
+  onAnchorMouseUp,
   readOnly
 }: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   // Using 60% opacity as requested for glass effect
-  const [bgColor, setBgColor] = useState('bg-[hsl(var(--card-bg))]/40'); 
+  const [bgColor, setBgColor] = useState('bg-[hsl(var(--card-bg))]/70'); 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   // Calculate progress if tasks exist
@@ -63,6 +67,7 @@ function SmartBlockComponent({
 
   return (
     <motion.div
+      id={id}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
@@ -106,8 +111,50 @@ function SmartBlockComponent({
          </button>
       </div>
 
+      {/* Anchor Points (Visible on Hover or dragging) */}
+      {!readOnly && (
+        <>
+            {/* Top Anchor */}
+            <div 
+                className={cn(
+                    "absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-opacity",
+                    isHovered ? "opacity-100" : "opacity-0 hover:opacity-100" // Always show if hovering block? User said small dots.
+                )}
+                onMouseDown={(e) => { e.stopPropagation(); onAnchorMouseDown?.('top', e); }}
+                onMouseUp={(e) => { e.stopPropagation(); onAnchorMouseUp?.('top', e); }}
+            />
+            {/* Right Anchor */}
+            <div 
+                className={cn(
+                    "absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-opacity",
+                    isHovered ? "opacity-100" : "opacity-0 hover:opacity-100"
+                )}
+                onMouseDown={(e) => { e.stopPropagation(); onAnchorMouseDown?.('right', e); }}
+                onMouseUp={(e) => { e.stopPropagation(); onAnchorMouseUp?.('right', e); }}
+            />
+            {/* Bottom Anchor */}
+            <div 
+                 className={cn(
+                    "absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-opacity",
+                    isHovered ? "opacity-100" : "opacity-0 hover:opacity-100"
+                )}
+                onMouseDown={(e) => { e.stopPropagation(); onAnchorMouseDown?.('bottom', e); }}
+                onMouseUp={(e) => { e.stopPropagation(); onAnchorMouseUp?.('bottom', e); }}
+            />
+            {/* Left Anchor */}
+             <div 
+                className={cn(
+                    "absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-opacity",
+                    isHovered ? "opacity-100" : "opacity-0 hover:opacity-100"
+                )}
+                onMouseDown={(e) => { e.stopPropagation(); onAnchorMouseDown?.('left', e); }}
+                onMouseUp={(e) => { e.stopPropagation(); onAnchorMouseUp?.('left', e); }}
+            />
+        </>
+      )}
+
       {/* Content Area */}
-      <div className={cn("flex-1 overflow-hidden relative z-10", type === 'text' ? 'p-4' : 'p-0')}>
+      <div className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-4' : 'p-0')}>
         {type === 'text' && (
              isEditing ? (
                 <BlockEditor 
