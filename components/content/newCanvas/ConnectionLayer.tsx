@@ -14,6 +14,8 @@ interface ConnectionLayerProps {
     activeDragStart: ActiveDragStart | null;
     onDragComplete: () => void;
     getCanvasPoint: (e: { clientX: number, clientY: number }) => { x: number, y: number };
+    selectedConnectionId: string | null;
+    onSelectConnection: (id: string) => void;
 }
 
 export function ConnectionLayer({ 
@@ -25,9 +27,10 @@ export function ConnectionLayer({
     onRemoveConnection,
     activeDragStart,
     onDragComplete,
-    getCanvasPoint
+    getCanvasPoint,
+    selectedConnectionId,
+    onSelectConnection
 }: ConnectionLayerProps) {
-    const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
     const containerRef = React.useRef<SVGSVGElement>(null); 
 
     // Internal Drag State - Only causes re-renders in this layer!
@@ -157,7 +160,10 @@ export function ConnectionLayer({
                 const isSelected = selectedConnectionId === conn.id;
 
                   return (
-                    <g key={conn.id} className="pointer-events-auto" onClick={() => setSelectedConnectionId(conn.id)}>
+                    <g key={conn.id} className="pointer-events-auto" onClick={(e) => {
+                        e.stopPropagation(); // Prevent canvas getting click
+                        onSelectConnection(conn.id);
+                    }}>
                         <path 
                             d={path} 
                             stroke={isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))"} 

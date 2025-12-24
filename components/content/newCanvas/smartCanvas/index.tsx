@@ -136,6 +136,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     return () => clearTimeout(timer);
   }, [blocks, connections]); // Trigger only on data change, not callback change
 
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+
   // Stable handlers for Memoized Components
   const handleConnectionUpdate = useCallback((updated: Connection) => {
     setConnections(prev => prev.map(c => c.id === updated.id ? updated : c));
@@ -147,6 +149,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
 
   const handleBlockDragStart = useCallback((id: string) => {
     setSelectedId(id);
+    setSelectedConnectionId(null); // Deselect connection when clicking block
   }, []);
 
   // Callback for when drag ends (success or cancel)
@@ -154,13 +157,44 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     setActiveDragStart(null);
   }, []);
 
+  // KeyDown Handler for Deletion
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input or contenteditable
+      if (
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement || 
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (selectedId) {
+            handleDeleteBlock(selectedId);
+            setSelectedId(null);
+        }
+        if (selectedConnectionId) {
+            handleConnectionRemove(selectedConnectionId);
+            setSelectedConnectionId(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, selectedConnectionId, handleDeleteBlock, handleConnectionRemove]);
+
   return (
     <div className="relative w-full h-full bg-[hsl(var(--background))]/50 overflow-auto" id="smart-canvas-viewport">
       <div 
         ref={containerRef}
         className="relative min-w-full min-h-full transition-[width,height] duration-300 ease-out"
         style={{ width: canvasSize.width, height: canvasSize.height }}
-        onClick={() => setSelectedId(null)}
+        onClick={() => {
+            setSelectedId(null);
+            setSelectedConnectionId(null);
+        }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleCanvasDrop}
         onDoubleClick={(e) => {
@@ -180,12 +214,17 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           connections={connections}
           setConnections={setConnections} 
           blocks={blockDims} // Pass simplified blocks for snapping logic
-          fullBlocks={blocks} // Pass full blocks for useConnectionDrag logic if needed (or refactor useConnectionDrag to use blockDims)
+          fullBlocks={blocks} // Pass full blocks for useConnectionDrag logic
           onUpdateConnection={handleConnectionUpdate}
           onRemoveConnection={handleConnectionRemove}
           activeDragStart={activeDragStart}
           onDragComplete={handleDragComplete}
           getCanvasPoint={getCanvasPoint}
+          selectedConnectionId={selectedConnectionId}
+          onSelectConnection={(id) => {
+              setSelectedConnectionId(id);
+              setSelectedId(null); // Deselect block when clicking connection
+          }}
         />
 
         {/* Blocks Layer (Memoized) */}
@@ -202,16 +241,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onDeleteBlock={handleDeleteBlock}
           onUnstack={handleUnstack}
           onAnchorMouseDown={handleAnchorMouseDown}
-          // onAnchorMouseUp is handled by ConnectionLayer logic predominantly, but we might keep it or refactor. 
-          // Actually, useConnectionDrag handles mouseup on Window.
-          // handleAnchorMouseUpStable was used for CLICK-to-connect or just cleanup?
-          // It was used in useCanvasHandlers for constraints. Let's keep it if regular usage requires it, 
-          // but drag logic is now in ConnectionLayer. 
-          // Check if handleAnchorMouseUpStable is passed?
-          // We removed it from destructuring in this edit, need to remove from Props too or keeping it?
-          // Let's pass a no-op or handle connection logic purely in ConnectionLayer?
-          // For now, let's keep the prop but maybe pass null if not needed?
-          // Actually, let's just not pass it if we removed it from handler.
           onAnchorMouseUp={() => {}} 
           onDimensionsChange={handleDimensionsChange}
           isConnectionDragging={!!activeDragStart}

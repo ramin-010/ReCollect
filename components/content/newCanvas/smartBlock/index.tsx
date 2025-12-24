@@ -42,22 +42,38 @@ function SmartBlockComponent({
   const [bgColor, setBgColor] = useState('bg-[hsl(var(--card-bg))]/70'); 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
+  
+  // Monitor Dimensions with Throttle (Reverted from Debounce)
+  const lastDimUpdate = useRef<number>(0);
+  const dimUpdateTimeout = useRef<any>(null);
 
-  // Monitor Dimensions
   useEffect(() => {
     if (!blockRef.current || !onDimensionsChange) return;
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        // Use borderBoxSize if available for better accuracy with borders, or contentRect fallback
         const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-        onDimensionsChange(id, width, height);
+        
+        const now = Date.now();
+        if (now - lastDimUpdate.current > 30) {
+           onDimensionsChange(id, width, height);
+           lastDimUpdate.current = now;
+        } else {
+           if (dimUpdateTimeout.current) clearTimeout(dimUpdateTimeout.current);
+           dimUpdateTimeout.current = setTimeout(() => {
+             onDimensionsChange(id, width, height);
+             lastDimUpdate.current = Date.now();
+           }, 30);
+        }
       }
     });
 
     observer.observe(blockRef.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (dimUpdateTimeout.current) clearTimeout(dimUpdateTimeout.current);
+    };
   }, [id, onDimensionsChange]);
 
   // Calculate progress if tasks exist
@@ -84,11 +100,12 @@ function SmartBlockComponent({
         "relative rounded-xl border transition-all duration-200 group flex flex-col",
         "backdrop-blur-md shadow-sm hover:shadow-md",
         isSelected ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20" : "border-[hsl(var(--border))]/50",
+        !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing", // Enable dragging on entire card when not editing
         bgColor
       )}
       style={{
-        width: width,
-        height: height,
+        width: '100%',
+        height: '100%',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

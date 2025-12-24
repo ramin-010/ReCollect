@@ -15,7 +15,7 @@ interface DragHandleProps {
 export const DragHandle: React.FC<DragHandleProps> = ({ isVisible }) => (
   <div className={cn(
     "smart-block-drag-handle",
-    "absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-lg z-[100] cursor-grab active:cursor-grabbing transition-opacity",
+    "absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-lg z-[100] cursor-grab active:cursor-grabbing transition-opacity",
     isVisible ? "opacity-100" : "opacity-0"
   )}>
     <GripVertical className="w-3 h-3" />
