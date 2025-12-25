@@ -215,7 +215,62 @@ export const BlockContent: React.FC<BlockContentProps> = ({
     }
     return (
       <div 
-        className="prose prose-sm dark:prose-invert max-w-none leading-normal text-[hsl(var(--foreground))] select-none pointer-events-none [&>ul]:list-disc [&>ol]:list-decimal [&>h1]:text-2xl [&>h1]:font-bold [&>h2]:text-xl [&>h2]:font-bold"
+        className={`
+          prose prose-sm  border-none dark:prose-invert max-w-none leading-normal 
+          text-[hsl(var(--foreground))] select-none pointer-events-none
+          
+          /* Headings */
+          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-2 [&>h1]:mt-0
+          [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-0
+          [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-1.5 [&>h3]:mt-0
+          
+          /* Lists */
+          [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:my-1
+          [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:my-1
+          [&_li]:my-0.5
+          
+          /* Blockquote - Left border line */
+          [&>blockquote]:border-l-4 [&>blockquote]:border-l-[hsl(var(--brand-primary))]
+          [&>blockquote]:border-t-0 [&>blockquote]:border-r-0 [&>blockquote]:border-b-0
+          [&>blockquote]:shadow-none [&>blockquote]:outline-none
+          [&>blockquote]:pl-4 [&>blockquote]:py-1 [&>blockquote]:my-2
+          [&>blockquote]:bg-transparent
+          [&>blockquote]:italic [&>blockquote]:text-[hsl(var(--muted-foreground))]
+          
+          /* Inline Code */
+          [&_code:not(pre_code)]:bg-[hsl(var(--muted))] [&_code:not(pre_code)]:px-1.5 
+          [&_code:not(pre_code)]:py-0.5 [&_code:not(pre_code)]:rounded 
+          [&_code:not(pre_code)]:text-[0.85em] [&_code:not(pre_code)]:font-mono
+          [&_code:not(pre_code)]:text-[hsl(var(--brand-primary))]
+          
+          /* Code Block */
+          [&>pre]:bg-[hsl(var(--muted))]/50 [&>pre]:p-3 [&>pre]:rounded-lg
+          [&>pre]:overflow-x-auto [&>pre]:my-2 [&>pre]:text-sm [&>pre]:font-mono
+          [&>pre_code]:bg-transparent [&>pre_code]:p-0
+          
+          /* Task List */
+          [&_ul[data-type="taskList"]]:list-none [&_ul[data-type="taskList"]]:pl-0
+          [&_li[data-type="taskItem"]]:flex [&_li[data-type="taskItem"]]:items-start [&_li[data-type="taskItem"]]:gap-2
+          [&_li[data-type="taskItem"]_input]:mt-1 [&_li[data-type="taskItem"]_input]:accent-[hsl(var(--brand-primary))]
+          [&_li[data-checked="true"]]:line-through [&_li[data-checked="true"]]:opacity-60
+          
+          /* Highlight */
+          [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/40 [&_mark]:px-0.5 [&_mark]:rounded-sm
+          
+          /* Links */
+          [&_a]:text-blue-500 [&_a]:underline [&_a]:cursor-pointer
+          
+          /* Horizontal Rule */
+          [&>hr]:border-[hsl(var(--border))] [&>hr]:my-3
+          
+          /* Strong/Bold and Emphasis/Italic */
+          [&_strong]:font-bold
+          [&_em]:italic
+          [&_u]:underline
+          
+          /* Paragraph spacing */
+          [&>p]:my-1
+        `}
         dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
       />
     );
@@ -284,7 +339,19 @@ export const StackItem: React.FC<StackItemProps> = ({
     </div>
 
     {item.type === 'text' && (
-      <div className="prose prose-sm dark:prose-invert line-clamp-[8] text-sm" dangerouslySetInnerHTML={{ __html: item.content }} />
+      <div 
+        className={`
+          prose prose-sm dark:prose-invert line-clamp-[8] text-sm
+          [&>blockquote]:border-l-4 [&>blockquote]:border-[hsl(var(--brand-primary))]
+          [&>blockquote]:pl-3 [&>blockquote]:py-0.5 [&>blockquote]:italic
+          [&_code:not(pre_code)]:bg-[hsl(var(--muted))] [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:rounded [&_code:not(pre_code)]:text-xs
+          [&>pre]:bg-[hsl(var(--muted))]/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:text-xs [&>pre]:font-mono
+          [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/40
+          [&_a]:text-blue-500 [&_a]:underline
+          [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4
+        `}
+        dangerouslySetInnerHTML={{ __html: item.content }} 
+      />
     )}
     {item.type === 'image' && (
       <div className="rounded-md overflow-hidden w-full mt-1">

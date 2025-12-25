@@ -10,6 +10,7 @@ import { Connection } from '@/types/canvas';
 import { DragController } from '../DragController';
 import { NativeConnectionLayer } from '../NativeConnectionLayer';
 
+
 // Types
 import { SmartCanvasProps, BlockData, ActiveDragStart } from './types';
 
@@ -17,6 +18,9 @@ import { SmartCanvasProps, BlockData, ActiveDragStart } from './types';
 import { usePasteHandler } from './usePasteHandler';
 import { useCanvasExpansion } from './useCanvasExpansion';
 import { useCanvasHandlers } from './useCanvasHandlers';
+
+// Storage
+import { imageStorage } from '@/lib/storage/imageStorage';
 
 // Utility Functions
 const getCanvasPointUtil = (
@@ -47,32 +51,51 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   
-  // Optimization: Only track the START of a drag here. The continuous updates happen in ConnectionLayer/NativeLayer.
+  // ZOOM STATE
+  const [zoom, setZoom] = useState(1);
+  const minZoom = 0.4; // 0.4 as requested (was 0.1)
+  const maxZoom = 1.0; // 1.0 as requested (was 2.0)
+
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
-  
-  // Ephemeral drag state is NO LONGER USED for React updates (Plan C), but we keep the state hook if generic handlers need it?
-  // Actually, useCanvasHandlers still calls setDraggingBlock.
-  // We can pass a dummy setter or let it update state that we ignore in rendering (perf hit?).
-  // To avoid perf hit, `setDraggingBlock` should be a dummy function or we refactor handlers.
-  // For now, let's keep it but NOT use it in `blockDims` memoization to prevent re-renders.
   const [draggingBlock, setDraggingBlock] = useState<{ id: string, x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const dragController = useRef(new DragController()).current;
 
-  // Helper: Get mouse/touch coordinates relative to the canvas container
-  const getCanvasPoint = useCallback((e: { clientX: number, clientY: number }) => {
-    return getCanvasPointUtil(containerRef, e);
+  // Zoom Handlers
+  const handleZoom = (delta: number) => {
+    setZoom(z => {
+        const newZoom = z + delta;
+        // Float precision fix
+        const rounded = Math.round(newZoom * 100) / 100;
+        return Math.min(maxZoom, Math.max(minZoom, rounded));
+    });
+  };
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -e.deltaY * 0.001; 
+        setZoom(z => Math.min(maxZoom, Math.max(minZoom, z + delta)));
+    }
   }, []);
+// ...
+
+
+  // Helper: Get mouse/touch coordinates relative to the canvas container (Unscaled)
+  const getCanvasPoint = useCallback((e: { clientX: number, clientY: number }) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / zoom,
+      y: (e.clientY - rect.top) / zoom
+    };
+  }, [zoom]);
 
   // Helper: Prepare Blocks data for ConnectionLayer
   const blockDims = useMemo(() => {
-    const dims = prepareBlockDims(blocks, renderedDims);
-    // PLAN C: We DO NOT merge draggingBlock state here.
-    // The visual update is handled by DOM manipulation (Rnd + NativeConnectionLayer).
-    // React sees the block at its original position until drag stops.
-    return dims;
-  }, [blocks, renderedDims]); // Removed draggingBlock from deps
+    return prepareBlockDims(blocks, renderedDims);
+  }, [blocks, renderedDims]);
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
     setRenderedDims(prev => {
@@ -88,7 +111,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     handleResize,
     handleResizeStop,
     handleDragStop,
-    handleDragThrottled,
     handleUnstack,
     handleAddBlock,
     handleAnchorMouseDown,
@@ -101,12 +123,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     getCanvasPoint,
     connections,
     activeDragStart,
-    // We pass the real setter, but since we don't use 'draggingBlock' state in render, it's fine.
-    // Actually, setting state triggers re-render regardless of usage.
-    // We should STOP `useCanvasHandlers` from calling it, OR pass a no-op.
-    // But `handleDragThrottled` is only called if WE call it.
-    // In `BlocksLayer`, we removed the `onDrag` call to `handleDragThrottled`.
-    // So this setter is effectively unused during drag! Perfect.
     setDraggingBlock
   );
 
@@ -114,32 +130,99 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   usePasteHandler(setBlocks);
   const canvasSize = useCanvasExpansion(blocks, containerRef);
   
-  // Initialization Logic
+  // Track if we've initialized from initialContent
+  const initializedRef = useRef(false);
+  const lastInitialContentRef = useRef<string | undefined>(undefined);
+  
+  // Stringify initialContent for stable comparison
+  const initialContentStr = typeof initialContent === 'string' 
+    ? initialContent 
+    : JSON.stringify(initialContent);
+  
+  // Initialization Logic with Image Rehydration
   useEffect(() => {
-    if (initialContent) {
-      try {
-        const parsed = JSON.parse(initialContent);
-        if (Array.isArray(parsed)) {
-          setBlocks(parsed);
-        } else if (parsed && typeof parsed === 'object') {
-          if (parsed.blocks) setBlocks(parsed.blocks);
-          if (parsed.connections) setConnections(parsed.connections);
+    const loadContent = async () => {
+      // Skip if content hasn't changed (prevents infinite loops from onChange updates)
+      if (lastInitialContentRef.current === initialContentStr && initializedRef.current) {
+        return;
+      }
+      
+      // Skip if no content
+      if (!initialContentStr || initialContentStr === '[]' || initialContentStr === '{}' || initialContentStr === '{"blocks":[],"connections":[]}') {
+        // Only reset if we had content before
+        if (lastInitialContentRef.current && lastInitialContentRef.current !== '[]' && lastInitialContentRef.current !== '{"blocks":[],"connections":[]}') {
+          setBlocks([]);
+          setConnections([]);
         }
+        lastInitialContentRef.current = initialContentStr;
+        initializedRef.current = true;
+        return;
+      }
+      
+      lastInitialContentRef.current = initialContentStr;
+
+      try {
+        let parsedBlocks: BlockData[] = [];
+        let parsedConnections: Connection[] = [];
+
+        const parsed = JSON.parse(initialContentStr);
+        if (Array.isArray(parsed)) {
+          parsedBlocks = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+          if (parsed.blocks) parsedBlocks = parsed.blocks;
+          if (parsed.connections) parsedConnections = parsed.connections;
+        }
+
+        // Rehydrate Images from IndexedDB
+        const hydratedBlocks = await Promise.all(
+          parsedBlocks.map(async (block) => {
+            // Check if it's a pending image (has ID but not uploaded)
+            if (block.type === 'image' && block.imageId && !block.isUploaded) {
+               // Try to get blob from local storage
+               try {
+                  const blob = await imageStorage.getImage(block.imageId);
+                  if (blob) {
+                    const objectUrl = imageStorage.createObjectURL(blob);
+                    return { ...block, url: objectUrl };
+                  }
+               } catch (err) {
+                 console.warn("Failed to load local image:", block.imageId, err);
+               }
+            }
+            return block;
+          })
+        );
+
+        setBlocks(hydratedBlocks);
+        setConnections(parsedConnections);
+        initializedRef.current = true;
+
       } catch (e) {
-        if (initialContent.trim()) {
-          setBlocks([{
+        if (initialContentStr.trim()) {
+           // ... (fallback logic) ...
+           setBlocks([{
             blockId: uuidv4(),
             type: 'text',
-            content: initialContent,
+            content: initialContentStr,
             x: 100,
             y: 100,
             width: 320,
             height: 'auto'
           }]);
         }
+        initializedRef.current = true;
       }
-    }
-  }, []);
+    };
+
+    loadContent();
+
+    // Cleanup Blob URLs on unmount
+    return () => {
+        // We can't access 'blocks' state here easily due to closure, 
+        // but we can trust the garbage collector or revoked manually if tracked.
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContentStr]); // Stable string dependency
 
   // Autosave Logic
   const onChangeRef = useRef(onChange);
@@ -150,7 +233,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
       if (blocks.length > 0 || connections.length > 0) {
         onChangeRef.current?.(JSON.stringify({ blocks, connections }));
       }
-    }, 1000); 
+    }, 1000); // Debounce 1s for autosave
     return () => clearTimeout(timer);
   }, [blocks, connections]);
 
@@ -184,7 +267,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
       ) {
         return;
       }
-
       if (e.key === 'Backspace' || e.key === 'Delete') {
         if (selectedId) {
             handleDeleteBlock(selectedId);
@@ -196,7 +278,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId, selectedConnectionId, handleDeleteBlock, handleConnectionRemove]);
@@ -205,12 +286,20 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     <div className="relative w-full h-full bg-[hsl(var(--background))]/50 overflow-auto" id="smart-canvas-viewport">
       <div 
         ref={containerRef}
-        className="relative min-w-full min-h-full transition-[width,height] duration-300 ease-out"
-        style={{ width: canvasSize.width, height: canvasSize.height }}
+        className="relative min-w-full min-h-full transition-transform duration-75 ease-out origin-top-left"
+        style={{ 
+            width: canvasSize.width, 
+            height: canvasSize.height,
+            transform: `scale(${zoom})`,
+            // Ensure the container takes up the visual space so scrolling works?
+            // "transform" doesn't affect flow. We might need a wrapper if we want perfect scrollbars.
+            // For now, let's keep it simple. Standard CSS transform zoom often relies on an infinite canvas approach.
+        }}
         onClick={() => {
             setSelectedId(null);
             setSelectedConnectionId(null);
         }}
+        onWheel={handleWheel}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleCanvasDrop}
         onDoubleClick={(e) => {
@@ -220,7 +309,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }}
       >
       
-        {/* Background Dots */}
+        {/* Background Dots - Scale Inverse? No, letting them scale looks natural like a map. */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} 
         />
@@ -235,7 +324,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
                 setSelectedConnectionId(id);
                 setSelectedId(null);
             }}
-            containerRef={containerRef}
+            containerRef={containerRef as React.RefObject<HTMLDivElement>}
+            zoom={zoom}
         />
 
         {/* Blocks Layer (Memoized) */}
@@ -244,7 +334,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           selectedId={selectedId}
           readOnly={readOnly}
           onDragStop={handleDragStop}
-          // We intentionally omit onDrag to prevent React state updates during drag
           onDragStart={handleBlockDragStart}
           onResize={handleResize}
           onResizeStop={handleResizeStop}
@@ -256,14 +345,14 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onDimensionsChange={handleDimensionsChange}
           isConnectionDragging={!!activeDragStart}
           dragController={dragController}
+          scale={zoom}
         />
 
         {/* DRAFT CONNECTION LAYER (Foreground - Creation Mode) */}
-        {/* We use the standard React Layer for the creation drag because it involves state (activeDragStart) and following mouse */}
         {activeDragStart && (
             <ConnectionLayer 
                 variant="default"
-                connections={[]} // Don't render existing connections here (handled by NativeLayer)
+                connections={[]} 
                 setConnections={setConnections} 
                 blocks={blockDims} 
                 fullBlocks={blocks}
@@ -272,12 +361,10 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
                 getCanvasPoint={getCanvasPoint}
                 selectedConnectionId={null}
                 onSelectConnection={() => {}}
-                // This layer is ephemeral and only exists while creating a connection
             />
         )}
 
         {/* Connection Layer (CONTROLS - Foreground) */}
-        {/* This layer renders handles for selecting/editing connections which are static/interactive */}
         <ConnectionLayer 
           variant="controls"
           connections={connections}
@@ -291,16 +378,31 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onUpdateConnection={handleConnectionUpdate}
         />
 
-        {/* FAB to add Note */}
-        <div className="fixed bottom-6 right-6 z-50">
+      </div>
+
+      {/* FAB to add Note */}
+      <div className="fixed bottom-6 right-6 z-50">
           <Button 
             onClick={(e) => { e.stopPropagation(); handleAddBlock(); }}
             className="rounded-full h-14 w-14 shadow-xl bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90 text-white p-0 flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
           >
             <Plus className="w-6 h-6" />
           </Button>
-        </div>
       </div>
+
+      {/* ZOOM CONTROLS (Floating UI) */}
+      <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">
+        <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleZoom(-0.1)}>
+             <span className="text-xl pb-1">-</span>
+        </Button>
+        <span className="text-xs font-mono font-medium min-w-[3ch] text-center">
+            {Math.round(zoom * 100)}%
+        </span>
+        <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleZoom(0.1)}>
+             <span className="text-xl pb-1">+</span>
+        </Button>
+      </div>
+
     </div>
   );
 }

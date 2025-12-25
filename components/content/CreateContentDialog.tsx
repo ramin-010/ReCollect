@@ -171,6 +171,31 @@ export function CreateContentDialog({
     setLinks(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleClose = () => {
+    // Only try to revoke if canvasBlocks is an array or object
+    let blocks: any[] = [];
+    if (Array.isArray(canvasBlocks)) {
+        blocks = canvasBlocks;
+    } else if (canvasBlocks && typeof canvasBlocks === 'object') {
+        // @ts-ignore
+        blocks = canvasBlocks.blocks || [];
+    }
+
+    blocks.forEach((block: any) => {
+      if (block.type === 'image' && block.url?.startsWith('blob:')) {
+        imageStorage.revokeObjectURL(block.url);
+      }
+    });
+
+    clearState();
+    setShowTagInput(false);
+    setNewTagInput('');
+    setLinks([]);
+    setNewLinkInput('');
+    setSampleTags(DEFAULT_TAGS);
+    onClose();
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error('Please enter a title');
@@ -180,7 +205,24 @@ export function CreateContentDialog({
     setIsLoading(true);
     try {
       const formData = new FormData();
-      const blocksToSave = [...canvasBlocks];
+      
+      // Normalize data: Parse if string, otherwise use as is
+      let rawData: any = canvasBlocks;
+      if (typeof rawData === 'string') {
+          try { rawData = JSON.parse(rawData); } catch (e) { rawData = []; }
+      }
+
+      let blocksToSave: any[] = [];
+      let connectionsToSave: any[] = [];
+
+      // Handle both Legacy (Array) and New (Object) formats
+      if (Array.isArray(rawData)) {
+          blocksToSave = [...rawData];
+      } else if (rawData && typeof rawData === 'object') {
+          blocksToSave = [...(rawData.blocks || [])];
+          connectionsToSave = rawData.connections || [];
+      }
+
       const imageBlockIds: string[] = []; // Track which blocks have images
 
       for (let i = blocksToSave.length - 1; i >= 0; i--) {
@@ -204,13 +246,19 @@ export function CreateContentDialog({
           blocksToSave.splice(i, 1);
         }
       }
-      // description-02: we need to add the description in the form data
-
+      
       // Send list of block IDs that have images
       formData.append('imageBlockIds', JSON.stringify(imageBlockIds));
       formData.append('title', title.trim());
       formData.append('description', description.trim());
-      formData.append('body', JSON.stringify(blocksToSave));
+      
+      // Construct final body with potential connections
+      const finalBody = {
+          blocks: blocksToSave,
+          connections: connectionsToSave
+      };
+      
+      formData.append('body', JSON.stringify(finalBody));
       formData.append('tags', JSON.stringify(selectedTags));
       formData.append('visibility', visibility);
       formData.append('links', JSON.stringify(links));
@@ -237,22 +285,6 @@ export function CreateContentDialog({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    canvasBlocks.forEach(block => {
-      if (block.type === 'image' && block.url?.startsWith('blob:')) {
-        imageStorage.revokeObjectURL(block.url);
-      }
-    });
-
-    clearState();
-    setShowTagInput(false);
-    setNewTagInput('');
-    setLinks([]);
-    setNewLinkInput('');
-    setSampleTags(DEFAULT_TAGS);
-    onClose();
   };
 
   const handleSetReminder = async (data: {
@@ -410,11 +442,13 @@ export function CreateContentDialog({
                 /> */}
                 
                 <SmartCanvas
-                  initialContent={JSON.stringify(canvasBlocks)}
-                  onChange={useCallback((content) => {
+                  initialContent={typeof canvasBlocks === 'string' ? canvasBlocks : JSON.stringify(canvasBlocks)}
+                  onChange={useCallback((content: string) => {
                       try {
-                          const blocks = JSON.parse(content);
-                          setCanvasBlocks(blocks);
+                          const parsed = JSON.parse(content);
+                          // Store exactly what we received (Object or Array)
+                          // The state is called 'canvasBlocks' but now it might hold { blocks, connections }
+                          setCanvasBlocks(parsed);
                       } catch (e) {
                           console.error("Failed to parse canvas blocks", e);
                       }

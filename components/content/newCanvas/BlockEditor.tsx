@@ -107,7 +107,12 @@ export function BlockEditor({
       debouncedOnChange(editor.getHTML());
     },
     onFocus: () => onFocus?.(),
-    onBlur: () => onBlur?.(),
+    onBlur: () => {
+      // Flush any pending debounced save immediately on blur
+      // This ensures pasted content is saved when user clicks outside
+      debouncedOnChange.flush();
+      onBlur?.();
+    },
   });
 
   // Sync content if it changes externally

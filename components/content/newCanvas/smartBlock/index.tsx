@@ -103,8 +103,8 @@ function SmartBlockComponent({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "relative rounded-xl border transition-all duration-200 group flex flex-col",
-        "backdrop-blur-md shadow-sm hover:shadow-md",
+        "relative rounded-xl border transition-all duration-200 group flex flex-col backdrop-blur-sm",
+        isEditing ? "shadow-md" : "shadow-none",
         isSelected ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20" : "border-[hsl(var(--border))]/50",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
         bgColor
@@ -144,7 +144,7 @@ function SmartBlockComponent({
       )}
 
       {/* Content Area */}
-      <div className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-4' : 'p-0')}>
+      <div className={cn("flex-1  overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-4' : 'p-0')}>
         {type !== 'stack' ? (
           <>
             <BlockContent 

@@ -1,7 +1,7 @@
 'use client';
 
 import '@excalidraw/excalidraw/index.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Lock, 
   Globe, 
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui-base/Button';
 import { ReminderDialog } from '@/components/notes/ReminderDialog';
-import { ContentCanvas, Block as CanvasBlock } from './contentCanvas';
+import { SmartCanvas } from './newCanvas/smartCanvas/index';
 import axios from 'axios';
 import axiosInstance from '@/lib/utils/axios';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
@@ -57,7 +57,7 @@ const parseNumber = (value: string | number | undefined, fallback: number) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const toCanvasBlock = (block: ApiBlock): CanvasBlock => ({
+const toCanvasBlock = (block: ApiBlock): any => ({
   blockId: block.blockId,
   type: block.type,
   x: parseNumber(block.x, 100),
@@ -68,10 +68,10 @@ const toCanvasBlock = (block: ApiBlock): CanvasBlock => ({
   url: block.url,
   imageId: block.imageId,
   isUploaded: block.isUploaded,
-  fontSize:block.fontSize || 20,
+  fontSize: block.fontSize || 20,
 });
 
-const mapBodyToCanvas = (body: ApiBlock[] | undefined): CanvasBlock[] =>
+const mapBodyToCanvas = (body: ApiBlock[] | undefined): any[] =>
   (body || []).map(toCanvasBlock);
 
 export function UpdateContentDialog({ 
@@ -90,7 +90,7 @@ export function UpdateContentDialog({
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
+  const [canvasBlocks, setCanvasBlocks] = useState<any>({ blocks: [], connections: [] });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<'Public' | 'Private'>('Private');
   const [reminderData, setReminderData] = useState<ReminderData | undefined>();
@@ -101,7 +101,7 @@ export function UpdateContentDialog({
     title: string;
     description: string;
     bodyJSON: string;
-    bodyBlocks: CanvasBlock[];
+    bodyBlocks: any;
     tags: string[];
     visibility: 'Public' | 'Private';
     reminderData?: ReminderData;
@@ -112,7 +112,18 @@ export function UpdateContentDialog({
     if (isOpen && content) {
       const initialTitle = content.title || '';
       const initialDescription = content.description || '';
-      const initialBody = mapBodyToCanvas(content.body);
+      // Handle both legacy array format and new object format
+      let initialBody: any;
+      if (Array.isArray(content.body)) {
+        initialBody = { blocks: mapBodyToCanvas(content.body), connections: [] };
+      } else if (content.body && typeof content.body === 'object') {
+        initialBody = {
+          blocks: mapBodyToCanvas((content.body as any).blocks || []),
+          connections: (content.body as any).connections || []
+        };
+      } else {
+        initialBody = { blocks: [], connections: [] };
+      }
       const initialTags = content.tags?.map(tag => tag.name) ?? [];
       const initialVisibility = content.visibility || 'Private';
       const initialReminderData = content.reminderData;
@@ -218,12 +229,12 @@ export function UpdateContentDialog({
   };
 
   // Helper function to detect which blocks have changed
-  const getChangedBlocks = (currentBlocks: CanvasBlock[], originalBlocks: CanvasBlock[]): { added: CanvasBlock[], modified: CanvasBlock[], deleted: string[] } => {
+  const getChangedBlocks = (currentBlocks: any[], originalBlocks: any[]): { added: any[], modified: any[], deleted: string[] } => {
     const originalMap = new Map(originalBlocks.map(b => [b.blockId, b]));
     const currentMap = new Map(currentBlocks.map(b => [b.blockId, b]));
     
-    const added: CanvasBlock[] = [];
-    const modified: CanvasBlock[] = [];
+    const added: any[] = [];
+    const modified: any[] = [];
     const deleted: string[] = [];
 
     // Check for added and modified blocks
@@ -261,8 +272,16 @@ export function UpdateContentDialog({
 
     const titleChanged = title.trim() !== originalValues.title;
     const descriptionChanged = description.trim() !== originalValues.description;
-    const changedBlocksInfo = getChangedBlocks(canvasBlocks, originalValues.bodyBlocks);
-    const bodyChanged = changedBlocksInfo.added.length > 0 || changedBlocksInfo.modified.length > 0 || changedBlocksInfo.deleted.length > 0;
+    
+    // Extract blocks from the new format
+    const currentBlocks = canvasBlocks?.blocks || [];
+    const originalBlocks = originalValues.bodyBlocks?.blocks || [];
+    const currentConnections = canvasBlocks?.connections || [];
+    const originalConnections = originalValues.bodyBlocks?.connections || [];
+    
+    const changedBlocksInfo = getChangedBlocks(currentBlocks, originalBlocks);
+    const connectionsChanged = JSON.stringify(currentConnections) !== JSON.stringify(originalConnections);
+    const bodyChanged = changedBlocksInfo.added.length > 0 || changedBlocksInfo.modified.length > 0 || changedBlocksInfo.deleted.length > 0 || connectionsChanged;
     const tagsChanged = JSON.stringify([...selectedTags].sort()) !== JSON.stringify([...originalValues.tags].sort());
     const visibilityChanged = visibility !== originalValues.visibility;
     const linksChanged = JSON.stringify([...links].sort()) !== JSON.stringify([...originalValues.links].sort());
@@ -313,7 +332,7 @@ export function UpdateContentDialog({
         console.log('📤 upsertBlocks:', upsertBlocks);
         
         // 2. Prepare Final Block Order (All current block IDs)
-        const finalBlockOrder = canvasBlocks.map(b => b.blockId);
+        const finalBlockOrder = currentBlocks.map((b: any) => b.blockId);
 
         const imageBlockIds: string[] = [];
         
@@ -344,6 +363,9 @@ export function UpdateContentDialog({
         // Send optimized block data
         formData.append('upsertBlocks', JSON.stringify(upsertBlocks));
         formData.append('finalBlockOrder', JSON.stringify(finalBlockOrder));
+        
+        // Send connections data
+        formData.append('connections', JSON.stringify(currentConnections));
       }
 
       console.log('📤 UPDATE REQUEST PAYLOAD:');
@@ -360,7 +382,8 @@ export function UpdateContentDialog({
       if (bodyChanged) {
         console.log('Block Optimization:', {
           upsertCount: changedBlocksInfo.added.length + changedBlocksInfo.modified.length,
-          totalBlocksInOrder: canvasBlocks.length
+          totalBlocksInOrder: currentBlocks.length,
+          connectionsCount: currentConnections.length
         });
 
       }
@@ -392,7 +415,8 @@ export function UpdateContentDialog({
   };
 
   const handleClose = () => {
-    canvasBlocks.forEach(block => {
+    const blocks = canvasBlocks?.blocks || [];
+    blocks.forEach((block: any) => {
       if (block.type === 'image' && block.url?.startsWith('blob:')) {
         imageStorage.revokeObjectURL(block.url);
       }
@@ -400,7 +424,7 @@ export function UpdateContentDialog({
     
     setTitle('');
     setDescription('');
-    setCanvasBlocks([]);
+    setCanvasBlocks({ blocks: [], connections: [] });
     setSelectedTags([]);
     setVisibility('Private');
     setReminderData(undefined);
@@ -657,15 +681,23 @@ export function UpdateContentDialog({
             </div>
 
             <div 
-              className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl overflow-hidden transition-colors"
+              className="border-2 border-[hsl(var(--border))] rounded-xl overflow-hidden transition-colors bg-[hsl(var(--card))]"
               style={inline 
                 ? { minHeight: 220, height: 'clamp(340px,50vh,540px)' } 
                 : { height: '300px' }
               }
             >
-              <ContentCanvas
-                initialBlocks={canvasBlocks}
-                onSave={blocks => setCanvasBlocks(blocks)}
+              <SmartCanvas
+                initialContent={JSON.stringify(canvasBlocks)}
+                onChange={useCallback((content: string) => {
+                  try {
+                    const parsed = JSON.parse(content);
+                    setCanvasBlocks(parsed);
+                  } catch (e) {
+                    console.error("Failed to parse canvas blocks", e);
+                  }
+                }, [])}
+                readOnly={false}
               />
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Connection, BlockDims } from '@/types/canvas';
 import { DragController } from './DragController';
 
@@ -8,7 +8,8 @@ interface NativeConnectionLayerProps {
     dragController: DragController;
     selectedConnectionId: string | null;
     onSelectConnection: (id: string, e: React.MouseEvent) => void;
-    containerRef: React.RefObject<HTMLDivElement>; // Parent container to calculate relative offsets
+    containerRef: React.RefObject<HTMLDivElement>; // Fixed type
+    zoom: number; // Added zoom prop
 }
 
 // --- Helper Functions (Pure Math) ---
@@ -93,12 +94,95 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
     dragController,
     selectedConnectionId,
     onSelectConnection,
-    containerRef
+    containerRef,
+    zoom
 }) => {
-    // We only need to trigger Re-renders when structure changes (new connection / deletion / selection change)
-    // Dragging will NOT trigger re-renders here.
+    // Use refs to avoid re-creating the effect when these change
+    const connectionsRef = useRef(connections);
+    const blocksRef = useRef(blocks);
+    const zoomRef = useRef(zoom);
+    
+    // Keep refs updated
+    useEffect(() => { connectionsRef.current = connections; }, [connections]);
+    useEffect(() => { blocksRef.current = blocks; }, [blocks]);
+    useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
-    // --- The Matrix Engine: rAF Loop ---
+    // Recalculate paths using actual DOM positions after render
+    // This ensures consistency between live dragging and static render
+    useLayoutEffect(() => {
+        const containerEl = containerRef.current;
+        if (!containerEl || connections.length === 0) return;
+
+        // Small delay to ensure DOM is fully rendered
+        const updatePaths = () => {
+            const contRect = containerEl.getBoundingClientRect();
+            
+            connections.forEach(conn => {
+                const fromEl = document.getElementById(conn.fromBlock);
+                const toEl = document.getElementById(conn.toBlock);
+                
+                if (!fromEl || !toEl) return;
+                
+                const fromRect = fromEl.getBoundingClientRect();
+                const toRect = toEl.getBoundingClientRect();
+                
+                // Calculate logical coordinates (unscaled)
+                const fromGeo = {
+                    x: (fromRect.left - contRect.left + containerEl.scrollLeft) / zoom,
+                    y: (fromRect.top - contRect.top + containerEl.scrollTop) / zoom,
+                    w: fromRect.width / zoom,
+                    h: fromRect.height / zoom
+                };
+                
+                const toGeo = {
+                    x: (toRect.left - contRect.left + containerEl.scrollLeft) / zoom,
+                    y: (toRect.top - contRect.top + containerEl.scrollTop) / zoom,
+                    w: toRect.width / zoom,
+                    h: toRect.height / zoom
+                };
+                
+                const start = getAnchorPos(fromGeo, conn.fromSide);
+                const end = getAnchorPos(toGeo, conn.toSide);
+                
+                let cp1 = conn.controlPoint1;
+                let cp2 = conn.controlPoint2;
+                
+                if (!cp1 || !cp2) {
+                    const dx = end.x - start.x;
+                    const dy = end.y - start.y;
+                    const dist = Math.hypot(dx, dy);
+                    const offset = Math.min(Math.max(dist * 0.5, 30), 200);
+
+                    const h1 = { ...start };
+                    if (conn.fromSide === 'top') h1.y -= offset;
+                    else if (conn.fromSide === 'bottom') h1.y += offset;
+                    else if (conn.fromSide === 'left') h1.x -= offset;
+                    else if (conn.fromSide === 'right') h1.x += offset;
+
+                    const h2 = { ...end };
+                    if (conn.toSide === 'top') h2.y -= offset;
+                    else if (conn.toSide === 'bottom') h2.y += offset;
+                    else if (conn.toSide === 'left') h2.x -= offset;
+                    else if (conn.toSide === 'right') h2.x += offset;
+
+                    if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
+                    if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
+                }
+                
+                const newPath = getSplinePath([start, cp1, cp2, end]);
+                
+                const pathEl = document.getElementById(`conn-path-${conn.id}`);
+                if (pathEl) {
+                    pathEl.setAttribute('d', newPath);
+                }
+            });
+        };
+        
+        // Use requestAnimationFrame to ensure DOM is painted
+        const rafId = requestAnimationFrame(updatePaths);
+        return () => cancelAnimationFrame(rafId);
+    }, [connections, blocks, zoom, containerRef]);
+
     useEffect(() => {
         let rafId: number;
         let isActive = false;
@@ -111,18 +195,23 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             // 1. Get Live Stats of the Dragged Block
             const blockEl = document.getElementById(activeId);
             const containerEl = containerRef.current;
+            const currentZoom = zoomRef.current;
+            const currentConnections = connectionsRef.current;
+            const currentBlocks = blocksRef.current;
             
             if (blockEl && containerEl) {
                 const contRect = containerEl.getBoundingClientRect();
                 const bRect = blockEl.getBoundingClientRect();
                 
-                const x = bRect.left - contRect.left + containerEl.scrollLeft;
-                const y = bRect.top - contRect.top + containerEl.scrollTop;
-                const w = bRect.width;
-                const h = bRect.height;
+                // CRITICAL: Unscale physical coordinates to Logical Canvas coordinates
+                // x = (Physical Relative Pos) / zoom
+                const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
+                const y = (bRect.top - contRect.top + containerEl.scrollTop) / currentZoom;
+                const w = bRect.width / currentZoom;
+                const h = bRect.height / currentZoom;
                 const activeBlockGeo = { x, y, w, h };
 
-                connections.forEach(conn => {
+                currentConnections.forEach(conn => {
                     if (conn.fromBlock !== activeId && conn.toBlock !== activeId) return;
 
                     const isFromMoving = conn.fromBlock === activeId;
@@ -135,13 +224,14 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                          if (el) {
                              const r = el.getBoundingClientRect();
                              fromGeo = {
-                                 x: r.left - contRect.left + containerEl.scrollLeft,
-                                 y: r.top - contRect.top + containerEl.scrollTop,
-                                 w: r.width,
-                                 h: r.height
+                                 x: (r.left - contRect.left + containerEl.scrollLeft) / currentZoom,
+                                 y: (r.top - contRect.top + containerEl.scrollTop) / currentZoom,
+                                 w: r.width / currentZoom,
+                                 h: r.height / currentZoom
                              };
                          } else {
-                             const b = blocks.find(b => b.id === conn.fromBlock);
+                             // Store blocks are already logical, no unscaling needed
+                             const b = currentBlocks.find(b => b.id === conn.fromBlock);
                              if (b) fromGeo = { x: b.x, y: b.y, w: b.width, h: b.height };
                          }
                     }
@@ -154,13 +244,13 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                          if (el) {
                              const r = el.getBoundingClientRect();
                              toGeo = {
-                                 x: r.left - contRect.left + containerEl.scrollLeft,
-                                 y: r.top - contRect.top + containerEl.scrollTop,
-                                 w: r.width,
-                                 h: r.height
+                                 x: (r.left - contRect.left + containerEl.scrollLeft) / currentZoom,
+                                 y: (r.top - contRect.top + containerEl.scrollTop) / currentZoom,
+                                 w: r.width / currentZoom,
+                                 h: r.height / currentZoom
                              };
                          } else {
-                             const b = blocks.find(b => b.id === conn.toBlock);
+                             const b = currentBlocks.find(b => b.id === conn.toBlock);
                              if (b) toGeo = { x: b.x, y: b.y, w: b.width, h: b.height };
                          }
                     }
@@ -221,7 +311,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             unsubscribe();
             cancelAnimationFrame(rafId);
         };
-    }, [dragController, connections, blocks]); // Deps: standard react deps
+    }, [dragController, containerRef]); // Only re-subscribe when dragController changes
 
     return (
         <svg 
