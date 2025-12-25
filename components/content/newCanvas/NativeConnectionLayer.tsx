@@ -117,7 +117,8 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
         const updatePaths = () => {
             const contRect = containerEl.getBoundingClientRect();
             
-            connections.forEach(conn => {
+            // Only update visible (non-hidden) connections
+            connections.filter(conn => !conn.hidden).forEach(conn => {
                 const fromEl = document.getElementById(conn.fromBlock);
                 const toEl = document.getElementById(conn.toBlock);
                 
@@ -212,6 +213,8 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                 const activeBlockGeo = { x, y, w, h };
 
                 currentConnections.forEach(conn => {
+                    // Skip hidden connections and connections not involving the dragged block
+                    if (conn.hidden) return;
                     if (conn.fromBlock !== activeId && conn.toBlock !== activeId) return;
 
                     const isFromMoving = conn.fromBlock === activeId;
@@ -330,7 +333,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                      <polygon points="0 0, 19 7, 0 14" fill="context-stroke" />
                  </marker>
              </defs>
-            {connections.map(conn => {
+            {connections.filter(conn => !conn.hidden).map(conn => {
                 const isSelected = selectedConnectionId === conn.id;
                 const path = calculateInitialPath(conn, blocks); // Initial render
                 return (

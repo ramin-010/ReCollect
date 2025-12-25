@@ -88,18 +88,92 @@ export const useCanvasHandlers = (
       });
 
       if (targetBlock) {
+        // Generate a NEW unique ID for the stack (don't reuse targetBlock.blockId!)
+        const newStackId = uuidv4();
+        
+        // Get all block IDs that will be merged into the stack
+        const targetStackItems = targetBlock.type === 'stack' ? (targetBlock.stackItems || []) : [targetBlock];
+        const mergedBlockIds = [
+          ...targetStackItems.map(item => item.blockId),
+          draggedBlock.blockId
+        ];
+        
+        // If target was already a stack, include its ID in merged list
+        if (targetBlock.type === 'stack') {
+          mergedBlockIds.push(targetBlock.blockId);
+        }
+        
         const newStackItems = [
-          ...(targetBlock.type === 'stack' ? (targetBlock.stackItems || []) : [targetBlock]),
+          ...targetStackItems,
           draggedBlock
         ];
         const newStackBlock: BlockData = {
-          ...targetBlock,
+          blockId: newStackId, // New unique ID!
           type: 'stack',
+          x: targetBlock.x,
+          y: targetBlock.y,
           stackItems: newStackItems as BlockData[],
           content: '',
           width: 450,
           height: 'auto'
         };
+        
+        // Handle connections: hide original connections, create merged stack connections
+        setConnections(prevConnections => {
+          const newConnections: Connection[] = [];
+          const externalTargets = new Map<string, { side: 'top' | 'right' | 'bottom' | 'left', fromOrTo: 'from' | 'to' }>();
+          
+          const updatedConnections = prevConnections.map(conn => {
+            const fromInStack = mergedBlockIds.includes(conn.fromBlock);
+            const toInStack = mergedBlockIds.includes(conn.toBlock);
+            
+            // Connection between two blocks that are both being stacked - just hide it
+            if (fromInStack && toInStack) {
+              return { ...conn, hidden: true, originalBlockId: conn.fromBlock };
+            }
+            
+            // Connection from a stacked block to an external block
+            if (fromInStack && !toInStack) {
+              // Deduplicate by TARGET BLOCK only (one merged connection per external target)
+              const key = `to-${conn.toBlock}`;
+              if (!externalTargets.has(key)) {
+                externalTargets.set(key, { side: conn.toSide, fromOrTo: 'to' });
+                // Create a new connection from the stack to this external block
+                newConnections.push({
+                  id: uuidv4(),
+                  fromBlock: newStackBlock.blockId,
+                  fromSide: 'right', // Default side for stack connections
+                  toBlock: conn.toBlock,
+                  toSide: conn.toSide
+                });
+              }
+              return { ...conn, hidden: true, originalBlockId: conn.fromBlock };
+            }
+            
+            // Connection from an external block to a stacked block
+            if (!fromInStack && toInStack) {
+              // Deduplicate by SOURCE BLOCK only
+              const key = `from-${conn.fromBlock}`;
+              if (!externalTargets.has(key)) {
+                externalTargets.set(key, { side: conn.fromSide, fromOrTo: 'from' });
+                // Create a new connection from the external block to the stack
+                newConnections.push({
+                  id: uuidv4(),
+                  fromBlock: conn.fromBlock,
+                  fromSide: conn.fromSide,
+                  toBlock: newStackBlock.blockId,
+                  toSide: 'left' // Default side for stack connections
+                });
+              }
+              return { ...conn, hidden: true, originalBlockId: conn.toBlock };
+            }
+            
+            return conn;
+          });
+          
+          return [...updatedConnections, ...newConnections];
+        });
+        
         return [...prevBlocks.filter(b => b.blockId !== blockId && b.blockId !== targetBlock.blockId), newStackBlock];
       }
 
@@ -117,7 +191,7 @@ export const useCanvasHandlers = (
 
       return prevBlocks.map(b => b.blockId === blockId ? { ...b, x: finalX, y: y } : b);
     });
-  }, [setBlocks, setDraggingBlock]);
+  }, [setBlocks, setDraggingBlock, setConnections]);
 
   const handleDragThrottled = useCallback((blockId: string, x: number, y: number) => {
     // rAF Throttling: Update strictly next frame (60fps/144fps sync)
@@ -131,13 +205,34 @@ export const useCanvasHandlers = (
 
   const handleUnstack = useCallback((stackBlock: BlockData) => {
     if (!stackBlock.stackItems) return;
+    
+    // Get all block IDs that were in the stack
+    const stackItemIds = stackBlock.stackItems.map(item => item.blockId);
+    
+    // Restore hidden connections and remove stack connections
+    setConnections(prev => {
+      return prev
+        // Remove connections from/to the stack itself (the merged connections)
+        .filter(c => c.fromBlock !== stackBlock.blockId && c.toBlock !== stackBlock.blockId)
+        // Restore hidden connections that belonged to stack items
+        .map(c => {
+          if (c.hidden && c.originalBlockId && stackItemIds.includes(c.originalBlockId)) {
+            // Restore this connection
+            const { hidden, originalBlockId, ...restoredConn } = c;
+            return restoredConn;
+          }
+          return c;
+        });
+    });
+    
+    // Extract blocks from the stack
     const unstackedItems = stackBlock.stackItems.map((item, index) => ({
       ...item,
       x: stackBlock.x + (index * 20) + 20, 
       y: stackBlock.y + (index * 20) + 20,
     }));
     setBlocks(prev => prev.filter(b => b.blockId !== stackBlock.blockId).concat(unstackedItems));
-  }, [setBlocks]);
+  }, [setBlocks, setConnections]);
 
   const handleAddBlock = useCallback((x?: number, y?: number) => {
     const newBlock: BlockData = {
@@ -191,28 +286,73 @@ export const useCanvasHandlers = (
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const dropX = e.clientX - rect.left - (itemData.width || 300) / 2;
         const dropY = e.clientY - rect.top;
+        
+        // Get the original blockId from itemData (preserve it!)
+        const originalBlockId = itemData.blockId;
 
         setBlocks(prev => {
+          let remainingStackItemIds: string[] = [];
+          let stackWasFullyDissolved = false;
+          
           // 1. Remove item from old stack
           const newBlocks = prev.map(b => {
             if (b.blockId === stackId && b.stackItems) {
               const newItems = b.stackItems.filter((_, i) => i !== itemIndex);
-              if (newItems.length === 0) return null;
-              if (newItems.length === 1) return { ...newItems[0], x: b.x, y: b.y };
+              remainingStackItemIds = newItems.map(item => item.blockId);
+              
+              if (newItems.length === 0) {
+                stackWasFullyDissolved = true;
+                return null;
+              }
+              if (newItems.length === 1) {
+                // Stack dissolves into single item - handle connections
+                stackWasFullyDissolved = true;
+                return { ...newItems[0], x: b.x, y: b.y };
+              }
               return { ...b, stackItems: newItems };
             }
             return b;
           }).filter(Boolean) as BlockData[];
 
-          // 2. Add new item
+          // 2. Add the dragged item (preserve original blockId!)
           const newBlock: BlockData = {
             ...itemData,
-            blockId: uuidv4(),
+            blockId: originalBlockId, // Keep original ID for connection restoration
             x: dropX,
             y: dropY,
             width: itemData.width || 300,
             height: 'auto'
           };
+          
+          // 3. Restore connections for the extracted item
+          setConnections(prevConns => {
+            let result = prevConns;
+            
+            // Restore hidden connections for this specific block
+            result = result.map(c => {
+              if (c.hidden && c.originalBlockId === originalBlockId) {
+                const { hidden, originalBlockId: _, ...restoredConn } = c;
+                return restoredConn;
+              }
+              return c;
+            });
+            
+            // If stack was fully dissolved, restore all its connections and remove stack connections
+            if (stackWasFullyDissolved) {
+              const allRestoredIds = [...remainingStackItemIds, originalBlockId];
+              result = result
+                .filter(c => c.fromBlock !== stackId && c.toBlock !== stackId)
+                .map(c => {
+                  if (c.hidden && c.originalBlockId && allRestoredIds.includes(c.originalBlockId)) {
+                    const { hidden, originalBlockId: _, ...restoredConn } = c;
+                    return restoredConn;
+                  }
+                  return c;
+                });
+            }
+            
+            return result;
+          });
 
           return [...newBlocks, newBlock];
         });
@@ -220,7 +360,7 @@ export const useCanvasHandlers = (
         console.error("Failed to process stack drop", err);
       }
     }
-  }, [setBlocks]);
+  }, [setBlocks, setConnections]);
 
   return {
     updateBlock,

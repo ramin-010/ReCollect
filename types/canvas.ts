@@ -14,6 +14,10 @@ export interface Connection {
   controlPoint1?: { x: number, y: number }; 
   controlPoint2?: { x: number, y: number };
   color?: string;
+  // Stack preservation: hidden connections are preserved but not rendered
+  hidden?: boolean;
+  // Track which block this connection originally belonged to (when hidden inside a stack)
+  originalBlockId?: string;
 }
 
 export interface BlockDims {
