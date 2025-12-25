@@ -7,17 +7,16 @@ import { Button } from '@/components/ui-base/Button';
 import { ConnectionLayer } from '../ConnectionLayer';
 import { BlocksLayer } from '../BlocksLayer';
 import { Connection } from '@/types/canvas';
+import { DragController } from '../DragController';
+import { NativeConnectionLayer } from '../NativeConnectionLayer';
 
 // Types
-import { SmartCanvasProps, BlockData, DraftConnection, ActiveDragStart } from './types';
+import { SmartCanvasProps, BlockData, ActiveDragStart } from './types';
 
 // Hooks
 import { usePasteHandler } from './usePasteHandler';
-import { useConnectionDrag } from './useConnectionDrag';
 import { useCanvasExpansion } from './useCanvasExpansion';
 import { useCanvasHandlers } from './useCanvasHandlers';
-
-
 
 // Utility Functions
 const getCanvasPointUtil = (
@@ -47,11 +46,19 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const [renderedDims, setRenderedDims] = useState<Record<string, { width: number, height: number }>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
-  // Optimization: Only track the START of a drag here. The continuous updates happen in ConnectionLayer.
+  
+  // Optimization: Only track the START of a drag here. The continuous updates happen in ConnectionLayer/NativeLayer.
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
+  
+  // Ephemeral drag state is NO LONGER USED for React updates (Plan C), but we keep the state hook if generic handlers need it?
+  // Actually, useCanvasHandlers still calls setDraggingBlock.
+  // We can pass a dummy setter or let it update state that we ignore in rendering (perf hit?).
+  // To avoid perf hit, `setDraggingBlock` should be a dummy function or we refactor handlers.
+  // For now, let's keep it but NOT use it in `blockDims` memoization to prevent re-renders.
   const [draggingBlock, setDraggingBlock] = useState<{ id: string, x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragController = useRef(new DragController()).current;
 
   // Helper: Get mouse/touch coordinates relative to the canvas container
   const getCanvasPoint = useCallback((e: { clientX: number, clientY: number }) => {
@@ -59,18 +66,13 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, []);
 
   // Helper: Prepare Blocks data for ConnectionLayer
-  // Merge ephemeral dragging state
   const blockDims = useMemo(() => {
     const dims = prepareBlockDims(blocks, renderedDims);
-    if (draggingBlock) {
-       const target = dims.find(b => b.id === draggingBlock.id);
-       if (target) {
-         target.x = draggingBlock.x;
-         target.y = draggingBlock.y;
-       }
-    }
+    // PLAN C: We DO NOT merge draggingBlock state here.
+    // The visual update is handled by DOM manipulation (Rnd + NativeConnectionLayer).
+    // React sees the block at its original position until drag stops.
     return dims;
-  }, [blocks, renderedDims, draggingBlock]);
+  }, [blocks, renderedDims]); // Removed draggingBlock from deps
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
     setRenderedDims(prev => {
@@ -94,20 +96,25 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   } = useCanvasHandlers(
     setBlocks,
     setSelectedId,
-    setActiveDragStart, // Renamed from setDraftConnection
+    setActiveDragStart,
     setConnections,
     getCanvasPoint,
     connections,
-    activeDragStart, // Renamed
+    activeDragStart,
+    // We pass the real setter, but since we don't use 'draggingBlock' state in render, it's fine.
+    // Actually, setting state triggers re-render regardless of usage.
+    // We should STOP `useCanvasHandlers` from calling it, OR pass a no-op.
+    // But `handleDragThrottled` is only called if WE call it.
+    // In `BlocksLayer`, we removed the `onDrag` call to `handleDragThrottled`.
+    // So this setter is effectively unused during drag! Perfect.
     setDraggingBlock
   );
 
   // Custom Hooks
   usePasteHandler(setBlocks);
-  // useConnectionDrag removed from here - moved to ConnectionLayer
   const canvasSize = useCanvasExpansion(blocks, containerRef);
   
-  // Initialization Logic (Consolidated)
+  // Initialization Logic
   useEffect(() => {
     if (initialContent) {
       try {
@@ -115,12 +122,10 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         if (Array.isArray(parsed)) {
           setBlocks(parsed);
         } else if (parsed && typeof parsed === 'object') {
-          // New format { blocks, connections }
           if (parsed.blocks) setBlocks(parsed.blocks);
           if (parsed.connections) setConnections(parsed.connections);
         }
       } catch (e) {
-        // If simple string, create one block
         if (initialContent.trim()) {
           setBlocks([{
             blockId: uuidv4(),
@@ -134,9 +139,9 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         }
       }
     }
-  }, []); // Run once on mount
+  }, []);
 
-  // Autosave Logic (Consolidated)
+  // Autosave Logic
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
@@ -147,11 +152,11 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
       }
     }, 1000); 
     return () => clearTimeout(timer);
-  }, [blocks, connections]); // Trigger only on data change, not callback change
+  }, [blocks, connections]);
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
-  // Stable handlers for Memoized Components
+  // Stable handlers
   const handleConnectionUpdate = useCallback((updated: Connection) => {
     setConnections(prev => prev.map(c => c.id === updated.id ? updated : c));
   }, []);
@@ -162,18 +167,16 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
 
   const handleBlockDragStart = useCallback((id: string) => {
     setSelectedId(id);
-    setSelectedConnectionId(null); // Deselect connection when clicking block
+    setSelectedConnectionId(null);
   }, []);
 
-  // Callback for when drag ends (success or cancel)
   const handleDragComplete = useCallback(() => {
     setActiveDragStart(null);
   }, []);
 
-  // KeyDown Handler for Deletion
+  // KeyDown Handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input or contenteditable
       if (
         e.target instanceof HTMLInputElement || 
         e.target instanceof HTMLTextAreaElement || 
@@ -222,23 +225,17 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} 
         />
 
-        {/* Connection Layer (LINES - Background) */}
-        <ConnectionLayer 
-          variant="default"
-          connections={connections}
-          setConnections={setConnections} 
-          blocks={blockDims} 
-          fullBlocks={blocks} 
-          onUpdateConnection={handleConnectionUpdate}
-          onRemoveConnection={handleConnectionRemove}
-          activeDragStart={activeDragStart}
-          onDragComplete={handleDragComplete}
-          getCanvasPoint={getCanvasPoint}
-          selectedConnectionId={selectedConnectionId}
-          onSelectConnection={(id) => {
-              setSelectedConnectionId(id);
-              setSelectedId(null);
-          }}
+        {/* NATIVE CONNECTION LAYER (Background - Matrix Mode) */}
+        <NativeConnectionLayer 
+            connections={connections} 
+            blocks={blockDims} 
+            dragController={dragController}
+            selectedConnectionId={selectedConnectionId}
+            onSelectConnection={(id, e) => {
+                setSelectedConnectionId(id);
+                setSelectedId(null);
+            }}
+            containerRef={containerRef}
         />
 
         {/* Blocks Layer (Memoized) */}
@@ -247,7 +244,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           selectedId={selectedId}
           readOnly={readOnly}
           onDragStop={handleDragStop}
-          onDrag={handleDragThrottled}
+          // We intentionally omit onDrag to prevent React state updates during drag
           onDragStart={handleBlockDragStart}
           onResize={handleResize}
           onResizeStop={handleResizeStop}
@@ -258,20 +255,39 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onAnchorMouseUp={() => {}} 
           onDimensionsChange={handleDimensionsChange}
           isConnectionDragging={!!activeDragStart}
+          dragController={dragController}
         />
 
+        {/* DRAFT CONNECTION LAYER (Foreground - Creation Mode) */}
+        {/* We use the standard React Layer for the creation drag because it involves state (activeDragStart) and following mouse */}
+        {activeDragStart && (
+            <ConnectionLayer 
+                variant="default"
+                connections={[]} // Don't render existing connections here (handled by NativeLayer)
+                setConnections={setConnections} 
+                blocks={blockDims} 
+                fullBlocks={blocks}
+                activeDragStart={activeDragStart}
+                onDragComplete={handleDragComplete}
+                getCanvasPoint={getCanvasPoint}
+                selectedConnectionId={null}
+                onSelectConnection={() => {}}
+                // This layer is ephemeral and only exists while creating a connection
+            />
+        )}
+
         {/* Connection Layer (CONTROLS - Foreground) */}
+        {/* This layer renders handles for selecting/editing connections which are static/interactive */}
         <ConnectionLayer 
           variant="controls"
           connections={connections}
           setConnections={setConnections} 
           blocks={blockDims} 
-          // dragStart not needed for controls
           activeDragStart={null} 
           onDragComplete={() => {}} 
           getCanvasPoint={getCanvasPoint}
           selectedConnectionId={selectedConnectionId}
-          onSelectConnection={() => {}} // Controls don't trigger selection (handles handle their own drag)
+          onSelectConnection={() => {}} 
           onUpdateConnection={handleConnectionUpdate}
         />
 

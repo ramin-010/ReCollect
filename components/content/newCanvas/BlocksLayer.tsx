@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from './smartBlock/index';
+import { DragController } from './DragController';
 
 // Define the Props expected by the layer
 interface BlocksLayerProps {
@@ -20,6 +21,7 @@ interface BlocksLayerProps {
     onDrag?: (id: string, x: number, y: number) => void;
     onDimensionsChange?: (id: string, width: number, height: number) => void;
     isConnectionDragging?: boolean;
+    dragController?: DragController;
 }
 
 const BlocksLayerComponent = ({
@@ -37,18 +39,26 @@ const BlocksLayerComponent = ({
     onAnchorMouseUp,
     onDrag,
     onDimensionsChange,
-    isConnectionDragging
+    isConnectionDragging,
+    dragController
 }: BlocksLayerProps) => {
     return (
         <>
             {blocks.map(block => (
                 <Rnd
                     key={block.blockId}
+                    id={block.blockId} // CRITICAL: Assign ID to Rnd wrapper so NativeLayer can find it during drag
                     position={{ x: block.x, y: block.y }}
                     size={{ width: block.width, height: block.height === 'auto' ? 'auto' : block.height }}
-                    onDragStop={(e, d) => onDragStop(block.blockId, d.x, d.y)}
+                    onDragStop={(e, d) => {
+                        onDragStop(block.blockId, d.x, d.y);
+                        dragController?.stopDrag(); // Signal Matrix Layer to stop (Correct method name)
+                    }}
                     onDrag={(e, d) => onDrag?.(block.blockId, d.x, d.y)}
-                    onDragStart={() => onDragStart(block.blockId)}
+                    onDragStart={() => {
+                        onDragStart(block.blockId);
+                        dragController?.startDrag(block.blockId); // Signal Matrix Layer to wake up
+                    }}
                     dragHandleClassName="smart-block-drag-handle"
                     bounds="parent"
                     enableResizing={{ 

@@ -99,7 +99,7 @@ function SmartBlockComponent({
   return (
     <motion.div
       ref={blockRef}
-      id={id}
+      id={`smart-block-${id}`} // Updated ID to avoid collision with Rnd wrapper (which will have the naked ID)
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
