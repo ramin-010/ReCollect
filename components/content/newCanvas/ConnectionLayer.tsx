@@ -120,30 +120,32 @@ export function ConnectionLayer({
         }
     }, [blocks]); 
 
+    // Helper to sample bezier
+    const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
+        const u = 1 - t;
+        const tt = t * t;
+        const uu = u * u;
+        const uuu = uu * u;
+        const ttt = tt * t;
+        const x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
+        const y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
+        return { x, y };
+    };
+
     // Helper: Generate a smooth spline path passing through points [p0, p1, p2, p3]
-    // Using simple Catmull-Rom to Cubic Bezier conversion
     const getSplinePath = (points: {x: number, y: number}[]) => {
         if (points.length < 2) return "";
-        
         let path = `M ${points[0].x} ${points[0].y}`;
-        
-        // Tension: 0.5 is standard Catmull-Rom
-        const t = 0.5; // Tension
-
+        const t = 0.5; 
         for (let i = 0; i < points.length - 1; i++) {
             const p0 = i > 0 ? points[i - 1] : points[0];
             const p1 = points[i];
             const p2 = points[i + 1];
             const p3 = i < points.length - 2 ? points[i + 2] : p2;
-
-            const cp1x = p1.x + (p2.x - p0.x) * t / 3; // Divide by 6? Standard is /6 for distance, but /3 for Bezier grid? 
-            // Catmull-Rom to Bezier: CP1 = P1 + (P2-P0)/6 * tension? 
-            // Let's use standard d = distance * tension.
+            const cp1x = p1.x + (p2.x - p0.x) * t / 3;
             const cp1y = p1.y + (p2.y - p0.y) * t / 3;
-
             const cp2x = p2.x - (p3.x - p1.x) * t / 3;
             const cp2y = p2.y - (p3.y - p1.y) * t / 3;
-
             path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
         }
         return path;
@@ -158,38 +160,25 @@ export function ConnectionLayer({
         let cp2 = conn.controlPoint2;
 
         if (!cp1 || !cp2) {
-             // For Spline, defaults should be ON the curve.
-             // Let's default to a nice arc or 1/3, 2/3 straights. 
-             // Catmull-Rom smooths corners, so zigzag is fine.
-             
-             // Let's use the previous "Smart Curve" offset but add it to the 1/3 2/3 points
              const dx = end.x - start.x;
              const dy = end.y - start.y;
              const dist = Math.hypot(dx, dy);
-             const offset = Math.min(dist * 0.25, 100); // reduced offset for waypoints
+             const offset = Math.min(Math.max(dist * 0.5, 30), 200);
 
-             // Base points on straight line
-             const p1Base = { x: start.x + dx * 0.33, y: start.y + dy * 0.33 };
-             const p2Base = { x: start.x + dx * 0.66, y: start.y + dy * 0.66 };
+             const h1 = { ...start };
+             if (conn.fromSide === 'top') h1.y -= offset;
+             else if (conn.fromSide === 'bottom') h1.y += offset;
+             else if (conn.fromSide === 'left') h1.x -= offset;
+             else if (conn.fromSide === 'right') h1.x += offset;
 
-             if (!cp1) {
-                 cp1 = { ...p1Base };
-                 // Offset perpendicular? Or just simple side-push
-                 if (conn.fromSide === 'top') cp1.y -= offset;
-                 if (conn.fromSide === 'bottom') cp1.y += offset;
-                 if (conn.fromSide === 'left') cp1.x -= offset;
-                 if (conn.fromSide === 'right') cp1.x += offset;
-             }
-             if (!cp2) {
-                 cp2 = { ...p2Base };
-                   // For p2, if we have a C-shape (e.g. Right to Right), we push same dir.
-                   // If S-shape (Right to Left), we might push opposite or just let spline handle it.
-                   // Simple logic: Push based on ToSide
-                 if (conn.toSide === 'top') cp2.y -= offset;
-                 if (conn.toSide === 'bottom') cp2.y += offset;
-                 if (conn.toSide === 'left') cp2.x -= offset;
-                 if (conn.toSide === 'right') cp2.x += offset;
-             }
+             const h2 = { ...end };
+             if (conn.toSide === 'top') h2.y -= offset;
+             else if (conn.toSide === 'bottom') h2.y += offset;
+             else if (conn.toSide === 'left') h2.x -= offset;
+             else if (conn.toSide === 'right') h2.x += offset;
+
+             if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
+             if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
         }
         return { cp1, cp2 };
     };
@@ -198,8 +187,6 @@ export function ConnectionLayer({
         const start = getAnchorPos(conn.fromBlock, conn.fromSide);
         const end = getAnchorPos(conn.toBlock, conn.toSide);
         const { cp1, cp2 } = getControlPoints(conn);
-        
-        // Generate Spline passing through S -> CP1 -> CP2 -> E
         return getSplinePath([start, cp1, cp2, end]);
     };
 

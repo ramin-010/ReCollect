@@ -42,6 +42,18 @@ const getSplinePath = (points: {x: number, y: number}[]) => {
     return path;
 };
 
+const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
+    const u = 1 - t;
+    const tt = t * t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const ttt = tt * t;
+
+    const x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
+    const y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
+    return { x, y };
+};
+
 const ConnectionLineComponent: React.FC<ConnectionLineProps> = ({ 
     connection, 
     fromBlock, 
@@ -54,32 +66,31 @@ const ConnectionLineComponent: React.FC<ConnectionLineProps> = ({
     const start = getAnchorPos(fromBlock, connection.fromSide);
     const end = getAnchorPos(toBlock, connection.toSide);
 
-    // Calculate Control Points (Same logic as ConnectionLayer)
     let cp1 = connection.controlPoint1;
     let cp2 = connection.controlPoint2;
 
     if (!cp1 || !cp2) {
+         // Calculate "Ideal" Bezier Handles for smooth curve
          const dx = end.x - start.x;
          const dy = end.y - start.y;
-         const offset = Math.min(Math.hypot(dx, dy) * 0.25, 100);
+         const dist = Math.hypot(dx, dy);
+         const offset = Math.min(Math.max(dist * 0.5, 30), 200);
 
-         const p1Base = { x: start.x + dx * 0.33, y: start.y + dy * 0.33 };
-         const p2Base = { x: start.x + dx * 0.66, y: start.y + dy * 0.66 };
+         const h1 = { ...start };
+         if (connection.fromSide === 'top') h1.y -= offset;
+         else if (connection.fromSide === 'bottom') h1.y += offset;
+         else if (connection.fromSide === 'left') h1.x -= offset;
+         else if (connection.fromSide === 'right') h1.x += offset;
 
-         if (!cp1) {
-             cp1 = { ...p1Base };
-             if (connection.fromSide === 'top') cp1.y -= offset;
-             if (connection.fromSide === 'bottom') cp1.y += offset;
-             if (connection.fromSide === 'left') cp1.x -= offset;
-             if (connection.fromSide === 'right') cp1.x += offset;
-         }
-         if (!cp2) {
-             cp2 = { ...p2Base };
-             if (connection.toSide === 'top') cp2.y -= offset;
-             if (connection.toSide === 'bottom') cp2.y += offset;
-             if (connection.toSide === 'left') cp2.x -= offset;
-             if (connection.toSide === 'right') cp2.x += offset;
-         }
+         const h2 = { ...end };
+         if (connection.toSide === 'top') h2.y -= offset;
+         else if (connection.toSide === 'bottom') h2.y += offset;
+         else if (connection.toSide === 'left') h2.x -= offset;
+         else if (connection.toSide === 'right') h2.x += offset;
+
+         // Sample the Ideal Bezier at 1/3 and 2/3 to get Waypoints ON the curve
+         if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
+         if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
     }
 
     const path = getSplinePath([start, cp1, cp2, end]);
