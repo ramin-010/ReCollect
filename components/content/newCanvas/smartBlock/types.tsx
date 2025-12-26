@@ -9,14 +9,13 @@ export interface SmartBlockProps {
   x: number;
   y: number;
   isSelected?: boolean;
-  onUpdate: (content: string) => void;
-  onUpdateBlock?: (id: string, data: any) => void; // Generic update handler
-  onDelete?: () => void;
-  onFocus?: () => void;
-  onUnstack?: () => void;
-  onStackUpdate?: (items: any[]) => void;
-  onAnchorMouseDown?: (side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
-  onAnchorMouseUp?: (side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
+  // Parent handlers (stable references) - block will call with its own ID
+  onUpdateBlock?: (id: string, data: any) => void;
+  onDeleteBlock?: (id: string) => void;
+  onFocus?: (id: string) => void;
+  onUnstack?: (block: any) => void;
+  onAnchorMouseDown?: (id: string, side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
+  onAnchorMouseUp?: (id: string, side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => void;
   onDimensionsChange?: (id: string, width: number, height: number) => void;
   isConnectionDragging?: boolean;
   readOnly?: boolean;

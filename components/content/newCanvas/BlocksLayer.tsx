@@ -16,6 +16,7 @@ interface BlocksLayerProps {
     onUpdateBlock: (id: string, data: any) => void;
     onDeleteBlock: (id: string) => void;
     onUnstack: (block: any) => void;
+    onFocus: (id: string) => void;
     onAnchorMouseDown: (id: string, side: any, e: any) => void;
     onAnchorMouseUp: (id: string, side: any, e: any) => void;
     onDrag?: (id: string, x: number, y: number) => void;
@@ -36,6 +37,7 @@ const BlocksLayerComponent = ({
     onUpdateBlock,
     onDeleteBlock,
     onUnstack,
+    onFocus,
     onAnchorMouseDown,
     onAnchorMouseUp,
     onDrag,
@@ -44,6 +46,9 @@ const BlocksLayerComponent = ({
     dragController,
     scale = 1 // default
 }: BlocksLayerProps) => {
+    // PERF: Log re-renders
+    console.log(`[PERF] BlocksLayer RENDER`, { blocksCount: blocks.length, selectedId: selectedId?.slice(-8) || null });
+    
     return (
         <>
             {blocks.map(block => (
@@ -88,17 +93,12 @@ const BlocksLayerComponent = ({
                         x={block.x}
                         y={block.y}
                         isSelected={selectedId === block.blockId}
-                        onUpdate={(content) => onUpdateBlock(block.blockId, { content })}
                         onUpdateBlock={onUpdateBlock}
-                        onDelete={() => onDeleteBlock(block.blockId)}
-                        onFocus={() => {
-                           // Logic handled by SmartCanvas click mainly, 
-                           // but we could lift specific focus logic here if needed.
-                        }}
-                        onUnstack={() => onUnstack(block.blockId)}
-                        onStackUpdate={(items) => onUpdateBlock(block.blockId, { stackItems: items })}
-                        onAnchorMouseDown={(side, e) => onAnchorMouseDown && onAnchorMouseDown(block.blockId, side, e)}
-                        onAnchorMouseUp={(side, e) => onAnchorMouseUp && onAnchorMouseUp(block.blockId, side, e)}
+                        onDeleteBlock={onDeleteBlock}
+                        onFocus={onFocus}
+                        onUnstack={onUnstack}
+                        onAnchorMouseDown={onAnchorMouseDown}
+                        onAnchorMouseUp={onAnchorMouseUp}
                         onDimensionsChange={onDimensionsChange}
                         readOnly={readOnly}
                         isConnectionDragging={isConnectionDragging}

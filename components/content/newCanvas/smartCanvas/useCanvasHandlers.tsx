@@ -62,6 +62,7 @@ export const useCanvasHandlers = (
   }, [updateBlock]);
 
   const handleDragStop = useCallback((blockId: string, x: number, y: number) => {
+    console.log('[PERF] handleDragStop', { blockId, x, y });
     // Cancel any pending drag frame
     if (dragRafId.current) {
         cancelAnimationFrame(dragRafId.current);
@@ -249,15 +250,15 @@ export const useCanvasHandlers = (
   }, [setBlocks, setSelectedId]);
 
   const handleAnchorMouseDown = useCallback((blockId: string, side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => {
-    // Constraint: Check if this anchor is already used
-    const isOccupied = connections.some(c => 
-      (c.fromBlock === blockId && c.fromSide === side) || 
-      (c.toBlock === blockId && c.toSide === side)
+    // Constraint: An anchor can have multiple OUTGOING connections (as source)
+    // BUT if it's ever been a TARGET (incoming), it can't become a source
+    const isIncomingTarget = connections.some(c => 
+      c.toBlock === blockId && c.toSide === side && !c.hidden
     );
 
-    if (isOccupied) {
+    if (isIncomingTarget) {
       e.stopPropagation();
-      return; // Do nothing if occupied
+      return; // Can't start connection from an anchor that receives connections
     }
 
     const { x, y } = getCanvasPoint(e);

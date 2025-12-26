@@ -38,10 +38,10 @@ export const useConnectionDrag = (
 
   // Stable Refs for Props that might change but shouldn't re-bind listeners
   const blocksRef = useRef(blocks);
-  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
+  blocksRef.current = blocks; // Update synchronously
   
   const connectionsRef = useRef(connections);
-  useEffect(() => { connectionsRef.current = connections; }, [connections]);
+  connectionsRef.current = connections; // Update synchronously - critical for constraint checking
 
   const isDragging = !!draftConnection;
 
@@ -78,13 +78,13 @@ export const useConnectionDrag = (
 
           const sides = ['top', 'right', 'bottom', 'left'] as const;
           for (const side of sides) {
-            // Check constraints: Is this anchor occupied?
-            const isOccupied = currentConnections.some(c => 
-               (c.fromBlock === block.id && c.fromSide === side) || 
-               (c.toBlock === block.id && c.toSide === side)
+            // Check constraints: An anchor can RECEIVE multiple incoming connections
+            // BUT if it's ever been a SOURCE (outgoing), it can't become a target
+            const isOutgoingSource = currentConnections.some(c => 
+               c.fromBlock === block.id && c.fromSide === side && !c.hidden
             );
             
-            if (isOccupied) continue;
+            if (isOutgoingSource) continue;
 
             const pos = getAnchorPosition(block, side);
             const dist = Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2));
@@ -125,13 +125,12 @@ export const useConnectionDrag = (
           const { blockId, side } = snappedAnchorRef.current;
           
           const currentConnections = connectionsRef.current;
-          // Re-validate constraint
-           const isOccupied = currentConnections.some(c => 
-             (c.fromBlock === blockId && c.fromSide === side) || 
-             (c.toBlock === blockId && c.toSide === side)
+          // Re-validate constraint: Only block if target anchor is an outgoing source
+           const isOutgoingSource = currentConnections.some(c => 
+             c.fromBlock === blockId && c.fromSide === side && !c.hidden
           );
 
-          if (!isOccupied) {
+          if (!isOutgoingSource) {
             setConnections(prev => [...prev, {
               id: uuidv4(),
               fromBlock: currentDraft.fromBlock,

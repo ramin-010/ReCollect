@@ -22,6 +22,7 @@ interface BlockEditorProps {
   readOnly?: boolean;
   autoFocus?: boolean;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  onDelete?: () => void;
 }
 
 export function BlockEditor({
@@ -31,11 +32,13 @@ export function BlockEditor({
   onBlur,
   readOnly = false,
   autoFocus = false,
-  onKeyDown
+  onKeyDown,
+  onDelete
 }: BlockEditorProps) {
   
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [bubbleMenuPos, setBubbleMenuPos] = useState({ top: 0, left: 0 });
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Debounced handler needs to be defined BEFORE useEditor so it can be used inside onUpdate
@@ -96,6 +99,12 @@ export function BlockEditor({
         class: 'prose prose-sm dark:prose-invert focus:outline-none max-w-none leading-normal text-[hsl(var(--foreground))]',
       },
       handleKeyDown: (view, event) => {
+        // Handle Ctrl+Delete or Ctrl+Backspace to delete the whole note
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'Delete' || event.key === 'Backspace')) {
+          event.preventDefault();
+          onDelete?.();
+          return true;
+        }
         if (onKeyDown) {
             // @ts-ignore
             onKeyDown(event);
@@ -228,13 +237,56 @@ export function BlockEditor({
                <span className="font-bold text-xs">H2</span>
             </button>
             <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1" />
-            <button
-              onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
-              className={`p-1.5 rounded hover:bg-[hsl(var(--muted))] ${editor.isActive('highlight') ? 'text-[hsl(var(--brand-primary))] bg-[hsl(var(--brand-primary))]/10' : 'text-[hsl(var(--muted-foreground))]'}`}
-              title="Highlight"
-            >
-              <Highlighter className="w-4 h-4" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowHighlightPicker(!showHighlightPicker)}
+                className={`p-1.5 rounded hover:bg-[hsl(var(--muted))] ${editor.isActive('highlight') ? 'text-[hsl(var(--brand-primary))] bg-[hsl(var(--brand-primary))]/10' : 'text-[hsl(var(--muted-foreground))]'}`}
+                title="Highlight"
+              >
+                <Highlighter className="w-4 h-4" />
+              </button>
+              {showHighlightPicker && (
+                <div 
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 min-w-[160px]"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))] mb-2 text-center">Highlight Color</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { color: 'rgba(254, 240, 138, 0.25)', name: 'Yellow' },
+                      { color: 'rgba(187, 247, 208, 0.25)', name: 'Green' },
+                      { color: 'rgba(147, 197, 253, 0.25)', name: 'Blue' },
+                      { color: 'rgba(252, 165, 165, 0.25)', name: 'Red' },
+                      { color: 'rgba(216, 180, 254, 0.25)', name: 'Purple' },
+                      { color: 'rgba(253, 186, 116, 0.25)', name: 'Orange' },
+                      { color: 'rgba(251, 207, 232, 0.25)', name: 'Pink' },
+                      { color: 'rgba(94, 234, 212, 0.35)', name: 'Teal' },
+                      { color: 'rgba(148, 163, 184, 0.4)', name: 'Gray' },
+                    ].map((item) => (
+                      <button
+                        key={item.color}
+                        onClick={() => {
+                          editor.chain().focus().toggleHighlight({ color: item.color }).run();
+                          setShowHighlightPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-lg border-2 border-[hsl(var(--border))] hover:scale-105 hover:border-white/50 transition-all"
+                        style={{ backgroundColor: item.color }}
+                        title={item.name}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      editor.chain().focus().unsetHighlight().run();
+                      setShowHighlightPicker(false);
+                    }}
+                    className="w-full mt-2 px-2 py-1 text-[10px] text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                  >
+                    Remove highlight
+                  </button>
+                </div>
+              )}
+            </div>
              <button
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             className={`p-1.5 rounded hover:bg-[hsl(var(--muted))] ${editor.isActive('codeBlock') ? 'text-[hsl(var(--brand-primary))] bg-[hsl(var(--brand-primary))]/10' : 'text-[hsl(var(--muted-foreground))]'}`}

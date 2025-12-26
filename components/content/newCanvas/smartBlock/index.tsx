@@ -26,12 +26,10 @@ function SmartBlockComponent({
   x,
   y,
   isSelected = false,
-  onUpdate,
   onUpdateBlock,
-  onDelete,
+  onDeleteBlock,
   onFocus,
   onUnstack,
-  onStackUpdate,
   onAnchorMouseDown,
   onAnchorMouseUp,
   onDimensionsChange,
@@ -39,7 +37,11 @@ function SmartBlockComponent({
   isConnectionDragging,
   color // Background color class
 }: SmartBlockProps) {
-  // console.log('[SmartBlock] Render', id); // Commented out to avoid spam, uncomment if deep debugging needed
+  // PERF: Log re-renders to verify memoization
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  console.log(`[PERF] SmartBlock RENDER #${renderCountRef.current}`, { id: id.slice(-8), type, isSelected });
+  
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -116,26 +118,29 @@ function SmartBlockComponent({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
-        onFocus?.();
-        setIsEditing(true);
+        onFocus?.(id);
+        // Only enter editing mode for text blocks - images/embeds/code/stacks don't need it
+        if (type === 'text') {
+          setIsEditing(true);
+        }
       }}
     >
       <DragHandle isVisible={isHovered || isSelected} />
       
       {/* Controls Overlay (Delete) - Top Right (Outside) */}
-      <ControlsOverlay isVisible={isHovered || isSelected} onDelete={onDelete} />
+      <ControlsOverlay isVisible={isHovered || isSelected} onDelete={() => onDeleteBlock?.(id)} />
 
       {/* Anchor Points (Visible on Hover or dragging) */}
       <AnchorPoints 
         isVisible={isHovered || !!isConnectionDragging}
         isDragging={!!isConnectionDragging}
         readOnly={readOnly}
-        onAnchorMouseDown={onAnchorMouseDown}
-        onAnchorMouseUp={onAnchorMouseUp}
+        onAnchorMouseDown={(side, e) => onAnchorMouseDown?.(id, side, e)}
+        onAnchorMouseUp={(side, e) => onAnchorMouseUp?.(id, side, e)}
       />
 
-      {/* Color Control - Floating "Inside" Top Right (Only when Editing) */}
-      {isEditing && (
+      {/* Color Control - Floating "Inside" Top Right (Only when Editing, not for stacks) */}
+      {isEditing && type !== 'stack' && (
             <ColorControl 
             isVisible={true} 
             currentColor={color}
@@ -152,30 +157,38 @@ function SmartBlockComponent({
               content={content}
               url={url}
               isEditing={isEditing}
-              onUpdate={onUpdate}
+              onUpdate={(newContent) => onUpdateBlock?.(id, { content: newContent })}
               onBlur={() => setIsEditing(false)}
+              onDelete={() => onDeleteBlock?.(id)}
             />
             <TaskProgressBar taskStats={type === 'text' ? taskStats : null} />
           </>
         ) : (
           stackItems && stackItems.length > 0 && (
-            <div className="w-full h-full flex flex-col bg-[hsl(var(--muted))]/10">
-              {/* Stack Header */}
-              <div className="px-3 py-2 bg-[hsl(var(--muted))]/30 border-b border-[hsl(var(--border))]/50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[hsl(var(--brand-primary))]" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                    Stack ({stackItems.length})
+            <div className="w-full h-full flex flex-col bg-gradient-to-b from-[hsl(var(--card))]/80 to-[hsl(var(--muted))]/30 backdrop-blur-sm rounded-lg overflow-hidden">
+              {/* Stack Header - Premium glassmorphism style */}
+              <div className="px-4 py-2.5 bg-gradient-to-r from-[hsl(var(--brand-primary))]/15 to-transparent border-b border-[hsl(var(--brand-primary))]/20 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  {/* Animated stack icon */}
+                  <div className="relative">
+                    <div className="w-2 h-2 rounded-full bg-[hsl(var(--brand-primary))] animate-pulse" />
+                    <div className="absolute -inset-1 rounded-full bg-[hsl(var(--brand-primary))]/20 animate-ping" style={{ animationDuration: '2s' }} />
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-[hsl(var(--foreground))]/80">
+                    Stack
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--brand-primary))]/20 text-[hsl(var(--brand-primary))]">
+                    {stackItems.length}
                   </span>
                 </div>
               </div>
 
-              {/* Vertical Stream of Items */}
+              {/* Vertical Stream of Items with improved spacing */}
               <div 
-                className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-2 relative"
+                className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-2.5 relative"
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={(e) => {
-                  handleStackDrop(e, dropTargetIndex, id, stackItems, onStackUpdate);
+                  handleStackDrop(e, dropTargetIndex, id, stackItems, (items) => onUpdateBlock?.(id, { stackItems: items }));
                   setDropTargetIndex(null);
                 }}
               >
@@ -183,7 +196,7 @@ function SmartBlockComponent({
                   <React.Fragment key={index}>
                     {/* Render Drop Placeholder Line/Gap if this is the target */}
                     {dropTargetIndex === index && (
-                      <div className="h-16 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center transition-all duration-200">
+                      <div className="h-14 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center transition-all duration-200 animate-pulse">
                         <span className="text-[10px] text-[hsl(var(--brand-primary))] font-medium">Drop here</span>
                       </div>
                     )}
@@ -192,11 +205,12 @@ function SmartBlockComponent({
                       item={item}
                       index={index}
                       stackId={id}
+                      totalItems={stackItems.length}
                       onDragStart={handleStackItemDragStart}
                       onDragEnter={(idx) => setDropTargetIndex(idx)}
                       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                       onDrop={(e, idx) => {
-                        handleStackItemDrop(e, idx, id, stackItems, onStackUpdate);
+                        handleStackItemDrop(e, idx, id, stackItems, (items) => onUpdateBlock?.(id, { stackItems: items }));
                         setDropTargetIndex(null);
                       }}
                     />
@@ -205,11 +219,11 @@ function SmartBlockComponent({
 
                 {/* Bottom Drop Zone to allow appending to end */}
                 <div 
-                  className="h-8 w-full transparent transition-all"
+                  className="h-6 w-full transparent transition-all"
                   onDragEnter={() => setDropTargetIndex(stackItems.length)}
                 >
                   {dropTargetIndex === stackItems.length && (
-                    <div className="h-16 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center">
+                    <div className="h-14 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center animate-pulse">
                       <span className="text-[10px] text-[hsl(var(--brand-primary))] font-medium">Drop at end</span>
                     </div>
                   )}
@@ -223,4 +237,24 @@ function SmartBlockComponent({
   );
 }
 
-export const SmartBlock = React.memo(SmartBlockComponent);
+// Custom comparison for React.memo - only re-render when data props change
+// Callbacks are stable (useCallback in parent) so we don't compare them
+const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
+  return (
+    prev.id === next.id &&
+    prev.type === next.type &&
+    prev.content === next.content &&
+    prev.url === next.url &&
+    prev.width === next.width &&
+    prev.height === next.height &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.isSelected === next.isSelected &&
+    prev.isConnectionDragging === next.isConnectionDragging &&
+    prev.readOnly === next.readOnly &&
+    prev.color === next.color &&
+    prev.stackItems === next.stackItems // Reference equality for array
+  );
+};
+
+export const SmartBlock = React.memo(SmartBlockComponent, arePropsEqual);

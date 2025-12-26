@@ -51,6 +51,15 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   
+  // PERF: Log re-renders
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current++;
+  console.log(`[PERF] SmartCanvas RENDER #${renderCountRef.current}`, { 
+    blocksCount: blocks.length, 
+    connectionsCount: connections.length,
+    selectedId: selectedId?.slice(-8) || null
+  });
+  
   // ZOOM STATE
   const [zoom, setZoom] = useState(1);
   const minZoom = 0.4; // 0.4 as requested (was 0.1)
@@ -98,8 +107,10 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, [blocks, renderedDims]);
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
+    console.log('[PERF] handleDimensionsChange', { id, w, h });
     setRenderedDims(prev => {
         if (prev[id]?.width === w && prev[id]?.height === h) return prev;
+        console.log('[PERF] setRenderedDims ACTUAL UPDATE', { id, w, h });
         return { ...prev, [id]: { width: w, height: h } };
     });
   }, []);
@@ -224,18 +235,38 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContentStr]); // Stable string dependency
 
-  // Autosave Logic
+  // Autosave Logic - Using refs to avoid re-render triggers
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
+  // Store latest data in refs (no re-renders when updating refs)
+  const blocksRef = useRef(blocks);
+  const connectionsRef = useRef(connections);
+  const lastSavedRef = useRef<string>('');
+  
+  // Update refs synchronously (no effect needed, no re-render)
+  blocksRef.current = blocks;
+  connectionsRef.current = connections;
+
+  // Single effect with empty deps - runs once, uses interval
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (blocks.length > 0 || connections.length > 0) {
-        onChangeRef.current?.(JSON.stringify({ blocks, connections }));
+    const interval = setInterval(() => {
+      const currentData = JSON.stringify({ 
+        blocks: blocksRef.current, 
+        connections: connectionsRef.current 
+      });
+      
+      // Only save if data changed since last save
+      if (currentData !== lastSavedRef.current && 
+          (blocksRef.current.length > 0 || connectionsRef.current.length > 0)) {
+        console.log('[PERF] Autosave EXECUTING');
+        onChangeRef.current?.(currentData);
+        lastSavedRef.current = currentData;
       }
-    }, 1000); // Debounce 1s for autosave
-    return () => clearTimeout(timer);
-  }, [blocks, connections]);
+    }, 1000); // Check every 1s
+    
+    return () => clearInterval(interval);
+  }, []); // Empty deps - runs once on mount
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
@@ -253,6 +284,21 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     setSelectedConnectionId(null);
   }, []);
 
+  // Stable callback for BlocksLayer onFocus
+  const handleFocusBlock = useCallback((id: string) => {
+    setSelectedId(id);
+    setSelectedConnectionId(null);
+  }, []);
+
+  // Stable noop callback for onAnchorMouseUp (not used currently)
+  const noopAnchorMouseUp = useCallback(() => {}, []);
+
+  // Stable callback for NativeConnectionLayer onSelectConnection
+  const handleSelectConnection = useCallback((id: string) => {
+    setSelectedConnectionId(id);
+    setSelectedId(null);
+  }, []);
+
   const handleDragComplete = useCallback(() => {
     setActiveDragStart(null);
   }, []);
@@ -260,21 +306,31 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   // KeyDown Handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
+      const isInEditableElement = (
         e.target instanceof HTMLInputElement || 
         e.target instanceof HTMLTextAreaElement || 
         (e.target as HTMLElement).isContentEditable
-      ) {
-        return;
-      }
+      );
+      
       if (e.key === 'Backspace' || e.key === 'Delete') {
-        if (selectedId) {
+        // Ctrl/Cmd + Delete/Backspace: Delete note even when editing
+        if ((e.ctrlKey || e.metaKey) && selectedId) {
+          e.preventDefault();
+          handleDeleteBlock(selectedId);
+          setSelectedId(null);
+          return;
+        }
+        
+        // Normal Delete/Backspace: Only works when NOT in editable element
+        if (!isInEditableElement) {
+          if (selectedId) {
             handleDeleteBlock(selectedId);
             setSelectedId(null);
-        }
-        if (selectedConnectionId) {
+          }
+          if (selectedConnectionId) {
             handleConnectionRemove(selectedConnectionId);
             setSelectedConnectionId(null);
+          }
         }
       }
     };
@@ -320,10 +376,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
             blocks={blockDims} 
             dragController={dragController}
             selectedConnectionId={selectedConnectionId}
-            onSelectConnection={(id, e) => {
-                setSelectedConnectionId(id);
-                setSelectedId(null);
-            }}
+            onSelectConnection={handleSelectConnection}
             containerRef={containerRef as React.RefObject<HTMLDivElement>}
             zoom={zoom}
         />
@@ -340,8 +393,9 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           onUpdateBlock={updateBlock}
           onDeleteBlock={handleDeleteBlock}
           onUnstack={handleUnstack}
+          onFocus={handleFocusBlock}
           onAnchorMouseDown={handleAnchorMouseDown}
-          onAnchorMouseUp={() => {}} 
+          onAnchorMouseUp={noopAnchorMouseUp} 
           onDimensionsChange={handleDimensionsChange}
           isConnectionDragging={!!activeDragStart}
           dragController={dragController}
@@ -352,7 +406,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         {activeDragStart && (
             <ConnectionLayer 
                 variant="default"
-                connections={[]} 
+                connections={connections} 
                 setConnections={setConnections} 
                 blocks={blockDims} 
                 fullBlocks={blocks}

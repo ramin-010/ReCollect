@@ -192,6 +192,7 @@ interface BlockContentProps {
   isEditing: boolean;
   onUpdate: (content: string) => void;
   onBlur: () => void;
+  onDelete?: () => void;
 }
 
 export const BlockContent: React.FC<BlockContentProps> = ({ 
@@ -200,7 +201,8 @@ export const BlockContent: React.FC<BlockContentProps> = ({
   url, 
   isEditing, 
   onUpdate, 
-  onBlur 
+  onBlur,
+  onDelete
 }) => {
   if (type === 'text') {
     if (isEditing) {
@@ -210,6 +212,7 @@ export const BlockContent: React.FC<BlockContentProps> = ({
           onChange={onUpdate}
           autoFocus={true}
           onBlur={onBlur}
+          onDelete={onDelete}
         />
       );
     }
@@ -314,12 +317,27 @@ interface StackItemProps {
   onDragEnter: (index: number) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, index: number) => void;
+  totalItems: number;
 }
+
+// Color palette for stack items - subtle accent borders only
+const getItemAccentColor = (index: number): string => {
+  const colors = [
+    'border-l-blue-500/50',
+    'border-l-purple-500/50',
+    'border-l-emerald-500/50',
+    'border-l-amber-500/50',
+    'border-l-rose-500/50',
+    'border-l-cyan-500/50',
+  ];
+  return colors[index % colors.length];
+};
 
 export const StackItem: React.FC<StackItemProps> = ({
   item,
   index,
   stackId,
+  totalItems,
   onDragStart,
   onDragEnter,
   onDragOver,
@@ -331,42 +349,73 @@ export const StackItem: React.FC<StackItemProps> = ({
     onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); onDragEnter(index); }}
     onDragOver={onDragOver}
     onDrop={(e) => onDrop(e, index)}
-    className="bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50 rounded-lg p-3 shadow-sm relative group/item hover:border-[hsl(var(--brand-primary))]/30 transition-colors cursor-grab active:cursor-grabbing"
+    className={`
+      relative group/item
+      bg-[hsl(var(--card))]
+      border border-[hsl(var(--border))]/40 
+      border-l-[3px] ${getItemAccentColor(index)}
+      rounded-lg p-3 
+      shadow-sm hover:shadow-md
+      hover:border-[hsl(var(--foreground))]/20 
+      transition-all duration-200
+      cursor-grab active:cursor-grabbing
+    `}
   >
-    {/* Stack Index Number - Top Left Outside */}
-    <div className="absolute top-0 right-1 text-[8px] font-mono font-medium text-[hsl(var(--muted-foreground))] opacity-50 select-none pointer-events-none">
-      {index < 9 ? `0${index + 1}` : index + 1}
+    {/* Stack Index Badge - Top Right */}
+    <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))]/50 shadow-sm">
+      <span className="text-[8px] font-mono font-bold text-[hsl(var(--muted-foreground))]">
+        {index + 1}/{totalItems}
+      </span>
     </div>
 
-    {item.type === 'text' && (
-      <div 
-        className={`
-          prose prose-sm dark:prose-invert line-clamp-[8] text-sm
-          [&>blockquote]:border-l-4 [&>blockquote]:border-[hsl(var(--brand-primary))]
-          [&>blockquote]:pl-3 [&>blockquote]:py-0.5 [&>blockquote]:italic
-          [&_code:not(pre_code)]:bg-[hsl(var(--muted))] [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:rounded [&_code:not(pre_code)]:text-xs
-          [&>pre]:bg-[hsl(var(--muted))]/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:text-xs [&>pre]:font-mono
-          [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/40
-          [&_a]:text-blue-500 [&_a]:underline
-          [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4
-        `}
-        dangerouslySetInnerHTML={{ __html: item.content }} 
-      />
-    )}
-    {item.type === 'image' && (
-      <div className="rounded-md overflow-hidden w-full mt-1">
-        <img src={item.url || item.content} className="w-full h-auto object-contain" />
+    {/* Drag indicator - Left side */}
+    <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-40 transition-opacity">
+      <div className="flex flex-row gap-0.5">
+        <div className="flex flex-col gap-0.5">
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+          <div className="w-1 h-1 rounded-full bg-[hsl(var(--foreground))]" />
+        </div>
       </div>
-    )}
-    {item.type === 'embed' && (
-      <div className="rounded-md overflow-hidden mt-2 pointer-events-none">
-        <EmbedBlock url={item.content} />
-      </div>
-    )}
-    {item.type === 'code' && (
-      <div className="rounded-md overflow-hidden mt-2 pointer-events-none max-h-32">
-        <CodeBlock code={item.content} />
-      </div>
-    )}
+    </div>
+
+    {/* Content with padding for drag indicator */}
+    <div className="ml-2">
+      {item.type === 'text' && (
+        <div 
+          className={`
+            prose prose-sm dark:prose-invert line-clamp-[6] text-sm leading-relaxed
+            [&>blockquote]:border-l-4 [&>blockquote]:border-[hsl(var(--brand-primary))]
+            [&>blockquote]:pl-3 [&>blockquote]:py-0.5 [&>blockquote]:italic
+            [&_code:not(pre_code)]:bg-[hsl(var(--muted))] [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:rounded [&_code:not(pre_code)]:text-xs
+            [&>pre]:bg-[hsl(var(--muted))]/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:text-xs [&>pre]:font-mono
+            [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/40
+            [&_a]:text-blue-500 [&_a]:underline
+            [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4
+          `}
+          dangerouslySetInnerHTML={{ __html: item.content }} 
+        />
+      )}
+      {item.type === 'image' && (
+        <div className="rounded-md overflow-hidden w-full">
+          <img src={item.url || item.content} className="w-full h-auto object-contain max-h-32" alt="" />
+        </div>
+      )}
+      {item.type === 'embed' && (
+        <div className="rounded-md overflow-hidden pointer-events-none">
+          <EmbedBlock url={item.content} />
+        </div>
+      )}
+      {item.type === 'code' && (
+        <div className="rounded-md overflow-hidden pointer-events-none max-h-28">
+          <CodeBlock code={item.content} />
+        </div>
+      )}
+    </div>
   </div>
 );
