@@ -19,11 +19,12 @@ import {
   Zap,
   FileText,
   Wallet,
-  CheckSquare
+  CheckSquare,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, useScroll, useTransform } from "framer-motion";
 import { AbstractDash } from './_components/AbstractDash';
-import { AbstractGraph } from './_components/AbstractGraph';
+import { AbstractSmartNotes } from './_components/AbstractSmartNotes';
 import { AbstractFlow } from './_components/AbstractFlow';
 import { AbstractMomentum } from './_components/AbstractMomentum';
 import { AbstractGrowth } from './_components/AbstractGrowth';
@@ -138,6 +139,7 @@ export default function WelcomePage() {
 
       {/* --- FEATURE SPOTLIGHT 2: KNOWLEDGE GRAPH --- */}
       {/* --- FEATURE SPOTLIGHT 2: KNOWLEDGE GRAPH --- */}
+      {/* --- FEATURE SPOTLIGHT 2: SMART BLOCKS --- */}
       <section className="relative py-32 px-6 border-t border-white/[0.05] bg-gradient-to-b from-transparent to-white/[0.02]">
          <div className="max-w-[1400px] mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -155,7 +157,7 @@ export default function WelcomePage() {
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
                   
                   <div className="relative z-10 w-full h-full">
-                     <AbstractGraph />
+                     <AbstractSmartNotes />
                   </div>
                </motion.div>
 
@@ -169,24 +171,23 @@ export default function WelcomePage() {
                >
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-500 text-sm font-semibold tracking-wide border border-amber-500/20">
                      <FileText size={16} />
-                     <span>CONNECTED KNOWLEDGE</span>
+                     <span>CONNECTED THINKING</span>
                   </div>
                   
                   <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
-                     Build Your <br/>
-                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500">Second Brain.</span>
+                     Map Your <br/>
+                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500">Mind Flow.</span>
                   </h2>
                   
                   <p className="text-lg md:text-xl text-[hsl(var(--muted-foreground))] leading-relaxed max-w-lg shadow-lg">
-                     Don't just take notes—build connections. Our graph view visualizes how your ideas relate,
-                     helping you discover insights you didn't even know you had.
+                     Structure complex problems into clear hierarchies. Drag out connections, attach visual assets, and share your entire thought process in one link.
                   </p>
                   
                   <div className="flex flex-col gap-4 pt-4">
-                     {["Bi-directional Linking", "Visual Graph View", "Smart Context Detection"].map((item, i) => (
+                     {["Hierarchical Mind Mapping", "Visual Asset Integration", "One-Click Sharing"].map((item, i) => (
                         <div key={i} className="flex items-center gap-3">
                            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-                              <CheckSquare className="w-3.5 h-3.5 text-amber-500" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
                            </div>
                            <span className="text-[hsl(var(--foreground))] font-medium">{item}</span>
                         </div>
@@ -194,7 +195,7 @@ export default function WelcomePage() {
                   </div>
 
                   <Button variant="ghost" className="group mt-4 -ml-4 text-amber-500 hover:text-amber-400">
-                     Explore Graph View <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                     Start Mapping <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                </motion.div>
             </div>

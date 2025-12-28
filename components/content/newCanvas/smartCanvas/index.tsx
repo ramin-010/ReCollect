@@ -51,14 +51,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   
-  // PERF: Log re-renders
-  const renderCountRef = React.useRef(0);
-  renderCountRef.current++;
-  console.log(`[PERF] SmartCanvas RENDER #${renderCountRef.current}`, { 
-    blocksCount: blocks.length, 
-    connectionsCount: connections.length,
-    selectedId: selectedId?.slice(-8) || null
-  });
+  // Force connection refresh after hydration (images may load async)
+  const [connectionRefreshKey, setConnectionRefreshKey] = useState(0);
   
   // ZOOM STATE
   const [zoom, setZoom] = useState(1);
@@ -102,9 +96,11 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, [zoom]);
 
   // Helper: Prepare Blocks data for ConnectionLayer
+  // connectionRefreshKey forces recalculation after hydration (images load async)
   const blockDims = useMemo(() => {
     return prepareBlockDims(blocks, renderedDims);
-  }, [blocks, renderedDims]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, renderedDims, connectionRefreshKey]);
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
     console.log('[PERF] handleDimensionsChange', { id, w, h });
@@ -125,7 +121,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     handleUnstack,
     handleAddBlock,
     handleAnchorMouseDown,
-    handleCanvasDrop
+    handleCanvasDrop,
+    handleDragThrottled: handleDrag
   } = useCanvasHandlers(
     setBlocks,
     setSelectedId,
@@ -188,13 +185,13 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         const hydratedBlocks = await Promise.all(
           parsedBlocks.map(async (block) => {
             // Check if it's a pending image (has ID but not uploaded)
-            if (block.type === 'image' && block.imageId && !block.isUploaded) {
-               // Try to get blob from local storage
+            // Skip if block already has a valid blob URL (prevents infinite hydration loop)
+            if (block.type === 'image' && block.imageId && !block.isUploaded && !block.url?.startsWith('blob:')) {
+               // Try to get blob from IndexedDB
                try {
                   const blob = await imageStorage.getImage(block.imageId);
                   if (blob) {
-                    const objectUrl = imageStorage.createObjectURL(blob);
-                    return { ...block, url: objectUrl };
+                    return { ...block, url: imageStorage.createObjectURL(blob) };
                   }
                } catch (err) {
                  console.warn("Failed to load local image:", block.imageId, err);
@@ -207,6 +204,12 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         setBlocks(hydratedBlocks);
         setConnections(parsedConnections);
         initializedRef.current = true;
+        
+        // Trigger delayed refresh for connection positions
+        // Images may load async and report new dimensions after initial render
+        setTimeout(() => {
+          setConnectionRefreshKey(k => k + 1);
+        }, 500);
 
       } catch (e) {
         if (initialContentStr.trim()) {
@@ -400,6 +403,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           isConnectionDragging={!!activeDragStart}
           dragController={dragController}
           scale={zoom}
+          onDrag={handleDrag}
         />
 
         {/* DRAFT CONNECTION LAYER (Foreground - Creation Mode) */}

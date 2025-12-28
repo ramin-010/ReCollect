@@ -37,11 +37,6 @@ function SmartBlockComponent({
   isConnectionDragging,
   color // Background color class
 }: SmartBlockProps) {
-  // PERF: Log re-renders to verify memoization
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
-  console.log(`[PERF] SmartBlock RENDER #${renderCountRef.current}`, { id: id.slice(-8), type, isSelected });
-  
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   

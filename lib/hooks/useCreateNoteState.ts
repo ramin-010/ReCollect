@@ -70,7 +70,7 @@ export function useCreateNoteState(dashboardId: string) {
           // Rehydrate images from IndexedDB
           const blocksWithUrls = await Promise.all(
             blocks.map(async (block: BlockType) => {
-              if (block.type === 'image' && block.imageId && !block.isUploaded) {
+              if (block.type === 'image' && block.imageId && !block.isUploaded && !block.url?.startsWith('blob:')) {
                 // Load from IndexedDB and create object URL
                 const blob = await imageStorage.getImage(block.imageId);
                 if (blob) {
