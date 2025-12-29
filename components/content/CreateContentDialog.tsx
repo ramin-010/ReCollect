@@ -1,7 +1,7 @@
 'use client';
 
 import '@excalidraw/excalidraw/index.css';
-import React, { useState, useEffect , useCallback} from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FileText,
   Lock,
@@ -58,6 +58,9 @@ export function CreateContentDialog({
   const [newTagInput, setNewTagInput] = useState('');
   const [newLinkInput, setNewLinkInput] = useState('');
   const [sampleTags, setSampleTags] = useState(DEFAULT_TAGS);
+  
+  // Debounce timer for canvas onChange to prevent dialog re-renders
+  const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     title = '',
@@ -97,6 +100,15 @@ export function CreateContentDialog({
       setSampleTags([...DEFAULT_TAGS, ...customTags]);
     }
   }, [isLoaded, selectedTags]);
+  
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (canvasDebounceRef.current) {
+        clearTimeout(canvasDebounceRef.current);
+      }
+    };
+  }, []);
 
   const toggleTag = (tag: string) => {
     const isDefaultTag = DEFAULT_TAGS.includes(tag);
@@ -444,15 +456,20 @@ export function CreateContentDialog({
                 <SmartCanvas
                   initialContent={typeof canvasBlocks === 'string' ? canvasBlocks : JSON.stringify(canvasBlocks)}
                   onChange={useCallback((content: string) => {
-                      try {
-                          const parsed = JSON.parse(content);
-                          // Store exactly what we received (Object or Array)
-                          // The state is called 'canvasBlocks' but now it might hold { blocks, connections }
-                          setCanvasBlocks(parsed);
-                      } catch (e) {
-                          console.error("Failed to parse canvas blocks", e);
+                      // Debounce parent state updates to prevent dialog re-renders during editing
+                      // SmartCanvas already persists to localStorage internally
+                      if (canvasDebounceRef.current) {
+                        clearTimeout(canvasDebounceRef.current);
                       }
-                  }, [updateState])} // updateState is stable from hook
+                      canvasDebounceRef.current = setTimeout(() => {
+                        try {
+                            const parsed = JSON.parse(content);
+                            setCanvasBlocks(parsed);
+                        } catch (e) {
+                            console.error("Failed to parse canvas blocks", e);
+                        }
+                      }, 2000); // 2 second debounce
+                  }, [updateState])}
                   readOnly={false}
                   />
 

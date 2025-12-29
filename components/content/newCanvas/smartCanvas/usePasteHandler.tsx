@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, RefObject } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { imageStorage } from '@/lib/storage/imageStorage';
 import { BlockData } from './types';
 
 export const usePasteHandler = (
-  setBlocks: React.Dispatch<React.SetStateAction<BlockData[]>>
+  setBlocks: React.Dispatch<React.SetStateAction<BlockData[]>>,
+  mousePositionRef: RefObject<{ x: number, y: number }>
 ) => {
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -20,12 +21,9 @@ export const usePasteHandler = (
           return;
       }
 
-      // Avoid handling paste if we are not the active/focused element context
-      // But since this is a global listener, we need to be careful. 
-      // Ideally, we should check if the click was within our canvas recently?
-      // For now, let's assume if no input is focused, we takeover.
-      
-      // e.preventDefault(); // CAUTION: preventDefault only if we handle it
+      // Get paste position from mouse cursor (or default to 200,200)
+      const pasteX = mousePositionRef.current?.x ?? 200;
+      const pasteY = mousePositionRef.current?.y ?? 200;
       
       // 1. Handle Images
       const items = e.clipboardData?.items;
@@ -46,8 +44,8 @@ export const usePasteHandler = (
                           url: objectURL,
                           imageId: imageId,
                           isUploaded: false,
-                          x: 200, 
-                          y: 200,
+                          x: pasteX, 
+                          y: pasteY,
                           width: 300,
                           height: 'auto'
                       };
@@ -73,8 +71,8 @@ export const usePasteHandler = (
                       blockId: uuidv4(),
                       type: 'embed',
                       content: text.trim(),
-                      x: 200,
-                      y: 200,
+                      x: pasteX,
+                      y: pasteY,
                       width: 300,
                       height: 200
                   };
@@ -86,8 +84,8 @@ export const usePasteHandler = (
                   blockId: uuidv4(),
                   type: 'code',
                   content: text,
-                  x: 200,
-                  y: 200,
+                  x: pasteX,
+                  y: pasteY,
                   width: 400, // code blocks usually need more width
                   height: 'auto'
               };
@@ -101,8 +99,8 @@ export const usePasteHandler = (
                   blockId: uuidv4(),
                   type: 'text',
                   content: `<p>${text.replace(/\n/g, '<br>')}</p>`, 
-                  x: 200, 
-                  y: 200,
+                  x: pasteX, 
+                  y: pasteY,
                   width: 300,
                   height: 'auto'
               };

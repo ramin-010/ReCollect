@@ -61,7 +61,6 @@ export const useCanvasHandlers = (
   }, [updateBlock]);
 
   const handleDragStop = useCallback((blockId: string, x: number, y: number) => {
-    console.log('[DRAG] handleDragStop - STATE UPDATE', { blockId, x, y });
     // Cancel any pending drag frame
     if (dragRafId.current) {
         cancelAnimationFrame(dragRafId.current);

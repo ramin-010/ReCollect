@@ -63,6 +63,22 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   
   const containerRef = useRef<HTMLDivElement>(null);
   const dragController = useRef(new DragController()).current;
+  
+  // Track mouse position for paste-at-cursor feature
+  const mousePositionRef = useRef<{ x: number, y: number }>({ x: 200, y: 200 });
+  
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollLeft = containerRef.current.scrollLeft;
+      const scrollTop = containerRef.current.scrollTop;
+      // Convert to canvas coordinates (account for scroll and zoom)
+      mousePositionRef.current = {
+        x: (e.clientX - rect.left + scrollLeft) / zoom,
+        y: (e.clientY - rect.top + scrollTop) / zoom
+      };
+    }
+  }, [zoom]);
 
   // Zoom Handlers
   const handleZoom = (delta: number) => {
@@ -102,10 +118,8 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   }, [blocks, renderedDims, connectionRefreshKey]);
 
   const handleDimensionsChange = useCallback((id: string, w: number, h: number) => {
-    console.log('[PERF] handleDimensionsChange', { id, w, h });
     setRenderedDims(prev => {
         if (prev[id]?.width === w && prev[id]?.height === h) return prev;
-        console.log('[PERF] setRenderedDims ACTUAL UPDATE', { id, w, h });
         return { ...prev, [id]: { width: w, height: h } };
     });
   }, []);
@@ -132,7 +146,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   );
 
   // Custom Hooks
-  usePasteHandler(setBlocks);
+  usePasteHandler(setBlocks, mousePositionRef);
   const canvasSize = useCanvasExpansion(blocks, containerRef);
   
   // Track if we've initialized from initialContent
@@ -259,7 +273,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
       // Only save if data changed since last save
       if (currentData !== lastSavedRef.current && 
           (blocksRef.current.length > 0 || connectionsRef.current.length > 0)) {
-        console.log('[PERF] Autosave EXECUTING');
         onChangeRef.current?.(currentData);
         lastSavedRef.current = currentData;
       }
@@ -355,6 +368,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
             setSelectedId(null);
             setSelectedConnectionId(null);
         }}
+        onMouseMove={handleCanvasMouseMove}
         onWheel={handleWheel}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleCanvasDrop}
