@@ -12,12 +12,11 @@ const SNAP_THRESHOLD = 50; // px distance to trigger snap
 export const useCanvasHandlers = (
   setBlocks: React.Dispatch<React.SetStateAction<BlockData[]>>,
   setSelectedId: React.Dispatch<React.SetStateAction<string | null>>,
-  setActiveDragStart: React.Dispatch<React.SetStateAction<ActiveDragStart | null>>, // Updated type
+  setActiveDragStart: React.Dispatch<React.SetStateAction<ActiveDragStart | null>>,
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>,
   getCanvasPoint: (e: { clientX: number; clientY: number }) => { x: number; y: number },
   connections: Connection[], 
-  activeDragStart: ActiveDragStart | null,
-  setDraggingBlock: React.Dispatch<React.SetStateAction<{ id: string, x: number, y: number } | null>>
+  activeDragStart: ActiveDragStart | null
 ) => {
   const lastResizeTime = useRef<number>(0);
   const resizeTimeout = useRef<any>(null);
@@ -62,14 +61,12 @@ export const useCanvasHandlers = (
   }, [updateBlock]);
 
   const handleDragStop = useCallback((blockId: string, x: number, y: number) => {
-    console.log('[PERF] handleDragStop', { blockId, x, y });
+    console.log('[DRAG] handleDragStop - STATE UPDATE', { blockId, x, y });
     // Cancel any pending drag frame
     if (dragRafId.current) {
         cancelAnimationFrame(dragRafId.current);
         dragRafId.current = null;
     }
-    // Clear ephemeral drag state immediately
-    setDraggingBlock(null);
 
     setBlocks(prevBlocks => {
       const draggedBlock = prevBlocks.find(b => b.blockId === blockId);
@@ -192,17 +189,7 @@ export const useCanvasHandlers = (
 
       return prevBlocks.map(b => b.blockId === blockId ? { ...b, x: finalX, y: y } : b);
     });
-  }, [setBlocks, setDraggingBlock, setConnections]);
-
-  const handleDragThrottled = useCallback((blockId: string, x: number, y: number) => {
-    // rAF Throttling: Update strictly next frame (60fps/144fps sync)
-    if (dragRafId.current) return;
-
-    dragRafId.current = requestAnimationFrame(() => {
-        setDraggingBlock({ id: blockId, x, y });
-        dragRafId.current = null;
-    });
-  }, [setDraggingBlock]);
+  }, [setBlocks, setConnections]);
 
   const handleUnstack = useCallback((stackBlock: BlockData) => {
     if (!stackBlock.stackItems) return;
@@ -370,7 +357,6 @@ export const useCanvasHandlers = (
     handleResizeStop,
     handleResizeThrottled,
     handleDragStop,
-    handleDragThrottled,
     handleUnstack,
     handleAddBlock,
     handleAnchorMouseDown,

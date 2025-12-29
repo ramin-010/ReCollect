@@ -60,7 +60,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
   const maxZoom = 1.0; // 1.0 as requested (was 2.0)
 
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
-  const [draggingBlock, setDraggingBlock] = useState<{ id: string, x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const dragController = useRef(new DragController()).current;
@@ -121,8 +120,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     handleUnstack,
     handleAddBlock,
     handleAnchorMouseDown,
-    handleCanvasDrop,
-    handleDragThrottled: handleDrag
+    handleCanvasDrop
   } = useCanvasHandlers(
     setBlocks,
     setSelectedId,
@@ -130,8 +128,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
     setConnections,
     getCanvasPoint,
     connections,
-    activeDragStart,
-    setDraggingBlock
+    activeDragStart
   );
 
   // Custom Hooks
@@ -403,7 +400,6 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
           isConnectionDragging={!!activeDragStart}
           dragController={dragController}
           scale={zoom}
-          onDrag={handleDrag}
         />
 
         {/* DRAFT CONNECTION LAYER (Foreground - Creation Mode) */}

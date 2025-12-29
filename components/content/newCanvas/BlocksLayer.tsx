@@ -19,7 +19,6 @@ interface BlocksLayerProps {
     onFocus: (id: string) => void;
     onAnchorMouseDown: (id: string, side: any, e: any) => void;
     onAnchorMouseUp: (id: string, side: any, e: any) => void;
-    onDrag?: (id: string, x: number, y: number) => void;
     onDimensionsChange?: (id: string, width: number, height: number) => void;
     isConnectionDragging?: boolean;
     dragController?: DragController;
@@ -44,7 +43,6 @@ interface BlockWrapperProps {
     onFocus: (id: string) => void;
     onAnchorMouseDown: (id: string, side: any, e: any) => void;
     onAnchorMouseUp: (id: string, side: any, e: any) => void;
-    onDrag?: (id: string, x: number, y: number) => void;
     onDimensionsChange?: (id: string, width: number, height: number) => void;
 }
 
@@ -71,7 +69,6 @@ const BlockWrapperComponent = ({
     onFocus,
     onAnchorMouseDown,
     onAnchorMouseUp,
-    onDrag,
     onDimensionsChange
 }: BlockWrapperProps) => {
 
@@ -84,10 +81,6 @@ const BlockWrapperComponent = ({
         onDragStop(block.blockId, d.x, d.y);
         dragController?.stopDrag(); 
     }, [block.blockId, onDragStop, dragController]);
-
-    const handleRndDrag = useCallback((e: any, d: any) => {
-        onDrag?.(block.blockId, d.x, d.y);
-    }, [block.blockId, onDrag]);
 
     const handleRndDragStart = useCallback(() => {
         onDragStart(block.blockId);
@@ -114,7 +107,6 @@ const BlockWrapperComponent = ({
             position={{ x: block.x, y: block.y }}
             size={{ width: block.width, height: block.height === 'auto' ? 'auto' : block.height }}
             onDragStop={handleRndDragStop}
-            onDrag={handleRndDrag}
             onDragStart={handleRndDragStart}
             dragHandleClassName="smart-block-drag-handle"
             bounds="parent"
@@ -175,7 +167,7 @@ const BlocksLayerComponent = ({
     onFocus,
     onAnchorMouseDown,
     onAnchorMouseUp,
-    onDrag,
+    // onDrag,
     onDimensionsChange,
     isConnectionDragging,
     dragController,
@@ -204,7 +196,7 @@ const BlocksLayerComponent = ({
                     onFocus={onFocus}
                     onAnchorMouseDown={onAnchorMouseDown}
                     onAnchorMouseUp={onAnchorMouseUp}
-                    onDrag={onDrag}
+                    // onDrag={onDrag}
                     onDimensionsChange={onDimensionsChange}
                 />
             ))}
