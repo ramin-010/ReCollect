@@ -15,6 +15,7 @@ interface DocState {
   docs: Doc[];
   currentDoc: Doc | null;
   isLoading: boolean;
+  isInitialized: boolean;
   setDocs: (docs: Doc[]) => void;
   addDoc: (doc: Doc) => void;
   updateDoc: (id: string, updates: Partial<Doc>) => void;
@@ -27,8 +28,9 @@ export const useDocStore = create<DocState>((set) => ({
   docs: [],
   currentDoc: null,
   isLoading: false,
+  isInitialized: false,
   
-  setDocs: (docs) => set({ docs }),
+  setDocs: (docs) => set({ docs, isInitialized: true, isLoading: false }),
   
   addDoc: (doc) => set((state) => ({ 
     docs: [doc, ...state.docs] 
@@ -50,3 +52,4 @@ export const useDocStore = create<DocState>((set) => ({
   
   setLoading: (isLoading) => set({ isLoading }),
 }));
+

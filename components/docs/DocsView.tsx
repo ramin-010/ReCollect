@@ -347,13 +347,16 @@ const getDocTag = (doc: Doc): { label: string; color: string } | null => {
 };
 
 export function DocsView() {
-  const { docs, currentDoc, isLoading, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
+  const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
 
   const fetchDocs = useCallback(async () => {
+    // Skip if already initialized this session
+    if (isInitialized) return;
+
     try {
       setLoading(true);
       const response = await axiosInstance.get('/api/docs');
@@ -396,10 +399,9 @@ export function DocsView() {
     } catch (error) {
       console.error('Failed to fetch docs:', error);
       toast.error('Failed to load documents');
-    } finally {
       setLoading(false);
     }
-  }, [setDocs, setLoading]);
+  }, [isInitialized, setDocs, setLoading]);
 
   useEffect(() => {
     fetchDocs();
