@@ -24,33 +24,30 @@ import { TodoDialog } from './TodoDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';
-
-interface Todo {
-  _id: string;
-  text: string;
-  isCompleted: boolean;
-  createdAt: string;
-  reminderDate?: string;
-}
-
-interface ApiTodo {
-  _id: string;
-  text: string;
-  isCompleted: boolean;
-  createdAt: string;
-  reminderDate?: string;
-}
+import { useTodoStore, Todo } from '@/lib/store/todoStore';
 
 export function TodoView() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    todos,
+    setTodos,
+    isLoading,
+    setLoading,
+    isInitialized,
+    addTodo,
+    updateTodo,
+    removeTodo
+  } = useTodoStore();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | undefined>(undefined);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Fetch todos from API
+  // Fetch todos from API (only if not initialized)
   const fetchTodos = useCallback(async () => {
+    if (isInitialized) return;
+
     try {
+      setLoading(true);
       const response = await axiosInstance.get('/api/todos');
       if (response.data.success) {
         setTodos(response.data.data);
@@ -58,10 +55,9 @@ export function TodoView() {
     } catch (error) {
       console.error('Failed to fetch todos:', error);
       toast.error('Failed to load tasks');
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [isInitialized, setTodos, setLoading]);
 
   useEffect(() => {
     fetchTodos();
@@ -85,9 +81,8 @@ export function TodoView() {
         });
         
         if (response.data.success) {
-          setTodos(prev => prev.map(t => 
-            t._id === editingTodo._id ? response.data.data : t
-          ));
+          // Use store action
+          updateTodo(editingTodo._id, response.data.data);
           toast.success('Task updated');
         }
       } else {
@@ -98,7 +93,8 @@ export function TodoView() {
         });
         
         if (response.data.success) {
-          setTodos(prev => [response.data.data, ...prev]);
+          // Use store action
+          addTodo(response.data.data);
           toast.success('Task created');
         }
       }
@@ -115,7 +111,8 @@ export function TodoView() {
       const response = await axiosInstance.delete(`/api/todos/${id}`);
       
       if (response.data.success) {
-        setTodos(prev => prev.filter(t => t._id !== id));
+        // Use store action
+        removeTodo(id);
         toast.success('Task deleted');
       }
     } catch (error: any) {
@@ -125,10 +122,8 @@ export function TodoView() {
   };
 
   const toggleComplete = async (id: string, currentStatus: boolean) => {
-    // Optimistic update
-    setTodos(prev => prev.map(t => 
-      t._id === id ? { ...t, isCompleted: !currentStatus } : t
-    ));
+    // Optimistic update using store action
+    updateTodo(id, { isCompleted: !currentStatus });
 
     try {
       const response = await axiosInstance.patch(`/api/todos/${id}`, {
@@ -137,15 +132,11 @@ export function TodoView() {
       
       if (!response.data.success) {
         // Revert on failure
-        setTodos(prev => prev.map(t => 
-          t._id === id ? { ...t, isCompleted: currentStatus } : t
-        ));
+        updateTodo(id, { isCompleted: currentStatus });
       }
     } catch (error) {
       // Revert on error
-      setTodos(prev => prev.map(t => 
-        t._id === id ? { ...t, isCompleted: currentStatus } : t
-      ));
+      updateTodo(id, { isCompleted: currentStatus });
       toast.error('Failed to update task');
     }
   };
