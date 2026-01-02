@@ -283,6 +283,7 @@ export function CreateContentDialog({
       const response = await axiosInstance.post('/api/add-content', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       if (response.data?.success && response.data?.data) {
         addContentToDashboard(dashboardId, response.data.data);
       }
@@ -468,7 +469,7 @@ export function CreateContentDialog({
                         } catch (e) {
                             console.error("Failed to parse canvas blocks", e);
                         }
-                      }, 2000); // 2 second debounce
+                      }, 300); // Faster sync - prevents stale canvas overwrites
                   }, [updateState])}
                   readOnly={false}
                   />

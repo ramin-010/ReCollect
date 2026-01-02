@@ -6,38 +6,25 @@ import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { contentApi } from '@/lib/api/content';
 import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
-import { Badge } from '@/components/ui-base/Badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
-import { MoreVertical, Edit, Trash2, Heart, Archive, Link as LinkIcon, Share2, Clock, Globe, Lock, Eye, FileText, AlignLeft } from 'lucide-react';
-import { toast } from 'sonner';
+import { MoreVertical, Edit, Trash2, Heart, Archive, Share2, Globe, Lock } from 'lucide-react';
+import { toast } from 'sonner'
 import { format } from 'date-fns';
 import { DeleteConfirmDialog } from '../shared/DeleteConfirmDialog';
 import { ShareContentDialog } from './ShareContentDialog';
 import { ContentPreviewModal } from './ContentPreviewModal';
+import { CanvasPreview } from './CanvasPreview';
 
 interface ContentCardProps {
   content: Content;
   dashboardId: string;
   onEdit?: (content: Content) => void;
 }
-
-interface BlockBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-const DEFAULT_TEXT_WIDTH = 150;
-const DEFAULT_TEXT_HEIGHT = 40;
-const DEFAULT_IMAGE_WIDTH = 100;
-const DEFAULT_IMAGE_HEIGHT = 100;
-const PREVIEW_PADDING = 16;
 
 export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -110,13 +97,6 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
     }
   };
 
-  const stripHtml = (html: string) => {
-    if (!html) return '';
-    const tmp = document.createElement('DIV');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
-
   const safeBody = useMemo(() => {
     if (!content.body || !Array.isArray(content.body)) return [];
     return content.body.filter(b => typeof b === 'object' && b !== null && 'type' in b);
@@ -127,171 +107,21 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
     return content.tags.filter(t => typeof t === 'object' && t !== null && 'name' in t);
   }, [content.tags]);
 
-  const previewData = useMemo(() => {
-    if (safeBody.length === 0) return null;
-
-    const blocks = safeBody.filter(b => (b.type === 'text' && b.content) || b.type === 'image');
-    if (blocks.length === 0) return null;
-
-    const blockBounds = blocks.map(block => {
-      const x = typeof block.x === 'number' ? block.x : parseFloat(block.x as string) || 0;
-      const y = typeof block.y === 'number' ? block.y : parseFloat(block.y as string) || 0;
-      let w = typeof block.width === 'number' ? block.width : parseFloat(block.width as string) || 0;
-      let h = typeof block.height === 'number' ? block.height : parseFloat(block.height as string) || 0;
-
-      if (block.type === 'text') {
-        w = w || DEFAULT_TEXT_WIDTH;
-        h = h || DEFAULT_TEXT_HEIGHT;
-      } else {
-        w = w || DEFAULT_IMAGE_WIDTH;
-        h = h || DEFAULT_IMAGE_HEIGHT;
-      }
-
-      return { x, y, width: w, height: h, block };
-    });
-
-    // Calculate bounding box of all elements
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-    blockBounds.forEach(({ x, y, width, height }) => {
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + width);
-      maxY = Math.max(maxY, y + height);
-    });
-
-    const contentWidth = maxX - minX;
-    const contentHeight = maxY - minY;
-
-    // Preview container dimensions (accounting for padding)
-    const previewWidth = 500 - PREVIEW_PADDING * 2;
-    const previewHeight = 200 - PREVIEW_PADDING * 1;
-
-    // Calculate scale to fit content width exactly, but don't scale up (max 1.0)
-    // User requirement: "take that total widht and decide the size of the blocks so that they can fit inside the fixed canvas preview width"
-    // Also: "it should not increase the hiegt and widht of the block if the conent is lesss"
-    const scale = contentWidth > 0 ? Math.min(previewWidth / contentWidth, 1) : 1;
-
-    // Calculate scaled dimensions
-    const scaledWidth = contentWidth * scale;
-    const scaledHeight = contentHeight * scale;
-
-    // Center offset (Vertical only, horizontal will be 0 if we fit width)
-    const offsetX = (previewWidth - scaledWidth) / 2;
-    const offsetY = (previewHeight - scaledHeight) / 2;
-
-    // Transform each block
-    const transformedBlocks = blockBounds.map(({ x, y, width, height, block }) => ({
-      block,
-      left: offsetX + (x - minX) * scale,
-      top: offsetY + (y - minY) * scale,
-      width: width * scale,
-      height: height * scale,
-    }));
-
-    return { transformedBlocks, scale };
-  }, [safeBody]);
-
-  const renderCanvasPreview = () => {
-    if (!previewData) {
-      return (
-        <div className="h-[280px] w-full bg-gradient-to-br from-[hsl(var(--muted))]/30 to-[hsl(var(--muted))]/10 flex flex-col items-center justify-center border-b border-[hsl(var(--border))]/40 group-hover:bg-[hsl(var(--muted))]/20 transition-all duration-300">
-          <div className="w-12 h-12 rounded-full bg-[hsl(var(--muted))]/40 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-500">
-            <FileText className="h-6 w-6 text-[hsl(var(--muted-foreground))]/50" />
-          </div>
-          <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]/50 uppercase tracking-widest">Empty Canvas</span>
-        </div>
-      );
-    }
-
-    const { transformedBlocks, scale } = previewData;
-
-    return (
-      <div className="h-[280px] w-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/30 relative overflow-hidden border-b border-[hsl(var(--border))]/40 group-hover:shadow-inner transition-all duration-500">
-        {/* Subtle dot pattern background */}
-        <div
-          className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #000 0.5px, transparent 0.5px)',
-            backgroundSize: '12px 12px'
-          }}
-        />
-
-        <div className="absolute inset-0" style={{ padding: PREVIEW_PADDING }}>
-          <div className="relative w-full h-full">
-            {transformedBlocks.map(({ block, left, top, width, height }, index) => {
-              if (block.type === 'text') {
-                const baseFontSize = typeof block.fontSize === 'number' ? block.fontSize : parseFloat(block.fontSize as any) || 20;
-                const fontSize = Math.max(4, baseFontSize * scale);
-                const content = block.content?.trim() || '';
-                return (
-                  <div
-                    key={block._id || index}
-                    className="absolute shadow-sm hover:shadow-md transition-shadow duration-300"
-                    style={{
-                      left: `${left}px`,
-                      top: `${top}px`,
-                      width: `${width}px`,
-                      height: `${height}px`,
-                      fontSize: `${fontSize}px`,
-                      lineHeight: '1.4',
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    <div className="line-clamp-3 backdrop-blur-sm bg-white/80 dark:bg-gray-800/100 text-gray-700 dark:text-gray-300 font-medium rounded-sm p-1 border border-gray-200/30 dark:border-gray-700/30 opacity-90">{stripHtml(content)}</div>
-                  </div>
-                );
-              }
-
-              const hasImage = Boolean(block.url);
-              return (
-                <div
-                  key={block._id || index}
-                  className="absolute bg-gray-100/60 dark:bg-gray-700/40 rounded-lg border border-gray-200/80 dark:border-gray-600/80 flex items-center justify-center overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
-                  style={{
-                    left: `${left}px`,
-                    top: `${top}px`,
-                    width: `${width}px`,
-                    height: `${height}px`,
-                  }}
-                >
-                  {hasImage ? (
-                    <img
-                      src={block.url!}
-                      alt="note preview"
-                      className="w-full h-full object-cover opacity-95 hover:opacity-100 transition-opacity duration-300"
-                    />
-                  ) : (
-                    <Eye className="h-4 w-4 text-[hsl(var(--muted-foreground))]/40" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Subtle vignette effect */}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/5 via-transparent to-transparent dark:from-black/20" />
-
-        {/* Item count badge - Floating bottom right */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1 shadow-sm">
-          <div className="w-1 h-1 rounded-full bg-[hsl(var(--brand-primary))]" />
-          {safeBody.length} {safeBody.length === 1 ? 'ITEM' : 'ITEMS'}
-        </div>
-      </div>
-    );
-  };
-
 
   return (
     <>
       <Card 
-        className="group h-full flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl cursor-pointer"
+        className="group h-full p-3 flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:border-[hsl(var(--brand-primary))]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl cursor-pointer"
         onDoubleClick={handleDoubleClick}
       >
         {/* 1. Canvas Preview (Top) - Tall Hero */}
         <div className="relative">
-          {renderCanvasPreview()}
+          <CanvasPreview 
+            blocks={safeBody as any[]} 
+            connections={(content as any).connections || []}
+            containerHeight={280}
+            containerWidth={500}
+          />
 
           {/* Action Overlay - Top Right */}
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -341,7 +171,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
         </div>
 
         {/* 2. Content Body (Clean & Minimal) */}
-        <div className="flex flex-col flex-1 p-5 gap-3">
+        <div className="flex flex-col flex-1 p-5 pl-3 gap-3">
           
           {/* Title Row */}
           <div className="flex items-start justify-between gap-3">
@@ -390,7 +220,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
           </div>
         </div>
       </Card>
-
+             
       <ShareContentDialog content={content} open={isShareOpen} onOpenChange={setIsShareOpen} />
       <DeleteConfirmDialog
         open={isDeleteOpen}

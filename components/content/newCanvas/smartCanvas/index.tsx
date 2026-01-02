@@ -185,6 +185,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
         let parsedConnections: Connection[] = [];
 
         const parsed = JSON.parse(initialContentStr);
+        
         if (Array.isArray(parsed)) {
           parsedBlocks = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -211,7 +212,7 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
             return block;
           })
         );
-
+        
         setBlocks(hydratedBlocks);
         setConnections(parsedConnections);
         initializedRef.current = true;

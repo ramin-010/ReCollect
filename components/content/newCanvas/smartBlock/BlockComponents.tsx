@@ -345,10 +345,12 @@ export const StackItem: React.FC<StackItemProps> = ({
 }) => (
   <div 
     draggable
-    onDragStart={(e) => onDragStart(e, index)}
+    onDragStart={(e) => { e.stopPropagation(); onDragStart(e, index); }}
     onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); onDragEnter(index); }}
-    onDragOver={onDragOver}
-    onDrop={(e) => onDrop(e, index)}
+    onDragOver={(e) => { e.stopPropagation(); onDragOver(e); }}
+    onDrop={(e) => { e.stopPropagation(); onDrop(e, index); }}
+    onDragEnd={(e) => { e.stopPropagation(); }}
+    onMouseDown={(e) => { e.stopPropagation(); }}
     className={`
       relative group/item
       bg-[hsl(var(--card))]

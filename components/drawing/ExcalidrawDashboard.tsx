@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
 import { CloudSyncModal } from './CloudSyncModal';
+import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
 import { useViewStore } from '@/lib/store/viewStore';
 import axiosInstance from '@/lib/utils/axios';
 
@@ -35,24 +36,25 @@ const Excalidraw = dynamic(
   { ssr: false }
 );
 
-interface Drawing {
-  id: string;
-  name: string;
-  data: any;
-  thumbnail?: string;
-  createdAt: string;
-  updatedAt: string;
-  isCloudSynced?: boolean;
-}
-
 export function ExcalidrawDashboard() {
-  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const { 
+    drawings, 
+    setDrawings, 
+    isLoading, 
+    setLoading, 
+    isInitialized,
+    addDrawing,
+    updateDrawing,
+    deleteDrawing: removeDrawingStore 
+  } = useWhiteboardStore();
+
   const [currentDrawing, setCurrentDrawing] = useState<Drawing | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [renamingDrawing, setRenamingDrawing] = useState<Drawing | null>(null);
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Remove local isLoading state, use store's
+  // const [isLoading, setIsLoading] = useState(false); 
   const [showCloudSyncModal, setShowCloudSyncModal] = useState(false);
   const [drawingToSync, setDrawingToSync] = useState<Drawing | null>(null);
   const [cloudSyncedIds, setCloudSyncedIds] = useState<Set<string>>(new Set());
@@ -72,7 +74,15 @@ export function ExcalidrawDashboard() {
   }, []);
 
   const loadDrawings = async () => {
+    // If already initialized, just ensure cloudSyncedIds are set correctly from the store data
+    if (isInitialized) {
+      const cloudIds = new Set(drawings.filter(d => d.isCloudSynced).map(d => d.id));
+      setCloudSyncedIds(cloudIds);
+      return;
+    }
+
     try {
+      setLoading(true);
       // Load from localStorage
       const saved = localStorage.getItem('recollect-drawings');
       let localDrawings: Drawing[] = [];
@@ -102,6 +112,7 @@ export function ExcalidrawDashboard() {
       setDrawings(localDrawings);
     } catch (error) {
       console.error('Failed to load drawings:', error);
+      setLoading(false);
     }
   };
 
@@ -177,7 +188,7 @@ export function ExcalidrawDashboard() {
   const saveCurrentDrawing = async (silent = false, generateThumbnail_flag = false) => {
     if (!currentDrawing) return;
 
-    setIsLoading(true);
+    setLoading(true);
     try {
       const { elements, appState, files } = excalidrawStateRef.current;
       
@@ -223,7 +234,7 @@ export function ExcalidrawDashboard() {
         toast.error('Failed to save drawing');
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -592,10 +603,8 @@ export function ExcalidrawDashboard() {
         drawing={drawingToSync}
         onSyncComplete={(drawingId) => {
           setCloudSyncedIds(prev => new Set([...prev, drawingId]));
-          // Update the drawing in the list to mark as synced
-          setDrawings(prev => prev.map(d => 
-            d.id === drawingId ? { ...d, isCloudSynced: true } : d
-          ));
+          // Update the drawing in the store to mark as synced
+          updateDrawing(drawingId, { isCloudSynced: true });
         }}
       />
     </div>

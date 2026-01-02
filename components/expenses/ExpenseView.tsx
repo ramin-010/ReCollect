@@ -62,16 +62,32 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+import { useExpenseStore } from '@/lib/store/expenseStore';
+
+// ... (keep usage of Transaction type locally if needed until fully refactored or import it)
+// We'll keep the local Type definition for now as it matches the store one, or we can import it.
+// Let's import the store hook.
+
 export function ExpenseView() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { 
+    transactions, 
+    setTransactions, 
+    isLoading, 
+    setLoading, 
+    isInitialized,
+    addTransaction,
+    removeTransaction 
+  } = useExpenseStore();
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // Fetch expenses on mount
+  // Fetch expenses only if not initialized
   const fetchExpenses = useCallback(async () => {
+    if (isInitialized) return;
+
     try {
-      setIsLoading(true);
+      setLoading(true);
       const response = await axiosInstance.get('/api/expenses');
       if (response.data.success) {
         setTransactions(response.data.data);
@@ -79,10 +95,9 @@ export function ExpenseView() {
     } catch (error) {
       console.error('Failed to fetch expenses:', error);
       toast.error('Failed to load expenses');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setLoading(false); // Ensure loading is turned off on error
+    } 
+  }, [isInitialized, setTransactions, setLoading]);
 
   useEffect(() => {
     fetchExpenses();
@@ -157,7 +172,8 @@ export function ExpenseView() {
       });
       
       if (response.data.success) {
-        setTransactions([response.data.data, ...transactions]);
+        // Use store action
+        addTransaction(response.data.data);
         toast.success('Expense added');
       }
     } catch (error) {
@@ -172,7 +188,8 @@ export function ExpenseView() {
       const response = await axiosInstance.delete(`/api/expenses/${id}`);
       
       if (response.data.success) {
-        setTransactions(transactions.filter(t => t._id !== id));
+        // Use store action
+        removeTransaction(id);
         toast.success('Expense deleted');
       }
     } catch (error) {

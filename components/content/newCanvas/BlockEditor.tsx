@@ -45,7 +45,7 @@ export function BlockEditor({
   const debouncedOnChange = useMemo(
     () => debounce((html: string) => {
       onChange(html);
-    }, 500), 
+    }, 300), 
     [onChange]
   );
   

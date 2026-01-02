@@ -168,7 +168,7 @@ export function useCreateNoteState(dashboardId: string) {
       }
     };
 
-    const timer = setTimeout(saveToLocalStorage, 1500); // Increased debounce to 1.5s for performance
+    const timer = setTimeout(saveToLocalStorage, 500); // Increased debounce to 1.5s for performance
     return () => clearTimeout(timer);
   }, [state, dashboardId, isLoaded]); // Keep these dependencies
 
