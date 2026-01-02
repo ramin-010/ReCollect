@@ -223,116 +223,111 @@ export function TodoView() {
 
         {/* Todo List */}
         <div className="space-y-4">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {todos.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card variant="elevated" padding="lg" className="text-center py-12">
-                  <CheckSquare className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]/30" />
-                  <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                    Add a task to get started
-                  </p>
-                </Card>
-              </motion.div>
-            ) : (
-              todos.map((todo) => {
-                const dueStatus = getDueStatus(todo.reminderDate);
-                
-                return (
-                  <motion.div
-                    key={todo._id}
-                    layoutId={todo._id}
-                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                    transition={{ 
-                      layout: { type: "spring", stiffness: 300, damping: 30 },
-                      opacity: { duration: 0.2 }
-                    }}
+          {todos.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card variant="elevated" padding="lg" className="text-center py-12">
+                <CheckSquare className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]/30" />
+                <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                  Add a task to get started
+                </p>
+              </Card>
+            </motion.div>
+          ) : (
+            todos.map((todo, index) => {
+              const dueStatus = getDueStatus(todo.reminderDate);
+              
+              return (
+                <motion.div
+                  key={todo._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                >
+                  <div
                     className={cn(
                       "group relative bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4 transition-all hover:shadow-md",
                       todo.isCompleted && "opacity-60 bg-[hsl(var(--muted))]/30"
                     )}
                   >
-                    <div className="flex items-start gap-4">
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => toggleComplete(todo._id, todo.isCompleted)}
-                        className={cn(
-                          "mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                          todo.isCompleted 
-                            ? "bg-emerald-600 border-emerald-600 text-white" 
-                            : "border-[hsl(var(--muted-foreground))] hover:border-emerald-600"
-                        )}
-                      >
-                        {todo.isCompleted && <CheckSquare className="w-3.5 h-3.5" />}
-                      </button>
+                  <div className="flex items-start gap-4">
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => toggleComplete(todo._id, todo.isCompleted)}
+                      className={cn(
+                        "mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                        todo.isCompleted 
+                          ? "bg-emerald-600 border-emerald-600 text-white" 
+                          : "border-[hsl(var(--muted-foreground))] hover:border-emerald-600"
+                      )}
+                    >
+                      {todo.isCompleted && <CheckSquare className="w-3.5 h-3.5" />}
+                    </button>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "text-base font-medium transition-all",
-                          todo.isCompleted && "line-through text-[hsl(var(--muted-foreground))]"
-                        )}>
-                          {todo.text}
-                        </p>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "text-base font-medium transition-all",
+                        todo.isCompleted && "line-through text-[hsl(var(--muted-foreground))]"
+                      )}>
+                        {todo.text}
+                      </p>
+                      
+                      {/* Meta Info */}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-[hsl(var(--muted-foreground))]">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(todo.createdAt).toLocaleDateString()}
+                        </span>
                         
-                        {/* Meta Info */}
-                        <div className="flex items-center gap-4 mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(todo.createdAt).toLocaleDateString()}
+                        {todo.reminderDate && (
+                          <span className={cn(
+                            "flex items-center gap-1 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]",
+                            dueStatus?.isOverdue && !todo.isCompleted && "text-red-600 bg-red-50 dark:bg-red-950/30",
+                            !dueStatus?.isOverdue && !todo.isCompleted && "text-blue-600 bg-blue-50 dark:bg-blue-950/30"
+                          )}>
+                            <Bell className="w-3 h-3" />
+                            {dueStatus?.text}
                           </span>
-                          
-                          {todo.reminderDate && (
-                            <span className={cn(
-                              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]",
-                              dueStatus?.isOverdue && !todo.isCompleted && "text-red-600 bg-red-50 dark:bg-red-950/30",
-                              !dueStatus?.isOverdue && !todo.isCompleted && "text-blue-600 bg-blue-50 dark:bg-blue-950/30"
-                            )}>
-                              <Bell className="w-3 h-3" />
-                              {dueStatus?.text}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
-
-                      {/* Actions */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(todo)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            destructive 
-                            onClick={() => handleDeleteTodo(todo._id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </AnimatePresence>
+
+                    {/* Actions */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(todo)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          destructive 
+                          onClick={() => handleDeleteTodo(todo._id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                </motion.div>
+              );
+            })
+          )}
         </div>
       </div>
 
