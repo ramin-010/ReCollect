@@ -256,8 +256,9 @@ export default function HomePage() {
   const isLoading = currentDashboard ? isLoadingContents(currentDashboard._id) : false;
   const pinnedContents = contents.filter(c => c.isPinned);
   const regularContents = contents.filter(c => !c.isPinned && !c.isArchived);
-  let hasContent = contents.length > 0;
-
+  
+  const archivedCount = contents.filter(c => c.isArchived).length;
+let hasContent = contents.length - archivedCount > 0;
   // Show skeleton while loading
   if (isLoading) {
     const skeletonCount = currentDashboard?.contents?.length || 4;
@@ -276,7 +277,7 @@ export default function HomePage() {
     );
   }
 
-  const archivedCount = contents.filter(c => c.isArchived).length;
+ 
 
   return (
     <div className="p-4 lg:p-8 min-h-screen">

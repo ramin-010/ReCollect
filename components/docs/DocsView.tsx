@@ -491,12 +491,7 @@ export function DocsView() {
     const tag = getTag();
     
     return (
-      <motion.div
-        layout="position"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.15, delay: index * 0.02 }}
+      <div
         onClick={() => setCurrentDoc(doc)}
         className="group relative cursor-pointer
                    bg-[hsl(var(--background))] 
@@ -586,7 +581,7 @@ export function DocsView() {
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -809,15 +804,19 @@ export function DocsView() {
           ) : viewMode === 'gallery' ? (
             // Gallery View
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence mode="popLayout">
-                {allSortedDocs.map((doc, i) => (
+              {allSortedDocs.map((doc, i) => (
+                <motion.div
+                  key={doc._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                >
                   <GalleryCard 
-                    key={doc._id} 
                     doc={doc} 
                     index={i} 
                   />
-                ))}
-              </AnimatePresence>
+                </motion.div>
+              ))}
               {/* New Page Card at the end */}
               <NewPageCard />
             </div>
