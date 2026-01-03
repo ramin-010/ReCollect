@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, FileText, Search, Loader2, MoreHorizontal, 
   Trash2, Pin, PinOff, Clock, CloudOff, LayoutGrid, List,
-  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon, Share2, Users
+  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon, Share2, Users, LogOut
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
@@ -33,67 +33,67 @@ type ViewMode = 'gallery' | 'list' | 'shared-by-me';
 type SortOption = 'updated' | 'created' | 'title';
 type OwnershipFilter = 'all' | 'mine' | 'shared';
 
-// Utility to extract preview text from TipTap JSON - Robust version
+
 const getDocPreview = (contentStr: string | object | null | undefined): { text: string; hasContent: boolean } => {
   try {
-    // Handle null/undefined/empty
+    
     if (!contentStr) {
       return { text: '', hasContent: false };
     }
 
     let content: any;
     
-    // Parse if string
+    
     if (typeof contentStr === 'string') {
-      // Handle empty string
+      
       if (contentStr.trim() === '') {
         return { text: '', hasContent: false };
       }   
       try {
         content = JSON.parse(contentStr);
       } catch (parseError) {
-        // If it's not valid JSON, treat the string itself as content
+        
         return { text: contentStr.substring(0, 300), hasContent: true };
       }
     } else {
       content = contentStr;
     }
 
-    // Validate TipTap structure
+    
     if (!content || typeof content !== 'object') {
       return { text: '', hasContent: false };
     }
 
-    // TipTap content is usually { type: 'doc', content: [...] }
+    
     const nodes = content.content || (Array.isArray(content) ? content : []);
     
     if (!Array.isArray(nodes) || nodes.length === 0) {
       return { text: '', hasContent: false };
     }
 
-    // Block-level node types that should have line breaks after them
+    
     const blockTypes = ['paragraph', 'heading', 'listItem', 'taskItem', 'blockquote', 'codeBlock'];
 
-    // Recursive text extractor that handles all node types
+    
     const extractText = (node: any): string => {
       if (!node) return '';
       
-      // Direct text node
+      
       if (typeof node === 'string') return node;
       if (node.text) return node.text;
       
-      // Handle different node types
+      
       const nodeType = node.type;
       let result = '';
       
-      // Process child content recursively
+      
       if (node.content && Array.isArray(node.content)) {
         for (const child of node.content) {
           result += extractText(child);
         }
       }
       
-      // Handle specific node types that might have text in attrs
+      
       if (nodeType === 'image' && node.attrs?.alt) {
         result += `[Image: ${node.attrs.alt}]`;
       }
@@ -105,18 +105,18 @@ const getDocPreview = (contentStr: string | object | null | undefined): { text: 
       return result;
     };
 
-    // Extract text from all nodes with proper line breaks
+    
     const lines: string[] = [];
     for (const node of nodes) {
       const text = extractText(node).trim();
       if (text) {
         lines.push(text);
       }
-      // Stop if we have enough content
+      
       if (lines.join('\n').length > 400) break;
     }
 
-    // Join with newlines and limit length
+    
     let fullText = lines.join('\n').substring(0, 350);
 
     return { 
@@ -137,7 +137,7 @@ const MiniDocRenderer = ({ content }: { content: any }) => {
     const json = typeof content === 'string' ? JSON.parse(content) : content;
     nodes = json.content || [];
   } catch (e) {
-    // Fallback for plain text
+    
     return (
       <p className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-4 font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
         {typeof content === 'string' ? content.substring(0, 150) : ''}
@@ -314,7 +314,7 @@ const MiniDocRenderer = ({ content }: { content: any }) => {
             );
 
           default:
-            // Default text rendering for any other node type
+            
             return (
               <p 
                 key={i} 
@@ -329,13 +329,13 @@ const MiniDocRenderer = ({ content }: { content: any }) => {
   );
 };
 
-// Get a random accent color for the left border
+
 const getAccentColor = (id: string): string => {
   const colors = [
     'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 
     'bg-amber-500', 'bg-rose-500', 'bg-cyan-500'
   ];
-  // Simple hash function
+  
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
@@ -343,7 +343,7 @@ const getAccentColor = (id: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Get tag based on doc properties
+
 const getDocTag = (doc: Doc): { label: string; color: string } => {
   const docTypeColors: Record<DocType, { label: string; color: string }> = {
     notes: { label: 'Notes', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400' },
@@ -354,7 +354,7 @@ const getDocTag = (doc: Doc): { label: string; color: string } => {
   return docTypeColors[doc.docType] || docTypeColors.notes;
 };
 
-// Get status badge (Draft, Pinned) - shown separately from docType
+
 const getStatusBadge = (doc: Doc): { label: string; color: string } | null => {
   if (doc._id.startsWith('local_')) {
     return { label: 'Draft', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' };
@@ -365,7 +365,7 @@ const getStatusBadge = (doc: Doc): { label: string; color: string } | null => {
   return null;
 };
 
-// --- Standalone Components ---
+
 
 interface DocItemProps {
   doc: Doc;
@@ -379,18 +379,18 @@ interface DocItemProps {
   onRename: (doc: Doc, newTitle: string) => Promise<void>;
 }
 
-// Share Menu Item with internal state handling
+
 const ShareMenuItem = ({ doc, onShare }: { doc: Doc, onShare: (doc: Doc, e: React.MouseEvent) => Promise<void> }) => {
   const { setIsOpen } = useDropdownMenu();
   const [isSharing, setIsSharing] = useState(false);
 
   const handleClick = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent immediate close
+    e.preventDefault(); 
     e.stopPropagation();
     setIsSharing(true);
     await onShare(doc, e);
     setIsSharing(false);
-    setIsOpen(false); // Close after completion
+    setIsOpen(false); 
   };
 
   return (
@@ -408,7 +408,7 @@ const ShareMenuItem = ({ doc, onShare }: { doc: Doc, onShare: (doc: Doc, e: Reac
   );
 };
 
-// Helper for tags in GalleryCard
+
 const getTags = (doc: Doc) => {
     switch (doc.docType) {
       case 'meeting': return { label: 'Meeting', color: 'bg-violet-600/90 text-white' };
@@ -423,16 +423,16 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
   const isLocal = doc._id.startsWith('local_');
   const tag = getTags(doc);
   
-  // Check if current user is owner
+  
   const isOwner = !doc.user || (typeof doc.user === 'object' && 'email' in doc.user ? doc.user._id === currentUserId : doc.user === currentUserId);
   const ownerName = typeof doc.user === 'object' && 'name' in doc.user ? doc.user.name : 'Unknown';
 
-  // Local Editing State
+  
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(doc.title || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync title from props when not editing
+  
   useEffect(() => {
     if (!isEditing) setTitle(doc.title || '');
   }, [doc.title, isEditing]);
@@ -448,7 +448,7 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
     const val = e.target.value;
     setTitle(val);
     
-    // Debounce Save
+    
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
         onRename(doc, val);
@@ -493,17 +493,21 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
       <div className="flex-1 p-3  relative overflow-hidden bg-[hsl(var(--card-bg))]">
         {/* Hover Actions - Top Right */}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-fit">
-          <button
-            className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
-            onClick={(e) => onTogglePin(doc, e)}
-            title={doc.isPinned ? 'Unpin' : 'Pin'}
-          >
-            {doc.isPinned ? (
-              <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-            ) : (
-              <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-            )}
-          </button>
+          {isOwner && (
+            <button
+               onClick={(e) => {
+                 onTogglePin(doc, e);
+               }}
+               className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
+               title={doc.isPinned ? 'Unpin' : 'Pin'}
+            >
+              {doc.isPinned ? (
+                <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+              ) : (
+                <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+              )}
+            </button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -514,13 +518,25 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36">
-              <ShareMenuItem doc={doc} onShare={onShare} />
-              <DropdownMenuSeparator />
+              {isOwner && (
+                <>
+                  <ShareMenuItem doc={doc} onShare={onShare} />
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem 
                 className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
                 onClick={(e) => onDelete(doc, e)}
               >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                {isOwner ? (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-4 h-4 mr-2" /> Leave Collab
+                  </>
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -555,7 +571,7 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
               />
            ) : (
               <h3 
-                onDoubleClick={handleStartEdit}
+                onDoubleClick={isOwner ? handleStartEdit : undefined}
                 title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
                 className={`font-semibold text-md leading-snug line-clamp-1 ${isOwner ? 'cursor-text hover:bg-black/5 dark:hover:bg-white/5 rounded px-1 -ml-1 transition-colors' : ''}
                           ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
@@ -580,7 +596,7 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
             )}
             {/* Shared Badge - For docs shared WITH ME */}
             {!isOwner && (
-              <div className="flex items-center gap-1.5 mt-1" title={`Shared by ${ownerName}`}>
+              <div className="flex items-center gap-1.5 " title={`Shared by ${ownerName}`}>
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-500/25">
                   <Share2 className="w-2.5 h-2.5" />
                   {ownerName?.split(' ')[0] || 'Shared'}
@@ -606,31 +622,37 @@ const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin
 </div>
             )}
             {/* Type Selector Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
+            {isOwner ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
+                      {tag?.label || 'Notes'}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'notes', e)}>
+                      <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
+                      {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'meeting', e)}>
+                      <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
+                      {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'project', e)}>
+                      <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
+                      {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'personal', e)}>
+                      <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
+                      {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+            ) : (
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-default ${tag?.color || ''}`}>
                   {tag?.label || 'Notes'}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'notes', e)}>
-                  <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
-                  {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'meeting', e)}>
-                  <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
-                  {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'project', e)}>
-                  <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
-                  {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'personal', e)}>
-                  <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
-                  {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </span>
+            )}
           </div>
         </div>
       </div>
@@ -643,7 +665,7 @@ const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, on
   const tag = getDocTag(doc);
   const statusBadge = getStatusBadge(doc);
   
-  // Check if current user is owner
+  
   const isOwner = !doc.user || (typeof doc.user === 'object' && 'email' in doc.user ? doc.user._id === currentUserId : doc.user === currentUserId);
   const ownerName = typeof doc.user === 'object' && 'name' in doc.user ? doc.user.name : 'Unknown';
 
@@ -675,7 +697,7 @@ const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, on
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      inputRef.current?.blur(); // This will trigger handleTitleSubmit via onBlur
+      inputRef.current?.blur(); 
     }
   };
 
@@ -694,7 +716,7 @@ const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, on
           {!isEditingTitle ? (
             <h3 
               className={`font-medium text-[hsl(var(--foreground))] truncate ${isOwner ? 'group-hover:text-amber-500 transition-colors cursor-text' : ''}`}
-              onDoubleClick={handleStartEdit}
+              onDoubleClick={isOwner ? handleStartEdit : undefined}
               title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
             >
               {doc.title || 'Untitled'}
@@ -742,21 +764,28 @@ const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, on
         {format(new Date(doc.updatedAt), 'MMM d, yyyy')}
       </span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
-          className="p-1.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
-          onClick={(e) => onTogglePin(doc, e)}
-        >
-          {doc.isPinned ? (
-            <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-          ) : (
-            <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-          )}
-        </button>
+        {isOwner && (
+          <button
+            className="p-1.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
+            onClick={(e) => onTogglePin(doc, e)}
+          >
+            {doc.isPinned ? (
+              <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+            ) : (
+              <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+            )}
+          </button>
+        )}
         <button
           className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           onClick={(e) => onDelete(doc, e)}
+          title={isOwner ? "Delete document" : "Leave document"}
         >
-          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+          {isOwner ? (
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+          ) : (
+            <LogOut className="w-3.5 h-3.5 text-red-500" />
+          )}
         </button>
       </div>
     </motion.div>
@@ -788,7 +817,7 @@ const NewPageCard = ({ onClick, disabled }: { onClick: () => void, disabled: boo
     </motion.button>
 );
 
-// Shared By Me Section - displays docs I've shared with collaborator management
+
 interface SharedByMeSectionProps {
   sharedByMeDocs: any[];
   isLoading: boolean;
@@ -1031,15 +1060,15 @@ export function DocsView() {
   const [currentDocRole, setCurrentDocRole] = useState<'owner' | 'editor' | 'viewer'>('owner');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   
-  // Shared by Me state
+  
   const [sharedByMeDocs, setSharedByMeDocs] = useState<any[]>([]);
   const [isLoadingSharedByMe, setIsLoadingSharedByMe] = useState(false);
 
-  // Refs for debouncing (pinning only now)
+  
   const pinTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
   const fetchDocs = useCallback(async () => {
-    // Skip if already initialized this session
+    
     if (isInitialized) return;
 
     try {
@@ -1047,13 +1076,13 @@ export function DocsView() {
       const response = await axiosInstance.get('/api/docs');
       const serverDocs = response.data.success ? response.data.data : [];
       
-      // Get all docs from offline storage (both pending and synced)
+      
       const allOfflineDocs = await offlineStorage.getAllOfflineDocs();
       const offlineContentMap = new Map(
         allOfflineDocs.map(od => [od.id, od])
       );
       
-      // Get pending local-only docs (not yet synced to server)
+      
       const pendingDocs = allOfflineDocs.filter(pd => pd.id.startsWith('local_'));
       const localDocs = pendingDocs.map(pd => ({
         _id: pd.id,
@@ -1065,11 +1094,11 @@ export function DocsView() {
         updatedAt: new Date(pd.updatedAt).toISOString(),
       }));
       
-      // Merge server docs with offline content for preview
+      
       const mergedServerDocs = serverDocs.map((serverDoc: any) => {
         const offlineDoc = offlineContentMap.get(serverDoc._id);
         if (offlineDoc && offlineDoc.content) {
-          // Use offline content for preview if available
+          
           return {
             ...serverDoc,
             content: typeof offlineDoc.content === 'string' 
@@ -1092,7 +1121,7 @@ export function DocsView() {
     fetchDocs();
   }, [fetchDocs]);
 
-  // Fetch docs I've shared with others
+  
   const fetchSharedByMe = useCallback(async () => {
     try {
       setIsLoadingSharedByMe(true);
@@ -1108,7 +1137,7 @@ export function DocsView() {
     }
   }, []);
 
-  // Fetch shared-by-me docs when switching to that tab
+  
   useEffect(() => {
     if (viewMode === 'shared-by-me' && sharedByMeDocs.length === 0) {
       fetchSharedByMe();
@@ -1155,50 +1184,83 @@ export function DocsView() {
   const handleTogglePin = async (doc: Doc, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // 1. Optimistic Update (Immediate UI feedback)
+    
     const newStatus = !doc.isPinned;
     updateDoc(doc._id, { isPinned: newStatus });
     
-    // 2. Handle Local Docs (No API)
+    
     if (doc._id.startsWith('local_')) {
       toast.success(newStatus ? 'Pinned (local)' : 'Unpinned (local)');
       return;
     }
 
-    // 3. Clear existing timeout if user clicked again rapidly
+    
     if (pinTimeouts.current[doc._id]) {
       clearTimeout(pinTimeouts.current[doc._id]);
     }
 
-    // 4. Set new timeout for API call (Debounce)
+    
     pinTimeouts.current[doc._id] = setTimeout(async () => {
       try {
         const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { isPinned: newStatus });
         if (!response.data.success) {
            throw new Error('Failed to update on server');
         }
+        
+        
+        const updatedDoc = response.data.data;
+        updateDoc(doc._id, { isPinned: newStatus, updatedAt: updatedDoc.updatedAt });
+        
+        
+        const offlineDoc = await offlineStorage.loadDoc(doc._id);
+        if (offlineDoc) {
+          await offlineStorage.saveDoc(
+            doc._id,
+            offlineDoc.content,
+            offlineDoc.title,
+            offlineDoc.coverImage,
+            'synced',
+            new Date(updatedDoc.updatedAt).getTime()
+          );
+        }
       } catch (error) {
-        // Revert on failure
+        
         console.error('Failed to toggle pin:', error);
         updateDoc(doc._id, { isPinned: !newStatus }); 
         toast.error('Failed to update pin status');
       } finally {
         delete pinTimeouts.current[doc._id];
       }
-    }, 500); // 500ms debounce
+    }, 500); 
   };
 
-  // Handler to rename (save) doc title
+  
   const handleRenameDoc = useCallback(async (doc: Doc, newTitle: string) => {
-      // Optimistic or just data update?
-      // Since GalleryCard/Input handles the visual state, we just need to ensure Store and DB are updated.
+      
+      
       try {
         if (doc._id.startsWith('local_')) {
           await offlineStorage.saveDoc(doc._id, doc.content, newTitle, doc.coverImage || null, 'pending');
           updateDoc(doc._id, { title: newTitle });
         } else {
-          await axiosInstance.patch(`/api/docs/${doc._id}`, { title: newTitle });
-          updateDoc(doc._id, { title: newTitle });
+          const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { title: newTitle });
+          if (response.data.success) {
+            const updatedDoc = response.data.data;
+            updateDoc(doc._id, { title: newTitle, updatedAt: updatedDoc.updatedAt });
+            
+            
+            const offlineDoc = await offlineStorage.loadDoc(doc._id);
+            if (offlineDoc) {
+              await offlineStorage.saveDoc(
+                doc._id,
+                offlineDoc.content,
+                newTitle,
+                offlineDoc.coverImage,
+                'synced',
+                new Date(updatedDoc.updatedAt).getTime()
+              );
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to save title:', error);
@@ -1218,7 +1280,7 @@ export function DocsView() {
         const updatedDoc = response.data.data;
         updateDoc(doc._id, { docType: newType, updatedAt: updatedDoc.updatedAt });
         
-        // Also update the offline storage's serverUpdatedAt to prevent version conflict warnings
+        
         const offlineDoc = await offlineStorage.loadDoc(doc._id);
         if (offlineDoc) {
           await offlineStorage.saveDoc(
@@ -1248,14 +1310,14 @@ export function DocsView() {
     setShareDialog({ open: true, docId: doc._id, docTitle: doc.title || 'Untitled' });
   };
 
-  // Filter and sort docs
+  
   const filteredDocs = docs
     .filter((doc) => {
-      // Ownership filter - treat undefined/null role as 'owner' (user's own docs)
+      
       const docRole = doc.role || 'owner';
       if (ownershipFilter === 'mine' && docRole !== 'owner') return false;
       if (ownershipFilter === 'shared' && docRole === 'owner') return false;
-      // Search filter
+      
       return doc.title.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => {
@@ -1268,9 +1330,9 @@ export function DocsView() {
   const unpinnedDocs = filteredDocs.filter(d => !d.isPinned);
   const allSortedDocs = [...pinnedDocs, ...unpinnedDocs];
 
-  // Handle opening a doc - use role from doc (fetched with getAllDocs)
+  
   const handleOpenDoc = useCallback((doc: Doc) => {
-    // Use role from doc if available, otherwise assume owner for local docs
+    
     const role = doc._id.startsWith('local_') ? 'owner' : (doc.role || 'owner');
     setCurrentDocRole(role);
     setCurrentDoc(doc);
@@ -1282,7 +1344,7 @@ export function DocsView() {
   }, [setCurrentDoc]);
 
   if (currentDoc) {
-    // Viewer role: show read-only SharedDocViewer
+    
     if (currentDocRole === 'viewer') {
       return (
         <SharedDocViewer 
@@ -1298,7 +1360,7 @@ export function DocsView() {
         />
       );
     }
-    // Owner/Editor role: show editable DocEditor
+    
     return <DocEditor doc={currentDoc} onBack={handleCloseDoc} />;
   }
 
@@ -1449,7 +1511,7 @@ export function DocsView() {
                </button>
             </div>
           ) : (
-            /* Shared by Me View */
+           
             <SharedByMeSection 
               sharedByMeDocs={sharedByMeDocs}
               isLoading={isLoadingSharedByMe}
