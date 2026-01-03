@@ -465,10 +465,12 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       );
       
       // Add to the doc store so it appears in the list immediately
-      addDoc({
+        addDoc({
         _id: localId,
         title: localTitle,
         content: JSON.stringify(localContent),
+        docType: doc.docType || 'notes', // Ensure docType is carried over
+        coverImage: coverImage, 
         isPinned: false,
         isArchived: false,
         createdAt: new Date().toISOString(),
@@ -624,15 +626,19 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           onImageUpload={handleImageDialogUpload}
         />
         {/* Cover Image Section */}
+        {/* Cover Image Section - Styles matching SharedDocViewer */}
         {coverImage ? (
-          <div className="relative group w-full h-48 mb-0">
+          <div className="w-full h-54 md:h-60 relative mb-8 group">
             <img 
               src={coverImage} 
               alt="Document cover" 
               className="w-full h-full object-cover object-[0_50%]"
             />
+            {/* Gradient Overlay for "Mix Effect" */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[hsl(var(--background))] to-transparent" />
+            
             {/* Cover Controls - appear on hover */}
-            <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
               <Button
                 variant="ghost"
                 size="sm"
@@ -652,16 +658,16 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
             </div>
           </div>
         ) : (
-          <div className="max-w-6xl mx-auto px-8 pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCoverPicker(true)}
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] text-sm opacity-60 hover:opacity-100 transition-opacity"
-              leftIcon={<ImagePlus className="h-4 w-4" />}
-            >
-              Add cover
-            </Button>
+          <div className="h-24 flex items-end justify-center pb-4"> 
+             <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCoverPicker(true)}
+                className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] text-sm opacity-60 hover:opacity-100 transition-opacity"
+                leftIcon={<ImagePlus className="h-4 w-4" />}
+              >
+                Add cover
+              </Button>
           </div>
         )}
 
@@ -724,7 +730,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           </div>
         )}
 
-        <div className={`max-w-6xl mx-auto px-8 ${coverImage ? ' pt-0' : 'pt-4'} py-10 rounded-lg`}>
+        <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
 
           {/* Document Title */}
           <div className="mb-6 pl-4">
