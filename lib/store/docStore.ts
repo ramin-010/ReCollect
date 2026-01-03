@@ -13,6 +13,17 @@ export interface Doc {
   createdAt: string;
   updatedAt: string;
   coverImage?: string | null;
+  user?: string | {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  collaborators?: Array<{
+    user: string | { _id: string, name: string, email: string };
+    role: 'editor' | 'viewer';
+    addedAt: string;
+  }>;
+  role?: 'owner' | 'editor' | 'viewer';
 }
 
 interface DocState {

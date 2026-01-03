@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,6 +35,8 @@ type ResetFormData = z.infer<typeof resetSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'login' | 'forgot' | 'reset'>('login');
@@ -63,7 +65,7 @@ export default function LoginPage() {
         toast.success('Welcome back!', {
           description: 'You have successfully logged in.',
         });
-        router.push('/');
+        router.push(redirectUrl);
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || '';

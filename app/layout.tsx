@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { AuthProvider } from '@/components/providers/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';
 
 // Using Outfit for a modern, clean look
@@ -40,13 +41,15 @@ export default function RootLayout({
         <body className={`${outfit.variable} ${inter.variable} font-sans antialiased`}>
 
         <ThemeProvider>
-          {children}
-          <Toaster 
-            position="bottom-right"
-            richColors
-            closeButton
-            duration={4000}
-          />
+          <AuthProvider>
+            {children}
+            <Toaster 
+              position="bottom-right"
+              richColors
+              closeButton
+              duration={4000}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

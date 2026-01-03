@@ -75,5 +75,5 @@ export default function SharedDocPage() {
     );
   }
 
-  return <SharedDocViewer doc={doc} />;
+  return <SharedDocViewer doc={doc} slug={slug} />;
 }

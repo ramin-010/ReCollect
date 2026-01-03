@@ -5,14 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, FileText, Search, Loader2, MoreHorizontal, 
   Trash2, Pin, PinOff, Clock, CloudOff, LayoutGrid, List,
-  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon, Share2
+  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon, Share2, Users
 } from 'lucide-react';
+import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
 import { useDocStore, Doc, DocType } from '@/lib/store/docStore';
 import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { DocEditor } from './DocEditor';
+import { SharedDocViewer } from './SharedDocViewer';
+import { ShareDialog } from './ShareDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +29,9 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
 
-type ViewMode = 'gallery' | 'list';
+type ViewMode = 'gallery' | 'list' | 'shared-by-me';
 type SortOption = 'updated' | 'created' | 'title';
+type OwnershipFilter = 'all' | 'mine' | 'shared';
 
 // Utility to extract preview text from TipTap JSON - Robust version
 const getDocPreview = (contentStr: string | object | null | undefined): { text: string; hasContent: boolean } => {
@@ -340,9 +344,20 @@ const getAccentColor = (id: string): string => {
 };
 
 // Get tag based on doc properties
-const getDocTag = (doc: Doc): { label: string; color: string } | null => {
+const getDocTag = (doc: Doc): { label: string; color: string } => {
+  const docTypeColors: Record<DocType, { label: string; color: string }> = {
+    notes: { label: 'Notes', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400' },
+    meeting: { label: 'Meeting', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+    project: { label: 'Project', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    personal: { label: 'Personal', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  };
+  return docTypeColors[doc.docType] || docTypeColors.notes;
+};
+
+// Get status badge (Draft, Pinned) - shown separately from docType
+const getStatusBadge = (doc: Doc): { label: string; color: string } | null => {
   if (doc._id.startsWith('local_')) {
-    return { label: 'Draft', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' };
+    return { label: 'Draft', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' };
   }
   if (doc.isPinned) {
     return { label: 'Pinned', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
@@ -355,7 +370,7 @@ const getDocTag = (doc: Doc): { label: string; color: string } | null => {
 interface DocItemProps {
   doc: Doc;
   index: number;
-  viewMode?: ViewMode;
+  currentUserId?: string;
   onOpen: (doc: Doc) => void;
   onTogglePin: (doc: Doc, e: React.MouseEvent) => void;
   onShare: (doc: Doc, e: React.MouseEvent) => Promise<void>;
@@ -403,11 +418,15 @@ const getTags = (doc: Doc) => {
     }
 };
 
-const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
+const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
   const { hasContent } = getDocPreview(doc.content);
   const isLocal = doc._id.startsWith('local_');
   const tag = getTags(doc);
   
+  // Check if current user is owner
+  const isOwner = !doc.user || (typeof doc.user === 'object' && 'email' in doc.user ? doc.user._id === currentUserId : doc.user === currentUserId);
+  const ownerName = typeof doc.user === 'object' && 'name' in doc.user ? doc.user.name : 'Unknown';
+
   // Local Editing State
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(doc.title || '');
@@ -420,7 +439,9 @@ const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDe
 
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsEditing(true);
+    if (isOwner) {
+      setIsEditing(true);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -535,8 +556,8 @@ const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDe
            ) : (
               <h3 
                 onDoubleClick={handleStartEdit}
-                title="Double click to edit"
-                className={`font-semibold text-md leading-snug line-clamp-1 cursor-text hover:bg-black/5 dark:hover:bg-white/5 rounded px-1 -ml-1 transition-colors
+                title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
+                className={`font-semibold text-md leading-snug line-clamp-1 ${isOwner ? 'cursor-text hover:bg-black/5 dark:hover:bg-white/5 rounded px-1 -ml-1 transition-colors' : ''}
                           ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
               >
                 {doc.title || 'Untitled'}
@@ -556,6 +577,33 @@ const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDe
               <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title="Not saved to cloud">
                 <CloudOff className="w-2.5 h-2.5" />
               </span>
+            )}
+            {/* Shared Badge - For docs shared WITH ME */}
+            {!isOwner && (
+              <div className="flex items-center gap-1.5 mt-1" title={`Shared by ${ownerName}`}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-500/25">
+                  <Share2 className="w-2.5 h-2.5" />
+                  {ownerName?.split(' ')[0] || 'Shared'}
+                </div>
+              </div>
+            )}
+            {/* Owner Shared - Broadcasting Pulse Indicator */}
+            {isOwner && doc.collaborators && doc.collaborators.length > 0 && (
+              <div 
+  className="flex items-center justify-center mt-1 mr-1 w-5 h-5" 
+  title={`Broadcasting to ${doc.collaborators.length} people`}
+>
+  <div className="relative flex items-center justify-center h-3 w-3">
+    {/* Outer pulse ring */}
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/60"></span>
+    
+    {/* Middle pulse ring - slightly delayed */}
+    {/* <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-emerald-400/40"></span> */}
+    
+    {/* Core dot with enhanced glow */}
+    <span className="relative inline-flex rounded-full h-2 w-2 bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.8),0_0_12px_rgba(16,185,129,0.4)]"></span>
+  </div>
+</div>
             )}
             {/* Type Selector Dropdown */}
             <DropdownMenu>
@@ -591,8 +639,46 @@ const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDe
   );
 });
 
-const ListRow = React.memo(({ doc, index, onOpen, onTogglePin, onDelete }: DocItemProps) => {
+const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
   const tag = getDocTag(doc);
+  const statusBadge = getStatusBadge(doc);
+  
+  // Check if current user is owner
+  const isOwner = !doc.user || (typeof doc.user === 'object' && 'email' in doc.user ? doc.user._id === currentUserId : doc.user === currentUserId);
+  const ownerName = typeof doc.user === 'object' && 'name' in doc.user ? doc.user.name : 'Unknown';
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState(doc.title || '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setTitleInput(doc.title || '');
+    }
+  }, [doc.title, isEditingTitle]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isOwner) {
+      setIsEditingTitle(true);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  };
+
+  const handleTitleSubmit = async () => {
+    if (titleInput.trim() !== doc.title) {
+      await onRename(doc, titleInput.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inputRef.current?.blur(); // This will trigger handleTitleSubmit via onBlur
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -603,16 +689,55 @@ const ListRow = React.memo(({ doc, index, onOpen, onTogglePin, onDelete }: DocIt
                  cursor-pointer border-b border-[hsl(var(--border))]/50 transition-colors"
     >
       <FileText className="w-4 h-4 text-[hsl(var(--muted-foreground))] shrink-0" />
-      <div className="flex-1 min-w-0">
-        <span className={`text-sm ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}>
-          {doc.title || 'Untitled'}
-        </span>
+      <div className="flex-1 min-w-0 pr-4">
+        <div className="flex items-center gap-2">
+          {!isEditingTitle ? (
+            <h3 
+              className={`font-medium text-[hsl(var(--foreground))] truncate ${isOwner ? 'group-hover:text-amber-500 transition-colors cursor-text' : ''}`}
+              onDoubleClick={handleStartEdit}
+              title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
+            >
+              {doc.title || 'Untitled'}
+            </h3>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              onBlur={handleTitleSubmit}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium bg-transparent border-b border-amber-500 focus:outline-none w-full"
+              autoFocus
+            />
+          )}
+          {!isOwner && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-medium rounded-full border border-blue-500/25 shrink-0">
+               <Share2 className="w-3 h-3" />
+               <span className="hidden sm:inline">Shared</span>
+            </div>
+          )}
+          {isOwner && doc.collaborators && doc.collaborators.length > 0 && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium rounded-full border border-emerald-500/25 shrink-0">
+               <Users className="w-3 h-3" />
+               <span className="hidden sm:inline">Broadcasting</span>
+            </div>
+          )}
+        </div>
       </div>
-      {tag && (
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded shrink-0 ${tag.color}`}>
-          {tag.label}
-        </span>
-      )}
+      <div className="flex items-center gap-2 w-24 shrink-0">
+        {tag && (
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${tag.color}`}>
+            {tag.label}
+          </span>
+        )}
+        {statusBadge && (
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${statusBadge.color}`}>
+            {statusBadge.label}
+          </span>
+        )}
+      </div>
       <span className="text-xs text-[hsl(var(--muted-foreground))] shrink-0 w-24 text-right">
         {format(new Date(doc.updatedAt), 'MMM d, yyyy')}
       </span>
@@ -663,12 +788,252 @@ const NewPageCard = ({ onClick, disabled }: { onClick: () => void, disabled: boo
     </motion.button>
 );
 
+// Shared By Me Section - displays docs I've shared with collaborator management
+interface SharedByMeSectionProps {
+  sharedByMeDocs: any[];
+  isLoading: boolean;
+  onRefresh: () => void;
+}
+
+const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: SharedByMeSectionProps) => {
+  const [updatingRole, setUpdatingRole] = useState<{docId: string; userId: string} | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<{url: string; name: string} | null>(null);
+
+  const handleUpdateRole = async (docId: string, collaboratorId: string, newRole: 'editor' | 'viewer') => {
+    try {
+      setUpdatingRole({ docId, userId: collaboratorId });
+      await axiosInstance.patch(`/api/docs/${docId}/collaborators/${collaboratorId}`, { role: newRole });
+      toast.success(`Role updated to ${newRole}`);
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      toast.error('Failed to update role');
+    } finally {
+      setUpdatingRole(null);
+    }
+  };
+
+  const handleRemoveCollaborator = async (docId: string, collaboratorId: string) => {
+    try {
+      await axiosInstance.delete(`/api/docs/${docId}/collaborators/${collaboratorId}`);
+      toast.success('Collaborator removed');
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to remove collaborator:', error);
+      toast.error('Failed to remove collaborator');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading shared docs...</p>
+      </div>
+    );
+  }
+
+  if (sharedByMeDocs.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))] flex items-center justify-center mx-auto mb-4">
+          <Share2 className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
+        </div>
+        <h2 className="text-lg font-semibold mb-2">No shared documents</h2>
+        <p className="text-sm text-[hsl(var(--muted-foreground))] max-w-sm mx-auto">
+          Documents you share with others will appear here. Share a doc to get started!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold">Documents You've Shared</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            Manage access permissions for your shared documents
+          </p>
+        </div>
+        <span className="text-sm text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]/50 px-3 py-1 rounded-full">
+          {sharedByMeDocs.length} document{sharedByMeDocs.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {sharedByMeDocs.map((doc) => (
+        <motion.div 
+          key={doc._id} 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden shadow-sm"
+        >
+          {/* Doc Header */}
+          <div className="px-5 py-4 bg-gradient-to-r from-[hsl(var(--muted))]/30 to-transparent border-b border-[hsl(var(--border))]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">{doc.title || 'Untitled'}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-2 py-0.5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+                      {doc.docType || 'notes'}
+                    </span>
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                      Updated {formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                <span className="text-sm font-medium">
+                  {doc.collaborators?.length || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Collaborators Table */}
+          <div className="px-5 py-3">
+            <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 px-1">
+              Collaborators
+            </div>
+            <div className="space-y-1">
+              {doc.collaborators?.map((collab: any) => {
+                const collabUser = collab.user;
+                const userId = typeof collabUser === 'object' ? collabUser._id : collabUser;
+                const userName = typeof collabUser === 'object' ? collabUser.name : 'Unknown';
+                const userEmail = typeof collabUser === 'object' ? collabUser.email : '';
+                const userAvatar = typeof collabUser === 'object' ? collabUser.avatar : '';
+                const isUpdating = updatingRole?.docId === doc._id && updatingRole?.userId === userId;
+
+                return (
+                  <div 
+                    key={userId} 
+                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[hsl(var(--muted))]/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {userAvatar ? (
+                        <img 
+                          src={userAvatar} 
+                          alt={userName} 
+                          className="w-9 h-9 rounded-full object-cover shrink-0 cursor-zoom-in hover:ring-2 hover:ring-blue-500/50 transition-all"
+                          onDoubleClick={() => setAvatarPreview({ url: userAvatar, name: userName })}
+                          title="Double-click to enlarge"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                          {userName?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{userName}</p>
+                        <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">{userEmail}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button 
+                            disabled={isUpdating} 
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-all flex items-center gap-1.5 ${
+                              collab.role === 'editor' 
+                                ? 'bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/25' 
+                                : 'bg-blue-500/15 text-blue-600 border-blue-500/30 hover:bg-blue-500/25'
+                            } ${isUpdating ? 'opacity-50 cursor-wait' : ''}`}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                {collab.role === 'editor' ? 'Can Edit' : 'View Only'}
+                                <ChevronDown className="w-3 h-3" />
+                              </>
+                            )}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem onClick={() => handleUpdateRole(doc._id, userId, 'editor')}>
+                            <Star className="w-4 h-4 mr-2 text-amber-500" /> Can Edit
+                            {collab.role === 'editor' && <span className="ml-auto text-amber-500">✓</span>}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleUpdateRole(doc._id, userId, 'viewer')}>
+                            <FileText className="w-4 h-4 mr-2 text-blue-500" /> View Only
+                            {collab.role === 'viewer' && <span className="ml-auto text-amber-500">✓</span>}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <button 
+                        onClick={() => handleRemoveCollaborator(doc._id, userId)}
+                        className="p-2 text-[hsl(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors opacity-100 group-hover:opacity-100"
+                        title="Remove access"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+
+      {/* Avatar Preview Modal */}
+      <AnimatePresence>
+        {avatarPreview && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setAvatarPreview(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={avatarPreview.url} 
+                alt={avatarPreview.name} 
+                className="w-64 h-64 md:w-80 md:h-80 rounded-2xl object-cover shadow-2xl border-4 border-white/10"
+              />
+              <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-center">
+                <p className="text-white font-medium text-lg">{avatarPreview.name}</p>
+                <p className="text-white/60 text-sm">Click anywhere to close</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export function DocsView() {
   const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
+  const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
+  const [shareDialog, setShareDialog] = useState({ open: false, docId: '', docTitle: '' });
+  const [currentDocRole, setCurrentDocRole] = useState<'owner' | 'editor' | 'viewer'>('owner');
+  const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
+  
+  // Shared by Me state
+  const [sharedByMeDocs, setSharedByMeDocs] = useState<any[]>([]);
+  const [isLoadingSharedByMe, setIsLoadingSharedByMe] = useState(false);
 
   // Refs for debouncing (pinning only now)
   const pinTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
@@ -726,6 +1091,29 @@ export function DocsView() {
   useEffect(() => {
     fetchDocs();
   }, [fetchDocs]);
+
+  // Fetch docs I've shared with others
+  const fetchSharedByMe = useCallback(async () => {
+    try {
+      setIsLoadingSharedByMe(true);
+      const response = await axiosInstance.get('/api/docs/shared-by-me');
+      if (response.data.success) {
+        setSharedByMeDocs(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch shared docs:', error);
+      toast.error('Failed to load shared docs');
+    } finally {
+      setIsLoadingSharedByMe(false);
+    }
+  }, []);
+
+  // Fetch shared-by-me docs when switching to that tab
+  useEffect(() => {
+    if (viewMode === 'shared-by-me' && sharedByMeDocs.length === 0) {
+      fetchSharedByMe();
+    }
+  }, [viewMode, sharedByMeDocs.length, fetchSharedByMe]);
 
   const handleCreateDoc = async () => {
     try {
@@ -857,25 +1245,19 @@ export function DocsView() {
       toast.info('Save the document first to share it');
       return;
     }
-    try {
-      const response = await axiosInstance.post('/api/create-doc-link', { 
-        type: 'doc', 
-        docId: doc._id 
-      });
-      if (response.data.success) {
-        const shareUrl = response.data.data.url;
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success('Share link copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Failed to create share link:', error);
-      toast.error('Failed to create share link');
-    }
+    setShareDialog({ open: true, docId: doc._id, docTitle: doc.title || 'Untitled' });
   };
 
   // Filter and sort docs
   const filteredDocs = docs
-    .filter((doc) => doc.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((doc) => {
+      // Ownership filter - treat undefined/null role as 'owner' (user's own docs)
+      const docRole = doc.role || 'owner';
+      if (ownershipFilter === 'mine' && docRole !== 'owner') return false;
+      if (ownershipFilter === 'shared' && docRole === 'owner') return false;
+      // Search filter
+      return doc.title.toLowerCase().includes(searchQuery.toLowerCase());
+    })
     .sort((a, b) => {
       if (sortBy === 'updated') return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       if (sortBy === 'created') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -886,8 +1268,38 @@ export function DocsView() {
   const unpinnedDocs = filteredDocs.filter(d => !d.isPinned);
   const allSortedDocs = [...pinnedDocs, ...unpinnedDocs];
 
+  // Handle opening a doc - use role from doc (fetched with getAllDocs)
+  const handleOpenDoc = useCallback((doc: Doc) => {
+    // Use role from doc if available, otherwise assume owner for local docs
+    const role = doc._id.startsWith('local_') ? 'owner' : (doc.role || 'owner');
+    setCurrentDocRole(role);
+    setCurrentDoc(doc);
+  }, [setCurrentDoc]);
+
+  const handleCloseDoc = useCallback(() => {
+    setCurrentDoc(null);
+    setCurrentDocRole('owner');
+  }, [setCurrentDoc]);
+
   if (currentDoc) {
-    return <DocEditor doc={currentDoc} onBack={() => setCurrentDoc(null)} />;
+    // Viewer role: show read-only SharedDocViewer
+    if (currentDocRole === 'viewer') {
+      return (
+        <SharedDocViewer 
+          doc={{
+            _id: currentDoc._id,
+            title: currentDoc.title,
+            content: currentDoc.content,
+            coverImage: currentDoc.coverImage,
+            updatedAt: currentDoc.updatedAt,
+          }}
+          mode="viewer"
+          onBack={handleCloseDoc}
+        />
+      );
+    }
+    // Owner/Editor role: show editable DocEditor
+    return <DocEditor doc={currentDoc} onBack={handleCloseDoc} />;
   }
 
   return (
@@ -910,10 +1322,13 @@ export function DocsView() {
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
              <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
-               <LayoutGrid className="w-4 h-4" /> Gallery View
+               <LayoutGrid className="w-4 h-4" /> Gallery
              </button>
              <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
-               <List className="w-4 h-4" /> List View
+               <List className="w-4 h-4" /> List
+             </button>
+             <button onClick={() => setViewMode('shared-by-me')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'shared-by-me' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+               <Share2 className="w-4 h-4" /> Shared by Me
              </button>
           </div>
           <div className="flex items-center gap-2">
@@ -940,8 +1355,29 @@ export function DocsView() {
                    <FileText className="w-4 h-4 mr-2" /> Title
                    {sortBy === 'title' && <span className="ml-auto text-amber-500">✓</span>}
                  </DropdownMenuItem>
-               </DropdownMenuContent>
-             </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))] transition-colors">
+                    <Filter className="w-4 h-4" /> {ownershipFilter === 'all' ? 'All' : ownershipFilter === 'mine' ? 'My Docs' : 'Shared'}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => setOwnershipFilter('all')}>
+                    <FileText className="w-4 h-4 mr-2" /> All Docs
+                    {ownershipFilter === 'all' && <span className="ml-auto text-amber-500">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setOwnershipFilter('mine')}>
+                    <Star className="w-4 h-4 mr-2" /> My Docs
+                    {ownershipFilter === 'mine' && <span className="ml-auto text-amber-500">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setOwnershipFilter('shared')}>
+                    <Users className="w-4 h-4 mr-2" /> Shared with Me
+                    {ownershipFilter === 'shared' && <span className="ml-auto text-amber-500">✓</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
              <Button onClick={handleCreateDoc} disabled={isCreating} className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5" size="sm">
                {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-3.5 h-3.5" /> New <ChevronDown className="w-3.5 h-3.5" /></>}
              </Button>
@@ -975,7 +1411,8 @@ export function DocsView() {
                   <GalleryCard 
                     doc={doc} 
                     index={i} 
-                    onOpen={setCurrentDoc}
+                    currentUserId={user?._id}
+                    onOpen={handleOpenDoc}
                     onTogglePin={handleTogglePin}
                     onShare={handleShareDoc}
                     onDelete={handleDeleteDoc}
@@ -986,10 +1423,10 @@ export function DocsView() {
               ))}
               <NewPageCard onClick={handleCreateDoc} disabled={isCreating} />
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
             <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg overflow-hidden">
                <div className="flex items-center gap-4 px-4 py-2.5 bg-[hsl(var(--muted))]/30 border-b border-[hsl(var(--border))] text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                 <span className="w-4" /> <span className="flex-1">Name</span> <span className="w-16">Tag</span> <span className="w-24 text-right">Updated</span> <span className="w-16" />
+                 <span className="w-4" /> <span className="flex-1">Name</span> <span className="w-20">Tag</span> <span className="w-24 text-right">Updated</span> <span className="w-16" />
                </div>
                <AnimatePresence>
                  {allSortedDocs.map((doc, i) => (
@@ -997,7 +1434,8 @@ export function DocsView() {
                      key={doc._id} 
                      doc={doc} 
                      index={i} 
-                     onOpen={setCurrentDoc} 
+                     currentUserId={user?._id}
+                     onOpen={handleOpenDoc} 
                      onTogglePin={handleTogglePin} 
                      onDelete={handleDeleteDoc}
                      onShare={handleShareDoc}
@@ -1010,6 +1448,13 @@ export function DocsView() {
                  <Plus className="w-4 h-4" /> <span className="text-sm">New page</span>
                </button>
             </div>
+          ) : (
+            /* Shared by Me View */
+            <SharedByMeSection 
+              sharedByMeDocs={sharedByMeDocs}
+              isLoading={isLoadingSharedByMe}
+              onRefresh={fetchSharedByMe}
+            />
           )}
           {searchQuery && allSortedDocs.length === 0 && (
             <div className="text-center py-12">
@@ -1018,6 +1463,13 @@ export function DocsView() {
           )}
         </div>
       </div>
+      
+      <ShareDialog 
+        open={shareDialog.open} 
+        onOpenChange={(open) => setShareDialog(prev => ({ ...prev, open }))}
+        docId={shareDialog.docId}
+        docTitle={shareDialog.docTitle}
+      />
     </div>
   );
 }

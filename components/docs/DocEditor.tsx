@@ -61,7 +61,9 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
-  const contentRef = useRef<string>(doc.content);
+  const contentRef = useRef<string>(
+    typeof doc.content === 'string' ? doc.content : JSON.stringify(doc.content)
+  );
   const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   

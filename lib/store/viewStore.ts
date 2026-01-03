@@ -12,3 +12,4 @@ export const useViewStore = create<ViewState>((set) => ({
   currentView: 'dashboard',
   setCurrentView: (view) => set({ currentView: view }),
 }));
+  
