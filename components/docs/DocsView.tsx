@@ -19,6 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui-base/DropdownMenu';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
 
@@ -552,24 +555,7 @@ export function DocsView() {
                   <MoreHorizontal className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'notes', e)}>
-                  <FileText className="w-4 h-4 mr-2 text-blue-500" /> Notes
-                  {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'meeting', e)}>
-                  <FileText className="w-4 h-4 mr-2 text-violet-500" /> Meeting
-                  {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'project', e)}>
-                  <FileText className="w-4 h-4 mr-2 text-emerald-500" /> Project
-                  {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'personal', e)}>
-                  <FileText className="w-4 h-4 mr-2 text-amber-500" /> Personal
-                  {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="w-36">
                 <DropdownMenuItem 
                   className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
                   onClick={(e) => handleDeleteDoc(doc, e)}
@@ -612,17 +598,39 @@ export function DocsView() {
               {format(new Date(doc.createdAt), 'MMM d, yyyy')}
             </span>
             
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                {/* Not Saved / Local indicator */}
               {isLocal && (
                 <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title="Not saved to cloud">
                   <CloudOff className="w-2.5 h-2.5" />
                 </span>
               )}
-              {/* Main Tag */}
-              <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${tag.color}`}>
-                {tag.label}
-              </span>
+              {/* Type Selector Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag.color}`}>
+                    {tag.label}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'notes', e)}>
+                    <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
+                    {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'meeting', e)}>
+                    <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
+                    {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'project', e)}>
+                    <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
+                    {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'personal', e)}>
+                    <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
+                    {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

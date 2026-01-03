@@ -117,16 +117,22 @@ export const DropdownMenuContent = React.forwardRef<HTMLDivElement, DropdownMenu
         }
       }
       
+      const handleScroll = () => {
+        setIsOpen(false)
+      }
+      
       // Small delay to prevent immediate closing
       const timer = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside)
         document.addEventListener('keydown', handleEscape)
+        window.addEventListener('scroll', handleScroll, true)
       }, 0)
       
       return () => {
         clearTimeout(timer)
         document.removeEventListener('mousedown', handleClickOutside)
         document.removeEventListener('keydown', handleEscape)
+        window.removeEventListener('scroll', handleScroll, true)
       }
     }, [isOpen, setIsOpen, triggerRef])
     
@@ -227,5 +233,106 @@ export const DropdownMenuLabel: React.FC<React.HTMLAttributes<HTMLDivElement>> =
     >
       {children}
     </div>
+  )
+}
+
+// Submenu Context
+const DropdownMenuSubContext = React.createContext<{
+  isSubOpen: boolean
+  setIsSubOpen: (open: boolean) => void
+  triggerRef: React.RefObject<HTMLDivElement | null> | null
+}>({
+  isSubOpen: false,
+  setIsSubOpen: () => {},
+  triggerRef: null,
+})
+
+export const DropdownMenuSub: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isSubOpen, setIsSubOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  
+  return (
+    <DropdownMenuSubContext.Provider value={{ isSubOpen, setIsSubOpen, triggerRef }}>
+      <div 
+        ref={triggerRef}
+        className="relative"
+        onMouseEnter={() => setIsSubOpen(true)}
+        onMouseLeave={() => setIsSubOpen(false)}
+      >
+        {children}
+      </div>
+    </DropdownMenuSubContext.Provider>
+  )
+}
+
+export interface DropdownMenuSubTriggerProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export const DropdownMenuSubTrigger: React.FC<DropdownMenuSubTriggerProps> = ({
+  className,
+  children,
+  ...props
+}) => {
+  return (
+    <div
+      className={cn(
+        'relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none',
+        'transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]',
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <svg 
+        className="ml-auto h-4 w-4" 
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
+  )
+}
+
+export interface DropdownMenuSubContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export const DropdownMenuSubContent: React.FC<DropdownMenuSubContentProps> = ({
+  className,
+  children,
+  ...props
+}) => {
+  const { isSubOpen, triggerRef, setIsSubOpen } = React.useContext(DropdownMenuSubContext)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+  
+  useEffect(() => {
+    if (isSubOpen && triggerRef?.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPosition({
+        top: rect.top,
+        left: rect.right + 4,
+      })
+    }
+  }, [isSubOpen, triggerRef])
+  
+  if (!isSubOpen) return null
+  
+  return createPortal(
+    <div
+      className={cn(
+        'fixed min-w-[8rem] overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 shadow-lg text-[hsl(var(--foreground))]',
+        'animate-fade-in z-[10001]',
+        className
+      )}
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+      }}
+      onMouseEnter={() => setIsSubOpen(true)}
+      onMouseLeave={() => setIsSubOpen(false)}
+      {...props}
+    >
+      {children}
+    </div>,
+    document.body
   )
 }
