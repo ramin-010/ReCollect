@@ -979,7 +979,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         }
         .notion-editor .ProseMirror p,
         .notion-editor .ProseMirror li {
-          color: #b6b4b4ff;
+          color: #dad7d7ff;
           margin-left: 0;
           padding-left: 0;
         }
