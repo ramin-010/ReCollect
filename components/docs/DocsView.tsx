@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, FileText, Search, Loader2, MoreHorizontal, 
   Trash2, Pin, PinOff, Clock, CloudOff, LayoutGrid, List,
-  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon
+  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { useDocStore, Doc, DocType } from '@/lib/store/docStore';
@@ -22,6 +22,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
+  useDropdownMenu,
 } from '@/components/ui-base/DropdownMenu';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
 
@@ -349,12 +350,328 @@ const getDocTag = (doc: Doc): { label: string; color: string } | null => {
   return null;
 };
 
+// --- Standalone Components ---
+
+interface DocItemProps {
+  doc: Doc;
+  index: number;
+  viewMode?: ViewMode;
+  onOpen: (doc: Doc) => void;
+  onTogglePin: (doc: Doc, e: React.MouseEvent) => void;
+  onShare: (doc: Doc, e: React.MouseEvent) => Promise<void>;
+  onDelete: (doc: Doc, e: React.MouseEvent) => void;
+  onChangeType: (doc: Doc, type: DocType, e: React.MouseEvent) => void;
+  onRename: (doc: Doc, newTitle: string) => Promise<void>;
+}
+
+// Share Menu Item with internal state handling
+const ShareMenuItem = ({ doc, onShare }: { doc: Doc, onShare: (doc: Doc, e: React.MouseEvent) => Promise<void> }) => {
+  const { setIsOpen } = useDropdownMenu();
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent immediate close
+    e.stopPropagation();
+    setIsSharing(true);
+    await onShare(doc, e);
+    setIsSharing(false);
+    setIsOpen(false); // Close after completion
+  };
+
+  return (
+    <DropdownMenuItem 
+        onClick={handleClick}
+        disabled={isSharing}
+    >
+       {isSharing ? (
+         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+       ) : (
+         <Share2 className="w-4 h-4 mr-2" />
+       )}
+       Share
+    </DropdownMenuItem>
+  );
+};
+
+// Helper for tags in GalleryCard
+const getTags = (doc: Doc) => {
+    switch (doc.docType) {
+      case 'meeting': return { label: 'Meeting', color: 'bg-violet-600/90 text-white' };
+      case 'project': return { label: 'Project', color: 'bg-emerald-600/90 text-white' };
+      case 'personal': return { label: 'Personal', color: 'bg-amber-600/90 text-white' };
+      case 'notes': default: return { label: 'Notes', color: 'bg-blue-600/90 text-white' };
+    }
+};
+
+const GalleryCard = React.memo(({ doc, index, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
+  const { hasContent } = getDocPreview(doc.content);
+  const isLocal = doc._id.startsWith('local_');
+  const tag = getTags(doc);
+  
+  // Local Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(doc.title || '');
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync title from props when not editing
+  useEffect(() => {
+    if (!isEditing) setTitle(doc.title || '');
+  }, [doc.title, isEditing]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTitle(val);
+    
+    // Debounce Save
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+        onRename(doc, val);
+    }, 800);
+  };
+
+  const handleBlur = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    onRename(doc, title);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      onRename(doc, title);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div className="relative group h-[300px]" onClick={() => onOpen(doc)}>
+      {/* Pinned Indicator - Sparkles Overlay (Hanging) */}
+      {doc.isPinned && (
+        <div className="absolute -top-2 -left-2 z-20 drop-shadow-md">
+            <Sparkles className="h-6 w-6 text-amber-500 " />
+        </div>
+      )}
+
+      <div
+        className="cursor-pointer h-full
+                   bg-[hsl(var(--background))] 
+                   border border-[hsl(var(--background))]/50 rounded-xl
+                   group-hover:border-[hsl(var(--muted-foreground))]/40
+                   group-hover:shadow-sm
+                   transition-all duration-200 overflow-hidden flex flex-col"
+      >
+       
+      {/* Top Section: Content Preview (The "Inside" Paper) */}
+      <div className="flex-1 p-3  relative overflow-hidden bg-[hsl(var(--card-bg))]">
+        {/* Hover Actions - Top Right */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-fit">
+          <button
+            className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
+            onClick={(e) => onTogglePin(doc, e)}
+            title={doc.isPinned ? 'Unpin' : 'Pin'}
+          >
+            {doc.isPinned ? (
+              <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+            ) : (
+              <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+            )}
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              <ShareMenuItem doc={doc} onShare={onShare} />
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
+                onClick={(e) => onDelete(doc, e)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Preview Text */}
+        <div className="relative h-full">
+          {hasContent ? (
+             <MiniDocRenderer content={doc.content} />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]/40">
+              <FileText className="w-8 h-8 mb-2 opacity-20" />
+              <p className="text-xs italic">Empty page</p>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Bottom Section: Footer with Title & Meta (Distinct Background) */}
+      <div className="bg-[hsl(var(--muted))]/30  border-[hsl(var(--background))] p-3 flex flex-col gap-1">
+        {/* Title Row */}
+        <div className="flex items-start gap-2 h-6" onClick={(e) => e.stopPropagation()}>
+           {isEditing ? (
+              <input 
+                autoFocus
+                type="text"
+                value={title}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                className="w-full text-md font-semibold bg-transparent border-b border-blue-500 focus:outline-none px-0 py-0 leading-snug"
+              />
+           ) : (
+              <h3 
+                onDoubleClick={handleStartEdit}
+                title="Double click to edit"
+                className={`font-semibold text-md leading-snug line-clamp-1 cursor-text hover:bg-black/5 dark:hover:bg-white/5 rounded px-1 -ml-1 transition-colors
+                          ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
+              >
+                {doc.title || 'Untitled'}
+              </h3>
+           )}
+        </div>
+
+        {/* Meta Row: Date & Tags */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+            {format(new Date(doc.createdAt), 'MMM d, yyyy')}
+          </span>
+          
+          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+             {/* Not Saved / Local indicator */}
+            {isLocal && (
+              <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title="Not saved to cloud">
+                <CloudOff className="w-2.5 h-2.5" />
+              </span>
+            )}
+            {/* Type Selector Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
+                  {tag?.label || 'Notes'}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'notes', e)}>
+                  <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
+                  {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'meeting', e)}>
+                  <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
+                  {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'project', e)}>
+                  <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
+                  {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => onChangeType(doc, 'personal', e)}>
+                  <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
+                  {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  );
+});
+
+const ListRow = React.memo(({ doc, index, onOpen, onTogglePin, onDelete }: DocItemProps) => {
+  const tag = getDocTag(doc);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.1, delay: index * 0.02 }}
+      onClick={() => onOpen(doc)}
+      className="group flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))/50] 
+                 cursor-pointer border-b border-[hsl(var(--border))]/50 transition-colors"
+    >
+      <FileText className="w-4 h-4 text-[hsl(var(--muted-foreground))] shrink-0" />
+      <div className="flex-1 min-w-0">
+        <span className={`text-sm ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}>
+          {doc.title || 'Untitled'}
+        </span>
+      </div>
+      {tag && (
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded shrink-0 ${tag.color}`}>
+          {tag.label}
+        </span>
+      )}
+      <span className="text-xs text-[hsl(var(--muted-foreground))] shrink-0 w-24 text-right">
+        {format(new Date(doc.updatedAt), 'MMM d, yyyy')}
+      </span>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          className="p-1.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
+          onClick={(e) => onTogglePin(doc, e)}
+        >
+          {doc.isPinned ? (
+            <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+          ) : (
+            <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+          )}
+        </button>
+        <button
+          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          onClick={(e) => onDelete(doc, e)}
+        >
+          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+
+
+
+const NewPageCard = ({ onClick, disabled }: { onClick: () => void, disabled: boolean }) => (
+    <motion.button
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      onClick={onClick}
+      disabled={disabled}
+      className="group flex items-center justify-center gap-2 p-4 min-h-[180px]  bg-[hsl(var(--card-bg))]
+                 border border-dashed border-[hsl(var(--border))] rounded-lg
+                 hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[hsl(var(--card-bg))]
+                 transition-all duration-200 text-[hsl(var(--muted-foreground))]
+                 hover:text-[hsl(var(--foreground))]"
+    >
+      {disabled ? (
+        <Loader2 className="w-5 h-5 animate-spin" />
+      ) : (
+        <>
+          <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="font-medium">New Page</span>
+        </>
+      )}
+    </motion.button>
+);
+
 export function DocsView() {
   const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
+
+  // Refs for debouncing (pinning only now)
+  const pinTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
   const fetchDocs = useCallback(async () => {
     // Skip if already initialized this session
@@ -449,20 +766,57 @@ export function DocsView() {
 
   const handleTogglePin = async (doc: Doc, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // 1. Optimistic Update (Immediate UI feedback)
+    const newStatus = !doc.isPinned;
+    updateDoc(doc._id, { isPinned: newStatus });
+    
+    // 2. Handle Local Docs (No API)
     if (doc._id.startsWith('local_')) {
-      toast.info('Save the document first to pin it');
+      toast.success(newStatus ? 'Pinned (local)' : 'Unpinned (local)');
       return;
     }
-    try {
-      const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { isPinned: !doc.isPinned });
-      if (response.data.success) {
-        updateDoc(doc._id, { isPinned: !doc.isPinned });
-        toast.success(doc.isPinned ? 'Unpinned' : 'Pinned');
-      }
-    } catch (error) {
-      console.error('Failed to toggle pin:', error);
+
+    // 3. Clear existing timeout if user clicked again rapidly
+    if (pinTimeouts.current[doc._id]) {
+      clearTimeout(pinTimeouts.current[doc._id]);
     }
+
+    // 4. Set new timeout for API call (Debounce)
+    pinTimeouts.current[doc._id] = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { isPinned: newStatus });
+        if (!response.data.success) {
+           throw new Error('Failed to update on server');
+        }
+      } catch (error) {
+        // Revert on failure
+        console.error('Failed to toggle pin:', error);
+        updateDoc(doc._id, { isPinned: !newStatus }); 
+        toast.error('Failed to update pin status');
+      } finally {
+        delete pinTimeouts.current[doc._id];
+      }
+    }, 500); // 500ms debounce
   };
+
+  // Handler to rename (save) doc title
+  const handleRenameDoc = useCallback(async (doc: Doc, newTitle: string) => {
+      // Optimistic or just data update?
+      // Since GalleryCard/Input handles the visual state, we just need to ensure Store and DB are updated.
+      try {
+        if (doc._id.startsWith('local_')) {
+          await offlineStorage.saveDoc(doc._id, doc.content, newTitle, doc.coverImage || null, 'pending');
+          updateDoc(doc._id, { title: newTitle });
+        } else {
+          await axiosInstance.patch(`/api/docs/${doc._id}`, { title: newTitle });
+          updateDoc(doc._id, { title: newTitle });
+        }
+      } catch (error) {
+        console.error('Failed to save title:', error);
+        toast.error('Failed to save title');
+      }
+  }, [updateDoc]);
 
   const handleChangeDocType = async (doc: Doc, newType: DocType, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -473,12 +827,49 @@ export function DocsView() {
     try {
       const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { docType: newType });
       if (response.data.success) {
-        updateDoc(doc._id, { docType: newType });
+        const updatedDoc = response.data.data;
+        updateDoc(doc._id, { docType: newType, updatedAt: updatedDoc.updatedAt });
+        
+        // Also update the offline storage's serverUpdatedAt to prevent version conflict warnings
+        const offlineDoc = await offlineStorage.loadDoc(doc._id);
+        if (offlineDoc) {
+          await offlineStorage.saveDoc(
+            doc._id,
+            offlineDoc.content,
+            offlineDoc.title,
+            offlineDoc.coverImage,
+            'synced',
+            new Date(updatedDoc.updatedAt).getTime()
+          );
+        }
+        
         toast.success(`Changed to ${newType.charAt(0).toUpperCase() + newType.slice(1)}`);
       }
     } catch (error) {
       console.error('Failed to change doc type:', error);
       toast.error('Failed to change document type');
+    }
+  };
+
+  const handleShareDoc = async (doc: Doc, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (doc._id.startsWith('local_')) {
+      toast.info('Save the document first to share it');
+      return;
+    }
+    try {
+      const response = await axiosInstance.post('/api/create-doc-link', { 
+        type: 'doc', 
+        docId: doc._id 
+      });
+      if (response.data.success) {
+        const shareUrl = response.data.data.url;
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Share link copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Failed to create share link:', error);
+      toast.error('Failed to create share link');
     }
   };
 
@@ -499,331 +890,61 @@ export function DocsView() {
     return <DocEditor doc={currentDoc} onBack={() => setCurrentDoc(null)} />;
   }
 
-  // Gallery Card Component (Notion-inspired - Bottom Title Design)
-  const GalleryCard = ({ doc, index }: { doc: Doc; index: number }) => {
-    const { hasContent } = getDocPreview(doc.content);
-    const isLocal = doc._id.startsWith('local_');
-    
-    // Get tag based on docType
-    const getTag = () => {
-      if (doc.isPinned) return { label: 'Pinned', color: 'bg-blue-500/90 text-white' };
-      switch (doc.docType) {
-        case 'meeting':
-          return { label: 'Meeting', color: 'bg-violet-600/90 text-white' };
-        case 'project':
-          return { label: 'Project', color: 'bg-emerald-600/90 text-white' };
-        case 'personal':
-          return { label: 'Personal', color: 'bg-amber-600/90 text-white' };
-        case 'notes':
-        default:
-          return { label: 'Notes', color: 'bg-blue-600/90 text-white' };
-      }
-    };
-    const tag = getTag();
-    
-    return (
-      <div
-        onClick={() => setCurrentDoc(doc)}
-        className="group relative cursor-pointer
-                   bg-[hsl(var(--background))] 
-                   border border-[hsl(var(--background))]/50 rounded-xl
-                   hover:border-[hsl(var(--muted-foreground))]/40
-                   hover:shadow-sm
-                   transition-all duration-200 overflow-hidden flex flex-col h-[300px]"
-      >
-        {/* Top Section: Content Preview (The "Inside" Paper) */}
-        <div className="flex-1 p-3  relative overflow-hidden bg-[hsl(var(--card-bg))]">
-          {/* Hover Actions - Top Right */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-fit">
-            <button
-              className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
-              onClick={(e) => handleTogglePin(doc, e)}
-              title={doc.isPinned ? 'Unpin' : 'Pin'}
-            >
-              {doc.isPinned ? (
-                <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              ) : (
-                <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              )}
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem 
-                  className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
-                  onClick={(e) => handleDeleteDoc(doc, e)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Preview Text */}
-          <div className="relative h-full">
-            {hasContent ? (
-               <MiniDocRenderer content={doc.content} />
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]/40">
-                <FileText className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-xs italic">Empty page</p>
-              </div>
-            )}
-            
-            {/* Fade gradient at bottom of preview */}
-            {/* <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none" /> */}
-          </div>
-        </div>
-        
-        {/* Bottom Section: Footer with Title & Meta (Distinct Background) */}
-        <div className="bg-[hsl(var(--muted))]/30  border-[hsl(var(--background))] p-3 flex flex-col gap-1">
-          {/* Title Row */}
-          <div className="flex items-start gap-2">
-             <h3 className={`font-semibold text-md leading-snug line-clamp-1
-                           ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}>
-              {doc.title || 'Untitled'}
-            </h3>
-          </div>
-
-          {/* Meta Row: Date & Tags */}
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
-              {format(new Date(doc.createdAt), 'MMM d, yyyy')}
-            </span>
-            
-            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-               {/* Not Saved / Local indicator */}
-              {isLocal && (
-                <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title="Not saved to cloud">
-                  <CloudOff className="w-2.5 h-2.5" />
-                </span>
-              )}
-              {/* Type Selector Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag.color}`}>
-                    {tag.label}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'notes', e)}>
-                    <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
-                    {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'meeting', e)}>
-                    <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
-                    {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'project', e)}>
-                    <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
-                    {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'personal', e)}>
-                    <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
-                    {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // List Row Component
-  const ListRow = ({ doc, index }: { doc: Doc; index: number }) => {
-    const tag = getDocTag(doc);
-    
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.1, delay: index * 0.02 }}
-        onClick={() => setCurrentDoc(doc)}
-        className="group flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))/50] 
-                   cursor-pointer border-b border-[hsl(var(--border))]/50 transition-colors"
-      >
-        <FileText className="w-4 h-4 text-[hsl(var(--muted-foreground))] shrink-0" />
-        
-        <div className="flex-1 min-w-0">
-          <span className={`text-sm ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}>
-            {doc.title || 'Untitled'}
-          </span>
-        </div>
-        
-        {tag && (
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded shrink-0 ${tag.color}`}>
-            {tag.label}
-          </span>
-        )}
-        
-        <span className="text-xs text-[hsl(var(--muted-foreground))] shrink-0 w-24 text-right">
-          {format(new Date(doc.updatedAt), 'MMM d, yyyy')}
-        </span>
-        
-        {/* Hover Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button
-            className="p-1.5 rounded hover:bg-[hsl(var(--muted))] transition-colors"
-            onClick={(e) => handleTogglePin(doc, e)}
-          >
-            {doc.isPinned ? (
-              <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-            ) : (
-              <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-            )}
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            onClick={(e) => handleDeleteDoc(doc, e)}
-          >
-            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-          </button>
-        </div>
-      </motion.div>
-    );
-  };
-
-  // New Page Card (Notion-style)
-  const NewPageCard = () => (
-    <motion.button
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      onClick={handleCreateDoc}
-      disabled={isCreating}
-      className="group flex items-center justify-center gap-2 p-4 min-h-[180px]  bg-[hsl(var(--card-bg))]
-                 border border-dashed border-[hsl(var(--border))] rounded-lg
-                 hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[hsl(var(--card-bg))]
-                 transition-all duration-200 text-[hsl(var(--muted-foreground))]
-                 hover:text-[hsl(var(--foreground))]"
-    >
-      {isCreating ? (
-        <Loader2 className="w-5 h-5 animate-spin" />
-      ) : (
-        <>
-          <Plus className="w-5 h-5" />
-          <span className="text-sm font-medium">New page</span>
-        </>
-      )}
-    </motion.button>
-  );
-
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
-      {/* Header Section - Notion Style */}
+      {/* Header Section */}
       <div className="shrink-0 px-8 pt-8 pb-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Title with Icon */}
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
-              <FileText className="w-5 h-5  text-amber-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">
-                Docs
-              </h1>
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                Organize and keep track of documents shared across your team.
-              </p>
-            </div>
-          </div>
+        <div className="max-w-6xl mx-auto flex items-center gap-3 mb-1">
+             <div className="w-10 h-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
+               <FileText className="w-5 h-5 text-amber-500" />
+             </div>
+             <div>
+               <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">Docs</h1>
+               <p className="text-sm text-[hsl(var(--muted-foreground))]">Organize and keep track of documents shared across your team.</p>
+             </div>
         </div>
       </div>
 
-      {/* View Tabs and Controls - Notion Style */}
+      {/* View Tabs & Controls */}
       <div className="shrink-0 px-8 pb-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          {/* View Tabs */}
           <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
-            <button
-              onClick={() => setViewMode('gallery')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-                         ${viewMode === 'gallery' 
-                           ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' 
-                           : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Gallery View
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-                         ${viewMode === 'list' 
-                           ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' 
-                           : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}
-            >
-              <List className="w-4 h-4" />
-              All Docs
-            </button>
+             <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+               <LayoutGrid className="w-4 h-4" /> Gallery View
+             </button>
+             <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+               <List className="w-4 h-4" /> List View
+             </button>
           </div>
-
-          {/* Right Controls */}
           <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[hsl(var(--card-bg))] 
-                           border border-transparent focus:border-[hsl(var(--border))] 
-                           focus:bg-[hsl(var(--card-bg))]/50 text-sm outline-none 
-                           transition-all placeholder:text-[hsl(var(--muted-foreground))]"
-              />
-            </div>
-
-            {/* Sort Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm 
-                                 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))]
-                                 transition-colors">
-                  <ArrowUpDown className="w-4 h-4" />
-                  Sort
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => setSortBy('updated')}>
-                  <Clock className="w-4 h-4 mr-2" /> Last updated
-                  {sortBy === 'updated' && <span className="ml-auto text-amber-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('created')}>
-                  <Sparkles className="w-4 h-4 mr-2" /> Date created
-                  {sortBy === 'created' && <span className="ml-auto text-amber-500">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('title')}>
-                  <FileText className="w-4 h-4 mr-2" /> Title
-                  {sortBy === 'title' && <span className="ml-auto text-amber-500">✓</span>}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* New Button */}
-            <Button
-              onClick={handleCreateDoc}
-              disabled={isCreating}
-              className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5"
-              size="sm"
-            >
-              {isCreating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  New
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </>
-              )}
-            </Button>
+             <div className="relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+               <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[hsl(var(--card-bg))] border border-transparent focus:border-[hsl(var(--border))] focus:bg-[hsl(var(--card-bg))]/50 text-sm outline-none transition-all placeholder:text-[hsl(var(--muted-foreground))]" />
+             </div>
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))] transition-colors">
+                   <ArrowUpDown className="w-4 h-4" /> Sort
+                 </button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="end" className="w-40">
+                 <DropdownMenuItem onClick={() => setSortBy('updated')}>
+                   <Clock className="w-4 h-4 mr-2" /> Last updated
+                   {sortBy === 'updated' && <span className="ml-auto text-amber-500">✓</span>}
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => setSortBy('created')}>
+                   <Sparkles className="w-4 h-4 mr-2" /> Date created
+                   {sortBy === 'created' && <span className="ml-auto text-amber-500">✓</span>}
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => setSortBy('title')}>
+                   <FileText className="w-4 h-4 mr-2" /> Title
+                   {sortBy === 'title' && <span className="ml-auto text-amber-500">✓</span>}
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+             <Button onClick={handleCreateDoc} disabled={isCreating} className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5" size="sm">
+               {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-3.5 h-3.5" /> New <ChevronDown className="w-3.5 h-3.5" /></>}
+             </Button>
           </div>
         </div>
       </div>
@@ -837,80 +958,62 @@ export function DocsView() {
               <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading documents...</p>
             </div>
           ) : allSortedDocs.length === 0 && !searchQuery ? (
-            // Empty State
             <div className="text-center py-16">
               <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))] flex items-center justify-center mx-auto mb-4">
                 <File className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
               </div>
               <h2 className="text-lg font-semibold mb-2">No documents yet</h2>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6 max-w-sm mx-auto">
-                Get started by creating your first document. Add notes, track information, and collaborate with your team.
-              </p>
-              <Button
-                onClick={handleCreateDoc}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Document
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6 max-w-sm mx-auto">Get started by creating your first document.</p>
+              <Button onClick={handleCreateDoc} className="bg-blue-600 text-white hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" /> Create Document
               </Button>
             </div>
           ) : viewMode === 'gallery' ? (
-            // Gallery View
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {allSortedDocs.map((doc, i) => (
-                <motion.div
-                  key={doc._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.1 }}
-                >
+                <motion.div key={doc._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
                   <GalleryCard 
                     doc={doc} 
                     index={i} 
+                    onOpen={setCurrentDoc}
+                    onTogglePin={handleTogglePin}
+                    onShare={handleShareDoc}
+                    onDelete={handleDeleteDoc}
+                    onChangeType={handleChangeDocType}
+                    onRename={handleRenameDoc}
                   />
                 </motion.div>
               ))}
-              {/* New Page Card at the end */}
-              <NewPageCard />
+              <NewPageCard onClick={handleCreateDoc} disabled={isCreating} />
             </div>
           ) : (
-            // List View
             <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg overflow-hidden">
-              {/* List Header */}
-              <div className="flex items-center gap-4 px-4 py-2.5 bg-[hsl(var(--muted))]/30 border-b border-[hsl(var(--border))] text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                <span className="w-4" /> {/* Icon spacer */}
-                <span className="flex-1">Name</span>
-                <span className="w-16">Tag</span>
-                <span className="w-24 text-right">Updated</span>
-                <span className="w-16" /> {/* Actions spacer */}
-              </div>
-              
-              <AnimatePresence>
-                {allSortedDocs.map((doc, i) => (
-                  <ListRow key={doc._id} doc={doc} index={i} />
-                ))}
-              </AnimatePresence>
-              
-              {/* New Page Row */}
-              <button
-                onClick={handleCreateDoc}
-                disabled={isCreating}
-                className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))]/30 
-                           cursor-pointer text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]
-                           transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="text-sm">New page</span>
-              </button>
+               <div className="flex items-center gap-4 px-4 py-2.5 bg-[hsl(var(--muted))]/30 border-b border-[hsl(var(--border))] text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                 <span className="w-4" /> <span className="flex-1">Name</span> <span className="w-16">Tag</span> <span className="w-24 text-right">Updated</span> <span className="w-16" />
+               </div>
+               <AnimatePresence>
+                 {allSortedDocs.map((doc, i) => (
+                   <ListRow 
+                     key={doc._id} 
+                     doc={doc} 
+                     index={i} 
+                     onOpen={setCurrentDoc} 
+                     onTogglePin={handleTogglePin} 
+                     onDelete={handleDeleteDoc}
+                     onShare={handleShareDoc}
+                     onChangeType={handleChangeDocType}
+                     onRename={handleRenameDoc}
+                   />
+                 ))}
+               </AnimatePresence>
+               <button onClick={handleCreateDoc} disabled={isCreating} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))]/30 cursor-pointer text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors">
+                 <Plus className="w-4 h-4" /> <span className="text-sm">New page</span>
+               </button>
             </div>
           )}
-
-          {/* No results message */}
           {searchQuery && allSortedDocs.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                No documents found matching "{searchQuery}"
-              </p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">No documents found matching "{searchQuery}"</p>
             </div>
           )}
         </div>

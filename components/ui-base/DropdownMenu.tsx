@@ -184,7 +184,9 @@ export const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenu
     
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       onClick?.(e)
-      setIsOpen(false)
+      if (!e.defaultPrevented) {
+        setIsOpen(false)
+      }
     }
     
     return (

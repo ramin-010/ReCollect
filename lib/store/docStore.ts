@@ -12,6 +12,7 @@ export interface Doc {
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
+  coverImage?: string | null;
 }
 
 interface DocState {
