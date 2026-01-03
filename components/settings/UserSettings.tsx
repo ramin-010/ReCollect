@@ -75,7 +75,7 @@ export function UserSettings() {
   const archivedNotes = useMemo(() => {
     return archivedNotesData.map(content => ({
       content,
-      dashboardId: '', // Not needed since we're not filtering by dashboard anymore
+      dashboardId: content.DashId || '', // Use DashId from backend
       dashboardName: 'Archived'
     })).sort((a, b) => 
       new Date(b.content.updatedAt).getTime() - new Date(a.content.updatedAt).getTime()
@@ -85,12 +85,69 @@ export function UserSettings() {
   const favoriteNotes = useMemo(() => {
     return favoriteNotesData.map(content => ({
       content,
-      dashboardId: '', // Not needed since we're not filtering by dashboard anymore
+      dashboardId: content.DashId || '', // Use DashId from backend
       dashboardName: 'Favorite'
     })).sort((a, b) => 
       new Date(b.content.updatedAt).getTime() - new Date(a.content.updatedAt).getTime()
     );
   }, [favoriteNotesData]);
+
+  // Track which notes are exiting (for animation)
+  const [exitingNotes, setExitingNotes] = useState<Set<string>>(new Set());
+
+  // Handle note deletion - remove from both lists with animation delay
+  const handleNoteDelete = (contentId: string) => {
+    setExitingNotes(prev => new Set(prev).add(contentId));
+    setTimeout(() => {
+      setArchivedNotesData(prev => prev.filter(note => note._id !== contentId));
+      setFavoriteNotesData(prev => prev.filter(note => note._id !== contentId));
+      setExitingNotes(prev => {
+        const next = new Set(prev);
+        next.delete(contentId);
+        return next;
+      });
+    }, 300);
+  };
+
+  // Handle note updates (archive/favorite toggle)
+  const handleNoteUpdate = (contentId: string, updates: Partial<ContentType>) => {
+    // If note was unarchived, remove from archived list with animation
+    if (updates.isArchived === false) {
+      setExitingNotes(prev => new Set(prev).add(contentId));
+      setTimeout(() => {
+        setArchivedNotesData(prev => prev.filter(note => note._id !== contentId));
+        setExitingNotes(prev => {
+          const next = new Set(prev);
+          next.delete(contentId);
+          return next;
+        });
+      }, 300);
+    }
+    // If note was unfavorited, remove from favorites list with animation
+    if (updates.isPinned === false) {
+      setExitingNotes(prev => new Set(prev).add(contentId));
+      setTimeout(() => {
+        setFavoriteNotesData(prev => prev.filter(note => note._id !== contentId));
+        setExitingNotes(prev => {
+          const next = new Set(prev);
+          next.delete(contentId);
+          return next;
+        });
+      }, 300);
+    }
+    // If note was archived, update the note in the list
+    if (updates.isArchived === true) {
+      setArchivedNotesData(prev => 
+        prev.map(note => note._id === contentId ? { ...note, ...updates } : note)
+      );
+    }
+    // If note was favorited, update the note in the list
+    if (updates.isPinned === true) {
+      setFavoriteNotesData(prev => 
+        prev.map(note => note._id === contentId ? { ...note, ...updates } : note)
+      );
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!formData.name.trim()) {
@@ -590,26 +647,42 @@ export function UserSettings() {
                     </Card>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {archivedNotes.map(({ content, dashboardId, dashboardName }, index) => (
-                        <motion.div
-                          key={content._id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                        >
-                          <div className="relative">
-                            <div className="absolute -top-2 left-4 z-10">
-                              <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] text-white rounded-lg shadow-md">
-                                {dashboardName}
-                              </span>
-                            </div>
-                            <ContentCard
-                              content={content}
-                              dashboardId={dashboardId}
-                            />
-                          </div>
-                        </motion.div>
-                      ))}
+                      <AnimatePresence mode="popLayout">
+                        {archivedNotes.map(({ content, dashboardId, dashboardName }, index) => {
+                          const isExiting = exitingNotes.has(content._id);
+                          return (
+                            <motion.div
+                              key={content._id}
+                              layout
+                              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                              animate={isExiting 
+                                ? { opacity: 0, scale: 0.9, y: -10 } 
+                                : { opacity: 1, y: 0, scale: 1 }
+                              }
+                              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                              transition={{ 
+                                duration: 0.3, 
+                                delay: isExiting ? 0 : index * 0.03,
+                                layout: { duration: 0.3 }
+                              }}
+                            >
+                              <div className="relative">
+                                <div className="absolute -top-2 left-4 z-10">
+                                  <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] text-white rounded-lg shadow-md">
+                                    {dashboardName}
+                                  </span>
+                                </div>
+                                <ContentCard
+                                  content={content}
+                                  dashboardId={dashboardId}
+                                  onDelete={handleNoteDelete}
+                                  onUpdate={handleNoteUpdate}
+                                />
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
                   )}
                 </motion.div>
@@ -644,26 +717,42 @@ export function UserSettings() {
                     </Card>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {favoriteNotes.map(({ content, dashboardId, dashboardName }, index) => (
-                        <motion.div
-                          key={content._id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                        >
-                          <div className="relative">
-                            <div className="absolute -top-2 left-4 z-10">
-                              <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] text-white rounded-lg shadow-md">
-                                {dashboardName}
-                              </span>
-                            </div>
-                            <ContentCard
-                              content={content}
-                              dashboardId={dashboardId}
-                            />
-                          </div>
-                        </motion.div>
-                      ))}
+                      <AnimatePresence mode="popLayout">
+                        {favoriteNotes.map(({ content, dashboardId, dashboardName }, index) => {
+                          const isExiting = exitingNotes.has(content._id);
+                          return (
+                            <motion.div
+                              key={content._id}
+                              layout
+                              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                              animate={isExiting 
+                                ? { opacity: 0, scale: 0.9, y: -10 } 
+                                : { opacity: 1, y: 0, scale: 1 }
+                              }
+                              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                              transition={{ 
+                                duration: 0.3, 
+                                delay: isExiting ? 0 : index * 0.03,
+                                layout: { duration: 0.3 }
+                              }}
+                            >
+                              <div className="relative">
+                                <div className="absolute -top-2 left-4 z-10">
+                                  <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[hsl(var(--brand-primary))] to-[hsl(var(--brand-secondary))] text-white rounded-lg shadow-md">
+                                    {dashboardName}
+                                  </span>
+                                </div>
+                                <ContentCard
+                                  content={content}
+                                  dashboardId={dashboardId}
+                                  onDelete={handleNoteDelete}
+                                  onUpdate={handleNoteUpdate}
+                                />
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
                   )}
                 </motion.div>

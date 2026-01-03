@@ -8,7 +8,7 @@ import {
   Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
-import { useDocStore, Doc } from '@/lib/store/docStore';
+import { useDocStore, Doc, DocType } from '@/lib/store/docStore';
 import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -461,6 +461,24 @@ export function DocsView() {
     }
   };
 
+  const handleChangeDocType = async (doc: Doc, newType: DocType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (doc._id.startsWith('local_')) {
+      toast.info('Save the document first to change its type');
+      return;
+    }
+    try {
+      const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { docType: newType });
+      if (response.data.success) {
+        updateDoc(doc._id, { docType: newType });
+        toast.success(`Changed to ${newType.charAt(0).toUpperCase() + newType.slice(1)}`);
+      }
+    } catch (error) {
+      console.error('Failed to change doc type:', error);
+      toast.error('Failed to change document type');
+    }
+  };
+
   // Filter and sort docs
   const filteredDocs = docs
     .filter((doc) => doc.title.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -483,10 +501,20 @@ export function DocsView() {
     const { hasContent } = getDocPreview(doc.content);
     const isLocal = doc._id.startsWith('local_');
     
-    // Determine tag based on doc state
+    // Get tag based on docType
     const getTag = () => {
       if (doc.isPinned) return { label: 'Pinned', color: 'bg-blue-500/90 text-white' };
-      return { label: 'Document', color: 'bg-emerald-600/90 text-white' };
+      switch (doc.docType) {
+        case 'meeting':
+          return { label: 'Meeting', color: 'bg-violet-600/90 text-white' };
+        case 'project':
+          return { label: 'Project', color: 'bg-emerald-600/90 text-white' };
+        case 'personal':
+          return { label: 'Personal', color: 'bg-amber-600/90 text-white' };
+        case 'notes':
+        default:
+          return { label: 'Notes', color: 'bg-blue-600/90 text-white' };
+      }
     };
     const tag = getTag();
     
@@ -524,7 +552,24 @@ export function DocsView() {
                   <MoreHorizontal className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'notes', e)}>
+                  <FileText className="w-4 h-4 mr-2 text-blue-500" /> Notes
+                  {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'meeting', e)}>
+                  <FileText className="w-4 h-4 mr-2 text-violet-500" /> Meeting
+                  {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'project', e)}>
+                  <FileText className="w-4 h-4 mr-2 text-emerald-500" /> Project
+                  {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleChangeDocType(doc, 'personal', e)}>
+                  <FileText className="w-4 h-4 mr-2 text-amber-500" /> Personal
+                  {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
                   onClick={(e) => handleDeleteDoc(doc, e)}

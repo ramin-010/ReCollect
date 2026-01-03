@@ -49,6 +49,7 @@ export interface Content {
   createdAt: string;
   updatedAt: string;
   description?: string;
+  DashId?: string; // Dashboard ID - populated in certain contexts like user settings
   reminderData?: {
     reminderDate: string;
     message?: string;

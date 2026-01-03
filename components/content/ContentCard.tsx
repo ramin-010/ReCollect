@@ -24,9 +24,11 @@ interface ContentCardProps {
   content: Content;
   dashboardId: string;
   onEdit?: (content: Content) => void;
+  onDelete?: (contentId: string) => void;
+  onUpdate?: (contentId: string, updates: Partial<Content>) => void;
 }
 
-export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) {
+export function ContentCard({ content, dashboardId, onEdit, onDelete, onUpdate }: ContentCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -59,6 +61,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
       const response = await contentApi.delete(content._id, dashboardId);
       if (response.success) {
         removeContent(dashboardId, content._id);
+        onDelete?.(content._id);
         toast.success('Note deleted', { description: 'The note has been deleted successfully.' });
         setIsDeleteOpen(false);
       }
@@ -74,6 +77,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
       const response = await contentApi.update(content._id, { isPinned: !content.isPinned, DashId: dashboardId });
       if (response.success && response.data) {
         updateContent(dashboardId, content._id, { isPinned: !content.isPinned });
+        onUpdate?.(content._id, { isPinned: !content.isPinned });
         toast.success(content.isPinned ? 'Removed from favorites' : 'Added to favorites', { 
           description: `Note has been ${content.isPinned ? 'removed from' : 'added to'} favorites.` 
         });
@@ -88,6 +92,7 @@ export function ContentCard({ content, dashboardId, onEdit }: ContentCardProps) 
       const response = await contentApi.update(content._id, { isArchived: !content.isArchived, DashId: dashboardId });
       if (response.success && response.data) {
         updateContent(dashboardId, content._id, { isArchived: !content.isArchived });
+        onUpdate?.(content._id, { isArchived: !content.isArchived });
         toast.success(content.isArchived ? 'Unarchived' : 'Archived', { 
           description: `Note has been ${content.isArchived ? 'unarchived' : 'archived'}.` 
         });

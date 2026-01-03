@@ -1,10 +1,13 @@
 // lib/store/docStore.ts
 import { create } from 'zustand';
 
+export type DocType = 'notes' | 'meeting' | 'project' | 'personal';
+
 export interface Doc {
   _id: string;
   title: string;
   content: string;
+  docType: DocType;
   isPinned: boolean;
   isArchived: boolean;
   createdAt: string;

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { useTheme } from 'next-themes';
@@ -157,28 +158,32 @@ export function ExcalidrawDashboard() {
     
     try {
       const { elements, appState, files } = excalidrawStateRef.current;
-      
-      // Use Excalidraw's renderStaticScene to generate thumbnail
-      const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 300;
-      
-      const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.fillStyle = '#18181b'; // Dark background color
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+
       // Export as image using Excalidraw's built-in export
       const { exportToCanvas } = await import('@excalidraw/excalidraw');
-      const exportedCanvas = await exportToCanvas({
+      const tempCanvas = await exportToCanvas({
         elements,
-        appState,
+        appState: {
+          ...appState,
+          exportWithDarkMode: true,
+          viewBackgroundColor: 'transparent',
+        },
         files,
-        canvas,
-        maxWidthOrHeight: 300
+        maxWidthOrHeight: 1200
       });
+
+      // Composite onto a dark background manually to ensure visibility
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = tempCanvas.width;
+      finalCanvas.height = tempCanvas.height;
+      const ctx = finalCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#121212'; // Force dark background
+        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
       
-      return exportedCanvas.toDataURL('image/png');
+      return finalCanvas.toDataURL('image/png');
     } catch (error) {
       console.error('Thumbnail generation failed:', error);
     }
@@ -449,55 +454,47 @@ export function ExcalidrawDashboard() {
             Create and manage your visual notes and diagrams
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setCurrentView('dashboard')}
-          leftIcon={<ArrowLeft className="w-4 h-4" />}
-        >
-          Back to Dashboard
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            New Drawing
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back to Dashboard
+          </Button>
+        </div>
       </div>
 
       {/* Drawings Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Create New Card */}
-        <Card
-          variant="interactive"
-          padding="none"
-          className="cursor-pointer group border border-2 hover:border-brand-primary/50 flex flex-col items-center justify-start min-h-[200px] relative overflow-hidden flex justify-center items-center "
-          onClick={() => setShowCreateDialog(true)}
-          style={{ 
-            backgroundImage: `url(/drawing_board/draw2.png)`, 
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        >
-          <div className="bg-black/20 w-full h-full absolute top-0 left-0"></div>
-          <div className="w-12 h-12 rounded-full bg-[hsl(var(--brand-primary))]/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Plus className="w-7 h-7 text-white font-bold bg-[hsl(var(--brand-primary))] p-2 rounded-full" />
-          </div>
-          {/* <div className="absolute bottom-1/5 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <p className="text-md text-black font-bold">Create New</p>
-          </div> */}
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
         {/* Existing Drawings */}
-        {drawings.map((drawing) => (
-          <Card
+        {drawings.map((drawing, index) => (
+          <motion.div
             key={drawing.id}
-            variant="interactive"
-            padding="none"
-            className="cursor-pointer group overflow-hidden flex flex-col h-[250px] relative"
-            onClick={() => openDrawing(drawing)}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.1 }}
           >
+            <Card
+              variant="interactive"
+              padding="none"
+              className="cursor-pointer group overflow-hidden flex flex-col h-[400px] relative transition-shadow duration-300 hover:shadow-2xl border-0 ring-1 ring-black/5 dark:ring-white/10 rounded-xl"
+              onClick={() => openDrawing(drawing)}
+            >
             {/* Thumbnail */}
-            <div className="w-full h-full bg-[hsl(var(--surface-light))] relative">
+            <div className="w-full h-full bg-[hsl(var(--muted))]/20 relative bg-[radial-gradient(#00000015_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff15_1px,transparent_1px)] [background-size:20px_20px]">
               {drawing.thumbnail ? (
                 <img
                   src={drawing.thumbnail}
                   alt={drawing.name}
-                  className="w-full h-full object-cover bg-center"
+                  className="w-full h-full object-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
@@ -506,47 +503,28 @@ export function ExcalidrawDashboard() {
               )}
               
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDrawing(drawing);
-                  }}
-                  leftIcon={<Edit2 className="w-4 h-4" />}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => handleRenameClick(drawing, e)}
-                  leftIcon={<PenTool className="w-4 h-4" />}
-                >
-                  Rename
-                </Button>
-              </div>
+
             </div>
 
             {/* Drawing Info - Positioned at Bottom with Dark Background */}
-            <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 via-black/50 to-transparent pt-8 pb-3 px-4">
-              <div className="flex items-start justify-between gap-2 mb-2">
+            {/* Drawing Info - Floating Glass Bar */}
+            <div className="absolute bottom-3 left-3 right-3 bg-black/60 backdrop-blur-md rounded-lg p-3 border border-white/10 shadow-lg transform transition-transform duration-200">
+              <div className="flex items-start justify-between gap-2 mb-1">
                 <h4 className="font-medium text-sm truncate flex-1 text-white" title={drawing.name}>
                   {drawing.name}
                 </h4>
               </div>
               
-              <div className="flex items-center justify-between text-xs text-gray-200">
+              <div className="flex items-center justify-between text-xs text-gray-300">
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   <span>{new Date(drawing.updatedAt).toLocaleDateString()}</span>
                 </div>
                 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-100">
                   {/* Cloud Sync Button */}
                   <button
-                    className={`p-1 rounded transition-colors ${cloudSyncedIds.has(drawing.id) ? 'text-green-400' : 'hover:bg-blue-500/30 text-blue-400'}`}
+                    className={`p-1 rounded transition-colors ${cloudSyncedIds.has(drawing.id) ? 'text-green-400' : 'hover:bg-white/20 text-blue-400'}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!cloudSyncedIds.has(drawing.id)) {
@@ -566,7 +544,14 @@ export function ExcalidrawDashboard() {
                     <Copy className="w-3.5 h-3.5 text-white" />
                   </button>
                   <button
-                    className="p-1 hover:bg-red-500/30 rounded transition-colors"
+                    className="p-1 hover:bg-white/20 rounded transition-colors"
+                    onClick={(e) => handleRenameClick(drawing, e)}
+                    title="Rename"
+                  >
+                    <PenTool className="w-3.5 h-3.5 text-white" />
+                  </button>
+                  <button
+                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteDrawing(drawing.id);
@@ -579,6 +564,7 @@ export function ExcalidrawDashboard() {
               </div>
             </div>
           </Card>
+          </motion.div>
         ))}
       </div>
 
