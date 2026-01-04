@@ -19,7 +19,7 @@ import { UserSettings } from '@/components/settings/UserSettings';
 import { ExcalidrawDashboard } from '@/components/drawing/ExcalidrawDashboard';
 import { TodoView } from '@/components/todo/TodoView';
 import { ExpenseView } from '@/components/expenses/ExpenseView';
-import { DocsView } from '@/components/docs/DocsView';
+import { DocsView } from '@/components/docs/doc_view';
 import { useViewStore } from '@/lib/store/viewStore';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';

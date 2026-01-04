@@ -13,7 +13,8 @@ import { useDocStore, Doc, DocType } from '@/lib/store/docStore';
 import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
-import { DocEditor } from './DocEditor';
+import { DocEditor } from './doc_editor';
+// import { DocEditor } from './DocEditor';
 import { SharedDocViewer } from './SharedDocViewer';
 import { ShareDialog } from './ShareDialog';
 import {
