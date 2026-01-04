@@ -11,7 +11,7 @@ import { Button } from '@/components/ui-base/Button';
 import { useDocStore, Doc, DocType } from '@/lib/store/docStore';
 import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
-import { DocEditor } from '../doc_editor';
+import { DocEditor, CollaborativeDocEditor } from '../doc_editor';
 import { SharedDocViewer } from '../SharedDocViewer';
 import { ShareDialog } from '../ShareDialog';
 import {
@@ -297,6 +297,7 @@ export function DocsView() {
   }, [setCurrentDoc]);
 
   if (currentDoc) {
+    // Viewer role - read-only access
     if (currentDocRole === 'viewer') {
       return (
         <SharedDocViewer 
@@ -313,6 +314,16 @@ export function DocsView() {
       );
     }
     
+    // Check if doc is shared (has collaborators or user is an editor collaborator)
+    const isSharedDoc = (currentDoc.collaborators && currentDoc.collaborators.length > 0) || 
+                        currentDocRole === 'editor';
+    
+    if (isSharedDoc) {
+      // Use CollaborativeDocEditor with real-time WebSocket sync
+      return <CollaborativeDocEditor doc={currentDoc} onBack={handleCloseDoc} />;
+    }
+    
+    // Personal doc - use regular DocEditor with auto-save
     return <DocEditor doc={currentDoc} onBack={handleCloseDoc} />;
   }
 

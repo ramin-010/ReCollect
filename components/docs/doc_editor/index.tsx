@@ -361,3 +361,6 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
 }
 
 export default DocEditor;
+
+// Re-export collaborative editor
+export { CollaborativeDocEditor } from './CollaborativeDocEditor';

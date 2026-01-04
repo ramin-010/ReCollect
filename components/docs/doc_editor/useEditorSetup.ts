@@ -39,7 +39,7 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-      }),
+      }) as any,
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') {
@@ -81,7 +81,7 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
       attributes: {
         class: 'focus:outline-none min-h-[900px]',
       },
-      handlePaste: (view, event, slice) => {
+      handlePaste: (view, event, _slice) => {
         const item = event.clipboardData?.items[0];
         if (item?.type.indexOf('image') === 0) {
           event.preventDefault();
@@ -100,7 +100,7 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
         }
         return false;
       },
-      handleDrop: (view, event, slice, moved) => {
+      handleDrop: (view, event, _slice, moved) => {
         if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
           const file = event.dataTransfer.files[0];
           if (file.type.indexOf('image') === 0) {
