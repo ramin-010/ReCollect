@@ -26,25 +26,33 @@ export interface SharedByMeSectionProps {
 }
 
 // Utility functions
-export const getDocPreview = (contentStr: string | object | null | undefined): { text: string; hasContent: boolean } => {
+// getDocPreview now accepts yjsState (Base64) or JSON content
+export const getDocPreview = (yjsStateOrContent: string | object | null | undefined): { text: string; hasContent: boolean } => {
   try {
-    if (!contentStr) {
+    if (!yjsStateOrContent) {
       return { text: '', hasContent: false };
     }
 
     let content: any;
     
-    if (typeof contentStr === 'string') {
-      if (contentStr.trim() === '') {
+    if (typeof yjsStateOrContent === 'string') {
+      if (yjsStateOrContent.trim() === '') {
         return { text: '', hasContent: false };
-      }   
+      }
+      // Try to parse as JSON first (for backward compat)
       try {
-        content = JSON.parse(contentStr);
-      } catch (parseError) {
-        return { text: contentStr.substring(0, 300), hasContent: true };
+        content = JSON.parse(yjsStateOrContent);
+      } catch {
+        // If not JSON, try to convert from yjsState
+        try {
+          const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
+          content = yjsStateToJson(yjsStateOrContent);
+        } catch {
+          return { text: '', hasContent: false };
+        }
       }
     } else {
-      content = contentStr;
+      content = yjsStateOrContent;
     }
 
     if (!content || typeof content !== 'object') {

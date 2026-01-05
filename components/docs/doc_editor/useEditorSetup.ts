@@ -15,24 +15,34 @@ import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SlashCommands } from '../SlashCommands';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { Doc } from '@/lib/store/docStore';
+import { toast } from 'sonner';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
+import { imageStorage } from '@/lib/storage/imageStorage';
 
 interface UseEditorSetupOptions {
   doc: Doc;
   onContentChange: (jsonString: string) => void;
 }
 
+// Generate unique image ID
+function generateImageId(): string {
+  return `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) {
   const getInitialContent = useCallback(() => {
-    try {
-      const parsed = JSON.parse(doc.content);
-      if (parsed && typeof parsed === 'object') {
-        return parsed;
+    // Prioritize yjsState for unified storage (collab compatibility)
+    if (doc.yjsState) {
+      try {
+        return yjsStateToJson(doc.yjsState);
+      } catch (err) {
+        console.error('[Editor] Failed to load yjsState:', err);
       }
-      return '';
-    } catch {
-      return doc.content || '';
     }
-  }, [doc.content]);
+    
+    // No yjsState available - return empty document
+    return { type: 'doc', content: [] };
+  }, [doc.yjsState]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -81,39 +91,98 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
       attributes: {
         class: 'focus:outline-none min-h-[900px]',
       },
-      handlePaste: (view, event, _slice) => {
-        const item = event.clipboardData?.items[0];
-        if (item?.type.indexOf('image') === 0) {
+      handlePaste: (view, event) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        const image = items.find(item => item.type.startsWith('image'));
+        
+        if (image) {
           event.preventDefault();
-          const file = item.getAsFile();
+          const file = image.getAsFile();
           if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const { schema } = view.state;
-              const node = schema.nodes.image.create({ src: e.target?.result });
-              const transaction = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(transaction);
-            };
-            reader.readAsDataURL(file);
+            const { $from } = view.state.selection;
+            const currentNode = $from.parent;
+            
+            const imageId = generateImageId();
+            
+            (async () => {
+              try {
+                await imageStorage.storeImage(imageId, file);
+                
+                const blobUrl = imageStorage.createObjectURL(file);
+                
+                const schema = view.state.schema;
+                const imageType = schema.nodes.resizableImage || schema.nodes.image;
+                
+                if (imageType) {
+                  const node = imageType.create({ 
+                    src: blobUrl,
+                    imageId: imageId,
+                  });
+                  
+                  let tr = view.state.tr;
+                  
+                  if (currentNode.type.name === 'paragraph' && currentNode.content.size === 0) {
+                    const start = $from.before($from.depth);
+                    const end = $from.after($from.depth);
+                    tr = tr.replaceWith(start, end, node);
+                  } else {
+                    tr = tr.insert($from.pos, node);
+                  }
+                  
+                  view.dispatch(tr);
+                  toast.success('Image added');
+                }
+              } catch (err) {
+                console.error('[Editor] Failed to store image:', err);
+                toast.error('Failed to add image');
+              }
+            })();
+            
             return true;
           }
         }
         return false;
       },
+      // Local storage on drop - upload happens on save
       handleDrop: (view, event, _slice, moved) => {
-        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
-          const file = event.dataTransfer.files[0];
-          if (file.type.indexOf('image') === 0) {
+        if (!moved && event.dataTransfer?.files?.length) {
+          const images = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image'));
+          
+          if (images.length > 0) {
             event.preventDefault();
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const { schema } = view.state;
-              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-              const node = schema.nodes.image.create({ src: e.target?.result });
-              const transaction = view.state.tr.insert(coordinates?.pos || 0, node);
-              view.dispatch(transaction);
-            };
-            reader.readAsDataURL(file);
+            const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            const dropPos = coordinates?.pos ?? view.state.selection.from;
+            
+            images.forEach(file => {
+              const imageId = generateImageId();
+              
+              (async () => {
+                try {
+                  // Store blob in IndexedDB
+                  await imageStorage.storeImage(imageId, file);
+                  
+                  // Create blob URL for immediate display
+                  const blobUrl = imageStorage.createObjectURL(file);
+                  
+                  const schema = view.state.schema;
+                  const imageType = schema.nodes.resizableImage || schema.nodes.image;
+                  
+                  if (imageType) {
+                    const node = imageType.create({ 
+                      src: blobUrl,
+                      imageId: imageId,
+                    });
+                    const tr = view.state.tr.replaceWith(dropPos, dropPos, node);
+                    view.dispatch(tr);
+                    toast.success('Image added');
+                  }
+                } catch (err) {
+                  console.error('[Editor] Failed to store image:', err);
+                  toast.error('Failed to add image');
+                }
+              })();
+            });
+            
             return true;
           }
         }
@@ -124,3 +193,5 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
 
   return { editor, getInitialContent };
 }
+
+

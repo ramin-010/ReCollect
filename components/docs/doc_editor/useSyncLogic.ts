@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { offlineStorage, OfflineDoc } from '@/lib/utils/offlineStorage';
 import { docApi, ServerDoc } from '@/lib/api/docApi';
 import { ConflictData } from './types';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 interface UseSyncLogicOptions {
   docId: string;
@@ -37,9 +38,10 @@ export function useSyncLogic({
 
         try {
           localData = await offlineStorage.loadDoc(docId);
-          if (localData) {
-            editor.commands.setContent(localData.content);
-            contentRef.current = JSON.stringify(localData.content);
+          if (localData && localData.yjsState) {
+            const content = yjsStateToJson(localData.yjsState);
+            editor.commands.setContent(content);
+            contentRef.current = JSON.stringify(content);
             setTitle(localData.title);
             if (localData.coverImage) setCoverImage(localData.coverImage);
           }
@@ -67,14 +69,17 @@ export function useSyncLogic({
             });
             setShowConflictDialog(true);
           } else if (serverUpdatedAt > localUpdatedAt) {
-            editor.commands.setContent(serverData.content);
-            contentRef.current = JSON.stringify(serverData.content);
+            if (serverData.yjsState) {
+              const content = yjsStateToJson(serverData.yjsState);
+              editor.commands.setContent(content);
+              contentRef.current = JSON.stringify(content);
+            }
             setTitle(serverData.title);
             setCoverImage(serverData.coverImage);
             
             await offlineStorage.saveDoc(
               docId,
-              serverData.content,
+              serverData.yjsState || '',
               serverData.title,
               serverData.coverImage,
               'synced',
@@ -82,14 +87,17 @@ export function useSyncLogic({
             );
           }
         } else if (!localData && serverData) {
-          editor.commands.setContent(serverData.content);
-          contentRef.current = JSON.stringify(serverData.content);
+          if (serverData.yjsState) {
+            const content = yjsStateToJson(serverData.yjsState);
+            editor.commands.setContent(content);
+            contentRef.current = JSON.stringify(content);
+          }
           setTitle(serverData.title);
           setCoverImage(serverData.coverImage);
           
           await offlineStorage.saveDoc(
             docId,
-            serverData.content,
+            serverData.yjsState || '',
             serverData.title,
             serverData.coverImage,
             'synced',

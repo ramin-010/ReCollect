@@ -10,7 +10,7 @@ import { DocType } from '@/lib/store/docStore';
 interface SharedDocData {
   _id: string;
   title: string;
-  content: any;
+  yjsState?: string; // Base64 Yjs state
   docType: DocType;
   coverImage: string | null;
   updatedAt: string;

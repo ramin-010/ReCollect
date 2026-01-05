@@ -1,75 +1,75 @@
 /**
- * Doc API - Real backend integration with image upload support
+ * Doc API - Unified yjsState storage with image upload support
  */
 
 import axiosInstance from '@/lib/utils/axios';
+import { imageStorage } from '@/lib/storage/imageStorage';
 
 export interface ServerDoc {
   _id: string;
-  content: any;
+  yjsState?: string; 
   title: string;
   coverImage: string | null;
   isPinned: boolean;
   isArchived: boolean;
-  cloudImages?: { nodeId: string; cloudUrl: string; cloudPublicId: string }[];
+  cloudImages?: { imageId: string; cloudUrl: string; cloudPublicId: string }[];
   updatedAt: string;
   createdAt: string;
 }
 
 /**
- * Extract images from TipTap JSON content and prepare for upload
- * Converts data URLs to blobs and replaces with PENDING_UPLOAD placeholders
+ * Extract ALL current image IDs from editor content (for cleanup tracking)
+ * Returns imageIds for both pending uploads and already uploaded images
  */
-export const extractImagesFromContent = async (content: any): Promise<{
-  formData: FormData;
-  imageNodeIds: string[];
-  contentWithPlaceholders: any;
-}> => {
-  const formData = new FormData();
-  const imageNodeIds: string[] = [];
+function extractAllImageIds(content: any): string[] {
+  const allIds: string[] = [];
   
-  // Deep clone content to avoid mutating original
-  const modifiedContent = JSON.parse(JSON.stringify(content));
-  
-  // Recursive function to find and process image nodes
-  const processNode = async (node: any): Promise<void> => {
-    if (node.type === 'image' && node.attrs?.src) {
-      // Only process data URLs (already-uploaded cloud URLs should remain unchanged)
-      if (node.attrs.src.startsWith('data:')) {
-        try {
-          // Convert data URL to blob
-          const response = await fetch(node.attrs.src);
-          const blob = await response.blob();
-          
-          // Generate unique node ID
-          const nodeId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          
-          // Append blob to FormData with the wildcard pattern
-          formData.append(`image_${nodeId}`, blob, 'image.png');
-          imageNodeIds.push(nodeId);
-          
-          // Replace data URL with placeholder
-          node.attrs.src = `PENDING_UPLOAD:${nodeId}`;
-          
-          console.log(`[docApi] Extracted image: ${nodeId}`);
-        } catch (err) {
-          console.error('[docApi] Failed to extract image:', err);
-        }
+  function traverse(node: any) {
+    if (node.type === 'resizableImage' || node.type === 'image') {
+      
+      if (node.attrs?.imageId) {
+        allIds.push(node.attrs.imageId);
+      }
+      
+      else if (node.attrs?.src && node.attrs.src.includes('cloudinary')) {
+        
+        allIds.push(node.attrs.src);
       }
     }
     
-    // Recursively process child nodes
     if (node.content && Array.isArray(node.content)) {
-      for (const child of node.content) {
-        await processNode(child);
+      node.content.forEach(traverse);
+    }
+  }
+  
+  traverse(content);
+  return allIds;
+}
+
+/**
+ * Extract pending image nodes that need uploading
+ * Returns array of { imageId, path } for images with blob URLs
+ */
+function extractPendingImages(content: any): { imageId: string; path: number[] }[] {
+  const pending: { imageId: string; path: number[] }[] = [];
+  
+  function traverse(node: any, path: number[] = []) {
+    if (node.type === 'resizableImage' || node.type === 'image') {
+      if (node.attrs?.imageId && node.attrs.src?.startsWith('blob:')) {
+        pending.push({ imageId: node.attrs.imageId, path: [...path] });
       }
     }
-  };
+    
+    if (node.content && Array.isArray(node.content)) {
+      node.content.forEach((child: any, index: number) => {
+        traverse(child, [...path, index]);
+      });
+    }
+  }
   
-  await processNode(modifiedContent);
-  
-  return { formData, imageNodeIds, contentWithPlaceholders: modifiedContent };
-};
+  traverse(content);
+  return pending;
+}
 
 export const docApi = {
   /**
@@ -110,7 +110,8 @@ export const docApi = {
   },
 
   /**
-   * Save document to server with image upload support
+   * Save document to server
+   * Always sends JSON content - backend handles yjsState conversion
    */
   async saveDoc(id: string, data: {
     content: any;
@@ -119,28 +120,74 @@ export const docApi = {
   }): Promise<{ success: boolean; updatedAt: string; data?: ServerDoc }> {
     console.log('[docApi] Saving doc:', id);
     
-    // Extract images from content
-    const { formData, imageNodeIds, contentWithPlaceholders } = await extractImagesFromContent(data.content);
     
-    // Add other fields to FormData
-    formData.append('content', JSON.stringify(contentWithPlaceholders));
-    formData.append('title', data.title);
-    if (data.coverImage !== null) {
-      formData.append('coverImage', data.coverImage);
+    const allImageIds = extractAllImageIds(data.content);
+    
+    
+    const pendingImages = extractPendingImages(data.content);
+    console.log('[docApi] All images:', allImageIds.length, '| Pending:', pendingImages.length);
+    
+    if (pendingImages.length > 0) {
+      
+      const formData = new FormData();
+      const imageNodeIds: string[] = [];
+      
+      for (const { imageId } of pendingImages) {
+        try {
+          const blob = await imageStorage.getImage(imageId);
+          if (blob) {
+            formData.append(`image_${imageId}`, blob, 'image.png');
+            imageNodeIds.push(imageId);
+          }
+        } catch (err) {
+          console.error(`[docApi] Failed to get image ${imageId}:`, err);
+        }
+      }
+      
+      
+      formData.append('content', JSON.stringify(data.content));
+      formData.append('title', data.title);
+      formData.append('coverImage', data.coverImage || '');
+      formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
+      formData.append('allImageIds', JSON.stringify(allImageIds));
+      
+      console.log('[docApi] Sending FormData with', imageNodeIds.length, 'images');
+      
+      const response = await axiosInstance.post(`/api/docs/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      
+      for (const imageId of imageNodeIds) {
+        try {
+          await imageStorage.deleteImage(imageId);
+        } catch (err) {
+          console.error(`[docApi] Failed to cleanup image ${imageId}:`, err);
+        }
+      }
+      
+      return {
+        success: response.data.success,
+        updatedAt: response.data.data?.updatedAt || new Date().toISOString(),
+        data: response.data.data,
+      };
+    } else {
+      
+      const response = await axiosInstance.post(`/api/docs/${id}`, {
+        content: data.content,
+        title: data.title,
+        coverImage: data.coverImage,
+        allImageIds: allImageIds,
+      });
+      
+      return {
+        success: response.data.success,
+        updatedAt: response.data.data?.updatedAt || new Date().toISOString(),
+        data: response.data.data,
+      };
     }
-    formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
-    
-    console.log(`[docApi] Uploading ${imageNodeIds.length} images`);
-    
-    const response = await axiosInstance.post(`/api/docs/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    
-    return {
-      success: response.data.success,
-      updatedAt: response.data.data?.updatedAt || new Date().toISOString(),
-      data: response.data.data,
-    };
   },
 
   /**
@@ -152,3 +199,4 @@ export const docApi = {
     return { success: response.data.success };
   },
 };
+

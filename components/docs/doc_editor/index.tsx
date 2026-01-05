@@ -27,9 +27,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
   
-  const contentRef = useRef<string>(
-    typeof doc.content === 'string' ? doc.content : JSON.stringify(doc.content)
-  );
+  const contentRef = useRef<string>('{}');
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   const handleContentChange = (jsonString: string) => {

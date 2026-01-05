@@ -1,10 +1,10 @@
 export const DB_NAME = 'RecollectDB_Doc';
 export const STORE_NAME = 'docs';
-export const DB_VERSION = 2; // Bumped for schema change
+export const DB_VERSION = 3; // Bumped for yjsState migration
 
 export interface OfflineDoc {
   id: string;
-  content: any;
+  yjsState: string; // Base64 Yjs state - single source of truth
   title: string;
   coverImage: string | null;
   updatedAt: number;             // Local timestamp
@@ -31,7 +31,7 @@ export const offlineStorage = {
 
   async saveDoc(
     id: string, 
-    content: any, 
+    yjsState: string, 
     title: string, 
     coverImage: string | null,
     syncStatus: 'synced' | 'pending' | 'conflict' = 'pending',
@@ -43,7 +43,7 @@ export const offlineStorage = {
       const store = transaction.objectStore(STORE_NAME);
       const doc: OfflineDoc = {
         id,
-        content,
+        yjsState,
         title,
         coverImage,
         updatedAt: Date.now(),
@@ -91,14 +91,12 @@ export const offlineStorage = {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const allDocs = request.result as OfflineDoc[];
-        // Filter for docs with 'pending' status (local-only docs)
         const pendingDocs = allDocs.filter(doc => doc.syncStatus === 'pending');
         resolve(pendingDocs);
       };
     });
   },
 
-  // Get ALL docs from offline storage (for merging content with server docs)
   async getAllOfflineDocs(): Promise<OfflineDoc[]> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {

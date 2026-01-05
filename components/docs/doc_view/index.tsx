@@ -60,7 +60,7 @@ export function DocsView() {
       const localDocs = pendingDocs.map(pd => ({
         _id: pd.id,
         title: pd.title || 'Untitled',
-        content: typeof pd.content === 'string' ? pd.content : JSON.stringify(pd.content),
+        yjsState: pd.yjsState,
         isPinned: false,
         isArchived: false,
         createdAt: new Date(pd.updatedAt).toISOString(),
@@ -69,12 +69,10 @@ export function DocsView() {
       
       const mergedServerDocs = serverDocs.map((serverDoc: any) => {
         const offlineDoc = offlineContentMap.get(serverDoc._id);
-        if (offlineDoc && offlineDoc.content) {
+        if (offlineDoc && offlineDoc.yjsState) {
           return {
             ...serverDoc,
-            content: typeof offlineDoc.content === 'string' 
-              ? offlineDoc.content 
-              : JSON.stringify(offlineDoc.content),
+            yjsState: offlineDoc.yjsState,
           };
         }
         return serverDoc;
@@ -179,7 +177,7 @@ export function DocsView() {
         if (offlineDoc) {
           await offlineStorage.saveDoc(
             doc._id,
-            offlineDoc.content,
+            offlineDoc.yjsState,
             offlineDoc.title,
             offlineDoc.coverImage,
             'synced',
@@ -199,7 +197,7 @@ export function DocsView() {
   const handleRenameDoc = useCallback(async (doc: Doc, newTitle: string) => {
       try {
         if (doc._id.startsWith('local_')) {
-          await offlineStorage.saveDoc(doc._id, doc.content, newTitle, doc.coverImage || null, 'pending');
+          await offlineStorage.saveDoc(doc._id, doc.yjsState || '', newTitle, doc.coverImage || null, 'pending');
           updateDoc(doc._id, { title: newTitle });
         } else {
           const response = await axiosInstance.patch(`/api/docs/${doc._id}`, { title: newTitle });
@@ -211,7 +209,7 @@ export function DocsView() {
             if (offlineDoc) {
               await offlineStorage.saveDoc(
                 doc._id,
-                offlineDoc.content,
+                offlineDoc.yjsState,
                 newTitle,
                 offlineDoc.coverImage,
                 'synced',
@@ -242,7 +240,7 @@ export function DocsView() {
         if (offlineDoc) {
           await offlineStorage.saveDoc(
             doc._id,
-            offlineDoc.content,
+            offlineDoc.yjsState,
             offlineDoc.title,
             offlineDoc.coverImage,
             'synced',
@@ -304,7 +302,7 @@ export function DocsView() {
           doc={{
             _id: currentDoc._id,
             title: currentDoc.title,
-            content: currentDoc.content,
+            yjsState: currentDoc.yjsState,
             coverImage: currentDoc.coverImage,
             updatedAt: currentDoc.updatedAt,
           }}

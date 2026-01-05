@@ -27,7 +27,7 @@ interface SharedDocViewerProps {
   doc: {
     _id?: string;
     title: string;
-    content: any;
+    yjsState?: string; // Base64 Yjs state
     coverImage?: string | null;
     updatedAt: string;
   };
@@ -74,7 +74,7 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-      }),
+      } as any) as any,
       Link.configure({
         openOnClick: true, // Allow clicking links in read-only mode
         HTMLAttributes: {
@@ -96,7 +96,7 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
         elementsToJoin: ['bulletList', 'orderedList'],
       }),
     ],
-    content: doc.content, 
+    content: '', 
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[500px] pro-prose', // Add prose classes if needed
@@ -109,26 +109,17 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
   }, []);
 
   useEffect(() => {
-    if (editor && doc.content) {
-       // Should we parse content? 
-       // The API returns whatever was stored. DocEditor stores JSON object (stringified in DB maybe? or Mixed).
-       // DocSchema says "content: Schema.Types.Mixed". usually it's the JSON object directly.
-       // But DocEditor `contentRef` stores stringified.
-       // Let's assume the API returns the JSON object if it's Mixed type.
-       // If it is stringified JSON, Tiptap might handle it or we need to parse.
-       // DocEditor `getInitialContent` parses if string.
-       // Let's safe handle it.
-       let content = doc.content;
-       if (typeof content === 'string') {
-         try {
-           content = JSON.parse(content);
-         } catch (e) {
-           // treat as HTML string or plain text
-         }
+    if (editor && doc.yjsState) {
+       // Convert yjsState to JSON content
+       try {
+         const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
+         const content = yjsStateToJson(doc.yjsState);
+         editor.commands.setContent(content);
+       } catch (e) {
+         console.error('Failed to load yjsState:', e);
        }
-       editor.commands.setContent(content);
     }
-  }, [editor, doc.content]);
+  }, [editor, doc.yjsState]);
 
 
   if (!mounted || !editor) {

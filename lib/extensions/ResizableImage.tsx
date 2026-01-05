@@ -22,6 +22,17 @@ export const ResizableImage = Image.extend({
           };
         },
       },
+      // Track pending uploads - imageId links to IndexedDB blob
+      imageId: {
+        default: null,
+        renderHTML: (attributes) => {
+          if (!attributes.imageId) return {};
+          return {
+            'data-image-id': attributes.imageId,
+          };
+        },
+        parseHTML: (element) => element.getAttribute('data-image-id'),
+      },
     };
   },
 

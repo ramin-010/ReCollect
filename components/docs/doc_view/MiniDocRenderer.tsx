@@ -1,24 +1,74 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { imageStorage } from '@/lib/storage/imageStorage';
+
+// Hydrating image component for previews with pending uploads
+const HydratingImage = ({ src, imageId }: { src?: string; imageId?: string }) => {
+  const [displaySrc, setDisplaySrc] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // If we have an imageId and src is blob (stale), hydrate from IndexedDB
+    if (imageId && (!src || src.startsWith('blob:'))) {
+      (async () => {
+        try {
+          const blob = await imageStorage.getImage(imageId);
+          if (blob) {
+            const blobUrl = imageStorage.createObjectURL(blob);
+            setDisplaySrc(blobUrl);
+          }
+        } catch (err) {
+          console.error(`[HydratingImage] Failed to hydrate ${imageId}:`, err);
+        }
+      })();
+    } else if (src) {
+      setDisplaySrc(src);
+    }
+    
+    return () => {
+      if (displaySrc && displaySrc.startsWith('blob:')) {
+        imageStorage.revokeObjectURL(displaySrc);
+      }
+    };
+  }, [imageId, src]);
+
+  return (
+    <div className="h-[150px] w-full bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] rounded-[3px] overflow-hidden relative my-[6px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]">
+      {displaySrc ? (
+        <img src={displaySrc} alt="Preview" className="w-full h-full object-cover" />
+      ) : (
+        <div className="flex items-center justify-center h-full text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[12px] gap-2">
+          <span className="animate-pulse">Loading...</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface MiniDocRendererProps {
-  content: any;
+  yjsState?: string;
+  content?: any;
 }
 
-export const MiniDocRenderer = ({ content }: MiniDocRendererProps) => {
-  if (!content) return null;
-
+export const MiniDocRenderer = ({ yjsState, content }: MiniDocRendererProps) => {
   let nodes: any[] = [];
+  
   try {
-    const json = typeof content === 'string' ? JSON.parse(content) : content;
+    let json: any = null;
+    
+    // Prefer yjsState if provided
+    if (yjsState) {
+      const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
+      json = yjsStateToJson(yjsState);
+    } else if (content) {
+      // Fallback to content (for backward compat)
+      json = typeof content === 'string' ? JSON.parse(content) : content;
+    }
+    
+    if (!json) return null;
     nodes = json.content || [];
   } catch (e) {
-    return (
-      <p className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-4 font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
-        {typeof content === 'string' ? content.substring(0, 150) : ''}
-      </p>
-    );
+    return null;
   }
 
   if (!Array.isArray(nodes) || !nodes.length) {
@@ -147,28 +197,13 @@ export const MiniDocRenderer = ({ content }: MiniDocRendererProps) => {
             );
 
           case 'image':
+          case 'resizableImage':
             return (
-              <div 
+              <HydratingImage 
                 key={i} 
-                className="h-[150px] w-full bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] rounded-[3px] overflow-hidden relative my-[6px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]"
-              >
-                {node.attrs?.src ? (
-                  <img 
-                    src={node.attrs.src} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[12px] gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                      <polyline points="21 15 16 10 5 21" strokeWidth="2"/>
-                    </svg>
-                    <span>Image</span>
-                  </div>
-                )}
-              </div>
+                src={node.attrs?.src} 
+                imageId={node.attrs?.imageId}
+              />
             );
 
           case 'blockquote':

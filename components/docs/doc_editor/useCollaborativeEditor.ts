@@ -95,23 +95,32 @@ export function useCollaborativeEditor({
           event.preventDefault();
           const file = image.getAsFile();
           if (file) {
-             const pos = view.state.selection.from;
+             // Get the resolved position and current node
+             const { $from } = view.state.selection;
+             const currentNode = $from.parent;
              
              toast.promise(uploadToCloud(file), {
                 loading: 'Uploading image...',
                 success: (url) => {
                    if (url) {
-                      // Use ProseMirror transaction directly to avoid 'editor' closure issues
-                      // 'editor' is undefined when editorProps is defined
                       const schema = view.state.schema;
-                      // Determine node type (usually 'image' or 'resizableImage')
                       const imageType = schema.nodes.resizableImage || schema.nodes.image;
                       
                       if (imageType) {
                          const node = imageType.create({ src: url });
-                         const tr = view.state.tr.insert(pos, node);
+                         let tr = view.state.tr;
+                         
+                         // Check if we're in an empty paragraph - replace the whole paragraph
+                         if (currentNode.type.name === 'paragraph' && currentNode.content.size === 0) {
+                            // Get the position of the entire empty paragraph
+                            const start = $from.before($from.depth);
+                            const end = $from.after($from.depth);
+                            tr = tr.replaceWith(start, end, node);
+                         } else {
+                            // Insert after current position
+                            tr = tr.insert($from.pos, node);
+                         }
                          view.dispatch(tr);
-                         console.log('Inserted image at', pos,"rurl", url);
                       } else {
                          console.error('Image node type not found in schema');
                       }
@@ -144,7 +153,8 @@ export function useCollaborativeEditor({
                           
                           if (imageType) {
                              const node = imageType.create({ src: url });
-                             const tr = view.state.tr.insert(dropPos, node);
+                             // Use replaceWith for accurate positioning
+                             const tr = view.state.tr.replaceWith(dropPos, dropPos, node);
                              view.dispatch(tr);
                           }
                        }

@@ -7,13 +7,14 @@ import { docApi } from '@/lib/api/docApi';
 import { toast } from 'sonner';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { ConflictData } from './types';
+import { jsonToYjsState, yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 interface UseSaveHandlersOptions {
   doc: Doc;
   editor: Editor | null;
   title: string;
   coverImage: string | null;
-  contentRef: React.MutableRefObject<string>;
+  contentRef: React.MutableRefObject<string>; // Still stores JSON string for editor
   setTitle: (title: string) => void;
   setCoverImage: (cover: string | null) => void;
   setHasUnsavedChanges: (value: boolean) => void;
@@ -55,7 +56,9 @@ export function useSaveHandlers({
       
       console.log("Auto-saving to offline storage...");
       try {
-        await offlineStorage.saveDoc(doc._id, JSON.parse(contentRef.current), title, coverImage);
+        const content = JSON.parse(contentRef.current);
+        const yjsState = jsonToYjsState(content);
+        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage);
         setHasUnsavedChanges(false);
       } catch (e) {
         console.error("Auto-save failed", e);
@@ -71,8 +74,11 @@ export function useSaveHandlers({
       
       const content = JSON.parse(contentRef.current);
       
-      await offlineStorage.saveDoc(doc._id, content, title, coverImage, 'pending');
+      // Save to offline storage (needs yjsState format)
+      const yjsState = jsonToYjsState(content);
+      await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       
+      // Send to backend (always sends JSON content - backend handles conversion)
       const result = await docApi.saveDoc(doc._id, {
         content,
         title,
@@ -80,16 +86,17 @@ export function useSaveHandlers({
       });
       
       if (result.success && result.data) {
-        const serverContent = result.data.content;
+        const serverYjsState = result.data.yjsState;
         const serverUpdatedAt = new Date(result.updatedAt).getTime();
         
-        if (editor && serverContent) {
+        if (editor && serverYjsState) {
+          const serverContent = yjsStateToJson(serverYjsState);
           editor.commands.setContent(serverContent);
           contentRef.current = JSON.stringify(serverContent);
         }
         
-        await offlineStorage.saveDoc(doc._id, serverContent || content, title, coverImage, 'synced', serverUpdatedAt);
-        updateDoc(doc._id, { content: contentRef.current, title });
+        await offlineStorage.saveDoc(doc._id, serverYjsState || yjsState, title, coverImage, 'synced', serverUpdatedAt);
+        updateDoc(doc._id, { yjsState: serverYjsState || yjsState, title });
         setHasUnsavedChanges(false);
         toast.success('Saved to cloud');
       }
@@ -103,13 +110,9 @@ export function useSaveHandlers({
 
   const handleKeepMine = useCallback(async () => {
     if (doc._id) {
-      await offlineStorage.saveDoc(
-        doc._id,
-        JSON.parse(contentRef.current),
-        title,
-        coverImage,
-        'pending'
-      );
+      const content = JSON.parse(contentRef.current);
+      const yjsState = jsonToYjsState(content);
+      await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       setHasUnsavedChanges(true);
       toast.success('Keeping your changes. Save to sync to cloud.');
     }
@@ -121,14 +124,17 @@ export function useSaveHandlers({
     if (conflictData?.serverDoc && editor) {
       const server = conflictData.serverDoc;
       
-      editor.commands.setContent(server.content);
-      contentRef.current = JSON.stringify(server.content);
+      if (server.yjsState) {
+        const serverContent = yjsStateToJson(server.yjsState);
+        editor.commands.setContent(serverContent);
+        contentRef.current = JSON.stringify(serverContent);
+      }
       setTitle(server.title);
       setCoverImage(server.coverImage);
       
       await offlineStorage.saveDoc(
         doc._id,
-        server.content,
+        server.yjsState || '',
         server.title,
         server.coverImage,
         'synced',
@@ -145,22 +151,17 @@ export function useSaveHandlers({
   const handleSaveAsNew = useCallback(async () => {
     if (doc._id && conflictData?.serverDoc && editor) {
       const localContent = JSON.parse(contentRef.current);
+      const localYjsState = jsonToYjsState(localContent);
       const localTitle = `${title} (Local Copy)`;
       
       const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      await offlineStorage.saveDoc(
-        localId,
-        localContent,
-        localTitle,
-        coverImage,
-        'pending'
-      );
+      await offlineStorage.saveDoc(localId, localYjsState, localTitle, coverImage, 'pending');
       
       addDoc({
         _id: localId,
         title: localTitle,
-        content: JSON.stringify(localContent),
+        yjsState: localYjsState,
         docType: doc.docType || 'notes',
         coverImage: coverImage,
         isPinned: false,
@@ -172,14 +173,17 @@ export function useSaveHandlers({
       toast.success(`Local copy saved as "${localTitle}". Save it to push to cloud.`);
       
       const server = conflictData.serverDoc;
-      editor.commands.setContent(server.content);
-      contentRef.current = JSON.stringify(server.content);
+      if (server.yjsState) {
+        const serverContent = yjsStateToJson(server.yjsState);
+        editor.commands.setContent(serverContent);
+        contentRef.current = JSON.stringify(serverContent);
+      }
       setTitle(server.title);
       setCoverImage(server.coverImage);
       
       await offlineStorage.saveDoc(
         doc._id,
-        server.content,
+        server.yjsState || '',
         server.title,
         server.coverImage,
         'synced',
@@ -200,16 +204,13 @@ export function useSaveHandlers({
           saveTimeoutRef.current = null;
         }
         
-        await offlineStorage.saveDoc(
-          doc._id, 
-          JSON.parse(contentRef.current), 
-          title, 
-          coverImage, 
-          'pending'
-        );
+        const content = JSON.parse(contentRef.current);
+        const yjsState = jsonToYjsState(content);
+        
+        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
         
         updateDoc(doc._id, { 
-          content: contentRef.current, 
+          yjsState,
           title,
           updatedAt: new Date().toISOString()
         });

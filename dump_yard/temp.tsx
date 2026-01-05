@@ -14,7 +14,7 @@ import {TextStyle} from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
-import { SlashCommands } from './SlashCommands';
+import { SlashCommands } from '../components/docs/SlashCommands';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
@@ -70,7 +70,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-      }),
+      } as any) as any,
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') {
