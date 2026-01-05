@@ -22,7 +22,7 @@ export const ResizableImage = Image.extend({
           };
         },
       },
-      // Track pending uploads - imageId links to IndexedDB blob
+      // Track pending uploads (personal docs) - imageId links to IndexedDB blob
       imageId: {
         default: null,
         renderHTML: (attributes) => {
@@ -32,6 +32,13 @@ export const ResizableImage = Image.extend({
           };
         },
         parseHTML: (element) => element.getAttribute('data-image-id'),
+      },
+      // Track cloud images (collab docs) - for cleanup
+      cloudPublicId: {
+        default: null,
+      },
+      cloudProvider: {
+        default: null,
       },
     };
   },

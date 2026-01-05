@@ -1,29 +1,31 @@
 import axiosInstance from './axios';
 
+export interface CloudUploadResult {
+    url: string;
+    publicId: string;
+    provider: string;
+}
+
 /**
- * UPLOAD UTILITY
- * 
- * Uploads file to backend -> UploadFly/Cloudinary -> Returns URL.
- * 
- * @param file - The file object to upload
- * @returns Promise<string> - The public URL of the uploaded image
+ * Uploads file to backend -> Cloudinary -> Returns URL + metadata.
+ * Pass docId for collab docs to track in cloudImages for cleanup.
  */
-export async function uploadToCloud(file: File): Promise<string> {
+export async function uploadToCloud(file: File, docId?: string): Promise<CloudUploadResult> {
     const formData = new FormData();
     formData.append('image', file);
-
-    console.log('Uploading image...');
-
-    try {
-        const response = await axiosInstance.post('/api/collab/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
-        
-        return response.data.url;
-    } catch (error) {
-        console.error('Upload failed:', error);
-        throw error;
+    if (docId) {
+        formData.append('docId', docId);
     }
+
+    const response = await axiosInstance.post('/api/collab/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        }
+    });
+    
+    return {
+        url: response.data.url,
+        publicId: response.data.publicId,
+        provider: response.data.provider,
+    };
 }

@@ -45,6 +45,7 @@ function CollaborativeEditorContent({
     ydoc,
     provider,
     user: { name: user.name, color: user.color },
+    docId: doc._id,
   });
 
   // UI State matching DocEditor
