@@ -17,26 +17,15 @@ export interface ServerDoc {
   createdAt: string;
 }
 
-/**
- * Extract ALL current image IDs from editor content (for cleanup tracking)
- * Returns imageIds for both pending uploads and already uploaded images
- */
 function extractAllImageIds(content: any): string[] {
   const allIds: string[] = [];
   
   function traverse(node: any) {
     if (node.type === 'resizableImage' || node.type === 'image') {
-      
       if (node.attrs?.imageId) {
         allIds.push(node.attrs.imageId);
       }
-      
-      else if (node.attrs?.src && node.attrs.src.includes('cloudinary')) {
-        
-        allIds.push(node.attrs.src);
-      }
     }
-    
     if (node.content && Array.isArray(node.content)) {
       node.content.forEach(traverse);
     }

@@ -20,6 +20,10 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import { uploadToCloud } from '@/lib/utils/upload';
 import { toast } from 'sonner';
 
+function generateImageId(): string {
+  return `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // ============================================
 // COLLABORATIVE EDITOR SETUP
 // ============================================
@@ -99,8 +103,9 @@ export function useCollaborativeEditor({
           if (file) {
              const { $from } = view.state.selection;
              const currentNode = $from.parent;
+             const imageId = generateImageId();
              
-             toast.promise(uploadToCloud(file, docId), {
+             toast.promise(uploadToCloud(file, docId, imageId), {
                 loading: 'Uploading image...',
                 success: (result) => {
                    if (result?.url) {
@@ -110,8 +115,7 @@ export function useCollaborativeEditor({
                       if (imageType) {
                          const node = imageType.create({ 
                            src: result.url,
-                           cloudPublicId: result.publicId,
-                           cloudProvider: result.provider,
+                           imageId: result.imageId,
                          });
                          let tr = view.state.tr;
                          
@@ -143,8 +147,9 @@ export function useCollaborativeEditor({
               images.forEach(file => {
                  const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
                  const dropPos = coordinates?.pos ?? view.state.selection.from;
+                 const imageId = generateImageId();
 
-                 toast.promise(uploadToCloud(file, docId), {
+                 toast.promise(uploadToCloud(file, docId, imageId), {
                     loading: 'Uploading image...',
                     success: (result) => {
                        if (result?.url) {
@@ -154,8 +159,7 @@ export function useCollaborativeEditor({
                           if (imageType) {
                              const node = imageType.create({ 
                                src: result.url,
-                               cloudPublicId: result.publicId,
-                               cloudProvider: result.provider,
+                               imageId: result.imageId,
                              });
                              const tr = view.state.tr.replaceWith(dropPos, dropPos, node);
                              view.dispatch(tr);
