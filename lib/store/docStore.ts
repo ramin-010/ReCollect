@@ -6,7 +6,8 @@ export type DocType = 'notes' | 'meeting' | 'project' | 'personal';
 export interface Doc {
   _id: string;
   title: string;
-  yjsState?: string; // Base64 Yjs state - single source of truth
+  yjsState?: string;
+  previewState?: string;
   docType: DocType;
   isPinned: boolean;
   isArchived: boolean;

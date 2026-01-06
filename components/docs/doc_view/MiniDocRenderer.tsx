@@ -46,22 +46,24 @@ const HydratingImage = ({ src, imageId }: { src?: string; imageId?: string }) =>
 };
 
 interface MiniDocRendererProps {
+  previewState?: string;
   yjsState?: string;
   content?: any;
 }
 
-export const MiniDocRenderer = ({ yjsState, content }: MiniDocRendererProps) => {
+export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRendererProps) => {
   let nodes: any[] = [];
   
   try {
     let json: any = null;
     
-    // Prefer yjsState if provided
+    // Prefer yjsState (local, may have recent changes) over previewState (server snapshot)
     if (yjsState) {
       const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
       json = yjsStateToJson(yjsState);
+    } else if (previewState) {
+      json = typeof previewState === 'string' ? JSON.parse(previewState) : previewState;
     } else if (content) {
-      // Fallback to content (for backward compat)
       json = typeof content === 'string' ? JSON.parse(content) : content;
     }
     
@@ -90,7 +92,7 @@ export const MiniDocRenderer = ({ yjsState, content }: MiniDocRendererProps) => 
   }).length;
 
   return (
-    <div className="space-y-[2px] select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif] -mt-1">
+    <div className="space-y-1 select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
       {nodesToShow.map((node: any, i: number) => {
         if (!node) return null;
 
@@ -210,7 +212,7 @@ export const MiniDocRenderer = ({ yjsState, content }: MiniDocRendererProps) => 
             return (
               <div 
                 key={i} 
-                className="border-l-[3px] border-[rgb(55,53,47)] dark:border-[rgb(255,255,255)] pl-[14px] my-[4px] text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] tracking-[-0.003em]"
+                className="border-l-[3px] border-[rgba(55,53,47,0.4)] dark:border-[rgba(255,255,255,0.4)] pl-[14px] py-[3px] my-[6px] text-[13px] leading-[1.6] italic text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] tracking-[-0.003em] line-clamp-4"
               >
                 {text}
               </div>

@@ -58,20 +58,30 @@ function CollaborativeEditorContent({
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
-  // Debounced save for Title/Cover (Metadata)
+  // Check if current user is the owner
+  const isOwner = doc.role === 'owner' || 
+    (typeof doc.user === 'object' && doc.user._id === user.id) ||
+    (typeof doc.user === 'string' && doc.user === user.id);
+
+  // Debounced save for Title/Cover (Metadata) - only for owners
   useEffect(() => {
+    // Non-owners shouldn't save metadata
+    if (!isOwner) return;
+    
     const timer = setTimeout(async () => {
       if (title !== doc.title || coverImage !== doc.coverImage) {
         setIsSavingMetadata(true);
         try {
-          // Import axios dynamically or use from libs
-           await axios.put(`/api/docs/${doc._id}`, {
+         
+          await axios.patch(`/api/docs/${doc._id}`, {
             title,
             coverImage
           });
-          // Update local doc object references if needed (optional)
-        } catch (err) {
-          console.error('Failed to save metadata:', err);
+        } catch (err: any) {
+          // Silently handle permission errors - non-owners can't edit metadata
+          if (err?.response?.status !== 403) {
+            console.error('Failed to save metadata:', err);
+          }
         } finally {
           setIsSavingMetadata(false);
         }
@@ -79,7 +89,7 @@ function CollaborativeEditorContent({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [title, coverImage, doc._id, doc.title, doc.coverImage]);
+  }, [title, coverImage, doc._id, doc.title, doc.coverImage, isOwner]);
 
   // Floating Toolbar Logic
   useEffect(() => {

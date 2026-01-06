@@ -19,7 +19,7 @@ import { MiniDocRenderer } from './MiniDocRenderer';
 import { ShareMenuItem } from './CardComponents';
 
 export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
-  const { hasContent } = getDocPreview(doc.yjsState);
+  const { hasContent } = getDocPreview(doc.previewState || doc.yjsState);
   const isLocal = doc._id.startsWith('local_');
   const tag = getTags(doc);
   
@@ -141,7 +141,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
         {/* Preview Text */}
         <div className="relative h-full">
           {hasContent ? (
-             <MiniDocRenderer yjsState={doc.yjsState} />
+             <MiniDocRenderer previewState={doc.previewState} yjsState={doc.yjsState} />
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]/40">
               <FileText className="w-8 h-8 mb-2 opacity-20" />
