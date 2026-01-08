@@ -25,6 +25,7 @@ export interface Doc {
     addedAt: string;
   }>;
   role?: 'owner' | 'editor' | 'viewer';
+  hasUnsyncedChanges?: boolean; // True if local changes not synced to cloud
 }
 
 interface DocState {

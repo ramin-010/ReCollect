@@ -5,11 +5,11 @@ import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
 import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
-import { Doc } from '@/lib/store/docStore';
+import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
-import axios from '@/lib/utils/axios';
+import { offlineStorage } from '@/lib/utils/offlineStorage';
 
 import { useCollaboration, CollaboratorInfo } from './useCollaboration';
 import { useCollaborativeEditor } from './useCollaborativeEditor';
@@ -48,14 +48,26 @@ function CollaborativeEditorContent({
     docId: doc._id,
   });
 
-  // UI State matching DocEditor
-  const [title, setTitle] = useState(doc.title);
-  const [coverImage, setCoverImage] = useState<string | null>(doc.coverImage || null);
+  // Get updateDoc from Zustand store to sync preview
+  const { updateDoc } = useDocStore();
+
+  // Get or create the metadata Y.Map
+  const metadataMap = ydoc.getMap('metadata');
+
+  // UI State for metadata - synced via Y.Map
+  const [title, setTitle] = useState(() => {
+    const mapTitle = metadataMap.get('title');
+    return typeof mapTitle === 'string' ? mapTitle : doc.title;
+  });
+  const [coverImage, setCoverImage] = useState<string | null>(() => {
+    const mapCover = metadataMap.get('coverImage');
+    return mapCover !== undefined ? (mapCover as string | null) : (doc.coverImage || null);
+  });
+  
   const [showCoverPicker, setShowCoverPicker] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   // Check if current user is the owner
@@ -63,33 +75,128 @@ function CollaborativeEditorContent({
     (typeof doc.user === 'object' && doc.user._id === user.id) ||
     (typeof doc.user === 'string' && doc.user === user.id);
 
-  // Debounced save for Title/Cover (Metadata) - only for owners
+  // Initialize Y.Map with doc values if empty (only owner should do this)
   useEffect(() => {
-    // Non-owners shouldn't save metadata
-    if (!isOwner) return;
-    
-    const timer = setTimeout(async () => {
-      if (title !== doc.title || coverImage !== doc.coverImage) {
-        setIsSavingMetadata(true);
-        try {
-         
-          await axios.patch(`/api/docs/${doc._id}`, {
-            title,
-            coverImage
-          });
-        } catch (err: any) {
-          // Silently handle permission errors - non-owners can't edit metadata
-          if (err?.response?.status !== 403) {
-            console.error('Failed to save metadata:', err);
-          }
-        } finally {
-          setIsSavingMetadata(false);
-        }
-      }
-    }, 1000);
+    if (isOwner && metadataMap.size === 0) {
+      // Initialize metadata in Y.Map from doc props
+      ydoc.transact(() => {
+        metadataMap.set('title', doc.title || '');
+        metadataMap.set('coverImage', doc.coverImage || null);
+      });
+    }
+  }, [isOwner, metadataMap, doc.title, doc.coverImage, ydoc]);
 
-    return () => clearTimeout(timer);
-  }, [title, coverImage, doc._id, doc.title, doc.coverImage, isOwner]);
+  // Subscribe to Y.Map changes for real-time sync
+  useEffect(() => {
+    const observer = () => {
+      const newTitle = metadataMap.get('title');
+      const newCover = metadataMap.get('coverImage');
+      
+      if (typeof newTitle === 'string') {
+        setTitle(newTitle);
+      }
+      if (newCover !== undefined) {
+        setCoverImage(newCover as string | null);
+      }
+    };
+
+    metadataMap.observe(observer);
+    return () => metadataMap.unobserve(observer);
+  }, [metadataMap]);
+
+  
+  const syncTimeoutRef = useRef<NodeJS.Timeout>(null);
+  
+  useEffect(() => {
+    const syncToIndexedDB = () => {
+      try {
+        const yjsState = Y.encodeStateAsUpdate(ydoc);
+        const yjsStateBase64 = Buffer.from(yjsState).toString('base64');
+        const now = Date.now();
+        
+        // Save to IndexedDB - 'synced' because Hocuspocus handles server persistence
+        offlineStorage.saveDoc(
+          doc._id,
+          yjsStateBase64,
+          title,
+          coverImage,
+          'synced',
+          now
+        ).catch(err => console.error('[CollabEditor] Debounced sync failed:', err));
+      } catch (err) {
+        console.error('[CollabEditor] Failed to serialize ydoc:', err);
+      }
+    };
+
+    // Listen for ydoc updates and debounce the IndexedDB sync
+    const handleUpdate = () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = setTimeout(syncToIndexedDB, 2000); // 2 second debounce
+    };
+
+    ydoc.on('update', handleUpdate);
+    
+    return () => {
+      ydoc.off('update', handleUpdate);
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [ydoc, doc._id, title, coverImage]);
+
+  // Update Y.Map when owner changes title (instead of REST API)
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    
+    if (isOwner) {
+      metadataMap.set('title', newTitle);
+    }
+  }, [isOwner, metadataMap]);
+
+  // Update Y.Map when owner changes cover
+  const handleCoverSelect = useCallback((url: string | null) => {
+    setCoverImage(url);
+    
+    if (isOwner) {
+      metadataMap.set('coverImage', url);
+    }
+  }, [isOwner, metadataMap]);
+
+  // Update Zustand store AND IndexedDB before navigating back
+  // This ensures local storage is synced for when doc becomes personal
+  const handleBackWithSync = useCallback(async () => {
+    try {
+      const yjsState = Y.encodeStateAsUpdate(ydoc);
+      const yjsStateBase64 = Buffer.from(yjsState).toString('base64');
+      const now = Date.now();
+
+      // Save to IndexedDB - marks as synced since Hocuspocus already saved to server
+      await offlineStorage.saveDoc(
+        doc._id,
+        yjsStateBase64,
+        title,
+        coverImage,
+        'synced',
+        now // serverUpdatedAt = now since Hocuspocus syncs in real-time
+      );
+
+      // Update Zustand store for immediate UI update
+      updateDoc(doc._id, { 
+        yjsState: yjsStateBase64,
+        title,
+        coverImage,
+        updatedAt: new Date().toISOString()
+      });
+
+      console.log('[CollabEditor] Synced to IndexedDB and store');
+    } catch (err) {
+      console.error('[CollabEditor] Failed to sync:', err);
+    }
+    onBack();
+  }, [ydoc, doc._id, title, coverImage, updateDoc, onBack]);
 
   // Floating Toolbar Logic
   useEffect(() => {
@@ -143,14 +250,6 @@ function CollaborativeEditorContent({
     }
   }, [editor]);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-  };
-
-  const handleCoverSelect = (url: string | null) => {
-    setCoverImage(url);
-  };
-
   const handleImageDialogUpload = (url: string) => {
     editor?.chain().focus().setImage({ src: url }).run();
   };
@@ -179,7 +278,7 @@ function CollaborativeEditorContent({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onBack}
+          onClick={handleBackWithSync}
           className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           leftIcon={<ChevronLeft className="w-4 h-4" />}
         >
@@ -234,9 +333,9 @@ function CollaborativeEditorContent({
              </div>
            )}
            
-           {isSavingMetadata && (
-            <span className="text-xs text-[hsl(var(--muted-foreground))] animate-pulse">Saving info...</span>
-           )}
+            {/* {isSavingMetadata && (
+              <span className="text-xs text-[hsl(var(--muted-foreground))] animate-pulse">Saving info...</span>
+            )} */}
         </div>
       </div>
 

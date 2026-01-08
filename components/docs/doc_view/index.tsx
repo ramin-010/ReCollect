@@ -69,12 +69,32 @@ export function DocsView() {
       
       const mergedServerDocs = serverDocs.map((serverDoc: any) => {
         const offlineDoc = offlineContentMap.get(serverDoc._id);
-        if (offlineDoc && offlineDoc.yjsState) {
-          return {
-            ...serverDoc,
-            yjsState: offlineDoc.yjsState,
-          };
+        
+        // For collab docs (shared or has collaborators), always use server data
+        const isCollabDoc = (serverDoc.collaborators && serverDoc.collaborators.length > 0) || 
+                            serverDoc.role === 'editor' || 
+                            serverDoc.role === 'viewer';
+        
+        if (isCollabDoc) {
+          return serverDoc; // Always use server data for collab docs
         }
+        
+        // For personal docs: compare timestamps - use whichever is newer
+        // This handles the case where collab doc became personal (server has newer data)
+        if (offlineDoc && offlineDoc.yjsState) {
+          const serverUpdatedAt = new Date(serverDoc.updatedAt).getTime();
+          const offlineUpdatedAt = offlineDoc.updatedAt || 0;
+          
+          if (offlineUpdatedAt > serverUpdatedAt) {
+            // IndexedDB is newer - use it (user has local pending changes)
+            return {
+              ...serverDoc,
+              yjsState: offlineDoc.yjsState,
+            };
+          }
+        }
+        
+        // Server is newer or no offline data - use server data
         return serverDoc;
       });
       
@@ -247,6 +267,7 @@ export function DocsView() {
             new Date(updatedDoc.updatedAt).getTime()
           );
         }
+        
         
         toast.success(`Changed to ${newType.charAt(0).toUpperCase() + newType.slice(1)}`);
       }
