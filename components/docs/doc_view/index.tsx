@@ -65,6 +65,7 @@ export function DocsView() {
         isArchived: false,
         createdAt: new Date(pd.updatedAt).toISOString(),
         updatedAt: new Date(pd.updatedAt).toISOString(),
+        hasUnsyncedChanges: true, // Local-only docs are always unsynced
       }));
       
       const mergedServerDocs = serverDocs.map((serverDoc: any) => {
@@ -76,26 +77,34 @@ export function DocsView() {
                             serverDoc.role === 'viewer';
         
         if (isCollabDoc) {
-          return serverDoc; // Always use server data for collab docs
+          return { ...serverDoc, hasUnsyncedChanges: false }; // Collab docs sync via Hocuspocus
         }
         
-        // For personal docs: compare timestamps - use whichever is newer
-        // This handles the case where collab doc became personal (server has newer data)
+        // For personal docs: check if there are unsynced local changes
         if (offlineDoc && offlineDoc.yjsState) {
           const serverUpdatedAt = new Date(serverDoc.updatedAt).getTime();
           const offlineUpdatedAt = offlineDoc.updatedAt || 0;
+          const offlineServerUpdatedAt = offlineDoc.serverUpdatedAt || 0;
+          
+          // Unsynced if: local changes haven't been saved to cloud
+          // i.e., offlineDoc.updatedAt > offlineDoc.serverUpdatedAt
+          const hasUnsyncedChanges = !offlineDoc.serverUpdatedAt || offlineUpdatedAt > offlineServerUpdatedAt;
           
           if (offlineUpdatedAt > serverUpdatedAt) {
             // IndexedDB is newer - use it (user has local pending changes)
             return {
               ...serverDoc,
               yjsState: offlineDoc.yjsState,
+              hasUnsyncedChanges,
             };
           }
+          
+          // Server is newer, but check if local had pending changes
+          return { ...serverDoc, hasUnsyncedChanges };
         }
         
-        // Server is newer or no offline data - use server data
-        return serverDoc;
+        // No offline data - use server data, synced
+        return { ...serverDoc, hasUnsyncedChanges: false };
       });
       
       setDocs([...localDocs, ...mergedServerDocs]);
@@ -281,6 +290,11 @@ export function DocsView() {
     e.stopPropagation();
     if (doc._id.startsWith('local_')) {
       toast.info('Save the document first to share it');
+      return;
+    }
+    // Block sharing for unsynced docs
+    if (doc.hasUnsyncedChanges) {
+      toast.info('Save the document first to share it. You have unsaved changes.');
       return;
     }
     setShareDialog({ open: true, docId: doc._id, docTitle: doc.title || 'Untitled' });

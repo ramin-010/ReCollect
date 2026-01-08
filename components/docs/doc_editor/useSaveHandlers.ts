@@ -58,7 +58,12 @@ export function useSaveHandlers({
       try {
         const content = JSON.parse(contentRef.current);
         const yjsState = jsonToYjsState(content);
-        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage);
+        
+        // Load existing offline doc to preserve serverUpdatedAt
+        const existingOfflineDoc = await offlineStorage.loadDoc(doc._id);
+        const serverUpdatedAt = existingOfflineDoc?.serverUpdatedAt;
+        
+        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending', serverUpdatedAt);
         setHasUnsavedChanges(false);
       } catch (e) {
         console.error("Auto-save failed", e);
@@ -96,7 +101,7 @@ export function useSaveHandlers({
         }
         
         await offlineStorage.saveDoc(doc._id, serverYjsState || yjsState, title, coverImage, 'synced', serverUpdatedAt);
-        updateDoc(doc._id, { yjsState: serverYjsState || yjsState, title });
+        updateDoc(doc._id, { yjsState: serverYjsState || yjsState, title, hasUnsyncedChanges: false });
         setHasUnsavedChanges(false);
         toast.success('Saved to cloud');
       }
@@ -207,12 +212,24 @@ export function useSaveHandlers({
         const content = JSON.parse(contentRef.current);
         const yjsState = jsonToYjsState(content);
         
-        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
+        // Load existing offline doc to check sync status BEFORE we save
+        const existingOfflineDoc = await offlineStorage.loadDoc(doc._id);
+        const serverUpdatedAt = existingOfflineDoc?.serverUpdatedAt;
+        const existingUpdatedAt = existingOfflineDoc?.updatedAt || 0;
+        
+        // Check if there were unsynced changes BEFORE this save
+        // If serverUpdatedAt exists and existingUpdatedAt <= serverUpdatedAt, doc was synced
+        const wasAlreadySynced = serverUpdatedAt && existingUpdatedAt <= serverUpdatedAt;
+        const hasUnsyncedChanges = !wasAlreadySynced;
+        
+        // Save to IndexedDB, preserving serverUpdatedAt
+        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending', serverUpdatedAt);
         
         updateDoc(doc._id, { 
           yjsState,
           title,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          hasUnsyncedChanges,
         });
       } catch (e) {
         console.error('Failed to save before navigating back:', e);

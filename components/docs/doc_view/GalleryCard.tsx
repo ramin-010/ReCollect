@@ -184,10 +184,10 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
           </span>
           
           <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            {/* Local indicator */}
-            {isLocal && (
-              <span className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title="Not saved to cloud">
-                <CloudOff className="w-2.5 h-2.5" />
+            {/* Unsync indicator - shows for local-only or unsynced docs */}
+            {(isLocal || doc.hasUnsyncedChanges) && (
+              <span className="flex items-center gap-1 text-[10px] font-medium mt-1 px-2 py-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title={isLocal ? "Not saved to cloud" : "Changes not synced to cloud"}>
+                <CloudOff className="w-3 h-3" />
               </span>
             )}
             {/* Shared Badge */}
@@ -215,7 +215,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
             {isOwner ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
+                    <button className={`text-[10px] font-medium px-2 py-[3px] rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
                       {tag?.label || 'Notes'}
                     </button>
                   </DropdownMenuTrigger>

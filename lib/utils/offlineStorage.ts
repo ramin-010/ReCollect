@@ -46,7 +46,8 @@ export const offlineStorage = {
         yjsState,
         title,
         coverImage,
-        updatedAt: Date.now(),
+        // When synced, updatedAt should equal serverUpdatedAt to indicate they're in sync
+        updatedAt: syncStatus === 'synced' && serverUpdatedAt ? serverUpdatedAt : Date.now(),
         syncStatus,
         serverUpdatedAt,
       };
