@@ -13,6 +13,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SlashCommands } from '../SlashCommands';
+import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { isEmbeddableUrl, getEmbedType } from '@/lib/utils/embedUtils';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { Doc } from '@/lib/store/docStore';
 import { toast } from 'sonner';
@@ -82,6 +84,7 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
         elementsToJoin: ['bulletList', 'orderedList'],
       }),
       SlashCommands,
+      EmbedNode,
     ],
     content: '',
     onUpdate: ({ editor }) => {
@@ -92,6 +95,21 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
         class: 'focus:outline-none min-h-[900px]',
       },
       handlePaste: (view, event) => {
+        // Check for embeddable URL first
+        const text = event.clipboardData?.getData('text/plain')?.trim();
+        if (text && isEmbeddableUrl(text)) {
+          event.preventDefault();
+          const embedType = getEmbedType(text);
+          const { state } = view;
+          const { from, to } = state.selection;
+          const node = state.schema.nodes.embed?.create({ url: text, embedType });
+          if (node) {
+            const tr = state.tr.replaceRangeWith(from, to, node);
+            view.dispatch(tr);
+            return true;
+          }
+        }
+
         const items = Array.from(event.clipboardData?.items || []);
         const image = items.find(item => item.type.startsWith('image'));
         

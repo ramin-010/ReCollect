@@ -14,6 +14,8 @@ import AutoJoiner from 'tiptap-extension-auto-joiner';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { SlashCommands } from '../SlashCommands';
+import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { isEmbeddableUrl, getEmbedType } from '@/lib/utils/embedUtils';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
@@ -77,6 +79,7 @@ export function useCollaborativeEditor({
       Color,
       AutoJoiner.configure({ elementsToJoin: ['bulletList', 'orderedList'] }),
       SlashCommands,
+      EmbedNode,
       // Collaboration extensions for real-time sync
       Collaboration.configure({
         document: ydoc,
@@ -94,6 +97,21 @@ export function useCollaborativeEditor({
         class: 'focus:outline-none min-h-[900px]',
       },
       handlePaste: (view, event) => {
+        // Check for embeddable URL first
+        const text = event.clipboardData?.getData('text/plain')?.trim();
+        if (text && isEmbeddableUrl(text)) {
+          event.preventDefault();
+          const embedType = getEmbedType(text);
+          const { state } = view;
+          const { from, to } = state.selection;
+          const node = state.schema.nodes.embed?.create({ url: text, embedType });
+          if (node) {
+            const tr = state.tr.replaceRangeWith(from, to, node);
+            view.dispatch(tr);
+            return true;
+          }
+        }
+
         const items = Array.from(event.clipboardData?.items || []);
         const image = items.find(item => item.type.startsWith('image'));
         

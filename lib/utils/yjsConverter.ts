@@ -11,6 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
+import { EmbedNode } from '@/lib/extensions/EmbedNode';
 import { getSchema } from '@tiptap/core';
 
 // Build the same schema used by the editor
@@ -18,6 +19,7 @@ const extensions = [
   StarterKit.configure({ heading: { levels: [1, 2, 3] } }) as any,
   Link,
   ResizableImage,
+  EmbedNode,
   TaskList,
   TaskItem.configure({ nested: true }),
   Highlight.configure({ multicolor: true }),
