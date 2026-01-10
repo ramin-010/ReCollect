@@ -96,6 +96,7 @@ export function useCollaborativeEditor({
         },
       }),
     ],
+    
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[900px]',
