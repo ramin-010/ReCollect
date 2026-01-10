@@ -127,15 +127,15 @@ export function EditorStyles() {
       .notion-editor .ProseMirror h1 {
         font-size: 2.25rem;
         font-weight: 700;
-        margin-top: 2rem;
-        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+        margin-bottom: 0.7rem;
         line-height: 1.2;
       }
       .notion-editor .ProseMirror h2 {
         font-size: 1.75rem;
         font-weight: 600;
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+        margin-bottom: 0.7rem;
         line-height: 1.3;
       }
       .notion-editor .ProseMirror mark {

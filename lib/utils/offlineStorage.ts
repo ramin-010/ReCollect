@@ -70,6 +70,22 @@ export const offlineStorage = {
     });
   },
 
+  // Helper to update only sync status and timestamp without needing all fields
+  async markAsSynced(id: string, serverUpdatedAt?: number): Promise<void> {
+    const existing = await this.loadDoc(id);
+    if (!existing) return;
+    
+    const now = serverUpdatedAt || Date.now();
+    await this.saveDoc(
+      id,
+      existing.yjsState,
+      existing.title,
+      existing.coverImage,
+      'synced',
+      now
+    );
+  },
+
   async deleteDoc(id: string): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {

@@ -99,7 +99,7 @@ export function useCollaborativeEditor({
     
     editorProps: {
       attributes: {
-        class: 'focus:outline-none min-h-[900px]',
+        class: 'focus:outline-none min-h-[1000px]',
       },
       handlePaste: (view, event) => {
         // Check for embeddable URL first

@@ -18,6 +18,7 @@ interface UseSaveHandlersOptions {
   setTitle: (title: string) => void;
   setCoverImage: (cover: string | null) => void;
   setHasUnsavedChanges: (value: boolean) => void;
+  setHasUnsyncedChanges: (value: boolean) => void;  // For server sync tracking
   setIsSaving: (value: boolean) => void;
   conflictData: ConflictData | null;
   setShowConflictDialog: (value: boolean) => void;
@@ -34,6 +35,7 @@ export function useSaveHandlers({
   setTitle,
   setCoverImage,
   setHasUnsavedChanges,
+  setHasUnsyncedChanges,
   setIsSaving,
   conflictData,
   setShowConflictDialog,
@@ -103,6 +105,7 @@ export function useSaveHandlers({
         await offlineStorage.saveDoc(doc._id, serverYjsState || yjsState, title, coverImage, 'synced', serverUpdatedAt);
         updateDoc(doc._id, { yjsState: serverYjsState || yjsState, title, hasUnsyncedChanges: false });
         setHasUnsavedChanges(false);
+        setHasUnsyncedChanges(false); // Reset unsync state after successful save
         toast.success('Saved to cloud');
       }
     } catch (error) {

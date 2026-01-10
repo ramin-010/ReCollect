@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, ImagePlus, X } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { SyncConflictDialog } from '../SyncConflictDialog';
@@ -15,6 +15,7 @@ import { useSaveHandlers } from './useSaveHandlers';
 import { FloatingToolbar } from './FloatingToolbar';
 import { CoverPicker } from './CoverPicker';
 import { EditorStyles } from './EditorStyles';
+import { offlineStorage } from '@/lib/utils/offlineStorage';
 
 export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [title, setTitle] = useState(doc.title);
@@ -26,6 +27,9 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
+  const [showRevertModal, setShowRevertModal] = useState(false);
+  // Local unsync tracking - starts with doc state, becomes true on edit, false after save
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(doc.hasUnsyncedChanges || false);
   
   const contentRef = useRef<string>('{}');
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -33,6 +37,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const handleContentChange = (jsonString: string) => {
     contentRef.current = jsonString;
     setHasUnsavedChanges(true);
+    setHasUnsyncedChanges(true); // Mark as unsynced when content changes
     debouncedSave();
   };
 
@@ -74,6 +79,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     setTitle,
     setCoverImage,
     setHasUnsavedChanges,
+    setHasUnsyncedChanges,
     setIsSaving,
     conflictData,
     setShowConflictDialog,
@@ -208,7 +214,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--background))]">
+    <div className="h-full flex flex-col bg-[hsl(var(--background))] ">
       {conflictData && (
         <SyncConflictDialog
           open={showConflictDialog}
@@ -230,29 +236,59 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         />
       )}
 
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBack}
-          className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-          leftIcon={<ChevronLeft className="w-4 h-4" />}
-        >
-          Back
-        </Button>
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 group/header p-2 -m-2 rounded-lg hover:bg-black/50 hover:backdrop-blur-sm  transition-all duration-200">
+        {/* Left side: Back button + Unsync indicator + Revert */}
         <div className="flex items-center gap-3">
-          {isSyncing && (
-            <span className="text-xs text-blue-400/80 animate-pulse">Syncing...</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="text-[hsl(var(--muted-foreground))] pl-2 hover:bg-[hsl(var(--accent))]/10 hover:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] mr-4"
+            leftIcon={<ChevronLeft className="w-4 h-4" />}
+          >
+            Back
+          </Button>
+          
+          {/* Unsync indicator - simple icon */}
+          {hasUnsyncedChanges && (
+            <>
+              <span 
+                title="Changes not synced to cloud"
+              >
+                <CloudOff 
+                className="w-4 h-4 text-blue-500/50 hover:text-blue-500 group-hover/header:text-blue-500"
+              />
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRevertModal(true)}
+                className="text-zinc-400/50 hover:text-red-400 hover:bg-red-500/10 group-hover/header:text-zinc-400 h-7 w-7 p-0"
+                title="Discard local changes"
+              >
+                <RotateCcw className="w-4 h-4 text-red-500/50 hover:text-red-500 group-hover/header:text-red-500" />
+              </Button>
+            </>
           )}
-          {hasUnsavedChanges && (
-            <span className="text-xs text-amber-400/80">Unsaved changes</span>
+        </div>
+        
+        {/* Right side: Local save status + Sync status + Save button */}
+        <div className="flex items-center  gap-3">
+          {isSyncing && (
+            <span className="text-sm text-blue-400/80 animate-pulse">Syncing...</span>
+          )}
+          {hasUnsavedChanges && !isSaving && (
+            <span 
+              className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
+              title="Saving to local storage"
+            />
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={saveDocument}
-            disabled={!hasUnsavedChanges || isSaving}
-            className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+            disabled={!hasUnsyncedChanges || isSaving}
+            className="text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]/10 hover:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))]"
             leftIcon={<Save className="w-4 h-4" />}
           >
             {isSaving ? 'Saving...' : 'Save'}
@@ -260,7 +296,47 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pt-16">
+      {/* Revert Confirmation Modal */}
+      {showRevertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-2">Discard Local Changes?</h3>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+              This will reset your document to the last saved server version. Any changes made since then will be permanently lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRevertModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  // Reload from server - reset editor to last saved state
+                  const savedContent = getInitialContent();
+                  if (editor && savedContent) {
+                    editor.commands.setContent(savedContent);
+                  }
+                  // Mark as synced in offline storage (updates serverUpdatedAt)
+                  await offlineStorage.markAsSynced(doc._id);
+                  setHasUnsavedChanges(false);
+                  setShowRevertModal(false);
+                  setHasUnsyncedChanges(false)
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Discard Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto pt-0">
         <ImageUploadDialog
           open={showImageDialog}
           onOpenChange={setShowImageDialog}
@@ -268,7 +344,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         />
 
         {coverImage ? (
-          <div className="w-full h-54 md:h-60 relative mb-8 group">
+          <div className="w-full h-54 md:h-58 relative mb-8 group">
             <img 
               src={coverImage} 
               alt="Document cover" 
@@ -317,7 +393,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         />
 
         <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
-          <div className="mb-6 pl-4">
+          <div className="mb-0 pl-4">
             <input
               type="text"
               value={title}
