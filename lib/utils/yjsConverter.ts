@@ -12,6 +12,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { MediaRow } from '@/lib/extensions/MediaRow';
+import { MediaItem } from '@/lib/extensions/MediaItem';
 import { getSchema } from '@tiptap/core';
 
 // Build the same schema used by the editor
@@ -20,6 +22,8 @@ const extensions = [
   Link,
   ResizableImage,
   EmbedNode,
+  MediaRow,
+  MediaItem,
   TaskList,
   TaskItem.configure({ nested: true }),
   Highlight.configure({ multicolor: true }),

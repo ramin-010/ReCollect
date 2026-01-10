@@ -404,3 +404,36 @@
   outline: 2px solid hsl(var(--brand-primary));
   outline-offset: 2px;
 }
+
+/* MediaRow - Each item is ~33% width (3 items fill row) */
+[data-media-row-content] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  align-items: flex-start !important;
+}
+
+[data-media-row-content] > * {
+  display: block !important;
+  flex: 0 0 calc(33.333% - 8px) !important; /* 33% minus gap share */
+  max-width: calc(33.333% - 8px) !important;
+  min-width: 150px;
+  height: auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* TipTap's node-view-wrapper inside items should fill parent */
+[data-media-row-content] [data-node-view-wrapper] {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Images inside MediaRow items should fill and maintain aspect ratio */
+[data-media-row-content] img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}

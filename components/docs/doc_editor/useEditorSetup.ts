@@ -14,6 +14,8 @@ import Color from '@tiptap/extension-color';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SlashCommands } from '../SlashCommands';
 import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { MediaRow } from '@/lib/extensions/MediaRow';
+import { MediaItem } from '@/lib/extensions/MediaItem';
 import { isEmbeddableUrl, getEmbedType } from '@/lib/utils/embedUtils';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { Doc } from '@/lib/store/docStore';
@@ -85,6 +87,8 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
       }),
       SlashCommands,
       EmbedNode,
+      MediaRow,
+      MediaItem,
     ],
     content: '',
     onUpdate: ({ editor }) => {

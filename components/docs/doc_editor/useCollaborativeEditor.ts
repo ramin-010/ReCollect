@@ -15,6 +15,8 @@ import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { SlashCommands } from '../SlashCommands';
 import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { MediaRow } from '@/lib/extensions/MediaRow';
+import { MediaItem } from '@/lib/extensions/MediaItem';
 import { isEmbeddableUrl, getEmbedType } from '@/lib/utils/embedUtils';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import * as Y from 'yjs';
@@ -80,6 +82,8 @@ export function useCollaborativeEditor({
       AutoJoiner.configure({ elementsToJoin: ['bulletList', 'orderedList'] }),
       SlashCommands,
       EmbedNode,
+      MediaRow,
+      MediaItem,
       // Collaboration extensions for real-time sync
       Collaboration.configure({
         document: ydoc,

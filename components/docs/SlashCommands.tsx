@@ -7,7 +7,7 @@ import tippy, { Instance } from 'tippy.js';
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   Heading1, Heading2, Heading3, List, ListOrdered,
-  Quote, Code, Minus, Image as ImageIcon, Type, CheckSquare
+  Quote, Code, Minus, Image as ImageIcon, Type, CheckSquare, LayoutGrid
 } from 'lucide-react';
 
 interface CommandItem {
@@ -108,6 +108,14 @@ const getSuggestionItems = (): CommandItem[] => [
       editor.storage.upload?.openImageDialog?.();
     },
   },
+  // {
+  //   title: 'Media Row',
+  //   description: 'Gallery of images & links',
+  //   icon: <LayoutGrid className="w-4 h-4" />,
+  //   command: ({ editor, range }) => {
+  //     editor.chain().focus().deleteRange(range).insertMediaRow().run();
+  //   },
+  // },
 ];
 
 interface CommandListRef {
