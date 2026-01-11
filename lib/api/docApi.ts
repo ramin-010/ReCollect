@@ -13,6 +13,12 @@ export interface ServerDoc {
   isPinned: boolean;
   isArchived: boolean;
   cloudImages?: { imageId: string; cloudUrl: string; cloudPublicId: string }[];
+  collaborators?: Array<{
+    user: string | { _id: string; name: string; email: string };
+    role: 'editor' | 'viewer';
+    addedAt: string;
+  }>;
+  role?: 'owner' | 'editor' | 'viewer';
   updatedAt: string;
   createdAt: string;
 }

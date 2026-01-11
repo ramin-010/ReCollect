@@ -12,6 +12,7 @@ import { DocEditorProps, ToolbarPosition } from './types';
 import { useEditorSetup } from './useEditorSetup';
 import { useDocState } from './useDocState';
 import { useDocPersistence } from './useDocPersistence';
+import { useDocNotifications } from './useDocNotifications';
 import { useDocStore } from '@/lib/store/docStore';
 import { FloatingToolbar } from './FloatingToolbar';
 import { CoverPicker } from './CoverPicker';
@@ -57,8 +58,11 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     onBack,
   });
 
+  // 4. Real-time listener for collaborator joins (enables instant switch to CollaborativeDocEditor)
+  useDocNotifications({ docId: doc._id });
+
   console.log('DocEditor state:', state.hasUnsavedChanges, state.isSaving);
-  // 4. Effects
+  // 5. Effects
   useEffect(() => {
     setMounted(true);
   }, []);

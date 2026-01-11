@@ -91,6 +91,22 @@ export function useDocPersistence({
 
         try {
           serverData = await docApi.fetchDoc(doc._id);
+          
+          // Check if server shows collaborators but local doesn't
+          // This handles "owner opens later" after someone saved the shared doc
+          if (serverData?.collaborators && serverData.collaborators.length > 0) {
+            const localHasCollabs = doc.collaborators && doc.collaborators.length > 0;
+            if (!localHasCollabs) {
+              console.log('[DocPersistence] Detected collaborators from server, updating store');
+              updateDoc(doc._id, { 
+                collaborators: serverData.collaborators,
+                role: serverData.role || 'owner'
+              });
+              // Store update will cause DocsView to switch to CollaborativeDocEditor
+              actions.setIsSyncing(false);
+              return;
+            }
+          }
         } catch (e) {
           console.error("Failed to fetch from server", e);
         }
