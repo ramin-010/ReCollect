@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
+import { mergeDocsWithOffline } from '@/lib/utils/docSyncHelpers';
 
 import { ViewMode, SortOption, OwnershipFilter } from './types';
 import { GalleryCard } from './GalleryCard';
@@ -52,62 +53,10 @@ export function DocsView() {
       const serverDocs = response.data.success ? response.data.data : [];
       
       const allOfflineDocs = await offlineStorage.getAllOfflineDocs();
-      const offlineContentMap = new Map(
-        allOfflineDocs.map(od => [od.id, od])
-      );
       
-      const pendingDocs = allOfflineDocs.filter(pd => pd.id.startsWith('local_'));
-      const localDocs = pendingDocs.map(pd => ({
-        _id: pd.id,
-        title: pd.title || 'Untitled',
-        yjsState: pd.yjsState,
-        isPinned: false,
-        isArchived: false,
-        createdAt: new Date(pd.updatedAt).toISOString(),
-        updatedAt: new Date(pd.updatedAt).toISOString(),
-        hasUnsyncedChanges: true, // Local-only docs are always unsynced
-      }));
+      const mergedDocs = mergeDocsWithOffline(serverDocs, allOfflineDocs);
       
-      const mergedServerDocs = serverDocs.map((serverDoc: any) => {
-        const offlineDoc = offlineContentMap.get(serverDoc._id);
-        
-        // For collab docs (shared or has collaborators), always use server data
-        const isCollabDoc = (serverDoc.collaborators && serverDoc.collaborators.length > 0) || 
-                            serverDoc.role === 'editor' || 
-                            serverDoc.role === 'viewer';
-        
-        if (isCollabDoc) {
-          return { ...serverDoc, hasUnsyncedChanges: false }; // Collab docs sync via Hocuspocus
-        }
-        
-        // For personal docs: check if there are unsynced local changes
-        if (offlineDoc && offlineDoc.yjsState) {
-          const serverUpdatedAt = new Date(serverDoc.updatedAt).getTime();
-          const offlineUpdatedAt = offlineDoc.updatedAt || 0;
-          const offlineServerUpdatedAt = offlineDoc.serverUpdatedAt || 0;
-          
-          // Unsynced if: local changes haven't been saved to cloud
-          // i.e., offlineDoc.updatedAt > offlineDoc.serverUpdatedAt
-          const hasUnsyncedChanges = !offlineDoc.serverUpdatedAt || offlineUpdatedAt > offlineServerUpdatedAt;
-          
-          if (offlineUpdatedAt > serverUpdatedAt) {
-            // IndexedDB is newer - use it (user has local pending changes)
-            return {
-              ...serverDoc,
-              yjsState: offlineDoc.yjsState,
-              hasUnsyncedChanges,
-            };
-          }
-          
-          // Server is newer, but check if local had pending changes
-          return { ...serverDoc, hasUnsyncedChanges };
-        }
-        
-        // No offline data - use server data, synced
-        return { ...serverDoc, hasUnsyncedChanges: false };
-      });
-      
-      setDocs([...localDocs, ...mergedServerDocs]);
+      setDocs(mergedDocs);
     } catch (error) {
       console.error('Failed to fetch docs:', error);
       toast.error('Failed to load documents');

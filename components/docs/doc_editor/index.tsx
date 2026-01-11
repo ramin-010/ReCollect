@@ -3,42 +3,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw , Cloud } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { SyncConflictDialog } from '../SyncConflictDialog';
 
 import { DocEditorProps, ToolbarPosition } from './types';
 import { useEditorSetup } from './useEditorSetup';
-import { useSyncLogic } from './useSyncLogic';
-import { useSaveHandlers } from './useSaveHandlers';
+import { useDocState } from './useDocState';
+import { useDocPersistence } from './useDocPersistence';
+import { useDocStore } from '@/lib/store/docStore';
 import { FloatingToolbar } from './FloatingToolbar';
 import { CoverPicker } from './CoverPicker';
 import { EditorStyles } from './EditorStyles';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
 
 export function DocEditor({ doc, onBack }: DocEditorProps) {
-  const [title, setTitle] = useState(doc.title);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [coverImage, setCoverImage] = useState<string | null>(null);
+  // 1. Unified State Management
+  const { state, actions } = useDocState({ initialDoc: doc });
+  
+  // UI State (Non-persistent)
   const [showCoverPicker, setShowCoverPicker] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
   const [showRevertModal, setShowRevertModal] = useState(false);
-  // Local unsync tracking - starts with doc state, becomes true on edit, false after save
-  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(doc.hasUnsyncedChanges || false);
+  const [mounted, setMounted] = useState(false);
   
   const contentRef = useRef<string>('{}');
   const toolbarRef = useRef<HTMLDivElement>(null);
 
+  // 2. Editor Setup
+  // We explicitly separate content changes from persistence triggers
   const handleContentChange = (jsonString: string) => {
     contentRef.current = jsonString;
-    setHasUnsavedChanges(true);
-    setHasUnsyncedChanges(true); // Mark as unsynced when content changes
-    debouncedSave();
+    actions.markDirty(); 
+    persistence.debouncedSave();
   };
 
   const { editor, getInitialContent } = useEditorSetup({
@@ -46,53 +46,22 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     onContentChange: handleContentChange,
   });
 
-  const {
-    showConflictDialog,
-    setShowConflictDialog,
-    conflictData,
-    setConflictData,
-    isSyncing,
-  } = useSyncLogic({
-    docId: doc._id,
-    editor,
-    mounted,
-    contentRef,
-    setTitle,
-    setCoverImage,
-    getInitialContent,
-  });
-
-  const {
-    debouncedSave,
-    saveDocument,
-    handleKeepMine,
-    handleAcceptServer,
-    handleSaveAsNew,
-    handleBack,
-    clearSaveTimeout,
-  } = useSaveHandlers({
+  // 3. Persistence Logic
+  const persistence = useDocPersistence({
     doc,
     editor,
-    title,
-    coverImage,
     contentRef,
-    setTitle,
-    setCoverImage,
-    setHasUnsavedChanges,
-    setHasUnsyncedChanges,
-    setIsSaving,
-    conflictData,
-    setShowConflictDialog,
-    setConflictData,
+    state,
+    actions,
+    getInitialContent,
     onBack,
   });
 
+  console.log('DocEditor state:', state.hasUnsavedChanges, state.isSaving);
+  // 4. Effects
   useEffect(() => {
     setMounted(true);
-    return () => {
-      clearSaveTimeout();
-    };
-  }, [clearSaveTimeout]);
+  }, []);
 
   useEffect(() => {
     if (editor) {
@@ -103,12 +72,9 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     }
   }, [editor]);
 
-  useEffect(() => {
-    if (mounted && doc._id) {
-      debouncedSave();
-    }
-  }, [coverImage, title, mounted, doc._id, debouncedSave]);
+  // Initial Save Trigger removed - rely on useDocPersistence's load logic
 
+  // Toolbar Logic
   useEffect(() => {
     if (!editor) return;
 
@@ -145,19 +111,16 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       }, 150);
     });
 
-    // Hide toolbar during drag operations
     const editorElement = editor.view.dom;
     editorElement.addEventListener('dragstart', hideToolbar);
     editorElement.addEventListener('drag', hideToolbar);
     
-    // Hide toolbar on scroll
     const scrollContainer = editorElement.closest('.overflow-y-auto');
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', hideToolbar);
     }
     window.addEventListener('scroll', hideToolbar, true);
     
-    // Hide on mousedown on drag handle
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.drag-handle') || target.closest('.drag-handle-icon')) {
@@ -178,22 +141,29 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     };
   }, [editor]);
 
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        saveDocument();
+        persistence.saveDocument();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveDocument]);
+  }, [persistence]);
 
+
+  // Handlers
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value || 'Untitled';
-    setTitle(newTitle);
-    setHasUnsavedChanges(true);
+    actions.setTitle(e.target.value || 'Untitled');
+    // Debounced save handled by useDocPersistence logic? 
+    // No, useDocPersistence debouncedSave depends on state.title changes? 
+    // Let's check useDocPersistence deps.
+    // Yes, [doc._id, title, coverImage...] are deps for debouncedSave callback, 
+    // BUT we need to trigger it.
+    persistence.debouncedSave(); 
   };
 
   const handleImageDialogUpload = (url: string) => {
@@ -201,9 +171,11 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   };
 
   const handleCoverSelect = (url: string | null) => {
-    setCoverImage(url);
-    setHasUnsavedChanges(true);
+    actions.setCoverImage(url);
+    persistence.debouncedSave();
   };
+
+  const hasUnsyncedChanges = state.syncStatus === 'unsynced';
 
   if (!mounted || !editor) {
     return (
@@ -215,19 +187,18 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))] ">
-      {conflictData && (
+      {persistence.conflictData && (
         <SyncConflictDialog
-          open={showConflictDialog}
-          onClose={() => setShowConflictDialog(false)}
-          localUpdatedAt={conflictData.localUpdatedAt}
-          serverUpdatedAt={conflictData.serverUpdatedAt}
-          onAcceptServer={handleAcceptServer}
-          onKeepMine={handleKeepMine}
-          onSaveAsNew={handleSaveAsNew}
+          open={persistence.showConflictDialog}
+          onClose={() => persistence.setShowConflictDialog(false)}
+          localUpdatedAt={persistence.conflictData.localUpdatedAt}
+          serverUpdatedAt={persistence.conflictData.serverUpdatedAt}
+          onAcceptServer={persistence.handleAcceptServer}
+          onKeepMine={persistence.handleKeepMine}
+          onSaveAsNew={persistence.handleSaveAsNew}
         />
       )}
 
-      {/* Floating Toolbar - rendered at root level for proper z-index stacking */}
       {editor && (
         <FloatingToolbar
           editor={editor}
@@ -237,19 +208,17 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       )}
 
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 group/header p-2 -m-2 rounded-lg hover:bg-black/50 hover:backdrop-blur-sm  transition-all duration-200">
-        {/* Left side: Back button + Unsync indicator + Revert */}
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleBack}
+            onClick={persistence.handleBack}
             className="text-[hsl(var(--muted-foreground))] pl-2 hover:bg-[hsl(var(--accent))]/10 hover:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] mr-4"
             leftIcon={<ChevronLeft className="w-4 h-4" />}
           >
             Back
           </Button>
           
-          {/* Unsync indicator - simple icon */}
           {hasUnsyncedChanges && (
             <>
               <span 
@@ -270,14 +239,23 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
               </Button>
             </>
           )}
+          {!hasUnsyncedChanges && (
+            <span 
+              title="Changes synced to cloud"
+            >
+              <Cloud 
+              className="w-4 h-4 text-blue-500/50 hover:text-blue-500 group-hover/header:text-blue-500"
+            />
+            </span>
+          )}
         </div>
         
-        {/* Right side: Local save status + Sync status + Save button */}
         <div className="flex items-center  gap-3">
-          {isSyncing && (
+          {state.isSyncing && (
             <span className="text-sm text-blue-400/80 animate-pulse">Syncing...</span>
           )}
-          {hasUnsavedChanges && !isSaving && (
+          {state.hasUnsavedChanges && !state.isSaving && (
+            
             <span 
               className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
               title="Saving to local storage"
@@ -286,17 +264,16 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={saveDocument}
-            disabled={!hasUnsyncedChanges || isSaving}
+            onClick={persistence.saveDocument}
+            disabled={!hasUnsyncedChanges || state.isSaving}
             className="text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]/10 hover:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))]"
             leftIcon={<Save className="w-4 h-4" />}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {state.isSaving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
 
-      {/* Revert Confirmation Modal */}
       {showRevertModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl p-6 max-w-md mx-4">
@@ -316,16 +293,17 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
                 variant="primary"
                 size="sm"
                 onClick={async () => {
-                  // Reload from server - reset editor to last saved state
                   const savedContent = getInitialContent();
                   if (editor && savedContent) {
-                    editor.commands.setContent(savedContent);
+                    editor.commands.setContent(savedContent, { emitUpdate: false });
                   }
-                  // Mark as synced in offline storage (updates serverUpdatedAt)
                   await offlineStorage.markAsSynced(doc._id);
-                  setHasUnsavedChanges(false);
+                  actions.markSynced(); 
+                  
+                  // Update global store to reflect discarded changes
+                   useDocStore.getState().updateDoc(doc._id, { hasUnsyncedChanges: false });
+
                   setShowRevertModal(false);
-                  setHasUnsyncedChanges(false)
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
@@ -343,10 +321,10 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           onImageUpload={handleImageDialogUpload}
         />
 
-        {coverImage ? (
+        {state.coverImage ? (
           <div className="w-full h-54 md:h-58 relative mb-8 group">
             <img 
-              src={coverImage} 
+              src={state.coverImage} 
               alt="Document cover" 
               className="w-full h-full object-cover object-[0_50%]"
             />
@@ -388,15 +366,15 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         <CoverPicker
           show={showCoverPicker}
           onClose={() => setShowCoverPicker(false)}
-          currentCover={coverImage}
+          currentCover={state.coverImage}
           onSelect={handleCoverSelect}
         />
 
-        <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
+        <div className={`max-w-7xl mx-auto px-8 ${state.coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
           <div className="mb-0 pl-4">
             <input
               type="text"
-              value={title}
+              value={state.title}
               onChange={handleTitleChange}
               placeholder="New Page"
               className="w-full text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight"

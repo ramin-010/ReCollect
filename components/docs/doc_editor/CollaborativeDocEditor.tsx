@@ -274,12 +274,12 @@ function CollaborativeEditorContent({
       )}
 
       {/* Header */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 group/header p-2 -m-2 rounded-lg hover:bg-black/50 hover:backdrop-blur-sm  transition-all duration-200">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleBackWithSync}
-          className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+            className="text-[hsl(var(--muted-foreground))] pl-2 hover:bg-[hsl(var(--accent))]/10  hover:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] mr-4"
           leftIcon={<ChevronLeft className="w-4 h-4" />}
         >
           Back
@@ -300,15 +300,15 @@ function CollaborativeEditorContent({
              ) : (
                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse ml-1.5" />
              )}
-             <span className="text-xs text-[hsl(var(--muted-foreground))]">
+             <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]">
                {provider.isSynced ? 'Live' : 'Connecting...'}
              </span>
            </div>
            
            {/* Collaborators List */}
            {collaborators.length > 0 && (
-             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10">
-               <Users className="w-3 h-3 text-[hsl(var(--muted-foreground))] ml-2 mr-1" />
+             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-[hsl(var(--muted-foreground))] group-hover/header:border-[hsl(var(--foreground))]">
+               <Users className="w-3 h-3 text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] ml-2 mr-1" />
                <div className="flex -space-x-2">
                  {collaborators.map((collab) => (
                    <div 
@@ -327,7 +327,7 @@ function CollaborativeEditorContent({
                    </div>
                  ))}
                </div>
-               <span className="text-xs text-[hsl(var(--muted-foreground))] px-2">
+               <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] px-2">
                  {collaborators.length === 1 ? collaborators[0].name : `${collaborators.length} online`}
                </span>
              </div>
@@ -339,7 +339,7 @@ function CollaborativeEditorContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pt-16">
+      <div className="flex-1 overflow-y-auto ">
         <ImageUploadDialog
           open={showImageDialog}
           onOpenChange={setShowImageDialog}
@@ -347,7 +347,7 @@ function CollaborativeEditorContent({
         />
 
         {coverImage ? (
-          <div className="w-full h-54 md:h-60 relative mb-8 group">
+          <div className="w-full h-54 md:h-58 relative mb-8 group">
             <img 
               src={coverImage} 
               alt="Document cover" 
@@ -396,7 +396,7 @@ function CollaborativeEditorContent({
         />
 
         <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
-          <div className="mb-6 pl-4">
+          <div className="mb-0 pl-4">
             <input
               type="text"
               value={title}
