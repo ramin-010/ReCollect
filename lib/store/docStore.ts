@@ -25,7 +25,8 @@ export interface Doc {
     addedAt: string;
   }>;
   role?: 'owner' | 'editor' | 'viewer';
-  hasUnsyncedChanges?: boolean; // True if local changes not synced to cloud
+  hasUnsyncedChanges?: boolean;
+  pendingLocalContent?: string; // JSON content to inject into collab editor after connect
 }
 
 interface DocState {

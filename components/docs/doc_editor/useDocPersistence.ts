@@ -291,18 +291,22 @@ export function useDocPersistence({
     if (doc._id) {
       const content = JSON.parse(contentRef.current);
       const yjsState = jsonToYjsState(content);
-      // Force local overwrite as 'pending'
+      
+      // Save locally as pending
       await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       actions.markDirty();
-      toast.success('Keeping your changes. Save to sync to cloud.');
       
-      // If doc has collaborators, trigger switch to CollaborativeDocEditor
+      // If doc has collaborators, switch to collab mode with pending content
       const serverCollabs = conflictData?.serverDoc?.collaborators;
       if (serverCollabs && serverCollabs.length > 0) {
         updateDoc(doc._id, { 
           collaborators: serverCollabs,
-          role: conflictData?.serverDoc?.role || 'owner'
+          role: conflictData?.serverDoc?.role || 'owner',
+          pendingLocalContent: contentRef.current // Pass JSON content to inject after connect
         });
+        toast.success('Switching to collaborative mode with your changes...');
+      } else {
+        toast.success('Keeping your changes. Save to sync to cloud.');
       }
     }
     setShowConflictDialog(false);

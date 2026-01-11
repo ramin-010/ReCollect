@@ -75,6 +75,53 @@ function CollaborativeEditorContent({
     (typeof doc.user === 'object' && doc.user._id === user.id) ||
     (typeof doc.user === 'string' && doc.user === user.id);
 
+  // Apply pending local content if present (from "Keep my changes" conflict resolution)
+  // Must wait for sync to complete before overwriting
+  const pendingContentApplied = useRef(false);
+  useEffect(() => {
+    if (editor && doc.pendingLocalContent && !pendingContentApplied.current) {
+      const applyContent = () => {
+        if (pendingContentApplied.current) return;
+        pendingContentApplied.current = true;
+        
+        try {
+          const content = JSON.parse(doc.pendingLocalContent!);
+          console.log('[CollabEditor] Provider synced, applying pending local content...');
+          
+          // Now that we're synced, our changes will be the "latest"
+          editor.chain()
+            .selectAll()
+            .deleteSelection()
+            .insertContent(content.content || [])
+            .run();
+          
+          // Clear pendingLocalContent from store
+          updateDoc(doc._id, { pendingLocalContent: undefined });
+          console.log('[CollabEditor] Pending local content applied and cleared');
+        } catch (err) {
+          console.error('[CollabEditor] Failed to apply pending content:', err);
+        }
+      };
+      
+      // Wait for provider to be synced before applying
+      if (provider.isSynced) {
+        // Already synced, apply now
+        applyContent();
+      } else {
+        // Wait for sync
+        const onSync = () => {
+          applyContent();
+          provider.off('synced', onSync);
+        };
+        provider.on('synced', onSync);
+        
+        return () => {
+          provider.off('synced', onSync);
+        };
+      }
+    }
+  }, [editor, doc._id, doc.pendingLocalContent, updateDoc, provider]);
+
   // Initialize Y.Map with doc values if empty (only owner should do this)
   useEffect(() => {
     if (isOwner && metadataMap.size === 0) {
