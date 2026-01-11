@@ -197,6 +197,8 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           onClose={() => persistence.setShowConflictDialog(false)}
           localUpdatedAt={persistence.conflictData.localUpdatedAt}
           serverUpdatedAt={persistence.conflictData.serverUpdatedAt}
+          localContent={persistence.conflictData.localContent}
+          serverContent={persistence.conflictData.serverContent}
           onAcceptServer={persistence.handleAcceptServer}
           onKeepMine={persistence.handleKeepMine}
           onSaveAsNew={persistence.handleSaveAsNew}

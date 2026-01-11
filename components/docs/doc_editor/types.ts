@@ -10,6 +10,8 @@ export interface ConflictData {
   localUpdatedAt: number;
   serverUpdatedAt: number;
   serverDoc: ServerDoc;
+  localContent?: string; // yjsState for preview
+  serverContent?: string; // yjsState for preview
 }
 
 export interface ToolbarPosition {

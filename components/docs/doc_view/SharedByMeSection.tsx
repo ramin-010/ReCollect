@@ -16,8 +16,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
 import { SharedByMeSectionProps } from './types';
+import { useDocStore } from '@/lib/store/docStore';
 
 export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: SharedByMeSectionProps) => {
+  const { updateDoc } = useDocStore();
   const [updatingRole, setUpdatingRole] = useState<{docId: string; userId: string} | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<{url: string; name: string} | null>(null);
 
@@ -38,6 +40,17 @@ export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: Shar
   const handleRemoveCollaborator = async (docId: string, collaboratorId: string) => {
     try {
       await axiosInstance.delete(`/api/docs/${docId}/collaborators/${collaboratorId}`);
+      
+      // Find the doc and update store with filtered collaborators
+      const doc = sharedByMeDocs.find(d => d._id === docId);
+      if (doc && doc.collaborators) {
+        const updatedCollaborators = doc.collaborators.filter((c: any) => {
+          const userId = typeof c.user === 'object' ? c.user._id : c.user;
+          return userId !== collaboratorId;
+        });
+        updateDoc(docId, { collaborators: updatedCollaborators });
+      }
+      
       toast.success('Collaborator removed');
       onRefresh();
     } catch (error) {

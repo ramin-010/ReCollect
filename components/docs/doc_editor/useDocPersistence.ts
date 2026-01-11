@@ -91,22 +91,6 @@ export function useDocPersistence({
 
         try {
           serverData = await docApi.fetchDoc(doc._id);
-          
-          // Check if server shows collaborators but local doesn't
-          // This handles "owner opens later" after someone saved the shared doc
-          if (serverData?.collaborators && serverData.collaborators.length > 0) {
-            const localHasCollabs = doc.collaborators && doc.collaborators.length > 0;
-            if (!localHasCollabs) {
-              console.log('[DocPersistence] Detected collaborators from server, updating store');
-              updateDoc(doc._id, { 
-                collaborators: serverData.collaborators,
-                role: serverData.role || 'owner'
-              });
-              // Store update will cause DocsView to switch to CollaborativeDocEditor
-              actions.setIsSyncing(false);
-              return;
-            }
-          }
         } catch (e) {
           console.error("Failed to fetch from server", e);
         }
@@ -119,20 +103,24 @@ export function useDocPersistence({
           const localUpdatedAt = localData.updatedAt;
 
           // Check if local is dirty (pending or undefined/legacy)
-          const isLocalDirty = localData.syncStatus !== 'synced'; // Safer than === 'pending'
+          const isLocalDirty = localData.syncStatus !== 'synced';
 
           if (serverUpdatedAt > localUpdatedAt && isLocalDirty) {
-            console.log('[SyncDebug] Conflict detected');
+            console.log('[SyncDebug] Conflict detected - local dirty & server newer');
             // Conflict: Server is newer BUT we have unsynced local changes
-             setConflictData({
+            // Show conflict dialog FIRST, let user decide before switching to collab
+            setConflictData({
               localUpdatedAt,
               serverUpdatedAt,
               serverDoc: serverData,
+              localContent: localData.yjsState,
+              serverContent: serverData.yjsState,
             });
             setShowConflictDialog(true);
+            return; // Wait for user to resolve conflict
           } else if (serverUpdatedAt > localUpdatedAt) {
             console.log('[SyncDebug] Server newer, accepting server');
-             // Server is newer and clean local state -> Update local from server
+            // Server is newer and clean local state -> Update local from server
             if (serverData.yjsState) {
               const content = yjsStateToJson(serverData.yjsState);
               editor.commands.setContent(content, { emitUpdate: false });
@@ -151,7 +139,28 @@ export function useDocPersistence({
               'synced',
               serverUpdatedAt
             );
-            actions.markSynced();
+            actions.setSyncStatus('synced');
+          } else if (localUpdatedAt > serverUpdatedAt && isLocalDirty) {
+            console.log('[SyncDebug] Local newer and dirty');
+            actions.markDirty();
+          } else {
+            console.log('[SyncDebug] Same timestamp or local synced');
+            actions.setSyncStatus('synced');
+          }
+        }
+        
+        // After sync logic, check if server has collaborators and switch to collab mode
+        // (only reached if no conflict dialog was shown)
+        if (serverData?.collaborators && serverData.collaborators.length > 0) {
+          const localHasCollabs = doc.collaborators && doc.collaborators.length > 0;
+          if (!localHasCollabs) {
+            console.log('[DocPersistence] No conflict, detected collaborators - switching to collab mode');
+            updateDoc(doc._id, { 
+              collaborators: serverData.collaborators,
+              role: serverData.role || 'owner'
+            });
+            // Store update will cause DocsView to switch to CollaborativeDocEditor
+            return;
           }
         } else if (!localData && serverData) {
             // Only server data exists -> hydrate local
@@ -286,10 +295,19 @@ export function useDocPersistence({
       await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       actions.markDirty();
       toast.success('Keeping your changes. Save to sync to cloud.');
+      
+      // If doc has collaborators, trigger switch to CollaborativeDocEditor
+      const serverCollabs = conflictData?.serverDoc?.collaborators;
+      if (serverCollabs && serverCollabs.length > 0) {
+        updateDoc(doc._id, { 
+          collaborators: serverCollabs,
+          role: conflictData?.serverDoc?.role || 'owner'
+        });
+      }
     }
     setShowConflictDialog(false);
     setConflictData(null);
-  }, [doc._id, title, coverImage, contentRef, actions]);
+  }, [doc._id, title, coverImage, contentRef, actions, conflictData, updateDoc]);
 
   const handleAcceptServer = useCallback(async () => {
     if (conflictData?.serverDoc && editor) {
@@ -316,10 +334,18 @@ export function useDocPersistence({
       
       actions.markClean();
       toast.success('Server version loaded');
+      
+      // If doc has collaborators, trigger switch to CollaborativeDocEditor
+      if (server.collaborators && server.collaborators.length > 0) {
+        updateDoc(doc._id, { 
+          collaborators: server.collaborators,
+          role: server.role || 'owner'
+        });
+      }
     }
     setShowConflictDialog(false);
     setConflictData(null);
-  }, [conflictData, editor, doc._id, contentRef, actions]);
+  }, [conflictData, editor, doc._id, contentRef, actions, updateDoc]);
 
   const handleSaveAsNew = useCallback(async () => {
     if (doc._id && conflictData?.serverDoc && editor) {

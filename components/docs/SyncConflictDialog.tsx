@@ -1,18 +1,89 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Cloud, Clock, Copy, Download, FileText } from 'lucide-react';
+import { Clock, Copy, Download, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import { ResizableImage } from '@/lib/extensions/ResizableImage';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SyncConflictDialogProps {
   open: boolean;
   onClose: () => void;
   localUpdatedAt: number;
   serverUpdatedAt: number;
+  localContent?: string;
+  serverContent?: string;
   onAcceptServer: () => void;
   onKeepMine: () => void;
   onSaveAsNew: () => void;
+}
+
+function ReadOnlyDocPreview({ content, label }: { content?: string; label: string }) {
+  const [mounted, setMounted] = useState(false);
+
+  const editor = useEditor({
+    editable: false,
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+      } as any) as any,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: 'text-blue-400 underline' },
+      }),
+      ResizableImage,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Highlight.configure({ multicolor: true }),
+      Underline,
+      TextStyle,
+      Color,
+    ],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'focus:outline-none min-h-[200px] pro-prose',
+      },
+    },
+  });
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (editor && content) {
+      try {
+        const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
+        editor.commands.setContent(yjsStateToJson(content));
+      } catch (e) {
+        console.error(`Failed to load ${label} content:`, e);
+      }
+    }
+  }, [editor, content, label]);
+
+  if (!mounted || !editor) {
+    return (
+      <div className="flex items-center justify-center h-48 text-[hsl(var(--muted-foreground))]">
+        <span className="animate-pulse">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="prose dark:prose-invert max-w-none">
+      <EditorContent editor={editor} />
+    </div>
+  );
 }
 
 export function SyncConflictDialog({
@@ -20,116 +91,113 @@ export function SyncConflictDialog({
   onClose,
   localUpdatedAt,
   serverUpdatedAt,
+  localContent,
+  serverContent,
   onAcceptServer,
   onKeepMine,
   onSaveAsNew,
 }: SyncConflictDialogProps) {
   if (!open) return null;
 
-  const localDate = format(new Date(localUpdatedAt), 'MMM d, yyyy h:mm a');
-  const serverDate = format(new Date(serverUpdatedAt), 'MMM d, yyyy h:mm a');
+  const localDate = format(new Date(localUpdatedAt), 'MMM d, h:mm a');
+  const serverDate = format(new Date(serverUpdatedAt), 'MMM d, h:mm a');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl shadow-2xl w-[480px] p-6 animate-in fade-in-0 zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-            <Cloud className="w-5 h-5 text-blue-500" />
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/80"
+          onClick={onClose}
+        />
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          className="relative bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-xl shadow-2xl w-[95vw] max-w-7xl h-[90vh] flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="shrink-0 px-6 py-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
+                Resolve Conflict
+              </h2>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
+                Choose which version to keep
+              </p>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => { onKeepMine(); onClose(); }}
+                className="px-4 py-2 text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/30"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Keep Local
+              </Button>
+              
+              <Button
+                onClick={() => { onAcceptServer(); onClose(); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Accept Server
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={() => { onSaveAsNew(); onClose(); }}
+                className="px-4 py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Save as New
+              </Button>
+              
+              <button
+                onClick={onClose}
+                className="p-2 ml-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
-              Server Has Newer Changes
-            </h2>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-              This document was updated elsewhere
-            </p>
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="space-y-4 mb-6">
-          <p className="text-sm text-[hsl(var(--foreground))/80]">
-            A newer version of this document exists on the server. 
-            Your local version may have unsaved changes that could be overwritten.
-          </p>
-
-          {/* Version comparison */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Local version (older) */}
-            <div className="p-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Your Version</span>
+          {/* Content */}
+          <div className="flex-1 overflow-hidden grid grid-cols-2 divide-x divide-[hsl(var(--border))]">
+            {/* Local */}
+            <div className="flex flex-col overflow-hidden">
+              <div className="shrink-0 px-6 py-2.5 border-b border-[hsl(var(--border))] flex items-center justify-between bg-emerald-500/5">
+                <span className="font-medium text-emerald-400">Local Version (You)</span>
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <Clock className="w-3 h-3 inline mr-1" />{localDate}
+                </span>
               </div>
-              <div className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
-                <Clock className="w-3 h-3" />
-                <span>{localDate}</span>
+              <div className="flex-1 overflow-y-auto p-8">
+                <ReadOnlyDocPreview content={localContent} label="local" />
               </div>
             </div>
 
-            {/* Server version (newer) */}
-            <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Download className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">Server Version</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300">NEWER</span>
+            {/* Server */}
+            <div className="flex flex-col overflow-hidden">
+              <div className="shrink-0 px-6 py-2.5 border-b border-[hsl(var(--border))] flex items-center justify-between bg-blue-500/5">
+                <span className="font-medium text-blue-400">Server Version</span>
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <Clock className="w-3 h-3 inline mr-1" />{serverDate}
+                </span>
               </div>
-              <div className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
-                <Clock className="w-3 h-3" />
-                <span>{serverDate}</span>
+              <div className="flex-1 overflow-y-auto p-8">
+                <ReadOnlyDocPreview content={serverContent} label="server" />
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col gap-2">
-          <Button
-            variant="primary"
-            onClick={() => {
-              onAcceptServer();
-              onClose();
-            }}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Accept Server Version
-          </Button>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onKeepMine();
-                onClose();
-              }}
-              className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-            >
-              Keep My Changes
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onSaveAsNew();
-                onClose();
-              }}
-              className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-            >
-              <Copy className="w-4 h-4 mr-1" />
-              Save as New
-            </Button>
-          </div>
-          
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="w-full text-[hsl(var(--muted-foreground))] text-sm"
-          >
-            Decide Later
-          </Button>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }
