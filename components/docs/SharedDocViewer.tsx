@@ -13,6 +13,7 @@ import Color from '@tiptap/extension-color';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useViewStore } from '@/lib/store/viewStore';
 import axios from '@/lib/utils/axios';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui-base/Button';
@@ -39,6 +40,7 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { setCurrentView } = useViewStore();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,6 +55,8 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
       const response = await axios.post(`/api/save/${slug}`);
       if (response.data.success) {
         toast.success('Document saved to your profile!');
+        setCurrentView('docs'); // Set the view state
+        router.push('/'); // Navigate to main app - it will read the view state
       }
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Failed to save document';
