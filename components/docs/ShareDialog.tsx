@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, Globe, Lock } from 'lucide-react';
+import { X, Copy, Check, Eye, Pencil, Sparkles, Globe, Link as LinkIcon, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui-base/Button';
 import axios from '@/lib/utils/axios';
+import { cn } from '@/lib/utils'; // Assuming you have a cn utility, if not I'll use template literals but cn is safer for tailwind merging. I'll stick to template literals if unsure, but standard shadcn/ui setups have it. I'll use standard className strings to be safe.
 
 interface ShareDialogProps {
   open: boolean;
@@ -45,7 +45,7 @@ export function ShareDialog({
 
       if (response.data.success) {
         setGeneratedLink(response.data.data.url);
-        toast.success(`Link generated with ${role} access`);
+        // Don't toast here, the UI update is enough feedback
       }
     } catch (error) {
       console.error('Failed to generate link:', error);
@@ -71,117 +71,172 @@ export function ShareDialog({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/60 backdrop-blur-xs"
           onClick={handleClose}
         />
 
         {/* Dialog */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md mx-4 bg-[hsl(var(--card))] rounded-2xl shadow-2xl border border-[hsl(var(--border))]"
+          exit={{ opacity: 0, scale: 0.9, y: 10 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="relative w-full max-w-lg overflow-hidden rounded-xl bg-[#121212] border border-white/10 shadow-2xl shadow-black/80" // Solid opaque background
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]">
-            <div>
-              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Share Document</h2>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] truncate max-w-[280px]">
-                {docTitle}
+          <div className="px-6 pt-6 pb-2 flex justify-between items-start">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
+                Share Doc <Sparkles className="w-4 h-4 text-blue-400 transition-colors duration-500" />
+              </h2>
+              <p className="text-sm text-zinc-400 max-w-[340px] truncate">
+                {docTitle || 'Untitled Document'}
               </p>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+              className="p-2 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Permission Selection */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-[hsl(var(--foreground))]">
-                Permission Level
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => { setRole('viewer'); setGeneratedLink(''); }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                    role === 'viewer'
-                      ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20'
-                      : 'border-[hsl(var(--border))] hover:border-[hsl(var(--muted-foreground))]'
-                  }`}
-                >
-                  <Globe className={`h-6 w-6 mb-2 ${role === 'viewer' ? 'text-blue-500' : 'text-[hsl(var(--muted-foreground))]'}`} />
-                  <span className={`text-sm font-medium ${role === 'viewer' ? 'text-blue-500' : 'text-[hsl(var(--foreground))]'}`}>
-                    Viewer
-                  </span>
-                  <span className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
-                    Read-only access
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => { setRole('editor'); setGeneratedLink(''); }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                    role === 'editor'
-                      ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500/20'
-                      : 'border-[hsl(var(--border))] hover:border-[hsl(var(--muted-foreground))]'
-                  }`}
-                >
-                  <Lock className={`h-6 w-6 mb-2 ${role === 'editor' ? 'text-amber-500' : 'text-[hsl(var(--muted-foreground))]'}`} />
-                  <span className={`text-sm font-medium ${role === 'editor' ? 'text-amber-500' : 'text-[hsl(var(--foreground))]'}`}>
-                    Editor
-                  </span>
-                  <span className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
-                    Can edit content
-                  </span>
-                </button>
-              </div>
+            
+            {/* Role Tab Switcher - Professional implementation */}
+            <div className="relative flex p-1 rounded-lg bg-zinc-900 border border-white/5">
+              <motion.div
+                className="absolute top-1 bottom-1 rounded-md shadow-sm border border-blue-500/20 bg-blue-500/10"
+                initial={false}
+                animate={{
+                  left: role === 'viewer' ? '4px' : '50%',
+                  width: 'calc(50% - 4px)',
+                  x: role === 'viewer' ? 0 : 0
+                }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+              />
+              
+              <button
+                onClick={() => { setRole('viewer'); setGeneratedLink(''); }}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${role === 'viewer' ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                <Eye className="w-4 h-4" />
+                <span>Viewer</span>
+              </button>
+              
+              <button
+                onClick={() => { setRole('editor'); setGeneratedLink(''); }}
+                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${role === 'editor' ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                <Pencil className="w-4 h-4" />
+                <span>Editor</span>
+              </button>
             </div>
 
-            {/* Generate / Link Display */}
-            <div className="pt-2">
-              {!generatedLink ? (
-                <Button
-                  onClick={handleGenerateLink}
-                  isLoading={isLoading}
-                  className="w-full h-11 bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90"
-                >
-                  Generate Link
-                </Button>
-              ) : (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
-                    Share Link
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={generatedLink}
-                      className="flex-1 px-3 py-2 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm text-[hsl(var(--foreground))] focus:outline-none"
-                    />
-                    <Button
-                      onClick={copyToClipboard}
-                      variant="outline"
-                      className={`min-w-[44px] px-0 ${hasCopied ? 'text-emerald-500 border-emerald-500 bg-emerald-500/10' : ''}`}
+            {/* Dynamic Content Area */}
+            <div className="min-h-[100px] flex flex-col justify-end">
+              <AnimatePresence mode="wait">
+                {!generatedLink ? (
+                  <motion.div
+                    key="generate"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="p-4 rounded-xl border flex gap-3 items-start transition-colors duration-300 bg-blue-500/5 border-blue-500/10">
+                      <div className="p-2 rounded-lg bg-blue-500/10">
+                        {role === 'viewer' ? <Globe className="w-5 h-5 text-blue-400" /> : <LinkIcon className="w-5 h-5 text-blue-400" />}
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-blue-100">
+                          {role === 'viewer' ? 'Public Read Access' : 'Collaborative Edit Access'}
+                        </h4>
+                        <p className="text-xs leading-relaxed text-blue-200/60">
+                          {role === 'viewer' 
+                            ? 'Anyone with the link can view this document perfectly.' 
+                            : 'Anyone with the link can edit and collaborate with you in real-time.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleGenerateLink}
+                      disabled={isLoading}
+                      className="group w-full py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {hasCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                    Anyone with this link can {role === 'viewer' ? 'view' : 'edit'} this document.
-                  </p>
-                </div>
-              )}
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Generate Link <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="result"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-400 ml-1">Unique Link</label>
+                      <div 
+                        className="group relative flex items-center gap-2 p-1.5 pl-3 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                        onClick={copyToClipboard}
+                      >
+                        <LinkIcon className="w-4 h-4 text-zinc-500" />
+                        <div className="flex-1 overflow-hidden">
+                          <input 
+                            readOnly 
+                            value={generatedLink} 
+                            className="w-full bg-transparent text-sm text-zinc-300 focus:outline-none cursor-pointer"
+                          />
+                          {/* Gradient fade on the right of input for long URLs */}
+                          <div className="absolute right-12 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-[#121212] pointer-events-none" />
+                        </div>
+                        
+                        <button
+                          className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                            hasCopied 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : 'bg-zinc-800 text-white group-hover:bg-zinc-700'
+                          }`}
+                        >
+                          {hasCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-center"
+                    >
+                      <p className="text-[11px] text-zinc-500">
+                        Link generated successfully. Valid for {role}.
+                      </p>
+                      <button 
+                         onClick={() => setGeneratedLink('')}
+                         className="text-[11px] text-zinc-400 hover:text-white mt-2 underline decoration-zinc-700 underline-offset-2 transition-colors"
+                      >
+                        Generate a different link
+                      </button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </motion.div>
