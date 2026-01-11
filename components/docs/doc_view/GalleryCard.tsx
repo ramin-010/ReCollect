@@ -21,6 +21,7 @@ import { ShareMenuItem } from './CardComponents';
 export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTogglePin, onShare, onDelete, onChangeType, onRename }: DocItemProps) => {
   const { hasContent } = getDocPreview(doc.previewState || doc.yjsState);
   const isLocal = doc._id.startsWith('local_');
+  const isCollab = doc.collaborators && doc.collaborators.length > 0; // Collab docs always stay synced
   const tag = getTags(doc);
   
   const isOwner = !doc.user || (typeof doc.user === 'object' && 'email' in doc.user ? doc.user._id === currentUserId : doc.user === currentUserId);
@@ -184,8 +185,8 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
           </span>
           
           <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            {/* Unsync indicator - shows for local-only or unsynced docs */}
-            {(isLocal || doc.hasUnsyncedChanges) && (
+            {/* Unsync indicator - shows for local-only or unsynced docs (but NOT collab docs) */}
+            {!isCollab && (isLocal || doc.hasUnsyncedChanges) && (
               <span className="flex items-center gap-1 text-[10px] font-medium mt-1 px-2 py-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title={isLocal ? "Not saved to cloud" : "Changes not synced to cloud"}>
                 <CloudOff className="w-3 h-3" />
               </span>
