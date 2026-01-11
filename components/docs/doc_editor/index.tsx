@@ -59,7 +59,11 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   });
 
   // 4. Real-time listener for collaborator joins (enables instant switch to CollaborativeDocEditor)
-  useDocNotifications({ docId: doc._id });
+  // Pass getEditorContent so unsaved changes are preserved when switching (Case 1 fix)
+  useDocNotifications({ 
+    docId: doc._id,
+    getEditorContent: () => contentRef.current || null
+  });
 
   console.log('DocEditor state:', state.hasUnsavedChanges, state.isSaving);
   // 5. Effects

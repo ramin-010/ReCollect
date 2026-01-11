@@ -9,6 +9,7 @@ import { docApi } from '@/lib/api/docApi';
 interface UseDocNotificationsOptions {
   docId: string;
   enabled?: boolean;
+  getEditorContent?: () => string | null; // Callback to get current editor JSON content
 }
 
 /**
@@ -16,7 +17,11 @@ interface UseDocNotificationsOptions {
  * Used by DocEditor to detect when a collaborator joins so it can 
  * switch to CollaborativeDocEditor in real-time.
  */
-export function useDocNotifications({ docId, enabled = true }: UseDocNotificationsOptions) {
+export function useDocNotifications({ 
+  docId, 
+  enabled = true,
+  getEditorContent 
+}: UseDocNotificationsOptions) {
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
   const { updateDoc } = useDocStore();
@@ -28,20 +33,26 @@ export function useDocNotifications({ docId, enabled = true }: UseDocNotificatio
       if (message.type === 'COLLABORATOR_JOINED') {
         console.log('[DocNotifications] Received COLLABORATOR_JOINED event');
         
+        // Capture current editor content BEFORE switching (Case 1 fix)
+        const currentContent = getEditorContent?.() || null;
+        
         // Fetch fresh doc data to get the new collaborator info
         const freshDoc = await docApi.fetchDoc(docId);
         if (freshDoc?.collaborators && freshDoc.collaborators.length > 0) {
           updateDoc(docId, {
             collaborators: freshDoc.collaborators,
-            role: freshDoc.role || 'owner'
+            role: freshDoc.role || 'owner',
+            // Pass pending content so CollaborativeDocEditor can restore it
+            pendingLocalContent: currentContent || undefined
           });
+          console.log('[DocNotifications] Switching to collab mode with pending content:', !!currentContent);
           // Store update will cause parent to switch to CollaborativeDocEditor
         }
       }
     } catch (err) {
       console.error('[DocNotifications] Failed to parse stateless message:', err);
     }
-  }, [docId, updateDoc]);
+  }, [docId, updateDoc, getEditorContent]);
 
   useEffect(() => {
     if (!enabled || !docId) return;
