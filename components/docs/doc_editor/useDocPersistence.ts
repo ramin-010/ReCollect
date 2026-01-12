@@ -336,7 +336,13 @@ export function useDocPersistence({
         conflictData.serverUpdatedAt
       );
       
-      actions.markClean();
+      actions.markSynced();
+      updateDoc(doc._id, { 
+        hasUnsyncedChanges: false,
+        yjsState: server.yjsState,
+        title: server.title,
+        coverImage: server.coverImage,
+      });
       toast.success('Server version loaded');
       
       // If doc has collaborators, trigger switch to CollaborativeDocEditor
@@ -417,7 +423,13 @@ export function useDocPersistence({
         conflictData.serverUpdatedAt
       );
       
-      actions.markClean();
+      actions.markSynced();
+      updateDoc(doc._id, { 
+        hasUnsyncedChanges: false,
+        yjsState: server.yjsState,
+        title: server.title,
+        coverImage: server.coverImage,
+      });
     }
     setShowConflictDialog(false);
     setConflictData(null);

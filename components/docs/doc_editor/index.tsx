@@ -266,7 +266,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           )}
           {state.hasUnsavedChanges && !state.isSaving && (
             
-            <span 
+            <span   
               className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
               title="Saving to local storage"
             />
