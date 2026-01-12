@@ -92,7 +92,31 @@ function CollaborativeEditorContent({
     try {
       await axiosInstance.delete(`/api/docs/${doc._id}/collaborators/${collaboratorId}`);
       toast.success(`${collaboratorName} removed`);
-      // Backend broadcast will handle the UI update via awareness
+      
+     
+      const remaining = (doc.collaborators || []).filter(c => {
+         const uid = typeof c.user === 'string' ? c.user : c.user._id;
+         return uid !== collaboratorId;
+      });
+
+      const updates: Partial<Doc> = { collaborators: remaining };
+
+      // If no collaborators left, prepare to switch to Personal Mode
+      if (remaining.length === 0) {
+         try {
+             // Capture latest state before switching editor
+             const state = Y.encodeStateAsUpdate(ydoc);
+             updates.yjsState = Buffer.from(state).toString('base64');
+             updates.updatedAt = new Date().toISOString();
+             toast.success('Switched to personal document');
+         } catch (e) {
+             console.error('Failed to convert to personal doc:', e);
+         }
+      }
+      
+      // Update store immediately
+      updateDoc(doc._id, updates);
+
     } catch (error) {
       console.error('Failed to remove collaborator:', error);
       toast.error('Failed to remove collaborator');
