@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus } from 'lucide-react';
+import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -83,6 +83,62 @@ function CollaborativeEditorContent({
     (typeof doc.user === 'object' && doc.user._id === user.id) ||
     (typeof doc.user === 'string' && doc.user === user.id);
 
+  // Merge DB collaborators with active sessions
+  const mergedCollaborators = React.useMemo(() => {
+    const uniqueUsers = new Map<string, any>();
+    
+    // Helper to add user to map
+    const addUser = (id: string, name: string, role: string, avatar?: string, email?: string) => {
+      if (!uniqueUsers.has(id)) {
+        uniqueUsers.set(id, { id, name, role, avatar, email, isOnline: false });
+      }
+    };
+
+    // 1. Add Owner
+    if (doc.user) {
+      const u = typeof doc.user === 'string' ? { _id: doc.user, name: 'Owner' } : doc.user;
+      addUser(u._id, u.name, 'owner', undefined, (u as any).email);
+    }
+
+    // 2. Add DB Collaborators
+    (doc.collaborators || []).forEach(c => {
+      const u = typeof c.user === 'string' ? { _id: c.user, name: 'Unknown' } : c.user;
+      const displayName = u.name || (u as any).email || 'Unknown';
+      addUser(u._id, displayName, c.role, (u as any).avatar, (u as any).email); 
+    });
+
+    // 3. Merge with Active Sessions
+    collaborators.forEach(active => {
+      const existing = uniqueUsers.get(active.id);
+      if (existing) {
+        existing.isOnline = true;
+        existing.color = active.color;
+        existing.avatar = active.avatar || existing.avatar;
+        existing.clientId = active.clientId;
+        existing.isCurrentUser = active.isCurrentUser;
+        uniqueUsers.set(active.id, existing);
+      } else {
+        uniqueUsers.set(active.id, {
+          id: active.id,
+          name: active.name,
+          role: 'viewer', 
+          color: active.color,
+          avatar: active.avatar,
+          isOnline: true,
+          clientId: active.clientId,
+          isCurrentUser: active.isCurrentUser
+        });
+      }
+    });
+
+    // Sort: online users first, offline users last
+    return Array.from(uniqueUsers.values()).sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      return 0;
+    });
+  }, [doc.user, doc.collaborators, collaborators]);
+
   const handleRemoveCollaborator = async (collaboratorId: string, collaboratorName: string) => {
     if (!collaboratorId || collaboratorId === 'unknown') {
       toast.error('Cannot remove user: Invalid ID');
@@ -90,10 +146,19 @@ function CollaborativeEditorContent({
     }
 
     try {
-      await axiosInstance.delete(`/api/docs/${doc._id}/collaborators/${collaboratorId}`);
-      toast.success(`${collaboratorName} removed`);
+      // Detect if user is leaving themselves (vs owner removing someone else)
+      const isLeavingSelf = collaboratorId === user.id;
       
-     
+      const response = await axiosInstance.delete(`/api/docs/${doc._id}/collaborators/${collaboratorId}`);
+      const remainingCountFromServer = response.data.remainingCount;
+      
+      // Only show "removed" toast when owner removes someone else
+      // (Leaving user will see "You have left" from the onClose handler)
+      if (!isLeavingSelf) {
+        toast.success(`${collaboratorName} removed`);
+      }
+      
+      // Update local doc state locally to reflect removal immediately (optimistic UI mostly, but we sync with server count)
       const remaining = (doc.collaborators || []).filter(c => {
          const uid = typeof c.user === 'string' ? c.user : c.user._id;
          return uid !== collaboratorId;
@@ -101,8 +166,9 @@ function CollaborativeEditorContent({
 
       const updates: Partial<Doc> = { collaborators: remaining };
 
-      // If no collaborators left, prepare to switch to Personal Mode
-      if (remaining.length === 0) {
+      // If no collaborators left AND user is owner, prepare to switch to Personal Mode
+      // We check remainingCountFromServer to be sure (source of truth)
+      if (remainingCountFromServer === 0 && isOwner) {
          try {
              // Capture latest state before switching editor
              const state = Y.encodeStateAsUpdate(ydoc);
@@ -359,6 +425,8 @@ function CollaborativeEditorContent({
     );
   }
 
+
+
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">
        {/* Floating Toolbar */}
@@ -403,7 +471,7 @@ function CollaborativeEditorContent({
            </div>
            
            {/* Collaborators List */}
-           {collaborators.length > 0 && (
+           {mergedCollaborators.length > 0 && (
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-[hsl(var(--muted-foreground))] group-hover/header:border-[hsl(var(--foreground))] cursor-pointer hover:bg-white/10 transition-colors">
@@ -431,31 +499,42 @@ function CollaborativeEditorContent({
                    </span>
                  </div>
                </DropdownMenuTrigger>
-               <DropdownMenuContent align="end" className="w-64">
+               <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
                  <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">
-                   Active Collaborators ({collaborators.length})
+                   All Collaborators ({mergedCollaborators.length})
                  </div>
-                 {collaborators.map((collab) => (
-                   <DropdownMenuItem key={collab.clientId} className="flex items-center justify-between p-2">
+                 {mergedCollaborators.map((collab, idx) => (
+                   <DropdownMenuItem 
+                      key={collab.id || collab.clientId || idx} 
+                      className={`flex items-center justify-between p-2 ${!collab.isOnline ? 'opacity-60' : ''}`}
+                   >
                      <div className="flex items-center gap-2 overflow-hidden">
                        <div 
-                         className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] text-white font-medium shrink-0"
-                         style={{ backgroundColor: collab.color }}
+                         className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] text-white font-medium shrink-0 relative"
+                         style={{ backgroundColor: collab.isOnline ? collab.color : '#6b7280' }}
                        >
+                         {/* Avatar Content */}
                          {collab.avatar ? (
-                           <img src={collab.avatar} alt={collab.name} className="w-full h-full rounded-full object-cover" />
+                           <img src={collab.avatar} alt={collab.name} className={`w-full h-full rounded-full object-cover ${!collab.isOnline && 'grayscale opacity-70'}`} />
                          ) : collab.isCurrentUser ? (
                            <User className="w-3.5 h-3.5" />
                          ) : (
-                           collab.name.charAt(0).toUpperCase()
+                           (collab.name || '?').charAt(0).toUpperCase()
                          )}
+                         
+                         {/* Online/Offline Status Dot */}
+                         <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[hsl(var(--popover))] ${collab.isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
                        </div>
-                       <span className={`text-sm truncate ${collab.isCurrentUser ? 'font-medium' : ''}`}>
-                         {collab.name} {collab.isCurrentUser && '(You)'}
-                       </span>
+                       
+                       <div className="flex flex-col min-w-0">
+                         <span className="text-sm font-medium truncate flex items-center gap-1">
+                           {collab.name} {collab.isCurrentUser && '(You)'}
+                           {!collab.isOnline && <span className="text-[10px] text-muted-foreground font-normal ml-1">(Offline)</span>}
+                         </span>
+                       </div>
                      </div>
                      
-                     {isOwner && !collab.isCurrentUser && (
+                     {isOwner && !collab.isCurrentUser && collab.id && collab.id !== 'unknown' && (
                        <div
                          role="button"
                          tabIndex={0}
@@ -468,6 +547,23 @@ function CollaborativeEditorContent({
                          }}
                        >
                          <UserMinus className="w-3.5 h-3.5" />
+                       </div>
+                     )}
+                     
+                     {/* Leave button for non-owner current user */}
+                     {!isOwner && collab.isCurrentUser && (
+                       <div
+                         role="button"
+                         tabIndex={0}
+                         title="Leave Document"
+                         className="h-6 mr-2 w-6 flex items-center justify-center rounded-md hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/40 cursor-pointer transition-colors"
+                         onClick={(e) => {
+                           e.preventDefault(); 
+                           e.stopPropagation();
+                           handleRemoveCollaborator(collab.id, collab.name);
+                         }}
+                       >
+                         <LogOut className="w-3.5 h-3.5" />
                        </div>
                      )}
                    </DropdownMenuItem>
@@ -620,6 +716,8 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     connect,
     disconnect,
     wasRemovedByOwner,
+    leftVoluntarily,
+    collaboratorLeftEvent,
   } = useCollaboration({
     documentName: `doc_${doc._id}`,
     token, // Empty string is fine, backend checks cookie
@@ -630,6 +728,78 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
       avatar: user?.avatar,
     },
   });
+
+  // Check if current user is the owner (for outer component)
+  const isDocOwner = doc.role === 'owner' || 
+    (typeof doc.user === 'object' && doc.user._id === user?._id) ||
+    (typeof doc.user === 'string' && doc.user === user?._id);
+
+  // Modal state for "no collaborators left" prompt
+  const [showNoCollaboratorsModal, setShowNoCollaboratorsModal] = useState(false);
+  const { updateDoc, removeDoc } = useDocStore();
+
+  // Show modal when last collaborator leaves (for owner only)
+  // Handle other collaborators leaving - update store and show modal if needed
+  useEffect(() => {
+    if (collaboratorLeftEvent) {
+      // 1. Remove the user from local doc.collaborators list so they don't show as "Offline"
+      const leftUserId = collaboratorLeftEvent.userId;
+      const currentCollaborators = doc.collaborators || [];
+      
+      const updatedCollaborators = currentCollaborators.filter(c => {
+         const uid = typeof c.user === 'string' ? c.user : c.user._id;
+         return uid !== leftUserId;
+      });
+      
+      // Only update if changes detected
+      if (updatedCollaborators.length !== currentCollaborators.length) {
+         console.log('[Collab] Removing left user from store:', leftUserId);
+         updateDoc(doc._id, { collaborators: updatedCollaborators });
+      }
+
+      // 2. Show modal when last collaborator leaves (for owner only)
+      if (isDocOwner && collaboratorLeftEvent.remainingCount === 0) {
+        console.log('[Collab] Last collaborator left, showing modal to owner');
+        setShowNoCollaboratorsModal(true);
+      }
+    }
+  }, [collaboratorLeftEvent, isDocOwner, doc.collaborators, updateDoc, doc._id]);
+
+  // Handle voluntary leave - cleanup and navigate back
+  useEffect(() => {
+    if (leftVoluntarily) {
+      console.log('[Collab] Left voluntarily, cleaning up and navigating back');
+      // Remove doc from store since user is no longer a collaborator
+      removeDoc(doc._id);
+      // Navigate back to dashboard
+      toast.success('You have left the document');
+      onBack();
+    }
+  }, [leftVoluntarily, removeDoc, doc._id, onBack]);
+
+  // Handler for switching to personal document
+  const handleSwitchToPersonal = useCallback(() => {
+    if (!ydoc) return;
+    
+    try {
+      // Capture current YJS state
+      const state = Y.encodeStateAsUpdate(ydoc);
+      const yjsState = Buffer.from(state).toString('base64');
+      
+      // Update store to trigger switch to Personal Editor
+      updateDoc(doc._id, { 
+        collaborators: [], 
+        yjsState,
+        updatedAt: new Date().toISOString()
+      });
+      
+      setShowNoCollaboratorsModal(false);
+      toast.success('Switched to personal document');
+    } catch (e) {
+      console.error('[Collab] Error switching to personal:', e);
+      toast.error('Failed to switch to personal document');
+    }
+  }, [ydoc, doc._id, updateDoc]);
 
   console.log('collaborators', collaborators);
   // Connect once when mounted
@@ -649,7 +819,6 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     };
   }, [disconnect]);
 
-  const { removeDoc } = useDocStore();
 
   const handleBack = useCallback(() => {
     disconnect();
@@ -713,6 +882,42 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
             >
               Return to Dashboard
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* No Collaborators Modal */}
+      {showNoCollaboratorsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-xl p-6 max-w-md mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <Users className="w-5 h-5 text-amber-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                No Collaborators Left
+              </h2>
+            </div>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+              All collaborators have left this document. Would you like to switch to a personal document to save resources?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNoCollaboratorsModal(false)}
+              >
+                Stay in Collab Mode
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSwitchToPersonal}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                Switch to Personal
+              </Button>
+            </div>
           </div>
         </div>
       )}

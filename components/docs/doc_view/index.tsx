@@ -44,29 +44,13 @@ export function DocsView() {
 
   const pinTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
-  const fetchDocs = useCallback(async () => {
-    if (isInitialized) return;
-
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get('/api/docs');
-      const serverDocs = response.data.success ? response.data.data : [];
-      
-      const allOfflineDocs = await offlineStorage.getAllOfflineDocs();
-      
-      const mergedDocs = mergeDocsWithOffline(serverDocs, allOfflineDocs);
-      
-      setDocs(mergedDocs);
-    } catch (error) {
-      console.error('Failed to fetch docs:', error);
-      toast.error('Failed to load documents');
-      setLoading(false);
-    }
-  }, [isInitialized, setDocs, setLoading]);
+  const { fetchDocs } = useDocStore();
 
   useEffect(() => {
-    fetchDocs();
-  }, [fetchDocs]);
+    if (!isInitialized) {
+      fetchDocs();
+    }
+  }, [fetchDocs, isInitialized]);
 
   const fetchSharedByMe = useCallback(async () => {
     try {

@@ -36,6 +36,8 @@ export interface UseCollaborationReturn {
   connect: () => void;
   disconnect: () => void;
   wasRemovedByOwner: boolean;
+  leftVoluntarily: boolean;
+  collaboratorLeftEvent: { userId: string; name: string; remainingCount: number } | null;
 }
 
 export function useCollaboration({
@@ -49,6 +51,8 @@ export function useCollaboration({
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [collaborators, setCollaborators] = useState<CollaboratorInfo[]>([]);
   const [wasRemovedByOwner, setWasRemovedByOwner] = useState(false);
+  const [leftVoluntarily, setLeftVoluntarily] = useState(false);
+  const [collaboratorLeftEvent, setCollaboratorLeftEvent] = useState<{ userId: string; name: string; remainingCount: number } | null>(null);
   
   // Use refs to avoid re-creating callbacks
   const providerRef = useRef<HocuspocusProvider | null>(null);
@@ -156,19 +160,49 @@ export function useCollaboration({
         });
       },
       onClose: (data: any) => {
-        // Close code 4001 = Removed by owner
         const event = data?.event;
+        // Close code 4001 = Removed by owner
         if (event?.code === 4001) {
           console.log('[Collab] Removed by owner (Close Code):', event.reason);
           setWasRemovedByOwner(true);
+        }
+        // Close code 4002 = Left voluntarily
+        if (event?.code === 4002) {
+          console.log('[Collab] Left voluntarily (Close Code):', event.reason);
+          setLeftVoluntarily(true);
         }
       },
       onStateless: ({ payload }: { payload: string }) => {
         try {
           const data = JSON.parse(payload);
-          if (data.type === 'COLLABORATOR_REMOVED') {
-            console.log('[Collab] Collaborator removed msg:', data);
+          
+          // COLLABORATOR_LEFT: User left voluntarily - owner should see toast + modal
+          if (data.type === 'COLLABORATOR_LEFT') {
+            console.log('[Collab] Collaborator left voluntarily:', data);
             if (data.userId !== userRef.current.id) {
+               toast.info(`${data.name} left the document`);
+               // Set the leave event for CollaborativeDocEditor to handle (for owner modal)
+               setCollaboratorLeftEvent({
+                 userId: data.userId,
+                 name: data.name,
+                 remainingCount: data.remainingCount
+               });
+            }
+          }
+          
+          // COLLABORATOR_REMOVED: User was kicked by owner - kicked user sees "Access Revoked" modal
+          if (data.type === 'COLLABORATOR_REMOVED') {
+            const removedBy = data.removedBy;
+            const currentUserId = userRef.current.id;
+            
+            console.log('[Collab] Collaborator was removed by owner:', data);
+            
+            if (data.userId === currentUserId) {
+               // This user was kicked - show "Access Revoked" modal
+               setWasRemovedByOwner(true);
+            } else if (removedBy !== currentUserId) {
+               // Show toast ONLY if I am NOT the one who initiated the removal
+               // (The initiator already got a success toast from the API call)
                toast.info(`${data.name} was removed by the owner`);
             }
           }
@@ -263,6 +297,8 @@ export function useCollaboration({
     connect,
     disconnect,
     wasRemovedByOwner,
+    leftVoluntarily,
+    collaboratorLeftEvent,
   };
 }
 

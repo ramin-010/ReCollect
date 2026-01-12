@@ -41,6 +41,7 @@ interface DocState {
   removeDoc: (id: string) => void;
   setCurrentDoc: (doc: Doc | null) => void;
   setLoading: (loading: boolean) => void;
+  fetchDocs: () => Promise<void>;
 }
 
 export const useDocStore = create<DocState>((set) => ({
@@ -70,5 +71,27 @@ export const useDocStore = create<DocState>((set) => ({
   setCurrentDoc: (doc) => set({ currentDoc: doc }),
   
   setLoading: (isLoading) => set({ isLoading }),
+
+  fetchDocs: async () => {
+    try {
+      set({ isLoading: true });
+      // Dynamic imports to manage dependencies
+      const { default: axiosInstance } = await import('@/lib/utils/axios');
+      const { offlineStorage } = await import('@/lib/utils/offlineStorage');
+      const { mergeDocsWithOffline } = await import('@/lib/utils/docSyncHelpers');
+
+      const response = await axiosInstance.get('/api/docs');
+      const serverDocs = response.data.success ? response.data.data : [];
+      
+      const allOfflineDocs = await offlineStorage.getAllOfflineDocs();
+      const mergedDocs = mergeDocsWithOffline(serverDocs, allOfflineDocs);
+
+      set({ docs: mergedDocs, isInitialized: true, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch docs:', error);
+      set({ isLoading: false });
+      // Even in error, we might have offline docs? For now just stop loading.
+    }
+  }
 }));
 
