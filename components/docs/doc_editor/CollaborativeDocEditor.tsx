@@ -57,7 +57,7 @@ function CollaborativeEditorContent({
   });
 
   // Get updateDoc from Zustand store to sync preview
-  const { updateDoc } = useDocStore();
+  const { updateDoc, removeDoc } = useDocStore();
 
   // Get or create the metadata Y.Map
   const metadataMap = ydoc.getMap('metadata');
@@ -144,10 +144,12 @@ function CollaborativeEditorContent({
       toast.error('Cannot remove user: Invalid ID');
       return;
     }
+    
+    let isLeavingSelf = false;
 
     try {
       // Detect if user is leaving themselves (vs owner removing someone else)
-      const isLeavingSelf = collaboratorId === user.id;
+      isLeavingSelf = collaboratorId === user.id;
       
       const response = await axiosInstance.delete(`/api/docs/${doc._id}/collaborators/${collaboratorId}`);
       const remainingCountFromServer = response.data.remainingCount;
@@ -183,7 +185,18 @@ function CollaborativeEditorContent({
       // Update store immediately
       updateDoc(doc._id, updates);
 
-    } catch (error) {
+    } catch (error: any) {
+      // Gracefully handle race condition: User removed by owner right before leaving
+      // If doc/collaborator not found (404) or Forbidden (403), assume already removed.
+      if (error.response?.status === 404 || error.response?.status === 403 || error.message?.includes('not found')) {
+        if (isLeavingSelf) {
+           toast.info('You have left the document');
+           removeDoc(doc._id);
+           onBack();
+           return;
+        }
+      }
+
       console.error('Failed to remove collaborator:', error);
       toast.error('Failed to remove collaborator');
     }

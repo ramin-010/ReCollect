@@ -104,7 +104,13 @@ export function DocsView() {
         removeDoc(doc._id);
         toast.success('Document deleted');
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Gracefully handle "Already Deleted" or "Already Removed" scenarios
+      if (error.response?.status === 404 || error.response?.status === 403 || error.message?.includes('not found')) {
+        removeDoc(doc._id);
+        toast.success('Document deleted');
+        return;
+      }
       console.error('Failed to delete doc:', error);
       toast.error('Failed to delete document');
     }
