@@ -3,13 +3,21 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus } from 'lucide-react';
+import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
+import axiosInstance from '@/lib/utils/axios';
+import { toast } from 'sonner';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui-base/DropdownMenu';
 
 import { useCollaboration, CollaboratorInfo } from './useCollaboration';
 import { useCollaborativeEditor } from './useCollaborativeEditor';
@@ -74,6 +82,24 @@ function CollaborativeEditorContent({
   const isOwner = doc.role === 'owner' || 
     (typeof doc.user === 'object' && doc.user._id === user.id) ||
     (typeof doc.user === 'string' && doc.user === user.id);
+
+  const handleRemoveCollaborator = async (collaboratorId: string, collaboratorName: string) => {
+    if (!collaboratorId || collaboratorId === 'unknown') {
+      toast.error('Cannot remove user: Invalid ID');
+      return;
+    }
+
+    try {
+      await axiosInstance.delete(`/api/docs/${doc._id}/collaborators/${collaboratorId}`);
+      toast.success(`${collaboratorName} removed`);
+      // Backend broadcast will handle the UI update via awareness
+    } catch (error) {
+      console.error('Failed to remove collaborator:', error);
+      toast.error('Failed to remove collaborator');
+    }
+  };
+
+
 
   // Apply pending local content if present (from "Keep my changes" conflict resolution)
   // Must wait for sync to complete before overwriting
@@ -354,30 +380,76 @@ function CollaborativeEditorContent({
            
            {/* Collaborators List */}
            {collaborators.length > 0 && (
-             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-[hsl(var(--muted-foreground))] group-hover/header:border-[hsl(var(--foreground))]">
-               <Users className="w-3 h-3 text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] ml-2 mr-1" />
-               <div className="flex -space-x-2">
-                 {collaborators.map((collab) => (
-                   <div 
-                    key={collab.clientId} 
-                    className="relative w-6 h-6 rounded-full border border-[hsl(var(--background))] flex items-center justify-center text-[10px] text-white font-medium"
-                    style={{ backgroundColor: collab.color }}
-                    title={collab.name}
-                   >
-                     {collab.avatar ? (
-                       <img src={collab.avatar} alt={collab.name} className="w-full h-full rounded-full object-cover" />
-                     ) : collab.isCurrentUser ? (
-                       <User className="w-3.5 h-3.5" />
-                     ) : (
-                       collab.name.charAt(0).toUpperCase()
-                     )}
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-[hsl(var(--muted-foreground))] group-hover/header:border-[hsl(var(--foreground))] cursor-pointer hover:bg-white/10 transition-colors">
+                   <Users className="w-3 h-3 text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] ml-2 mr-1" />
+                   <div className="flex -space-x-2">
+                     {collaborators.slice(0, 5).map((collab) => (
+                       <div 
+                        key={collab.clientId} 
+                        className="relative w-6 h-6 rounded-full border border-[hsl(var(--background))] flex items-center justify-center text-[10px] text-white font-medium"
+                        style={{ backgroundColor: collab.color }}
+                        title={collab.name}
+                       >
+                         {collab.avatar ? (
+                           <img src={collab.avatar} alt={collab.name} className="w-full h-full rounded-full object-cover" />
+                         ) : collab.isCurrentUser ? (
+                           <User className="w-3.5 h-3.5" />
+                         ) : (
+                           collab.name.charAt(0).toUpperCase()
+                         )}
+                       </div>
+                     ))}
                    </div>
+                   <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] px-2">
+                     {collaborators.length === 1 ? collaborators[0].name : `${collaborators.length} online`}
+                   </span>
+                 </div>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="end" className="w-64">
+                 <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">
+                   Active Collaborators ({collaborators.length})
+                 </div>
+                 {collaborators.map((collab) => (
+                   <DropdownMenuItem key={collab.clientId} className="flex items-center justify-between p-2">
+                     <div className="flex items-center gap-2 overflow-hidden">
+                       <div 
+                         className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] text-white font-medium shrink-0"
+                         style={{ backgroundColor: collab.color }}
+                       >
+                         {collab.avatar ? (
+                           <img src={collab.avatar} alt={collab.name} className="w-full h-full rounded-full object-cover" />
+                         ) : collab.isCurrentUser ? (
+                           <User className="w-3.5 h-3.5" />
+                         ) : (
+                           collab.name.charAt(0).toUpperCase()
+                         )}
+                       </div>
+                       <span className={`text-sm truncate ${collab.isCurrentUser ? 'font-medium' : ''}`}>
+                         {collab.name} {collab.isCurrentUser && '(You)'}
+                       </span>
+                     </div>
+                     
+                     {isOwner && !collab.isCurrentUser && (
+                       <div
+                         role="button"
+                         tabIndex={0}
+                         title="Remove User"
+                         className="h-6 mr-2 w-6 flex items-center justify-center rounded-md hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/40 cursor-pointer transition-colors"
+                         onClick={(e) => {
+                           e.preventDefault(); 
+                           e.stopPropagation();
+                           handleRemoveCollaborator(collab.id, collab.name);
+                         }}
+                       >
+                         <UserMinus className="w-3.5 h-3.5" />
+                       </div>
+                     )}
+                   </DropdownMenuItem>
                  ))}
-               </div>
-               <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))] px-2">
-                 {collaborators.length === 1 ? collaborators[0].name : `${collaborators.length} online`}
-               </span>
-             </div>
+               </DropdownMenuContent>
+             </DropdownMenu>
            )}
            
             {/* {isSavingMetadata && (
@@ -535,6 +607,7 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     },
   });
 
+  console.log('collaborators', collaborators);
   // Connect once when mounted
   const hasConnectedRef = useRef(false);
   

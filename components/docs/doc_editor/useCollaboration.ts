@@ -65,9 +65,26 @@ export function useCollaboration({
   useEffect(() => {
     documentNameRef.current = documentName;
     tokenRef.current = token;
-    userRef.current = user;
     onStatusChangeRef.current = onStatusChange;
   });
+
+  // Reactively update awareness when user details change or connection is established
+  useEffect(() => {
+    // Only update if connected and we have a provider
+    if (provider && status === 'connected') {
+      // Ensure we have at least a basic user object
+      const safeUser = {
+        id: user?.id || 'unknown',
+        name: user?.name || 'Anonymous',
+        color: user?.color || getUserColor(user?.id || 'unknown'),
+        avatar: user?.avatar,
+      };
+
+      // console.log('[Collab] Updating awareness user:', safeUser);
+      provider.setAwarenessField('user', safeUser);
+      userRef.current = user;
+    }
+  }, [user, provider, status]);
 
   const getUserColor = (userId: string): string => {
     const colors = [
@@ -133,7 +150,10 @@ export function useCollaboration({
             });
           }
         });
-        setCollaborators(users);
+        setCollaborators(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(users)) return prev;
+          return users;
+        });
       },
       onClose: (data: any) => {
         // Close code 4001 = Removed by owner
