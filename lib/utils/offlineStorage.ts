@@ -10,6 +10,7 @@ export interface OfflineDoc {
   updatedAt: number;             // Local timestamp
   serverUpdatedAt?: number;      // Last known server timestamp
   syncStatus: 'synced' | 'pending' | 'conflict';
+  sourceDocId?: string;          // For local copies: the original server doc ID this was copied from
 }
 
 export const offlineStorage = {
@@ -35,7 +36,8 @@ export const offlineStorage = {
     title: string, 
     coverImage: string | null,
     syncStatus: 'synced' | 'pending' | 'conflict' = 'pending',
-    serverUpdatedAt?: number
+    serverUpdatedAt?: number,
+    sourceDocId?: string
   ): Promise<void> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
@@ -50,6 +52,7 @@ export const offlineStorage = {
         updatedAt: syncStatus === 'synced' && serverUpdatedAt ? serverUpdatedAt : Date.now(),
         syncStatus,
         serverUpdatedAt,
+        sourceDocId,
       };
 
       const request = store.put(doc);

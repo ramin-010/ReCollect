@@ -27,6 +27,7 @@ export interface Doc {
   role?: 'owner' | 'editor' | 'viewer';
   hasUnsyncedChanges?: boolean;
   pendingLocalContent?: string; // JSON content to inject into collab editor after connect
+  sourceDocId?: string; // For local copies: the original server doc ID this was copied from
 }
 
 interface DocState {

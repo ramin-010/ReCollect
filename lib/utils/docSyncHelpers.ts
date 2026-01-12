@@ -26,7 +26,8 @@ export function mergeDocsWithOffline(
     createdAt: new Date(pd.updatedAt).toISOString(),
     updatedAt: new Date(pd.updatedAt).toISOString(),
     hasUnsyncedChanges: true, // Local-only docs are always unsynced
-    syncStatus: 'unsynced' // explicit status
+    syncStatus: 'unsynced', // explicit status
+    sourceDocId: pd.sourceDocId, // Transfer from IndexedDB for "Save as New" detection
   }));
   
   // 2. Merge Server Docs with Local Changes

@@ -353,29 +353,50 @@ export function useDocPersistence({
 
   const handleSaveAsNew = useCallback(async () => {
     if (doc._id && conflictData?.serverDoc && editor) {
-      // 1. Create copy of local
+      // 1. Prepare local content
       const localContent = JSON.parse(contentRef.current);
       const localYjsState = jsonToYjsState(localContent);
       const localTitle = `${title} (Local Copy)`;
-      const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      await offlineStorage.saveDoc(localId, localYjsState, localTitle, coverImage, 'pending');
+      // 2. Check if a local copy already exists for this doc
+      const docs = useDocStore.getState().docs;
+      const existingLocalCopy = docs.find(d => d.sourceDocId === doc._id);
+      console.log('existing local copy', existingLocalCopy)
+      if (existingLocalCopy) {
+        // UPDATE existing local copy instead of creating a new one
+        // Pass the existing sourceDocId to preserve it
+        await offlineStorage.saveDoc(existingLocalCopy._id, localYjsState, localTitle, coverImage, 'pending', undefined, existingLocalCopy.sourceDocId);
+        updateDoc(existingLocalCopy._id, {
+          title: localTitle,
+          yjsState: localYjsState,
+          coverImage: coverImage,
+          updatedAt: new Date().toISOString(),
+        });
+        toast.success(`Updated existing local copy.`);
+      } else {
+        // CREATE new local copy with sourceDocId to track origin
+        const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Pass sourceDocId as the last parameter for IndexedDB persistence
+        await offlineStorage.saveDoc(localId, localYjsState, localTitle, coverImage, 'pending', undefined, doc._id);
+        
+        addDoc({
+          _id: localId,
+          title: localTitle,
+          yjsState: localYjsState,
+          docType: doc.docType || 'notes',
+          coverImage: coverImage,
+          isPinned: false,
+          isArchived: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          sourceDocId: doc._id, // Track which server doc this was copied from
+        });
+        
+        toast.success(`Local copy saved as "${localTitle}".`);
+      }
       
-      addDoc({
-        _id: localId,
-        title: localTitle,
-        yjsState: localYjsState,
-        docType: doc.docType || 'notes',
-        coverImage: coverImage,
-        isPinned: false,
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      
-      toast.success(`Local copy saved as "${localTitle}".`);
-      
-      // 2. Revert current doc to server version
+      // 3. Revert current doc to server version
       const server = conflictData.serverDoc;
       if (server.yjsState) {
         const serverContent = yjsStateToJson(server.yjsState);
@@ -400,7 +421,7 @@ export function useDocPersistence({
     }
     setShowConflictDialog(false);
     setConflictData(null);
-  }, [doc._id, conflictData, editor, title, coverImage, addDoc, contentRef, actions]);
+  }, [doc._id, doc.docType, conflictData, editor, title, coverImage, addDoc, updateDoc, contentRef, actions]);
 
   const handleBack = useCallback(async () => {
     if (saveTimeoutRef.current) {
