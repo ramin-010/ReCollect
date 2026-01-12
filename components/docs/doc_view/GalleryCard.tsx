@@ -37,7 +37,8 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
 
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isOwner) {
+    // Disable inline title editing for collab docs - edit inside the editor instead
+    if (isOwner && !isCollab) {
       setIsEditing(true);
     }
   };

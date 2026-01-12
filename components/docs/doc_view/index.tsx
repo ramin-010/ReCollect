@@ -84,10 +84,10 @@ export function DocsView() {
   }, []);
 
   useEffect(() => {
-    if (viewMode === 'shared-by-me' && sharedByMeDocs.length === 0) {
+    if (viewMode === 'shared-by-me') {
       fetchSharedByMe();
     }
-  }, [viewMode, sharedByMeDocs.length, fetchSharedByMe]);
+  }, [viewMode, fetchSharedByMe]);
 
   const handleCreateDoc = async () => {
     try {

@@ -34,7 +34,7 @@ function generateImageId(): string {
 
 interface UseCollaborativeEditorOptions {
   ydoc: Y.Doc;
-  provider: HocuspocusProvider;
+  provider: HocuspocusProvider | null;
   user: {
     name: string;
     color: string;
@@ -88,13 +88,15 @@ export function useCollaborativeEditor({
       Collaboration.configure({
         document: ydoc,
       }),
-      CollaborationCursor.configure({
-        provider,
-        user: {
-          name: user.name,
-          color: user.color,
-        },
-      }),
+      ...(provider ? [
+        CollaborationCursor.configure({
+          provider,
+          user: {
+            name: user.name,
+            color: user.color,
+          },
+        })
+      ] : []),
     ],
     
     editorProps: {

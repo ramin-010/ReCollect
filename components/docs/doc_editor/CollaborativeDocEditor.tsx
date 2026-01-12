@@ -523,6 +523,7 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     collaborators,
     connect,
     disconnect,
+    wasRemovedByOwner,
   } = useCollaboration({
     documentName: `doc_${doc._id}`,
     token, // Empty string is fine, backend checks cookie
@@ -538,11 +539,11 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
   const hasConnectedRef = useRef(false);
   
   useEffect(() => {
-    if (mounted && !hasConnectedRef.current) {
+    if (mounted && !hasConnectedRef.current && !wasRemovedByOwner) {
       hasConnectedRef.current = true;
       connect();
     }
-  }, [mounted, connect]);
+  }, [mounted, connect, wasRemovedByOwner]);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -551,10 +552,15 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     };
   }, [disconnect]);
 
+  const { removeDoc } = useDocStore();
+
   const handleBack = useCallback(() => {
     disconnect();
+    if (wasRemovedByOwner) {
+      removeDoc(doc._id);
+    }
     onBack();
-  }, [disconnect, onBack]);
+  }, [disconnect, onBack, wasRemovedByOwner, removeDoc, doc._id]);
 
   if (!mounted) {
     return (
@@ -564,30 +570,56 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
     );
   }
 
+
   return (
-    <>
-      {ydoc && provider ? (
-        <CollaborativeEditorContent 
-          ydoc={ydoc} 
-          provider={provider}
-          user={{
-            id: user?._id || 'unknown',
-            name: user?.name || 'Anonymous',
-            color: getUserColor(user?._id || 'unknown'),
-          }}
-          doc={doc}
-          onBack={handleBack}
-          collaborators={collaborators}
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-           <div className="flex flex-col items-center gap-2">
-             <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-             <span className="text-sm text-[hsl(var(--muted-foreground))]">Connecting to collaboration server...</span>
-           </div>
+    <div className="relative h-full">
+      <div className={`h-full transition-all duration-500 ${wasRemovedByOwner ? 'pointer-events-none select-none' : ''}`}>
+        {ydoc && provider ? (
+          <CollaborativeEditorContent 
+            ydoc={ydoc} 
+            provider={provider}
+            user={{
+              id: user?._id || 'unknown',
+              name: user?.name || 'Anonymous',
+              color: getUserColor(user?._id || 'unknown'),
+            }}
+            doc={doc}
+            onBack={handleBack}
+            collaborators={collaborators}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+             <div className="flex flex-col items-center gap-2">
+               <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+               <span className="text-sm text-[hsl(var(--muted-foreground))]">Connecting to collaboration server...</span>
+             </div>
+          </div>
+        )}
+      </div>
+
+      {wasRemovedByOwner && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-2xl rounded-xl p-8 text-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 dark:text-red-400">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                <line x1="12" y1="2" x2="12" y2="12" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Access Revoked</h2>
+            <p className="text-[hsl(var(--muted-foreground))] mb-6">
+              You have been removed from this document by the owner. You no longer have access to view or edit this content.
+            </p>
+            <button 
+              onClick={handleBack}
+              className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md"
+            >
+              Return to Dashboard
+            </button>
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

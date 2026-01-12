@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
+import { toast } from 'sonner';
 
 export interface CollaboratorInfo {
   clientId: number;
@@ -23,6 +24,8 @@ export interface UseCollaborationOptions {
     avatar?: string;
   };
   onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected') => void;
+  onClose?: (code: number, reason: string) => void;
+  onStateless?: (payload: any) => void;
 }
 
 export interface UseCollaborationReturn {
@@ -32,6 +35,7 @@ export interface UseCollaborationReturn {
   collaborators: CollaboratorInfo[];
   connect: () => void;
   disconnect: () => void;
+  wasRemovedByOwner: boolean;
 }
 
 export function useCollaboration({
@@ -44,6 +48,7 @@ export function useCollaboration({
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [collaborators, setCollaborators] = useState<CollaboratorInfo[]>([]);
+  const [wasRemovedByOwner, setWasRemovedByOwner] = useState(false);
   
   // Use refs to avoid re-creating callbacks
   const providerRef = useRef<HocuspocusProvider | null>(null);
@@ -129,6 +134,27 @@ export function useCollaboration({
           }
         });
         setCollaborators(users);
+      },
+      onClose: (data: any) => {
+        // Close code 4001 = Removed by owner
+        const event = data?.event;
+        if (event?.code === 4001) {
+          console.log('[Collab] Removed by owner (Close Code):', event.reason);
+          setWasRemovedByOwner(true);
+        }
+      },
+      onStateless: ({ payload }: { payload: string }) => {
+        try {
+          const data = JSON.parse(payload);
+          if (data.type === 'COLLABORATOR_REMOVED') {
+            console.log('[Collab] Collaborator removed msg:', data);
+            if (data.userId !== userRef.current.id) {
+               toast.info(`${data.name} was removed by the owner`);
+            }
+          }
+        } catch (e) {
+          console.error('[Collab] Error parsing stateless msg:', e);
+        }
       },
     });
 
@@ -216,6 +242,7 @@ export function useCollaboration({
     collaborators,
     connect,
     disconnect,
+    wasRemovedByOwner,
   };
 }
 
