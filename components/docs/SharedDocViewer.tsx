@@ -18,7 +18,7 @@ import { useDocStore } from '@/lib/store/docStore';
 import axios from '@/lib/utils/axios';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui-base/Button';
-import { Download, LogIn, UserPlus, X, ChevronLeft, Eye } from 'lucide-react';
+import { Download, LogIn, UserPlus, X, ChevronLeft, Eye, Clock, Ban, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
@@ -43,6 +43,9 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
   const { user, isAuthenticated } = useAuthStore();
   const { setCurrentView } = useViewStore();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showRequestSentDialog, setShowRequestSentDialog] = useState(false);
+  const [showAccessRevokedDialog, setShowAccessRevokedDialog] = useState(false);
+  const [showAlreadyRequestedDialog, setShowAlreadyRequestedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveToProfile = async () => {
@@ -53,22 +56,42 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
 
     try {
       setIsSaving(true);
-      const response = await axios.post(`/api/save/${slug}`);
+      // Call the new request-access endpoint
+      const response = await axios.post(`/api/docs/${doc._id}/request-access`, {
+        shareLinkSlug: slug
+      });
+      
       if (response.data.success) {
-        toast.success('Document saved to your profile!');
-        
-        // Refresh the doc store to include the new document
-        useDocStore.getState().fetchDocs();
-        
-        setCurrentView('docs'); // Set the view state
-        router.push('/'); // Navigate to main app - it will read the view state
+        if (response.data.status === 'pending') {
+          // Request was created or already exists
+          if (response.data.message?.includes('already')) {
+            setShowAlreadyRequestedDialog(true);
+          } else {
+            setShowRequestSentDialog(true);
+          }
+        } else {
+          // Somehow got approved directly? (shouldn't happen with new flow)
+          toast.success('Document saved to your profile!');
+          useDocStore.getState().fetchDocs();
+          setCurrentView('docs');
+          router.push('/');
+        }
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to save document';
-      if (msg.includes('owner')) {
+      const msg = error.response?.data?.message || 'Failed to request access';
+      const status = error.response?.status;
+      
+      if (status === 403 || msg.includes('revoked')) {
+        setShowAccessRevokedDialog(true);
+      } else if (msg.includes('owner')) {
         toast.info(msg);
-      } else if (msg.includes('Already')) {
-        toast.info('You are already a collaborator on this document');
+      } else if (msg.includes('already a collaborator')) {
+        toast.success('You already have access to this document');
+        useDocStore.getState().fetchDocs();
+        setCurrentView('docs');
+        router.push('/');
+      } else if (msg.includes('denied')) {
+        toast.error('Your access request was previously denied');
       } else {
         toast.error(msg);
       }
@@ -258,6 +281,132 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
               </div>
               <button 
                 onClick={() => setShowLoginDialog(false)}
+                className="absolute top-4 right-4 p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Request Sent Dialog */}
+        {showRequestSentDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+             <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowRequestSentDialog(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[hsl(var(--card))] rounded-2xl shadow-2xl overflow-hidden border border-[hsl(var(--border))]"
+            >
+              <div className="p-6 text-center">
+                 <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-6 h-6 text-green-500" />
+                 </div>
+                 <h3 className="text-xl font-bold mb-2 text-[hsl(var(--foreground))]">Request Sent!</h3>
+                 <p className="text-[hsl(var(--muted-foreground))] mb-6 text-sm">
+                   Your access request has been sent to the document owner. You'll receive an email when it's approved.
+                 </p>
+                 <Button 
+                   onClick={() => setShowRequestSentDialog(false)} 
+                   className="w-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))]"
+                 >
+                   Got it
+                 </Button>
+              </div>
+              <button 
+                onClick={() => setShowRequestSentDialog(false)}
+                className="absolute top-4 right-4 p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Already Requested Dialog */}
+        {showAlreadyRequestedDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+             <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowAlreadyRequestedDialog(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[hsl(var(--card))] rounded-2xl shadow-2xl overflow-hidden border border-[hsl(var(--border))]"
+            >
+              <div className="p-6 text-center">
+                 <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-6 h-6 text-blue-500" />
+                 </div>
+                 <h3 className="text-xl font-bold mb-2 text-[hsl(var(--foreground))]">Request Pending</h3>
+                 <p className="text-[hsl(var(--muted-foreground))] mb-6 text-sm">
+                   You've already requested access. Please wait for the owner to approve your request.
+                 </p>
+                 <Button 
+                   onClick={() => setShowAlreadyRequestedDialog(false)} 
+                   className="w-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))]"
+                 >
+                   Okay
+                 </Button>
+              </div>
+              <button 
+                onClick={() => setShowAlreadyRequestedDialog(false)}
+                className="absolute top-4 right-4 p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Access Revoked Dialog */}
+        {showAccessRevokedDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+             <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowAccessRevokedDialog(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[hsl(var(--card))] rounded-2xl shadow-2xl overflow-hidden border border-[hsl(var(--border))]"
+            >
+              <div className="p-6 text-center">
+                 <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Ban className="w-6 h-6 text-red-500" />
+                 </div>
+                 <h3 className="text-xl font-bold mb-2 text-[hsl(var(--foreground))]">Access Revoked</h3>
+                 <p className="text-[hsl(var(--muted-foreground))] mb-6 text-sm">
+                   Your access to this document has been revoked by the owner. You can no longer request access.
+                 </p>
+                 <Button 
+                   onClick={() => {
+                     setShowAccessRevokedDialog(false);
+                     router.push('/');
+                   }} 
+                   className="w-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))]"
+                 >
+                   Return to Dashboard
+                 </Button>
+              </div>
+              <button 
+                onClick={() => setShowAccessRevokedDialog(false)}
                 className="absolute top-4 right-4 p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
               >
                 <X className="w-4 h-4" />
