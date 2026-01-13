@@ -4,7 +4,7 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, FileText, Search, Loader2, LayoutGrid, List,
-  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Clock, Users, Share2
+  Filter, ArrowUpDown, ChevronDown, Star, Sparkles, File, Clock, Users, Share2, Inbox
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
@@ -27,10 +27,13 @@ import { ViewMode, SortOption, OwnershipFilter } from './types';
 import { GalleryCard } from './GalleryCard';
 import { ListRow, NewPageCard } from './CardComponents';
 import { SharedByMeSection } from './SharedByMeSection';
+import { PendingRequestsPanel } from '../PendingRequestsPanel';
+import { useSearchParams } from 'next/navigation';
 
 export function DocsView() {
   const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
   const { user } = useAuthStore();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
@@ -45,6 +48,16 @@ export function DocsView() {
   const pinTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
   const { fetchDocs } = useDocStore();
+
+  // Read tab from URL query param on mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'requests') {
+      setViewMode('requests');
+    } else if (tab === 'shared-by-me') {
+      setViewMode('shared-by-me');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -327,6 +340,9 @@ export function DocsView() {
              <button onClick={() => setViewMode('shared-by-me')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'shared-by-me' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <Share2 className="w-4 h-4" /> Shared by Me
              </button>
+             <button onClick={() => setViewMode('requests')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'requests' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+               <Inbox className="w-4 h-4" /> Requests
+             </button>
           </div>
           <div className="flex items-center gap-2">
              <div className="relative">
@@ -445,13 +461,15 @@ export function DocsView() {
                  <Plus className="w-4 h-4" /> <span className="text-sm">New page</span>
                </button>
             </div>
-          ) : (
+          ) : viewMode === 'shared-by-me' ? (
             <SharedByMeSection 
               sharedByMeDocs={sharedByMeDocs}
               isLoading={isLoadingSharedByMe}
               onRefresh={fetchSharedByMe}
             />
-          )}
+          ) : viewMode === 'requests' ? (
+            <PendingRequestsPanel />
+          ) : null}
           {searchQuery && allSortedDocs.length === 0 && (
             <div className="text-center py-12">
               <p className="text-sm text-[hsl(var(--muted-foreground))]">No documents found matching "{searchQuery}"</p>

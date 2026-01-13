@@ -25,6 +25,7 @@ import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ContentCardSkeleton } from '@/components/content/ContentCardSkeleton';
+import { useSearchParams } from 'next/navigation';
 
 export default function HomePage() {
   const dashboards = useDashboardStore((state) => state.dashboards);
@@ -47,6 +48,15 @@ export default function HomePage() {
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const currentView = useViewStore((state) => state.currentView);
   const setCurrentView = useViewStore((state) => state.setCurrentView);
+  const searchParams = useSearchParams();
+
+  // Handle URL query params for deep linking (e.g., email links)
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'docs') {
+      setCurrentView('docs');
+    }
+  }, [searchParams, setCurrentView]);
 
   // Get current inline dialog state based on dashboard
   const showInlineCreate = currentDashboard 

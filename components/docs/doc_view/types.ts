@@ -2,7 +2,7 @@ import React from 'react';
 import { Doc, DocType } from '@/lib/store/docStore';
 
 // View and filter types
-export type ViewMode = 'gallery' | 'list' | 'shared-by-me';
+export type ViewMode = 'gallery' | 'list' | 'shared-by-me' | 'requests';
 export type SortOption = 'updated' | 'created' | 'title';
 export type OwnershipFilter = 'all' | 'mine' | 'shared';
 
