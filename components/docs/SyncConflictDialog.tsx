@@ -15,6 +15,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { motion, AnimatePresence } from 'framer-motion';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 interface SyncConflictDialogProps {
   open: boolean;
@@ -63,7 +64,6 @@ function ReadOnlyDocPreview({ content, label }: { content?: string; label: strin
   useEffect(() => {
     if (editor && content) {
       try {
-        const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
         editor.commands.setContent(yjsStateToJson(content));
       } catch (e) {
         console.error(`Failed to load ${label} content:`, e);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Doc, DocType } from '@/lib/store/docStore';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 // View and filter types
 export type ViewMode = 'gallery' | 'list' | 'shared-by-me' | 'requests';
@@ -45,7 +46,6 @@ export const getDocPreview = (yjsStateOrContent: string | object | null | undefi
       } catch {
         // If not JSON, try to convert from yjsState
         try {
-          const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
           content = yjsStateToJson(yjsStateOrContent);
         } catch {
           return { text: '', hasContent: false };

@@ -21,6 +21,7 @@ import { Button } from '@/components/ui-base/Button';
 import { Download, LogIn, UserPlus, X, ChevronLeft, Eye, Clock, Ban, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 // Note: We don't import SlashCommands as this is read-only
 
@@ -144,7 +145,6 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
     if (editor && doc.yjsState) {
        // Convert yjsState to JSON content
        try {
-         const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
          const content = yjsStateToJson(doc.yjsState);
          editor.commands.setContent(content);
        } catch (e) {

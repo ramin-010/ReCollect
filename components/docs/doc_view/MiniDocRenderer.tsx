@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { imageStorage } from '@/lib/storage/imageStorage';
+import { yjsStateToJson } from '@/lib/utils/yjsConverter';
 
 // Hydrating image component for previews with pending uploads
 const HydratingImage = ({ src, imageId }: { src?: string; imageId?: string }) => {
@@ -59,7 +60,6 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
     
     // Prefer yjsState (local, may have recent changes) over previewState (server snapshot)
     if (yjsState) {
-      const { yjsStateToJson } = require('@/lib/utils/yjsConverter');
       json = yjsStateToJson(yjsState);
     } else if (previewState) {
       json = typeof previewState === 'string' ? JSON.parse(previewState) : previewState;
