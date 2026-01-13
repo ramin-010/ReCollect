@@ -469,11 +469,11 @@ function CollaborativeEditorContent({
 
         {/* Premium Reader View Badge */}
         {readOnly && (
-           <div className="group flex items-center gap-2 pl-1 pr-3 py-1 rounded-full mr-auto bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md shadow-[0_0_15px_-3px_rgba(0,0,0,0.1)] transition-all hover:bg-black/10 dark:hover:bg-white/10 select-none ">
-             <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 shadow-inner ">
-                <Eye className="w-3 h-3 text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]" />
+           <div className="group flex items-center gap-2 pl-1 pr-2 py-1 rounded-full mr-auto bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md shadow-[0_0_15px_-3px_rgba(0,0,0,0.1)] transition-all hover:bg-black/10 dark:hover:bg-white/10 select-none ">
+             <div className="w-[18px] h-[18px] rounded-full bg-gradient-to-tr from-amber-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 shadow-inner ">
+                <Eye className="w-[11px] h-[11px] text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]" />
              </div>
-             <span className="text-xs text-[hsl(var(--muted-foreground))]  group-hover/header:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] font-medium tracking-wide">Read Only</span>
+             <span className="text-[11px] text-[hsl(var(--muted-foreground))]  group-hover/header:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] font-medium tracking-wide">Read Only</span>
            </div>
         )}
 

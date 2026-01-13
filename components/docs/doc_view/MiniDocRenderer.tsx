@@ -92,7 +92,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
   }).length;
 
   return (
-    <div className="space-y-1 select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
+    <div className="space-y-1 bg-transparent select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
       {nodesToShow.map((node: any, i: number) => {
         if (!node) return null;
 
@@ -125,7 +125,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <p 
                 key={i} 
-                className={`text-[12px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] ${paragraphClamp} tracking-[-0.003em]`}
+                className={`text-[12px]  leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] ${paragraphClamp} tracking-[-0.003em]`}
               >
                 {text}
               </p>

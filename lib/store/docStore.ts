@@ -18,9 +18,10 @@ export interface Doc {
     _id: string;
     name: string;
     email: string;
+    avatar?: string;
   };
   collaborators?: Array<{
-    user: string | { _id: string, name: string, email: string };
+    user: string | { _id: string, name: string, email: string, avatar?: string };
     role: 'editor' | 'viewer';
     addedAt: string;
   }>;

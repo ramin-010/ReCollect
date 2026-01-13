@@ -70,186 +70,220 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
   };
 
   return (
-    <div className="relative group h-[300px]" onClick={() => onOpen(doc)}>
-      {/* Pinned Indicator */}
-      {doc.isPinned && (
-        <div className="absolute -top-2 -left-2 z-20 drop-shadow-md">
-            <Sparkles className="h-6 w-6 text-amber-500 " />
-        </div>
-      )}
-
+    <div className="relative group h-[280px]" onClick={() => onOpen(doc)}>
+      {/* Hover Lift & Container */}
       <div
         className="cursor-pointer h-full
-                   bg-[hsl(var(--background))] 
-                   border border-[hsl(var(--background))]/50 rounded-xl
-                   group-hover:border-[hsl(var(--muted-foreground))]/40
-                   group-hover:shadow-sm
-                   transition-all duration-200 overflow-hidden flex flex-col"
+                   bg-[hsl(var(--card))] 
+                   rounded-2xl border border-[hsl(var(--border))]/40
+                   shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)]
+                   group-hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)]
+                   group-hover:-translate-y-0.5
+                   group-hover:border-[hsl(var(--border))]/80
+                   transition-all duration-300 ease-out flex flex-col overflow-hidden relative"
       >
-       
-      {/* Top Section: Content Preview */}
-      <div className="flex-1 p-3 relative overflow-hidden bg-[hsl(var(--card-bg))]">
-        {/* Hover Actions */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-fit">
-          {isOwner && (
-            <button
-               onClick={(e) => {
-                 onTogglePin(doc, e);
-               }}
-               className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
-               title={doc.isPinned ? 'Unpin' : 'Pin'}
-            >
-              {doc.isPinned ? (
-                <PinOff className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              ) : (
-                <Pin className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              )}
-            </button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="p-1.5 rounded-md bg-[hsl(var(--background))]/80 hover:bg-[hsl(var(--muted))] transition-colors border border-[hsl(var(--border))]/50"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              {isOwner && (
-                <>
-                  <ShareMenuItem doc={doc} onShare={onShare} />
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem 
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
-                onClick={(e) => onDelete(doc, e)}
-              >
-                {isOwner ? (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-4 h-4 mr-2" /> Leave Collab
-                  </>
-                )}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Preview Text */}
-        <div className="relative h-full">
-          {hasContent ? (
-             <MiniDocRenderer previewState={doc.previewState} yjsState={doc.yjsState} />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]/40">
-              <FileText className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-xs italic">Empty page</p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Bottom Section: Footer */}
-      <div className="bg-[hsl(var(--muted))]/30 border-[hsl(var(--background))] p-3 flex flex-col gap-1">
-        {/* Title Row */}
-        <div className="flex items-start gap-2 h-6" onClick={(e) => e.stopPropagation()}>
-           {isEditing ? (
-              <input 
-                autoFocus
-                type="text"
-                value={title}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                className="w-full text-md font-semibold bg-transparent border-b border-blue-500 focus:outline-none px-0 py-0 leading-snug"
-              />
-           ) : (
-              <h3 
-                onDoubleClick={isOwner ? handleStartEdit : undefined}
-                title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
-                className={`font-semibold text-md leading-snug line-clamp-1 ${isOwner ? 'cursor-text hover:bg-black/5 dark:hover:bg-white/5 rounded px-1 -ml-1 transition-colors' : ''}
-                          ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
-              >
-                {doc.title || 'Untitled'}
-              </h3>
-           )}
-        </div>
-
-        {/* Meta Row */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
-            {format(new Date(doc.createdAt), 'MMM d, yyyy')}
-          </span>
-          
-          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            {/* Unsync indicator - shows for local-only or unsynced docs (but NOT collab docs) */}
-            {!isCollab && (isLocal || doc.hasUnsyncedChanges) && (
-              <span className="flex items-center gap-1 text-[10px] font-medium mt-1 px-2 py-1 rounded bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20" title={isLocal ? "Not saved to cloud" : "Changes not synced to cloud"}>
-                <CloudOff className="w-3 h-3" />
-              </span>
-            )}
-            {/* Shared Badge */}
-            {!isOwner && (
-              <div className="flex items-center gap-1.5 " title={`Shared by ${ownerName}`}>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-500/25">
-                  <Share2 className="w-2.5 h-2.5" />
-                  {ownerName?.split(' ')[0] || 'Shared'}
-                </div>
+        
+         {/* Pinned Indicator - Top Left */}
+         {doc.isPinned && (
+          <div className="absolute top-3 left-3 z-20">
+              <div className="bg-amber-500/10 backdrop-blur-md border border-amber-500/20 p-1.5 rounded-full shadow-sm">
+                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               </div>
-            )}
-            {/* Broadcasting Indicator */}
-            {isOwner && doc.collaborators && doc.collaborators.length > 0 && (
-              <div 
-                className="flex items-center justify-center mt-1 mr-1 w-5 h-5" 
-                title={`Broadcasting to ${doc.collaborators.length} people`}
-              >
-                <div className="relative flex items-center justify-center h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/60"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.8),0_0_12px_rgba(16,185,129,0.4)]"></span>
-                </div>
-              </div>
-            )}
-            {/* Type Selector */}
-            {isOwner ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className={`text-[10px] font-medium px-2 py-[3px] rounded cursor-pointer hover:opacity-80 transition-opacity ${tag?.color || ''}`}>
-                      {tag?.label || 'Notes'}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'notes', e)}>
-                      <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
-                      {doc.docType === 'notes' && <span className="ml-auto text-blue-500">✓</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'meeting', e)}>
-                      <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
-                      {doc.docType === 'meeting' && <span className="ml-auto text-violet-500">✓</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'project', e)}>
-                      <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
-                      {doc.docType === 'project' && <span className="ml-auto text-emerald-500">✓</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => onChangeType(doc, 'personal', e)}>
-                      <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
-                      {doc.docType === 'personal' && <span className="ml-auto text-amber-500">✓</span>}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-            ) : (
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded cursor-default ${tag?.color || ''}`}>
-                  {tag?.label || 'Notes'}
-                </span>
-            )}
           </div>
+        )}
+
+        {/* Action Menu - Top Right (Visible on Hover) */}
+        <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+           <div className="flex items-center gap-1">
+             {isOwner && (
+               <button
+                  onClick={(e) => onTogglePin(doc, e)}
+                  className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
+                  title={doc.isPinned ? 'Unpin' : 'Pin'}
+               >
+                 {doc.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+               </button>
+             )}
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <button
+                   className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
+                   onClick={(e) => e.stopPropagation()}
+                 >
+                   <MoreHorizontal className="w-3.5 h-3.5" />
+                 </button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="end" className="w-40 p-1">
+                 {isOwner && (
+                   <>
+                     <ShareMenuItem doc={doc} onShare={onShare} />
+                     <DropdownMenuSeparator />
+                   </>
+                 )}
+                 <DropdownMenuItem 
+                   className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20" 
+                   onClick={(e) => onDelete(doc, e)}
+                 >
+                   {isOwner ? (
+                     <span className="flex items-center"><Trash2 className="w-4 h-4 mr-2" /> Delete</span>
+                   ) : (
+                     <span className="flex items-center"><LogOut className="w-4 h-4 mr-2" /> Leave</span>
+                   )}
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+           </div>
+        </div>
+
+        {/* Cover Section (Image or Gradient) */}
+        <div className="h-[35%] relative w-full overflow-hidden bg-[hsl(var(--muted))]">
+          {doc.coverImage ? (
+            <img 
+              src={doc.coverImage} 
+              alt="Cover" 
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+             <div className={`w-full h-full bg-gradient-to-br ${
+               doc.docType === 'meeting' ? 'from-purple-500/10 to-blue-500/5' :
+               doc.docType === 'project' ? 'from-emerald-500/10 to-teal-500/5' :
+               doc.docType === 'personal' ? 'from-amber-500/10 to-orange-500/5' :
+               'from-blue-500/10 to-indigo-500/5' // Notes default
+             }`}>
+                {/* Fallback Icon */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
+                   <FileText className="w-16 h-16" />
+                </div>
+             </div>
+          )}
+          {/* Overlay Gradient for Text Contrast if needed, mostly for bottom edge */}
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[hsl(var(--card))] to-transparent opacity-50" />
+        </div>
+
+        {/* Content Section */}
+        <div className="flex-1 px-4 pt-2 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[hsl(var(--sidebar-bg))] to-[hsl(var(--card))]">
+           
+           <div className="flex flex-col gap-1.5">
+             {/* Title */}
+             <div className="h-7 flex items-center" onClick={(e) => e.stopPropagation()}>
+               {isEditing ? (
+                  <input 
+                    autoFocus
+                    type="text"
+                    value={title}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    className="w-full text-lg font-bold bg-transparent border-b-2 border-primary focus:outline-none px-0 py-0 leading-tight"
+                  />
+               ) : (
+                  <h3 
+                    onDoubleClick={isOwner ? handleStartEdit : undefined}
+                    title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
+                    className={`font-bold text-[17px] leading-tight truncate w-full ${isOwner ? 'cursor-text hover:text-primary transition-colors' : ''}
+                              ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
+                  >
+                    {doc.title || 'Untitled'}
+                  </h3>
+               )}
+             </div>
+
+             {/* Dynamic Preview Fragment */}
+             <div className="relative h-[4.5rem] overflow-hidden text-sm text-[hsl(var(--muted-foreground))] leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                {hasContent ? (
+                  <div className="text-[13px] line-clamp-3 font-normal">
+                     <MiniDocRenderer previewState={doc.previewState} yjsState={doc.yjsState} />
+                  </div>
+                ) : (
+                  <span className="italic text-xs opacity-50">Empty document...</span>
+                )}
+             </div>
+           </div>
+
+           {/* Footer Meta */}
+           <div className="flex items-center justify-between pt-3 mt-1 border-t border-[hsl(var(--border))]/30">
+              <span className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] flex items-center gap-2">
+                {format(new Date(doc.updatedAt), 'MMM d')}
+                
+                {/* Unsync indicator */}
+                {!isCollab && (isLocal || doc.hasUnsyncedChanges) && (
+                  <span className="pl-1" title={isLocal ? "Not saved to cloud" : "Changes not synced to cloud"}>
+                    <CloudOff className="w-3 h-3 text-rose-600 dark:text-blue-400" />
+                  </span>
+                )}
+              </span>
+
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                
+                {/* Live Activity Indicator */}
+            
+
+                {/* Shared Avatar Stack */}
+                {doc.collaborators && doc.collaborators.length > 0 && (
+                   <div className="flex -space-x-1.5 items-center mr-1">
+                      {doc.collaborators.slice(0, 3).map((collab, i) => (
+                        <div key={i} className="w-5 h-5 rounded-full ring-2 ring-[hsl(var(--card))] bg-[hsl(var(--muted))] flex items-center justify-center text-[8px] font-bold overflow-hidden" title={typeof collab.user === 'object' ? collab.user.name : 'User'}>
+                            {typeof collab.user === 'object' && collab.user.avatar ? (
+                               <img src={collab.user.avatar} className="w-full h-full object-cover" />
+                            ) : (
+                               <span>{(typeof collab.user === 'object' ? collab.user.name : '?').charAt(0)}</span>
+                            )}
+                        </div>
+                      ))}
+                      {doc.collaborators.length > 3 && (
+                        <div className="w-5 h-5 rounded-full ring-2 ring-[hsl(var(--card))] bg-[hsl(var(--muted))] flex items-center justify-center text-[8px] font-bold">
+                           +{doc.collaborators.length - 3}
+                        </div>
+                      )}
+                   </div>
+                )}
+                   {isOwner && doc.collaborators && doc.collaborators.length > 0 && (
+                   <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Live Collaboration">
+                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                   </div>
+                )}
+
+                
+                {/* Doc Type Badge */}
+                {isOwner ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
+                          ${doc.docType === 'meeting' ? 'bg-violet-500 border-violet-500/20 text-violet-600 dark:text-white' :
+                            doc.docType === 'project' ? 'bg-emerald-500 border-emerald-500/20 text-emerald-600 dark:text-white' :
+                            doc.docType === 'personal' ? 'bg-amber-500 border-amber-500/20 text-amber-600 dark:text-white' :
+                            'bg-blue-500 border-blue-500/20 text-blue-600 dark:text-white'
+                          }`}>
+                        {tag?.label || 'Notes'}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={(e) => onChangeType(doc, 'notes', e)}>
+                        <FileText className="w-3.5 h-3.5 mr-2 text-blue-500" /> Notes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => onChangeType(doc, 'meeting', e)}>
+                        <FileText className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => onChangeType(doc, 'project', e)}>
+                        <FileText className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => onChangeType(doc, 'personal', e)}>
+                        <FileText className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border bg-opacity-10 backdrop-blur-sm cursor-default ${tag?.color || ''}`}>
+                     {tag?.label || 'Shared'}
+                  </span>
+                )}
+              </div>
+           </div>
         </div>
       </div>
     </div>
-  </div>
+
   );
 });
 
