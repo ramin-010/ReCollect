@@ -11,7 +11,6 @@ import {
   Moon
 } from 'lucide-react';
 
-// Simplified block structure for database storage
 interface CanvasBlock {
   blockId: string;
   type: 'rectangle' | 'ellipse' | 'arrow' | 'text' | 'image';
@@ -47,8 +46,7 @@ export default function MinimalExcalidrawCanvas({
   const lastSceneSnapshot = useRef<string>('');
   const [isReady, setIsReady] = useState(false);
 
-  // Convert Excalidraw elements to simplified blocks
-  const convertToBlocks = (elements: any[], files: any): CanvasBlock[] => {
+    const convertToBlocks = (elements: any[], files: any): CanvasBlock[] => {
     if (!elements || !Array.isArray(elements)) return [];
     
     return elements
@@ -87,8 +85,7 @@ export default function MinimalExcalidrawCanvas({
       });
   };
 
-  // Handle canvas changes with auto-save
-  const handleChange = (elements: any, appState: any, files: any) => {
+    const handleChange = (elements: any, appState: any, files: any) => {
     if (!isReady) return;
     
     if (autoSaveTimer.current) {
@@ -121,8 +118,7 @@ export default function MinimalExcalidrawCanvas({
     }, 1000);
   };
 
-  // Handle tool selection
-  const selectTool = (tool: string) => {
+    const selectTool = (tool: string) => {
     setSelectedTool(tool);
     const api = excalidrawRef.current;
     if (!api) return;
@@ -150,8 +146,7 @@ export default function MinimalExcalidrawCanvas({
     }
   };
 
-  // Handle image upload
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -164,16 +159,14 @@ export default function MinimalExcalidrawCanvas({
       const fileId = `image-${Date.now()}`;
       
       try {
-        // First, add the file to Excalidraw's file storage
-        api.addFiles([{
+                api.addFiles([{
           id: fileId,
           dataURL,
           mimeType: file.type,
           created: Date.now(),
         }]);
 
-        // Then, create the image element on canvas
-        const img = new Image();
+                const img = new Image();
         img.onload = () => {
           const currentElements = api.getSceneElements() || [];
           const appState = api.getAppState() || {};
@@ -221,8 +214,7 @@ export default function MinimalExcalidrawCanvas({
     e.target.value = '';
   };
 
-  // Handle paste event for images
-  useEffect(() => {
+    useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items || !isReady) return;
@@ -258,8 +250,7 @@ export default function MinimalExcalidrawCanvas({
     }
   }, [isReady]);
 
-  // Toggle background color
-  const toggleBackground = () => {
+    const toggleBackground = () => {
     if (!isReady || !excalidrawRef.current) return;
 
     const newIsDark = !isDarkMode;
@@ -354,8 +345,7 @@ export default function MinimalExcalidrawCanvas({
           <Excalidraw
             excalidrawAPI={(api) => {
               excalidrawRef.current = api;
-              // Delay initialization to ensure component is fully mounted
-              setTimeout(() => {
+                            setTimeout(() => {
                 if (excalidrawRef.current) {
                   setIsReady(true);
                 }
@@ -421,7 +411,6 @@ export default function MinimalExcalidrawCanvas({
   );
 }
 
-// Tool Button Component
 function ToolButton({ 
   icon, 
   label, 

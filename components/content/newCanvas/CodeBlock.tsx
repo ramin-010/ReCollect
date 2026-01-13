@@ -13,31 +13,24 @@ interface CodeBlockProps {
 export function CodeBlock({ code, language = 'javascript', className }: CodeBlockProps) {
   
   const highlightedCode = useMemo(() => {
-    // Simple regex-based syntax highlighting for demo purposes
-    // (In production, use prismjs or shiki)
-    let html = code
+            let html = code
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    // Keywords
-    const keywords = /\b(const|let|var|function|return|import|export|from|if|else|for|while|class|interface|type|extends|implements|new|this|async|await|try|catch|finally)\b/g;
+        const keywords = /\b(const|let|var|function|return|import|export|from|if|else|for|while|class|interface|type|extends|implements|new|this|async|await|try|catch|finally)\b/g;
     html = html.replace(keywords, '<span class="text-purple-400 font-semibold">$1</span>');
 
-    // Strings
-    const strings = /(['"`])(.*?)\1/g;
+        const strings = /(['"`])(.*?)\1/g;
     html = html.replace(strings, '<span class="text-green-400">$1$2$1</span>');
 
-    // Numbers
-    const numbers = /\b(\d+)\b/g;
+        const numbers = /\b(\d+)\b/g;
     html = html.replace(numbers, '<span class="text-orange-400">$1</span>');
 
-    // Comments (Simple //)
-    const comments = /(\/\/.*)/g;
+        const comments = /(\/\/.*)/g;
     html = html.replace(comments, '<span class="text-slate-500 italic">$1</span>');
 
-    // Functions calls
-    const functions = /\b([a-zA-Z]\w*)(?=\()/g;
+        const functions = /\b([a-zA-Z]\w*)(?=\()/g;
     html = html.replace(functions, '<span class="text-blue-400">$1</span>');
 
     return html;

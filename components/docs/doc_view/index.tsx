@@ -282,21 +282,9 @@ export function DocsView() {
   }, [setCurrentDoc]);
 
   if (currentDoc) {
-    // Viewer role - read-only access
+    // Viewer role - read-only access with live updates
     if (currentDocRole === 'viewer') {
-      return (
-        <SharedDocViewer 
-          doc={{
-            _id: currentDoc._id,
-            title: currentDoc.title,
-            yjsState: currentDoc.yjsState,
-            coverImage: currentDoc.coverImage,
-            updatedAt: currentDoc.updatedAt,
-          }}
-          mode="viewer"
-          onBack={handleCloseDoc}
-        />
-      );
+      return <CollaborativeDocEditor doc={currentDoc} onBack={handleCloseDoc} readOnly />;
     }
     
     // Check if doc is shared (has collaborators or user is an editor collaborator)

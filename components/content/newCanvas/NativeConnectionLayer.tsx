@@ -8,11 +8,8 @@ interface NativeConnectionLayerProps {
     dragController: DragController;
     selectedConnectionId: string | null;
     onSelectConnection: (id: string, e: React.MouseEvent) => void;
-    containerRef: React.RefObject<HTMLDivElement>; // Fixed type
-    zoom: number; // Added zoom prop
-}
+    containerRef: React.RefObject<HTMLDivElement>;     zoom: number; }
 
-// --- Helper Functions (Pure Math) ---
 const getAnchorPos = (block: {x: number, y: number, w: number, h: number}, side: 'top' | 'right' | 'bottom' | 'left') => {
     const { x, y, w, h } = block;
     switch (side) {
@@ -52,7 +49,6 @@ const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:nu
     return { x, y };
 };
 
-// --- Initial Path Generation (Using React Props for initial render) ---
 const calculateInitialPath = (conn: Connection, blocks: BlockDims[]) => {
     const fromBlock = blocks.find(b => b.id === conn.fromBlock);
     const toBlock = blocks.find(b => b.id === conn.toBlock);
@@ -61,8 +57,7 @@ const calculateInitialPath = (conn: Connection, blocks: BlockDims[]) => {
     const start = getAnchorPos({x: fromBlock.x, y: fromBlock.y, w: fromBlock.width, h: fromBlock.height}, conn.fromSide);
     const end = getAnchorPos({x: toBlock.x, y: toBlock.y, w: toBlock.width, h: toBlock.height}, conn.toSide);
 
-    // Initial Path Calculation with Sampled Defaults
-    let cp1 = conn.controlPoint1;
+        let cp1 = conn.controlPoint1;
     let cp2 = conn.controlPoint2;
     if (!cp1 || !cp2) {
          const dx = end.x - start.x;
@@ -97,28 +92,22 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
     containerRef,
     zoom
 }) => {
-    // Use refs to avoid re-creating the effect when these change
-    const connectionsRef = useRef(connections);
+        const connectionsRef = useRef(connections);
     const blocksRef = useRef(blocks);
     const zoomRef = useRef(zoom);
     
-    // Keep refs updated
-    useEffect(() => { connectionsRef.current = connections; }, [connections]);
+        useEffect(() => { connectionsRef.current = connections; }, [connections]);
     useEffect(() => { blocksRef.current = blocks; }, [blocks]);
     useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
-    // Recalculate paths using actual DOM positions after render
-    // This ensures consistency between live dragging and static render
-    useLayoutEffect(() => {
+            useLayoutEffect(() => {
         const containerEl = containerRef.current;
         if (!containerEl || connections.length === 0) return;
 
-        // Small delay to ensure DOM is fully rendered
-        const updatePaths = () => {
+                const updatePaths = () => {
             const contRect = containerEl.getBoundingClientRect();
             
-            // Only update visible (non-hidden) connections
-            connections.filter(conn => !conn.hidden).forEach(conn => {
+                        connections.filter(conn => !conn.hidden).forEach(conn => {
                 const fromEl = document.getElementById(conn.fromBlock);
                 const toEl = document.getElementById(conn.toBlock);
                 
@@ -127,8 +116,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                 const fromRect = fromEl.getBoundingClientRect();
                 const toRect = toEl.getBoundingClientRect();
                 
-                // Calculate logical coordinates (unscaled)
-                const fromGeo = {
+                                const fromGeo = {
                     x: (fromRect.left - contRect.left + containerEl.scrollLeft) / zoom,
                     y: (fromRect.top - contRect.top + containerEl.scrollTop) / zoom,
                     w: fromRect.width / zoom,
@@ -179,8 +167,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             });
         };
         
-        // Use requestAnimationFrame to ensure DOM is painted
-        const rafId = requestAnimationFrame(updatePaths);
+                const rafId = requestAnimationFrame(updatePaths);
         return () => cancelAnimationFrame(rafId);
     }, [connections, blocks, zoom, containerRef]);
 
@@ -193,8 +180,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             const activeId = dragController.activeId;
             if (!activeId) return;
 
-            // 1. Get Live Stats of the Dragged Block
-            const blockEl = document.getElementById(activeId);
+                        const blockEl = document.getElementById(activeId);
             const containerEl = containerRef.current;
             const currentZoom = zoomRef.current;
             const currentConnections = connectionsRef.current;
@@ -204,17 +190,14 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                 const contRect = containerEl.getBoundingClientRect();
                 const bRect = blockEl.getBoundingClientRect();
                 
-                // CRITICAL: Unscale physical coordinates to Logical Canvas coordinates
-                // x = (Physical Relative Pos) / zoom
-                const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
+                                                const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
                 const y = (bRect.top - contRect.top + containerEl.scrollTop) / currentZoom;
                 const w = bRect.width / currentZoom;
                 const h = bRect.height / currentZoom;
                 const activeBlockGeo = { x, y, w, h };
 
                 currentConnections.forEach(conn => {
-                    // Skip hidden connections and connections not involving the dragged block
-                    if (conn.hidden) return;
+                                        if (conn.hidden) return;
                     if (conn.fromBlock !== activeId && conn.toBlock !== activeId) return;
 
                     const isFromMoving = conn.fromBlock === activeId;
@@ -233,8 +216,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                                  h: r.height / currentZoom
                              };
                          } else {
-                             // Store blocks are already logical, no unscaling needed
-                             const b = currentBlocks.find(b => b.id === conn.fromBlock);
+                                                          const b = currentBlocks.find(b => b.id === conn.fromBlock);
                              if (b) fromGeo = { x: b.x, y: b.y, w: b.width, h: b.height };
                          }
                     }
@@ -314,8 +296,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             unsubscribe();
             cancelAnimationFrame(rafId);
         };
-    }, [dragController, containerRef]); // Only re-subscribe when dragController changes
-
+    }, [dragController, containerRef]); 
     return (
         <svg 
             className="absolute inset-0 pointer-events-none overflow-visible w-full h-full z-0"
@@ -335,16 +316,14 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
              </defs>
             {connections.filter(conn => !conn.hidden).map(conn => {
                 const isSelected = selectedConnectionId === conn.id;
-                const path = calculateInitialPath(conn, blocks); // Initial render
-                return (
+                const path = calculateInitialPath(conn, blocks);                 return (
                     <g 
                         key={conn.id} 
                         className="pointer-events-auto" 
                         onClick={(e) => { e.stopPropagation(); onSelectConnection(conn.id, e); }}
                     >
                         <path 
-                            id={`conn-path-${conn.id}`} // Hook for Matrix
-                            d={path} 
+                            id={`conn-path-${conn.id}`}                             d={path} 
                             stroke={conn.color || (isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))")} 
                             strokeWidth={isSelected ? 3 : 2}
                             fill="none"

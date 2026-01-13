@@ -40,6 +40,7 @@ interface UseCollaborativeEditorOptions {
     color: string;
   };
   docId: string;
+  editable?: boolean; // false for viewer role
 }
 
 export function useCollaborativeEditor({ 
@@ -47,8 +48,10 @@ export function useCollaborativeEditor({
   provider, 
   user,
   docId,
+  editable = true, // default to editable
 }: UseCollaborativeEditorOptions) {
   const editor = useEditor({
+    editable,
     immediatelyRender: false,
     extensions: [
       // StarterKit provides essential features (bold, italic, lists, etc.)
@@ -80,7 +83,8 @@ export function useCollaborativeEditor({
       TextStyle,
       Color,
       AutoJoiner.configure({ elementsToJoin: ['bulletList', 'orderedList'] }),
-      SlashCommands,
+      // Only include SlashCommands if editable
+      ...(editable ? [SlashCommands] : []),
       EmbedNode,
       MediaRow,
       MediaItem,

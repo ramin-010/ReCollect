@@ -8,17 +8,14 @@ import { ConnectionLine } from './ConnectionLine';
 interface ConnectionLayerProps {
     connections: Connection[];
     setConnections: React.Dispatch<React.SetStateAction<Connection[]>>;
-    blocks: BlockDims[]; // Needed to calculate anchor positions (visuals)
-    fullBlocks?: BlockData[]; // Needed for logic snapping
-    onUpdateConnection?: (connection: Connection) => void;
+    blocks: BlockDims[];     fullBlocks?: BlockData[];     onUpdateConnection?: (connection: Connection) => void;
     onRemoveConnection?: (id: string) => void;
     activeDragStart: ActiveDragStart | null;
     onDragComplete: () => void;
     getCanvasPoint: (e: { clientX: number, clientY: number }) => { x: number, y: number };
     selectedConnectionId: string | null;
     onSelectConnection: (id: string) => void;
-    variant?: 'default' | 'controls'; // New prop to split rendering
-}
+    variant?: 'default' | 'controls'; }
 
 export function ConnectionLayer({ 
     connections, 
@@ -37,16 +34,14 @@ export function ConnectionLayer({
     const containerRef = React.useRef<SVGSVGElement>(null); 
     const [draggingHandle, setDraggingHandle] = useState<{ connId: string, handle: 'cp1' | 'cp2' } | null>(null);
 
-    // Internal Drag State (Only for 'default' creation variant)
-    const [internalDraft, setInternalDraft] = useState<{
+        const [internalDraft, setInternalDraft] = useState<{
         fromBlock: string;
         fromSide: 'top' | 'right' | 'bottom' | 'left';
         currentX: number;
         currentY: number;
     } | null>(null);
 
-    // Sync activeDragStart (only if default)
-    useEffect(() => {
+        useEffect(() => {
         if (variant === 'default' && activeDragStart) {
             setInternalDraft({
                 fromBlock: activeDragStart.blockId,
@@ -57,12 +52,10 @@ export function ConnectionLayer({
         }
     }, [activeDragStart, variant]);
 
-    // Track if we have actively initiated the internal draft
-    const hasStartedRef = useRef(false);
+        const hasStartedRef = useRef(false);
     useEffect(() => { if (internalDraft) hasStartedRef.current = true; }, [internalDraft]);
 
-    // Use our hooked drag logic (only if default)
-    useConnectionDrag(
+        useConnectionDrag(
         variant === 'default' ? internalDraft : null,
         setInternalDraft,
         getCanvasPoint,
@@ -71,8 +64,7 @@ export function ConnectionLayer({
         setConnections
     );
 
-    // Completion Logic (only if default)
-    useEffect(() => {
+        useEffect(() => {
         if (variant === 'default' && activeDragStart && !internalDraft && hasStartedRef.current) {
             onDragComplete();
             hasStartedRef.current = false; 
@@ -80,22 +72,17 @@ export function ConnectionLayer({
     }, [internalDraft, activeDragStart, onDragComplete, variant]);
 
 
-    // Helper: Get Anchor Coordinate using DOM (Shared)
-    const getAnchorPos = useCallback((blockId: string, side: 'top' | 'right' | 'bottom' | 'left') => {
+        const getAnchorPos = useCallback((blockId: string, side: 'top' | 'right' | 'bottom' | 'left') => {
         const el = document.getElementById(blockId);
         const container = containerRef.current?.parentElement; 
         
-        // Note: For the 'controls' layer (z-50), the parent might be different if we nest differently, 
-        // but assuming it's in the same relative container.
-        
+                        
         if (!el || !container) {
-            // Fallback to simpler math if DOM not found (e.g. initial render race)
-            const block = blocks.find(b => b.id === blockId);
+                        const block = blocks.find(b => b.id === blockId);
             if (!block) return { x: 0, y: 0 };
             const w = block.width;
             const h = block.height; 
-            // Fallback calculations...
-             switch (side) {
+                         switch (side) {
                 case 'top': return { x: block.x + w / 2, y: block.y };
                 case 'right': return { x: block.x + w, y: block.y + h / 2 };
                 case 'bottom': return { x: block.x + w / 2, y: block.y + h };
@@ -106,8 +93,7 @@ export function ConnectionLayer({
         const elRect = el.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
 
-        // Relative Position inside the container
-        const relX = elRect.left - containerRect.left;
+                const relX = elRect.left - containerRect.left;
         const relY = elRect.top - containerRect.top;
         const w = elRect.width;
         const h = elRect.height;
@@ -120,8 +106,7 @@ export function ConnectionLayer({
         }
     }, [blocks]); 
 
-    // Helper to sample bezier
-    const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
+        const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
         const u = 1 - t;
         const tt = t * t;
         const uu = u * u;
@@ -132,8 +117,7 @@ export function ConnectionLayer({
         return { x, y };
     };
 
-    // Helper: Generate a smooth spline path passing through points [p0, p1, p2, p3]
-    const getSplinePath = (points: {x: number, y: number}[]) => {
+        const getSplinePath = (points: {x: number, y: number}[]) => {
         if (points.length < 2) return "";
         let path = `M ${points[0].x} ${points[0].y}`;
         const t = 0.5; 
@@ -151,8 +135,7 @@ export function ConnectionLayer({
         return path;
     };
 
-    // Helper: Get Control Points (Waypoints)
-    const getControlPoints = (conn: Connection) => {
+        const getControlPoints = (conn: Connection) => {
         const start = getAnchorPos(conn.fromBlock, conn.fromSide);
         const end = getAnchorPos(conn.toBlock, conn.toSide);
         
@@ -190,8 +173,7 @@ export function ConnectionLayer({
         return getSplinePath([start, cp1, cp2, end]);
     };
 
-    // Handle Control Point Dragging (Variant: 'controls')
-    useEffect(() => {
+        useEffect(() => {
         if (variant !== 'controls' || !draggingHandle) return;
 
         let animationFrameId: number;
@@ -200,14 +182,10 @@ export function ConnectionLayer({
             animationFrameId = requestAnimationFrame(() => {
                 const { x, y } = getCanvasPoint(e);
                 
-                // Optimistically update the local state or parent?
-                // Updating parent triggers re-render loop.
-                // Using rAF debounces it slightly to screen sync.
-                
+                                                                
                 setConnections(prev => prev.map(c => {
                     if (c.id !== draggingHandle.connId) return c;
-                    const currentCPs = getControlPoints(c); // Use mostly stable reference
-                    return {
+                    const currentCPs = getControlPoints(c);                     return {
                         ...c,
                         controlPoint1: draggingHandle.handle === 'cp1' ? { x, y } : currentCPs.cp1,
                         controlPoint2: draggingHandle.handle === 'cp2' ? { x, y } : currentCPs.cp2
@@ -240,8 +218,7 @@ export function ConnectionLayer({
                 const isSelected = selectedConnectionId === conn.id;
 
                 if (variant === 'default') {
-                    // RENDER LINE (Memoized)
-                    const fromBlock = blocks.find(b => b.id === conn.fromBlock);
+                                        const fromBlock = blocks.find(b => b.id === conn.fromBlock);
                     const toBlock = blocks.find(b => b.id === conn.toBlock);
                     
                     return (
@@ -255,13 +232,11 @@ export function ConnectionLayer({
                         />
                     );
                 } else if (variant === 'controls' && isSelected) {
-                    // RENDER CONTROLS
-                     const { cp1, cp2 } = getControlPoints(conn);
+                                         const { cp1, cp2 } = getControlPoints(conn);
                      const start = getAnchorPos(conn.fromBlock, conn.fromSide);
                      const end = getAnchorPos(conn.toBlock, conn.toSide);
                      
-                     // Calculate midpoint for Color Picker (between CP1 and CP2 is usually the visual center)
-                     const midX = (cp1.x + cp2.x) / 2;
+                                          const midX = (cp1.x + cp2.x) / 2;
                      const midY = (cp1.y + cp2.y) / 2;
 
                      const COLORS = [
@@ -276,8 +251,7 @@ export function ConnectionLayer({
                         <g 
                             key={`${conn.id}-controls`} 
                             className="pointer-events-auto"
-                            onClick={(e) => e.stopPropagation()} // Prevent canvas click (deselect)
-                        >
+                            onClick={(e) => e.stopPropagation()}                         >
                              {/* Color Picker Toolbar */}
                              <foreignObject x={midX - 60} y={midY - 40} width="90" height="10" opacity={0.7} className="overflow-visible">
                                  <div className="flex items-center justify-center gap-1 bg-background/90 border border-border rounded-full p-1 shadow-sm backdrop-blur-sm">
@@ -311,8 +285,7 @@ export function ConnectionLayer({
                                  }}
                                  onDoubleClick={(e) => {
                                      e.stopPropagation();
-                                     // Reset CP1 to undefined to revert to smart default
-                                     setConnections(prev => prev.map(c => 
+                                                                          setConnections(prev => prev.map(c => 
                                          c.id === conn.id ? { ...c, controlPoint1: undefined } : c
                                      ));
                                  }}
@@ -330,8 +303,7 @@ export function ConnectionLayer({
                                  }}
                                  onDoubleClick={(e) => {
                                      e.stopPropagation();
-                                     // Reset CP2 to undefined
-                                     setConnections(prev => prev.map(c => 
+                                                                          setConnections(prev => prev.map(c => 
                                          c.id === conn.id ? { ...c, controlPoint2: undefined } : c
                                      ));
                                  }}

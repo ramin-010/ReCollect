@@ -53,14 +53,12 @@ export function CreateContentDialog({
 
   const [isLoading, setIsLoading] = useState(false);
   const [showReminderDialog, setShowReminderDialog] = useState(false);
-  const [isCanvasExpanded, setIsCanvasExpanded] = useState(false); // #new: Canvas expansion state
-  const [showTagInput, setShowTagInput] = useState(false);
+  const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [newLinkInput, setNewLinkInput] = useState('');
   const [sampleTags, setSampleTags] = useState(DEFAULT_TAGS);
   
-  // Debounce timer for canvas onChange to prevent dialog re-renders
-  const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     title = '',
@@ -101,8 +99,7 @@ export function CreateContentDialog({
     }
   }, [isLoaded, selectedTags]);
   
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
+    useEffect(() => {
     return () => {
       if (canvasDebounceRef.current) {
         clearTimeout(canvasDebounceRef.current);
@@ -184,13 +181,11 @@ export function CreateContentDialog({
   };
 
   const handleClose = () => {
-    // Only try to revoke if canvasBlocks is an array or object
-    let blocks: any[] = [];
+        let blocks: any[] = [];
     if (Array.isArray(canvasBlocks)) {
         blocks = canvasBlocks;
     } else if (canvasBlocks && typeof canvasBlocks === 'object') {
-        // @ts-ignore
-        blocks = canvasBlocks.blocks || [];
+                blocks = canvasBlocks.blocks || [];
     }
 
     blocks.forEach((block: any) => {
@@ -218,8 +213,7 @@ export function CreateContentDialog({
     try {
       const formData = new FormData();
       
-      // Normalize data: Parse if string, otherwise use as is
-      let rawData: any = canvasBlocks;
+            let rawData: any = canvasBlocks;
       if (typeof rawData === 'string') {
           try { rawData = JSON.parse(rawData); } catch (e) { rawData = []; }
       }
@@ -227,16 +221,14 @@ export function CreateContentDialog({
       let blocksToSave: any[] = [];
       let connectionsToSave: any[] = [];
 
-      // Handle both Legacy (Array) and New (Object) formats
-      if (Array.isArray(rawData)) {
+            if (Array.isArray(rawData)) {
           blocksToSave = [...rawData];
       } else if (rawData && typeof rawData === 'object') {
           blocksToSave = [...(rawData.blocks || [])];
           connectionsToSave = rawData.connections || [];
       }
 
-      const imageBlockIds: string[] = []; // Track which blocks have images
-
+      const imageBlockIds: string[] = []; 
       for (let i = blocksToSave.length - 1; i >= 0; i--) {
         const block = blocksToSave[i];
 
@@ -259,13 +251,11 @@ export function CreateContentDialog({
         }
       }
       
-      // Send list of block IDs that have images
-      formData.append('imageBlockIds', JSON.stringify(imageBlockIds));
+            formData.append('imageBlockIds', JSON.stringify(imageBlockIds));
       formData.append('title', title.trim());
       formData.append('description', description.trim());
       
-      // Construct final body with potential connections
-      const finalBody = {
+            const finalBody = {
           blocks: blocksToSave,
           connections: connectionsToSave
       };
@@ -457,9 +447,7 @@ export function CreateContentDialog({
                 <SmartCanvas
                   initialContent={typeof canvasBlocks === 'string' ? canvasBlocks : JSON.stringify(canvasBlocks)}
                   onChange={useCallback((content: string) => {
-                      // Debounce parent state updates to prevent dialog re-renders during editing
-                      // SmartCanvas already persists to localStorage internally
-                      if (canvasDebounceRef.current) {
+                                                                  if (canvasDebounceRef.current) {
                         clearTimeout(canvasDebounceRef.current);
                       }
                       canvasDebounceRef.current = setTimeout(() => {
@@ -469,8 +457,7 @@ export function CreateContentDialog({
                         } catch (e) {
                             console.error("Failed to parse canvas blocks", e);
                         }
-                      }, 300); // Faster sync - prevents stale canvas overwrites
-                  }, [updateState])}
+                      }, 300);                   }, [updateState])}
                   readOnly={false}
                   />
 

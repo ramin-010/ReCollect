@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut } from 'lucide-react';
+import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut, Eye } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -29,6 +29,7 @@ import { ImageUploadDialog } from '../ImageUploadDialog';
 interface CollaborativeDocEditorProps {
   doc: Doc;
   onBack: () => void;
+  readOnly?: boolean; // true for viewer role
 }
 
 interface CollaborativeEditorContentProps {
@@ -38,6 +39,7 @@ interface CollaborativeEditorContentProps {
   doc: Doc;
   onBack: () => void;
   collaborators: CollaboratorInfo[];
+  readOnly?: boolean;
 }
 
 // Inner component that renders the full editor UI once connected
@@ -47,13 +49,15 @@ function CollaborativeEditorContent({
   user,
   doc,
   onBack,
-  collaborators
+  collaborators,
+  readOnly = false
 }: CollaborativeEditorContentProps) {
   const { editor } = useCollaborativeEditor({
     ydoc,
     provider,
     user: { name: user.name, color: user.color },
     docId: doc._id,
+    editable: !readOnly,
   });
 
   // Get updateDoc from Zustand store to sync preview
@@ -442,8 +446,8 @@ function CollaborativeEditorContent({
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">
-       {/* Floating Toolbar */}
-       {editor && (
+       {/* Floating Toolbar - only show when editable */}
+       {editor && !readOnly && (
         <FloatingToolbar
           editor={editor}
           show={showFloatingToolbar}
@@ -462,7 +466,18 @@ function CollaborativeEditorContent({
         >
           Back
         </Button>
-        <div className="flex items-center gap-3">
+
+        {/* Premium Reader View Badge */}
+        {readOnly && (
+           <div className="group flex items-center gap-2 pl-1 pr-3 py-1 rounded-full mr-auto bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md shadow-[0_0_15px_-3px_rgba(0,0,0,0.1)] transition-all hover:bg-black/10 dark:hover:bg-white/10 select-none ">
+             <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 shadow-inner ">
+                <Eye className="w-3 h-3 text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]" />
+             </div>
+             <span className="text-xs text-[hsl(var(--muted-foreground))]  group-hover/header:text-[hsl(var(--foreground))] group-hover/header:text-[hsl(var(--foreground))] font-medium tracking-wide">Read Only</span>
+           </div>
+        )}
+
+        <div className="flex items-center gap-3 ml-auto">
            {/* Collaboration Status Indicators */}
            <div className="flex items-center gap-2 mr-2">
              {provider.isSynced ? (
@@ -584,7 +599,7 @@ function CollaborativeEditorContent({
                </DropdownMenuContent>
              </DropdownMenu>
            )}
-           
+
             {/* {isSavingMetadata && (
               <span className="text-xs text-[hsl(var(--muted-foreground))] animate-pulse">Saving info...</span>
             )} */}
@@ -626,7 +641,7 @@ function CollaborativeEditorContent({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : !readOnly ? (
           <div className="h-24 flex items-end justify-center pb-4"> 
             <Button
               variant="ghost"
@@ -638,6 +653,8 @@ function CollaborativeEditorContent({
               Add cover
             </Button>
           </div>
+        ) : (
+          <div className="h-16" />
         )}
 
         <CoverPicker
@@ -654,25 +671,29 @@ function CollaborativeEditorContent({
               value={title}
               onChange={handleTitleChange}
               placeholder="New Page"
-              className="w-full text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight"
+              readOnly={readOnly}
+              className={`w-full text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
               style={{ fontFamily: '"Noto Sans", "Roboto", sans-serif' }}
             />
             <div className="w-16 h-1 bg-amber-500 rounded-full" />
           </div>
 
           <div className="notion-editor relative">
-            <DragHandle editor={editor}>
-              <div className="drag-handle-icon cursor-grab active:cursor-grabbing p-1 rounded hover:bg-white/10 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                  <circle cx="9" cy="12" r="1"/>
-                  <circle cx="9" cy="5" r="1"/>
-                  <circle cx="9" cy="19" r="1"/>
-                  <circle cx="15" cy="12" r="1"/>
-                  <circle cx="15" cy="5" r="1"/>
-                  <circle cx="15" cy="19" r="1"/>
-                </svg>
-              </div>
-            </DragHandle>
+            {/* Drag Handle - only show when editable */}
+            {!readOnly && (
+              <DragHandle editor={editor}>
+                <div className="drag-handle-icon cursor-grab active:cursor-grabbing p-1 rounded hover:bg-white/10 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <circle cx="9" cy="12" r="1"/>
+                    <circle cx="9" cy="5" r="1"/>
+                    <circle cx="9" cy="19" r="1"/>
+                    <circle cx="15" cy="12" r="1"/>
+                    <circle cx="15" cy="5" r="1"/>
+                    <circle cx="15" cy="19" r="1"/>
+                  </svg>
+                </div>
+              </DragHandle>
+            )}
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -694,7 +715,7 @@ function CollaborativeEditorContent({
  * Collaborative document editor for shared docs.
  * Uses Yjs + HocusPocus for real-time sync.
  */
-export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorProps) {
+export function CollaborativeDocEditor({ doc, onBack, readOnly = false }: CollaborativeDocEditorProps) {
   const { user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState<string>('');
@@ -865,6 +886,7 @@ export function CollaborativeDocEditor({ doc, onBack }: CollaborativeDocEditorPr
             doc={doc}
             onBack={handleBack}
             collaborators={collaborators}
+            readOnly={readOnly}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

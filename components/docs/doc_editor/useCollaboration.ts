@@ -54,38 +54,31 @@ export function useCollaboration({
   const [leftVoluntarily, setLeftVoluntarily] = useState(false);
   const [collaboratorLeftEvent, setCollaboratorLeftEvent] = useState<{ userId: string; name: string; remainingCount: number } | null>(null);
   
-  // Use refs to avoid re-creating callbacks
-  const providerRef = useRef<HocuspocusProvider | null>(null);
+    const providerRef = useRef<HocuspocusProvider | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
   const isConnectedRef = useRef(false);
   
-  // Store latest values in refs so callbacks don't need them as deps
-  const documentNameRef = useRef(documentName);
+    const documentNameRef = useRef(documentName);
   const tokenRef = useRef(token);
   const userRef = useRef(user);
   const onStatusChangeRef = useRef(onStatusChange);
   
-  // Update refs when props change
-  useEffect(() => {
+    useEffect(() => {
     documentNameRef.current = documentName;
     tokenRef.current = token;
     onStatusChangeRef.current = onStatusChange;
   });
 
-  // Reactively update awareness when user details change or connection is established
-  useEffect(() => {
-    // Only update if connected and we have a provider
-    if (provider && status === 'connected') {
-      // Ensure we have at least a basic user object
-      const safeUser = {
+    useEffect(() => {
+        if (provider && status === 'connected') {
+            const safeUser = {
         id: user?.id || 'unknown',
         name: user?.name || 'Anonymous',
         color: user?.color || getUserColor(user?.id || 'unknown'),
         avatar: user?.avatar,
       };
 
-      // console.log('[Collab] Updating awareness user:', safeUser);
-      provider.setAwarenessField('user', safeUser);
+            provider.setAwarenessField('user', safeUser);
       userRef.current = user;
     }
   }, [user, provider, status]);
@@ -103,8 +96,7 @@ export function useCollaboration({
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Stable connect function - no dependencies that change
-  const connect = useCallback(() => {
+    const connect = useCallback(() => {
     if (isConnectedRef.current || providerRef.current) return;
     isConnectedRef.current = true;
 
@@ -138,22 +130,34 @@ export function useCollaboration({
       },
       onAwarenessUpdate: () => {
         const states = providerRef.current?.awareness?.getStates() || new Map();
-        const users: CollaboratorInfo[] = [];
         const localClientId = providerRef.current?.awareness?.clientID;
         
+                const uniqueUsers = new Map<string, CollaboratorInfo>();
+        
         states.forEach((state: any, clientId: number) => {
-          if (state.user) {
+          if (state.user && state.user.id) {
             const isMe = clientId === localClientId;
-            users.push({
-              clientId,
-              id: state.user.id,
-              name: isMe ? 'You' : (state.user.name || 'Anonymous'),
-              color: state.user.color || getUserColor(state.user.id),
-              avatar: state.user.avatar,
-              isCurrentUser: isMe,
-            });
+            const userId = state.user.id;
+            
+                        if (!uniqueUsers.has(userId)) {
+              uniqueUsers.set(userId, {
+                clientId,
+                id: userId,
+                name: isMe ? 'You' : (state.user.name || 'Anonymous'),
+                color: state.user.color || getUserColor(userId),
+                avatar: state.user.avatar,
+                isCurrentUser: isMe,
+              });
+            } else if (isMe) {
+                            const existing = uniqueUsers.get(userId)!;
+              existing.clientId = clientId;
+              existing.isCurrentUser = true;
+              existing.name = 'You';
+            }
           }
         });
+        
+        const users = Array.from(uniqueUsers.values());
         setCollaborators(prev => {
           if (JSON.stringify(prev) === JSON.stringify(users)) return prev;
           return users;
@@ -161,13 +165,11 @@ export function useCollaboration({
       },
       onClose: (data: any) => {
         const event = data?.event;
-        // Close code 4001 = Removed by owner
-        if (event?.code === 4001) {
+                if (event?.code === 4001) {
           console.log('[Collab] Removed by owner (Close Code):', event.reason);
           setWasRemovedByOwner(true);
         }
-        // Close code 4002 = Left voluntarily
-        if (event?.code === 4002) {
+                if (event?.code === 4002) {
           console.log('[Collab] Left voluntarily (Close Code):', event.reason);
           setLeftVoluntarily(true);
         }
@@ -176,13 +178,11 @@ export function useCollaboration({
         try {
           const data = JSON.parse(payload);
           
-          // COLLABORATOR_LEFT: User left voluntarily - owner should see toast + modal
-          if (data.type === 'COLLABORATOR_LEFT') {
+                    if (data.type === 'COLLABORATOR_LEFT') {
             console.log('[Collab] Collaborator left voluntarily:', data);
             if (data.userId !== userRef.current.id) {
                toast.info(`${data.name} left the document`);
-               // Set the leave event for CollaborativeDocEditor to handle (for owner modal)
-               setCollaboratorLeftEvent({
+                              setCollaboratorLeftEvent({
                  userId: data.userId,
                  name: data.name,
                  remainingCount: data.remainingCount
@@ -190,20 +190,16 @@ export function useCollaboration({
             }
           }
           
-          // COLLABORATOR_REMOVED: User was kicked by owner - kicked user sees "Access Revoked" modal
-          if (data.type === 'COLLABORATOR_REMOVED') {
+                    if (data.type === 'COLLABORATOR_REMOVED') {
             const removedBy = data.removedBy;
             const currentUserId = userRef.current.id;
             
             console.log('[Collab] Collaborator was removed by owner:', data);
             
             if (data.userId === currentUserId) {
-               // This user was kicked - show "Access Revoked" modal
-               setWasRemovedByOwner(true);
+                              setWasRemovedByOwner(true);
             } else if (removedBy !== currentUserId) {
-               // Show toast ONLY if I am NOT the one who initiated the removal
-               // (The initiator already got a success toast from the API call)
-               toast.info(`${data.name} was removed by the owner`);
+                                             toast.info(`${data.name} was removed by the owner`);
             }
           }
         } catch (e) {
@@ -224,8 +220,7 @@ export function useCollaboration({
     setProvider(hocusProvider);
     setStatus('connecting');
     
-    // Force immediate update
-    const initialStates = hocusProvider.awareness?.getStates() || new Map();
+        const initialStates = hocusProvider.awareness?.getStates() || new Map();
     const initialUsers: CollaboratorInfo[] = [];
     const localClientIdInitial = hocusProvider.awareness?.clientID;
     
@@ -244,10 +239,8 @@ export function useCollaboration({
     });
     setCollaborators(initialUsers);
 
-  }, []); // No dependencies - uses refs
-
-  // Stable disconnect function
-  const disconnect = useCallback(() => {
+  }, []); 
+    const disconnect = useCallback(() => {
     if (providerRef.current) {
       providerRef.current.destroy();
       providerRef.current = null;
@@ -261,10 +254,8 @@ export function useCollaboration({
     isConnectedRef.current = false;
     setStatus('disconnected');
     setCollaborators([]);
-  }, []); // No dependencies
-
-  // Cleanup on unmount only
-  useEffect(() => {
+  }, []); 
+    useEffect(() => {
     return () => {
       if (providerRef.current) {
         providerRef.current.destroy();
@@ -277,8 +268,7 @@ export function useCollaboration({
     };
   }, []);
 
-  // Update awareness when user prop changes
-  useEffect(() => {
+    useEffect(() => {
     if (providerRef.current && user) {
        providerRef.current.setAwarenessField('user', {
           id: user.id,

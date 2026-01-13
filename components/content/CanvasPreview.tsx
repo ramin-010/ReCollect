@@ -33,7 +33,6 @@ interface CanvasPreviewProps {
   containerWidth?: number;
 }
 
-// Default dimensions
 const DEFAULT_TEXT_WIDTH = 200;
 const DEFAULT_TEXT_HEIGHT = 60;
 const DEFAULT_IMAGE_WIDTH = 150;
@@ -42,13 +41,11 @@ const DEFAULT_STACK_WIDTH = 200;
 const DEFAULT_STACK_HEIGHT = 150;
 const PREVIEW_PADDING = 12;
 
-// Strip HTML tags for text preview
 const stripHtml = (html: string): string => {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '').slice(0, 100);
 };
 
-// Tailwind color map - maps color names to actual hex values
 const TAILWIND_COLORS: Record<string, string> = {
   slate: '#64748b',
   gray: '#6b7280',
@@ -74,12 +71,10 @@ const TAILWIND_COLORS: Record<string, string> = {
   rose: '#f43f5e',
 };
 
-// Parse Tailwind color class to get actual color
 const parseTailwindColor = (colorClass: string | undefined): string | null => {
   if (!colorClass) return null;
   
-  // Match patterns like 'bg-violet-500/10' or 'bg-green-500'
-  const match = colorClass.match(/bg-(\w+)-(\d+)/);
+    const match = colorClass.match(/bg-(\w+)-(\d+)/);
   if (match) {
     const colorName = match[1];
     return TAILWIND_COLORS[colorName] || null;
@@ -87,9 +82,7 @@ const parseTailwindColor = (colorClass: string | undefined): string | null => {
   return null;
 };
 
-// --- Helper Functions copied from NativeConnectionLayer.tsx ---
 
-// Get anchor position on block edge
 const getAnchorPos = (block: {x: number, y: number, w: number, h: number}, side: 'top' | 'right' | 'bottom' | 'left') => {
   const { x, y, w, h } = block;
   switch (side) {
@@ -100,7 +93,6 @@ const getAnchorPos = (block: {x: number, y: number, w: number, h: number}, side:
   }
 };
 
-// Generate smooth Catmull-Rom spline path
 const getSplinePath = (points: {x: number, y: number}[]) => {
   if (points.length < 2) return "";
   let path = `M ${points[0].x} ${points[0].y}`;
@@ -119,7 +111,6 @@ const getSplinePath = (points: {x: number, y: number}[]) => {
   return path;
 };
 
-// Calculate point on bezier curve at parameter t
 const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
   const u = 1 - t;
   const tt = t * t;
@@ -131,7 +122,6 @@ const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:nu
   return { x, y };
 };
 
-// Calculate connection path with proper control points
 const calculateConnectionPath = (
   conn: Connection,
   fromBlock: { x: number; y: number; width: number; height: number },
@@ -142,8 +132,7 @@ const calculateConnectionPath = (
   minX: number,
   minY: number
 ): string => {
-  // Transform to preview coordinates
-  const fromGeo = {
+    const fromGeo = {
     x: offsetX + (fromBlock.x - minX) * scale,
     y: offsetY + (fromBlock.y - minY) * scale,
     w: fromBlock.width * scale,
@@ -159,8 +148,7 @@ const calculateConnectionPath = (
   const start = getAnchorPos(fromGeo, conn.fromSide);
   const end = getAnchorPos(toGeo, conn.toSide);
 
-  // Calculate control points for smooth curve
-  const dx = end.x - start.x;
+    const dx = end.x - start.x;
   const dy = end.y - start.y;
   const dist = Math.hypot(dx, dy);
   const offset = Math.min(Math.max(dist * 0.5, 20), 100);
@@ -191,8 +179,7 @@ export function CanvasPreview({
 }: CanvasPreviewProps) {
   
   const previewData = useMemo(() => {
-    // Filter to include text (with content), image, and stack blocks
-    const filteredBlocks = blocks.filter(b => 
+        const filteredBlocks = blocks.filter(b => 
       (b.type === 'text' && b.content) || 
       b.type === 'image' || 
       b.type === 'stack'
@@ -200,43 +187,32 @@ export function CanvasPreview({
     
     if (filteredBlocks.length === 0) return null;
 
-    // Calculate bounds for each block
-    const blockBounds = filteredBlocks.map(block => {
+        const blockBounds = filteredBlocks.map(block => {
       const x = typeof block.x === 'number' ? block.x : parseFloat(String(block.x)) || 0;
       const y = typeof block.y === 'number' ? block.y : parseFloat(String(block.y)) || 0;
       const width = typeof block.width === 'number' ? block.width : parseFloat(String(block.width) ) || 400;
       let height = typeof block.height === 'number' ? block.height : 0;
       
-      // If height is 'auto' (string) or 0, calculate based on content (same as Rnd auto-sizing)
-      const isAutoHeight = height === 0 || String(block.height) === 'auto';
+            const isAutoHeight = height === 0 || String(block.height) === 'auto';
       if (isAutoHeight) {
         if (block.type === 'text') {
-          // Text blocks auto-size based on content
-          // Base block has ~48px padding (p-4 = 16px * 2 + borders)
-          // Content renders with ~24px line-height
-          const contentText = stripHtml(block.content || '');
-          const charsPerLine = Math.floor(width / 7); // ~7px per char average
-          const numLines = Math.max(1, Math.ceil(contentText.length / charsPerLine));
-          // 48px padding + 24px per line (approximate)
-          height = 48 + numLines * 24;
+                                        const contentText = stripHtml(block.content || '');
+          const charsPerLine = Math.floor(width / 7);           const numLines = Math.max(1, Math.ceil(contentText.length / charsPerLine));
+                    height = 48 + numLines * 24;
         } else if (block.type === 'stack') {
-          // Stack: header (~50px) + each item (~55px) + footer padding (~15px)
-          const itemCount = block.stackItems?.length || 1;
+                    const itemCount = block.stackItems?.length || 1;
           height = 50 + itemCount * 55 + 15;
         } else if (block.type === 'image') {
-          // Images maintain rough aspect ratio, default to 4:3
-          height = width * 0.75;
+                    height = width * 0.75;
         }
       }
 
-      // Fallback for height only if still 0
-      height = height || 100;
+            height = height || 100;
 
       return { x, y, width, height, block };
     });
 
-    // Calculate content bounding box
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     blockBounds.forEach(({ x, y, width, height }) => {
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
@@ -247,25 +223,20 @@ export function CanvasPreview({
     const contentWidth = maxX - minX;
     const contentHeight = maxY - minY;
 
-    // Available preview area
-    const previewWidth = containerWidth - PREVIEW_PADDING * 1;
+        const previewWidth = containerWidth - PREVIEW_PADDING * 1;
     const previewHeight = containerHeight - PREVIEW_PADDING * 1;
 
-    // Calculate scale to fit (don't scale up)
-    const scaleX = contentWidth > 0 ? previewWidth / contentWidth : 1;
+        const scaleX = contentWidth > 0 ? previewWidth / contentWidth : 1;
     const scaleY = contentHeight > 0 ? previewHeight / contentHeight : 1;
     const scale = Math.min(scaleX, scaleY, 1);
 
-    // Scaled dimensions
-    const scaledWidth = contentWidth * scale;
+        const scaledWidth = contentWidth * scale;
     const scaledHeight = contentHeight * scale;
 
-    // Center offset
-    const offsetX = (previewWidth - scaledWidth) / 2;
+        const offsetX = (previewWidth - scaledWidth) / 2;
     const offsetY = (previewHeight - scaledHeight) / 2;
 
-    // Transform blocks to preview coordinates
-    const transformedBlocks = blockBounds.map(({ x, y, width, height, block }) => ({
+        const transformedBlocks = blockBounds.map(({ x, y, width, height, block }) => ({
       block,
       left: offsetX + (x - minX) * scale,
       top: offsetY + (y - minY) * scale,
@@ -274,8 +245,7 @@ export function CanvasPreview({
       originalBounds: { x, y, width, height }
     }));
 
-    // Create block lookup for connections
-    const blockLookup = new Map<string, { x: number; y: number; width: number; height: number }>();
+        const blockLookup = new Map<string, { x: number; y: number; width: number; height: number }>();
     blockBounds.forEach(({ x, y, width, height, block }) => {
       const id = block.blockId || block._id;
       if (id) blockLookup.set(id, { x, y, width, height });
@@ -292,8 +262,7 @@ export function CanvasPreview({
     };
   }, [blocks, containerWidth, containerHeight]);
 
-  // Empty state
-  if (!previewData || previewData.transformedBlocks.length === 0) {
+    if (!previewData || previewData.transformedBlocks.length === 0) {
     return (
       <div 
         className="w-full bg-gradient-to-br from-[hsl(var(--muted))]/30 to-[hsl(var(--muted))]/10 flex flex-col items-center justify-center border-b border-[hsl(var(--border))]/40"
@@ -384,8 +353,7 @@ export function CanvasPreview({
           {transformedBlocks.map(({ block, left, top, width, height }, index) => {
             const blockId = block.blockId || block._id || index;
             
-            // TEXT BLOCK
-            if (block.type === 'text') {
+                        if (block.type === 'text') {
               const colorClasses = block.color || 'bg-gray-700';
               const fontSize = Math.max(8, (typeof block.fontSize === 'number' ? block.fontSize : 14) * scale);
               
@@ -408,8 +376,7 @@ export function CanvasPreview({
               );
             }
 
-            // STACK BLOCK
-            if (block.type === 'stack') {
+                        if (block.type === 'stack') {
               const stackItems = block.stackItems || [];
               return (
                 <div
@@ -450,8 +417,7 @@ export function CanvasPreview({
               );
             }
 
-            // IMAGE BLOCK
-            const hasImage = Boolean(block.url);
+                        const hasImage = Boolean(block.url);
             return (
               <div
                 key={blockId}

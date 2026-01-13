@@ -1,4 +1,3 @@
-// components/content/ShareContentDialog.tsx
 'use client';
 
 import { useState } from 'react';

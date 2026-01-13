@@ -9,9 +9,6 @@ import { imageStorage } from '@/lib/storage/imageStorage';
 import { isEqual } from 'lodash';
 
 
-// ============================================================
-// TYPE DEFINITIONS
-// ============================================================
 
 export interface Block {
   blockId: string;
@@ -23,10 +20,7 @@ export interface Block {
   content?: string;
   url?: string;
   fontSize?: number;
-  imageId?: string;      // IndexedDB reference for images
-  isUploaded?: boolean;  // Track if image is uploaded to cloud
-  autoWidth?: boolean;   // #change: Track if width should auto-expand
-}
+  imageId?: string;        isUploaded?: boolean;    autoWidth?: boolean;   }
 
 interface ContentCanvasProps {
   initialBlocks?: Block[];
@@ -34,9 +28,6 @@ interface ContentCanvasProps {
   readOnly?: boolean;
 }
 
-// ============================================================
-// EDITABLE TEXT BLOCK COMPONENT (Textarea)
-// ============================================================
 
 type EditableTextBlock = {
   content: string;
@@ -44,14 +35,12 @@ type EditableTextBlock = {
   onFocus: () => void;
   onBlur: () => void;
   readOnly?: boolean;
-  onDimensionsChange?: (w: number, h: number) => void; // #change: Report both width and height
-  onPasteImage?: (file: File) => void;
+  onDimensionsChange?: (w: number, h: number) => void;   onPasteImage?: (file: File) => void;
   autoFocus?: boolean;
   isEditing?: boolean;
   textSize: number;
   width: number;
-  autoWidth?: boolean; // #change: Receive autoWidth prop
-}
+  autoWidth?: boolean; }
 
 
 function EditableTextBlock({
@@ -69,48 +58,36 @@ function EditableTextBlock({
   autoWidth
 }: EditableTextBlock) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const ghostRef = useRef<HTMLDivElement>(null); // #change: Ghost element for width measurement
-  const isMountedRef = useRef(false); // Track if first render completed
-
-  // #change: Measure width and height
-  useLayoutEffect(() => {
+  const ghostRef = useRef<HTMLDivElement>(null);   const isMountedRef = useRef(false); 
+    useLayoutEffect(() => {
     const el = textareaRef.current;
     const ghost = ghostRef.current;
     if (!el || !ghost) return;
 
-    // 1. Measure Width (if autoWidth is true)
-    let newWidth = width;
+        let newWidth = width;
     if (autoWidth) {
-      ghost.textContent = content || ' '; // Ensure at least one char for height
-      
+      ghost.textContent = content || ' ';       
       const measuredWidth = ghost.scrollWidth;
-      // Add a small buffer for cursor/padding
-      newWidth = Math.max(width, measuredWidth + 10); 
+            newWidth = Math.max(width, measuredWidth + 10); 
     }
 
-    // 2. Measure Height (based on current/new width)
-    el.style.height = 'auto';
+        el.style.height = 'auto';
     const newHeight = el.scrollHeight;
     el.style.height = `${newHeight}px`;
 
-    // #fix: Skip first render to prevent immediate loop, compare against props
-    if (!isMountedRef.current) {
+        if (!isMountedRef.current) {
       isMountedRef.current = true;
       return;
     }
 
-    // Only notify if there's a meaningful change from the current block dimensions
-    const widthChanged = autoWidth && Math.abs(newWidth - width) > 1;
-    // Note: height comparison is handled by the parent's onDimensionsChange callback
-    
+        const widthChanged = autoWidth && Math.abs(newWidth - width) > 1;
+        
     if (widthChanged) {
       onDimensionsChange?.(newWidth, newHeight);
     }
 
-  }, [content, textSize, autoWidth]); // Removed 'width' from deps to prevent loop
-
-  // Handle autofocus
-  useEffect(() => {
+  }, [content, textSize, autoWidth]); 
+    useEffect(() => {
     if (autoFocus && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(textareaRef.current.value.length, textareaRef.current.value.length);
@@ -155,8 +132,7 @@ function EditableTextBlock({
           left: 0,
           visibility: 'hidden',
           height: 'auto',
-          width: 'auto', // Allow it to expand freely to measure width
-          minWidth: '10px',
+          width: 'auto',           minWidth: '10px',
           pointerEvents: 'none',
         }}
         aria-hidden="true"
@@ -181,17 +157,13 @@ function EditableTextBlock({
           minHeight: '10px',
           caretColor: 'white',
           border: 'none',
-          // #change: Disable pointer events when not editing to allow drag/select
-          pointerEvents: isEditing ? 'auto' : 'none',
+                    pointerEvents: isEditing ? 'auto' : 'none',
         }}
       />
     </>
   );
 }
 
-// ============================================================
-// MAIN CONTENT CANVAS COMPONENT
-// ============================================================
 
 export function ContentCanvas({
   initialBlocks = [],
@@ -204,8 +176,7 @@ export function ContentCanvas({
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   
-  // Track resize state
-  const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
+    const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [initialResizeState, setInitialResizeState] = useState<{ width: number, height: number, fontSize: number } | null>(null);
 
@@ -214,10 +185,7 @@ export function ContentCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 150, y: 150 });
 
-  // ============================================================
-  // EFFECTS
-  // ============================================================
-
+      
   useEffect(() => {
     const loadImages = async () => {
       const loadedBlocks = await Promise.all(
@@ -258,22 +226,17 @@ export function ContentCanvas({
     return () => clearTimeout(timer);
   }, [blocks, onSave]);
 
-  // ============================================================
-  // BLOCK MANAGEMENT
-  // ============================================================
-
+      
   const addTextBlock = (x?: number, y?: number) => {
     const newBlock: Block = {
       blockId: uuidv4(),
       type: 'text',
       x: x ?? 100,
       y: y ?? 100,
-      width: 10, // #change: Start small, let autoWidth expand it
-      height: 30,
+      width: 10,       height: 30,
       content: '',
       fontSize: 20,
-      autoWidth: true // #change: Enable auto-width by default
-    };
+      autoWidth: true     };
     setBlocks((prev) => [...prev, newBlock]);
     setEditingBlock(newBlock.blockId);
   };
@@ -316,10 +279,7 @@ export function ContentCanvas({
     setBlocks((prev) => prev.filter((block) => block.blockId !== id));
   };
 
-  // ============================================================
-  // RESIZING LOGIC
-  // ============================================================
-
+      
   const handleResizeStart = (block: Block, direction: string) => {
     setResizingBlockId(block.blockId);
     setResizeDirection(direction);
@@ -334,23 +294,15 @@ export function ContentCanvas({
     const newWidth = parseInt(ref.style.width);
     const newHeight = parseInt(ref.style.height);
     
-    // Find current block state
-    const block = blocks.find(b => b.blockId === blockId);
+        const block = blocks.find(b => b.blockId === blockId);
     if (!block || !initialResizeState) return;
 
     if (block.type === 'text') {
-      // #change: Treat top/bottom as scaling (like corners)
-      const isScaling = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'top', 'bottom'].includes(direction);
+            const isScaling = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'top', 'bottom'].includes(direction);
       
       if (isScaling) {
-        // SCALING: Change font size based on width ratio (or height ratio if dragging top/bottom?)
-        // If dragging top/bottom, width might not change if aspect ratio is locked? 
-        // Yes, Rnd with lockAspectRatio will change width too.
-        
-        // We can use the ratio of the dimension that is being primarily changed?
-        // Or just rely on width change since aspect ratio is locked.
-        // If dragging bottom, height changes -> width changes -> newWidth is correct.
-        
+                                
+                                
         const scaleFactor = newWidth / initialResizeState.width;
         const newFontSize = Math.max(1, initialResizeState.fontSize * scaleFactor);
         
@@ -359,21 +311,17 @@ export function ContentCanvas({
           height: newHeight,
           fontSize: newFontSize,
           ...position,
-          // #change: Keep autoWidth true to allow expansion
-          autoWidth: true 
+                    autoWidth: true 
         });
       } else {
-        // REFLOWING: Change width (left/right)
-        updateBlock(blockId, {
+                updateBlock(blockId, {
           width: newWidth,
           ...position,
-          // #change: Keep autoWidth true to allow expansion
-          autoWidth: true 
+                    autoWidth: true 
         });
       }
     } else {
-      // Image resizing (standard)
-      updateBlock(blockId, {
+            updateBlock(blockId, {
         width: newWidth,
         height: newHeight,
         ...position
@@ -387,10 +335,7 @@ export function ContentCanvas({
     setInitialResizeState(null);
   };
 
-  // ============================================================
-  // EVENT HANDLERS
-  // ============================================================
-
+      
   const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly) return;
     if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('canvas-inner')) {
@@ -506,8 +451,7 @@ export function ContentCanvas({
               minHeight={10}
               bounds="parent"
               enableResizing={!readOnly}
-              // #change: Lock aspect ratio for corners AND top/bottom
-              lockAspectRatio={
+                            lockAspectRatio={
                 block.type === 'text' && 
                 ['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'top', 'bottom'].includes(resizeDirection || '')
               }
@@ -539,11 +483,8 @@ export function ContentCanvas({
                     }
                     onDimensionsChange={(newWidth, newHeight) => {
                        const updates: Partial<Block> = {};
-                       // Only update width if it changed (auto-width expansion)
-                       if (Math.abs(newWidth - block.width) > 1) updates.width = newWidth;
-                       // Only update height if content actually changed (not just initial measurement)
-                       // Skip height updates during initial load - let the stored height be used
-                       if (editingBlock === block.blockId && Math.abs(newHeight - block.height) > 1) {
+                                              if (Math.abs(newWidth - block.width) > 1) updates.width = newWidth;
+                                                                     if (editingBlock === block.blockId && Math.abs(newHeight - block.height) > 1) {
                           updates.height = newHeight;
                        }
                        

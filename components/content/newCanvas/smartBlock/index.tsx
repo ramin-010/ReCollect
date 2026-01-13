@@ -35,19 +35,16 @@ function SmartBlockComponent({
   onDimensionsChange,
   readOnly,
   isConnectionDragging,
-  color // Background color class
-}: SmartBlockProps) {
+  color }: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Use prop color or default
-  const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
+    const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
   
-  // Monitor Dimensions with Throttle (Reverted from Debounce)
-  const lastDimUpdate = useRef<number>(0);
+    const lastDimUpdate = useRef<number>(0);
   const dimUpdateTimeout = useRef<any>(null);
 
   useEffect(() => {
@@ -79,8 +76,7 @@ function SmartBlockComponent({
     };
   }, [id, onDimensionsChange]);
 
-  // Calculate progress if tasks exist
-  const taskStats = useMemo(() => calculateTaskStats(content), [content]);
+    const taskStats = useMemo(() => calculateTaskStats(content), [content]);
 
   const handleStackItemDragStart = (e: React.DragEvent, index: number) => {
     e.stopPropagation();
@@ -96,8 +92,7 @@ function SmartBlockComponent({
   return (
     <motion.div
       ref={blockRef}
-      id={`smart-block-${id}`} // Updated ID to avoid collision with Rnd wrapper (which will have the naked ID)
-      initial={{ opacity: 0, scale: 0.95 }}
+      id={`smart-block-${id}`}       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
         "relative rounded-xl border transition-all duration-200 group flex flex-col backdrop-blur-sm",
@@ -114,8 +109,7 @@ function SmartBlockComponent({
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         onFocus?.(id);
-        // Only enter editing mode for text blocks - images/embeds/code/stacks don't need it
-        if (type === 'text') {
+                if (type === 'text') {
           setIsEditing(true);
         }
       }}
@@ -232,8 +226,6 @@ function SmartBlockComponent({
   );
 }
 
-// Custom comparison for React.memo - only re-render when data props change
-// Callbacks are stable (useCallback in parent) so we don't compare them
 const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
   return (
     prev.id === next.id &&
@@ -248,8 +240,7 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.isConnectionDragging === next.isConnectionDragging &&
     prev.readOnly === next.readOnly &&
     prev.color === next.color &&
-    prev.stackItems === next.stackItems // Reference equality for array
-  );
+    prev.stackItems === next.stackItems   );
 };
 
 export const SmartBlock = React.memo(SmartBlockComponent, arePropsEqual);

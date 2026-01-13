@@ -22,13 +22,11 @@ export const handleStackDrop = (
   if (stackData && dropTargetIndex !== null && onStackUpdate) {
     try {
       const { stackId: sourceStackId, itemIndex } = JSON.parse(stackData);
-      // Only reorder if dragging within the SAME stack
-      if (sourceStackId === stackId) {
+            if (sourceStackId === stackId) {
         const newItems = [...stackItems];
         const [movedItem] = newItems.splice(itemIndex, 1);
         
-        // Adjust target index if we are moving downwards
-        let finalIndex = dropTargetIndex;
+                let finalIndex = dropTargetIndex;
         if (itemIndex < dropTargetIndex) {
           finalIndex--;
         }
@@ -56,8 +54,7 @@ export const handleStackItemDrop = (
   if (stackData) {
     try {
       const { stackId: sourceStackId, itemIndex } = JSON.parse(stackData);
-      // Only reorder if dragging within the SAME stack
-      if (sourceStackId === stackId && onStackUpdate) {
+            if (sourceStackId === stackId && onStackUpdate) {
         const finalNewItems = [...stackItems];
         const [moved] = finalNewItems.splice(itemIndex, 1);
         
