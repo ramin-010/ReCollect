@@ -70,7 +70,7 @@ export function DocsView() {
   const prevViewModeRef = useRef<ViewMode>(viewMode);
   // Throttle: track last sync time to prevent rapid requests
   const lastSyncTimeRef = useRef<number>(0);
-  const SYNC_THROTTLE_MS = 15000; // 15 seconds minimum between syncs
+  const SYNC_THROTTLE_MS = 30000; // 15 seconds minimum between syncs
 
 
   useEffect(() => {

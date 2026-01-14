@@ -2,40 +2,57 @@
 @import 'tailwindcss';
 
 @layer base {
-  /* Default Light Mode - Clean with Subtle Blue Tint */
+
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Option 3 Revised: Soft Daylight (Neutral Gray) */
+    --background: 0 0% 92%;        /* User preference approx */
+    --foreground: 0 0% 15%;        /* Neutral Black */
+    
+    --card: 0 0% 100%;             /* Pure White - Pops clearly */
+    --card-bg: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 15%;
+    
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 214 32% 91%;
-    --accent-foreground: 222 47% 11%;
+    
+    --secondary: 0 0% 88%;         /* Slightly darker than bg */
+    --secondary-foreground: 0 0% 15%;
+    
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 45%;
+    
+    --accent: 0 0% 88%;
+    --accent-foreground: 0 0% 15%;
+    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 20% 85%;
-    --input: 214 32% 91%;
+    
+    --border: 0 0% 85%;            /* Compatible border */
+    --input: 0 0% 88%;
     --ring: 217 91% 50%;
+    
     --radius: 0.75rem;
+    
     --brand-primary: 217 91% 50%;
     --brand-secondary: 259 84% 55%;
-    --surface-light: 210 40% 99%;
-    --surface-medium: 214 32% 94%;
-    --surface-dark: 210 35% 93%;
-    --text-secondary: 215 16% 47%;
+    
+    --surface-light: 0 0% 100%;
+    --surface-medium: 0 0% 92%;
+    --surface-dark: 0 0% 88%;
+    
+    --text-secondary: 0 0% 45%;
+    
     --success: 142 76% 36%;
-    --warning: 38 92% 50%;
-    --sidebar-bg: 214 32% 95%;
-    --sidebar-hover: 214 32% 92%;
-    --sidebar-active: 214 32% 88%;
-    --divider: 217 20% 88%;
+    --warning: 38 72% 50%;
+    
+    --sidebar-bg: 0 0% 90%;        /* Neutral Grey to match BG family */
+    --sidebar-hover: 0 0% 87%;
+    --sidebar-active: 0 0% 85%;
+    --divider: 0 0% 85%;
+    --sidebar-foreground: 0 0% 35%;
   }
 
   /* Dark Mode */
