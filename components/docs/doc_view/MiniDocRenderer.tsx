@@ -92,7 +92,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
   }).length;
 
   return (
-    <div className="space-y-1 bg-transparent select-none font-[ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
+    <div className="space-y-0.5 bg-transparent select-none font-sans">
       {nodesToShow.map((node: any, i: number) => {
         if (!node) return null;
 
@@ -102,30 +102,25 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
         switch (node.type) {
           case 'heading':
             const level = node.attrs?.level || 1;
+            const baseHeading = "font-semibold tracking-tight text-[hsl(var(--foreground))]";
             let headingClass = '';
             
-            if (level === 1) {
-              headingClass = 'text-[1.55em] leading-[1.2] font-bold mt-[2px] mb-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
-            } else if (level === 2) {
-              headingClass = 'text-[1.45em] leading-[1.3] font-semibold mt-[2px] mb-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
-            } else if (level === 3) {
-              headingClass = 'text-[1.25em] leading-[1.3] font-semibold mt-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
-            } else {
-              headingClass = 'text-[1.125em] leading-[1.4] font-semibold mt-[1px] text-[rgb(55,53,47)] dark:text-[hsl(var(--foreground))]';
-            }
+            if (level === 1) headingClass = `${baseHeading} text-[14px] pt-0 `;
+            else if (level === 2) headingClass = `${baseHeading} text-[13px] pt-0 pb-0`;
+            else headingClass = `${baseHeading} text-[12px] pt-0`;
             
             return (
-              <h4 key={i} className={`${headingClass} line-clamp-1 tracking-[-0.003em] pb-1`}>
+              <h4 key={i} className={`${headingClass} line-clamp-1`}>
                 {text}
               </h4>
             );
 
           case 'paragraph':
-            const paragraphClamp = totalNodes <= 2 ? 'line-clamp-6' : totalNodes <= 4 ? 'line-clamp-4' : 'line-clamp-2';
+            const paragraphClamp =  'line-clamp-3' ;
             return (
               <p 
                 key={i} 
-                className={`text-[12px]  leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] ${paragraphClamp} tracking-[-0.003em]`}
+                className={`text-[12px] leading-relaxed text-[hsl(var(--muted-foreground))] ${paragraphClamp}`}
               >
                 {text}
               </p>
@@ -135,13 +130,13 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
           case 'orderedList':
             const isOrdered = node.type === 'orderedList';
             return (
-              <div key={i} className="space-y-[1px] my-[2px]">
-                {node.content?.slice(0, 10).map((li: any, j: number) => (
-                  <div key={j} className="flex gap-[6px] items-start">
-                    <span className="text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[14px] leading-[1.5] mt-[1px] min-w-[16px]">
+              <div key={i} className="my-1 space-y-0.5">
+                {node.content?.slice(0, 5).map((li: any, j: number) => (
+                  <div key={j} className="flex gap-2 items-start text-[12px] text-[hsl(var(--muted-foreground))]">
+                    <span className="opacity-50 min-w-[12px] text-[10px] mt-0.5">
                       {isOrdered ? `${j + 1}.` : '•'}
                     </span>
-                    <span className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-1 flex-1 tracking-[-0.003em]">
+                    <span className="line-clamp-1 flex-1 leading-relaxed">
                       {getText(li)}
                     </span>
                   </div>
@@ -151,32 +146,32 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
 
           case 'taskList':
             return (
-              <div key={i} className="space-y-[2px] my-[2px]">
+              <div key={i} className="my-1 space-y-0.5">
                 {node.content?.slice(0, 3).map((li: any, j: number) => {
                   const isChecked = li.attrs?.checked;
                   return (
-                    <div key={j} className="flex gap-[8px] items-center">
+                    <div key={j} className="flex gap-2 items-center text-[12px]">
                       <div 
                         className={`
-                          w-[16px] h-[16px] rounded-[3px] border flex-shrink-0
+                          w-3 h-3 rounded-[3px] border flex-shrink-0 flex items-center justify-center
                           ${isChecked 
-                            ? 'bg-[rgb(46,170,220)] border-[rgb(46,170,220)] dark:bg-[rgb(46,170,220)] dark:border-[rgb(46,170,220)]' 
-                            : 'border-[rgba(55,53,47,0.16)] dark:border-[rgba(255,255,255,0.16)]'
+                            ? 'bg-blue-500 border-blue-500' 
+                            : 'border-[hsl(var(--border))]'
                           }
                         `}
                       >
                         {isChecked && (
-                          <svg className="w-full h-full p-[2px]" viewBox="0 0 14 14" fill="none">
-                            <path d="M5.5 7.5L7 9L10.5 5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                           <svg width="8" height="8" viewBox="0 0 14 14" fill="none">
+                             <path d="M5.5 7.5L7 9L10.5 5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                           </svg>
                         )}
                       </div>
                       <span 
                         className={`
-                          text-[14px] leading-[1.5] line-clamp-1 flex-1 tracking-[-0.003em]
+                          line-clamp-1 flex-1 leading-relaxed
                           ${isChecked 
-                            ? 'line-through text-[rgba(55,53,47,0.375)] dark:text-[rgba(255,255,255,0.375)]' 
-                            : 'text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)]'
+                            ? 'line-through text-[hsl(var(--muted-foreground))] opacity-60' 
+                            : 'text-[hsl(var(--muted-foreground))]'
                           }
                         `}
                       >
@@ -192,9 +187,9 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <div 
                 key={i} 
-                className="bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] px-[12px] py-[9px] rounded-[3px] text-[85%] font-mono text-[rgb(235,87,87)] dark:text-[rgb(255,142,114)] line-clamp-2 my-[4px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]"
+                className="bg-[hsl(var(--muted))] px-3 py-2 rounded-md text-[11px] font-mono text-[hsl(var(--foreground))] line-clamp-2 my-1 border border-[hsl(var(--border))]/50"
               >
-                {text || <span className="italic opacity-40 text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)]">Empty code block</span>}
+                {text || <span className="opacity-50 italic">Empty code block</span>}
               </div>
             );
 
@@ -212,7 +207,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <div 
                 key={i} 
-                className="border-l-[3px] border-[rgba(55,53,47,0.4)] dark:border-[rgba(255,255,255,0.4)] pl-[14px] py-[3px] my-[6px] text-[13px] leading-[1.6] italic text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] tracking-[-0.003em] line-clamp-4"
+                className="border-l-2 border-[hsl(var(--border))] pl-3 py-1 my-1.5 text-[12px] italic text-[hsl(var(--muted-foreground))] line-clamp-3"
               >
                 {text}
               </div>
@@ -222,7 +217,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <hr 
                 key={i} 
-                className="border-t border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)] my-[6px]"
+                className="border-t border-[hsl(var(--border))] my-2"
               />
             );
 
@@ -230,7 +225,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <p 
                 key={i} 
-                className="text-[14px] leading-[1.5] text-[rgba(55,53,47,0.65)] dark:text-[rgba(255,255,255,0.65)] line-clamp-1 tracking-[-0.003em]"
+                className="text-[12px] leading-relaxed text-[hsl(var(--muted-foreground))] line-clamp-1"
               >
                 {text}
               </p>

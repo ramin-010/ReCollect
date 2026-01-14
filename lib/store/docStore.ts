@@ -82,6 +82,7 @@ export const useDocStore = create<DocState>((set) => ({
       const { mergeDocsWithOffline } = await import('@/lib/utils/docSyncHelpers');
 
       const response = await axiosInstance.get('/api/docs');
+      console.log('got the response')
       const serverDocs = response.data.success ? response.data.data : [];
       
       const allOfflineDocs = await offlineStorage.getAllOfflineDocs();

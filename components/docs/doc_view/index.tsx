@@ -25,6 +25,7 @@ import { mergeDocsWithOffline } from '@/lib/utils/docSyncHelpers';
 
 import { ViewMode, SortOption, OwnershipFilter } from './types';
 import { GalleryCard } from './GalleryCard';
+import { GallerySkeletonGrid } from './GalleryCardSkeleton';
 import { ListRow, NewPageCard } from './CardComponents';
 import { SharedByMeSection } from './SharedByMeSection';
 import { PendingRequestsPanel } from '../PendingRequestsPanel';
@@ -64,6 +65,33 @@ export function DocsView() {
       fetchDocs();
     }
   }, [fetchDocs, isInitialized]);
+
+  // Track previous viewMode to detect tab switches
+  const prevViewModeRef = useRef<ViewMode>(viewMode);
+  // Throttle: track last sync time to prevent rapid requests
+  const lastSyncTimeRef = useRef<number>(0);
+  const SYNC_THROTTLE_MS = 15000; // 15 seconds minimum between syncs
+
+
+  useEffect(() => {
+    const prevMode = prevViewModeRef.current;
+    prevViewModeRef.current = viewMode;
+
+    const now = Date.now();
+    const timeSinceLastSync = now - lastSyncTimeRef.current;
+
+    if (
+      viewMode === 'gallery' &&
+      prevMode !== 'gallery' &&
+      prevMode !== undefined &&
+      isInitialized &&
+      !isLoading &&
+      timeSinceLastSync >= SYNC_THROTTLE_MS
+    ) {
+      lastSyncTimeRef.current = now;
+      fetchDocs();
+    }
+  }, [viewMode, fetchDocs, isInitialized, isLoading]);
 
   const fetchSharedByMe = useCallback(async () => {
     try {
@@ -390,10 +418,7 @@ export function DocsView() {
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64 gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading documents...</p>
-            </div>
+            <GallerySkeletonGrid count={3} />
           ) : allSortedDocs.length === 0 && !searchQuery ? (
             <div className="text-center py-16">
               <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))] flex items-center justify-center mx-auto mb-4">

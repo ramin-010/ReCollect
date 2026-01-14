@@ -78,7 +78,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                    rounded-2xl border border-[hsl(var(--border))]/40
                    shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)]
                    group-hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)]
-                   group-hover:-translate-y-0.5
+                   group-hover:-translate-y-0
                    group-hover:border-[hsl(var(--border))]/80
                    transition-all duration-300 ease-out flex flex-col overflow-hidden relative"
       >
@@ -101,7 +101,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                   className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
                   title={doc.isPinned ? 'Unpin' : 'Pin'}
                >
-                 {doc.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                 {doc.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5 " />}
                </button>
              )}
              <DropdownMenu>
@@ -141,7 +141,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
             <img 
               src={doc.coverImage} 
               alt="Cover" 
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
             />
           ) : (
              <div className={`w-full h-full bg-gradient-to-br ${
@@ -161,7 +161,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 px-4 pt-2 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[hsl(var(--sidebar-bg))] to-[hsl(var(--card))]">
+        <div className="flex-1 px-4 pt-1 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[hsl(var(--sidebar-bg))] to-[hsl(var(--card))]">
            
            <div className="flex flex-col gap-1.5">
              {/* Title */}
@@ -180,16 +180,16 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                   <h3 
                     onDoubleClick={isOwner ? handleStartEdit : undefined}
                     title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
-                    className={`font-bold text-[17px] leading-tight truncate w-full ${isOwner ? 'cursor-text hover:text-primary transition-colors' : ''}
+                    className={`font-bold text-[18px] leading-tight truncate w-full ${isOwner ? 'cursor-text  p-1 pl-0 hover:text-primary transition-colors' : ''}
                               ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
                   >
-                    {doc.title || 'Untitled'}
+                    <span className={`${isOwner ? 'hover:bg-[hsl(var(--card-bg))] rounded-sm p-0.5 pr-4' : ''} `}>{doc.title || 'Untitled'}</span>
                   </h3>
                )}
              </div>
 
              {/* Dynamic Preview Fragment */}
-             <div className="relative h-[4.5rem] overflow-hidden text-sm text-[hsl(var(--muted-foreground))] leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+             <div className="relative h-[5rem] overflow-hidden text-sm text-[hsl(var(--muted-foreground))] leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
                 {hasContent ? (
                   <div className="text-[13px] line-clamp-3 font-normal">
                      <MiniDocRenderer previewState={doc.previewState} yjsState={doc.yjsState} />
@@ -201,7 +201,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
            </div>
 
            {/* Footer Meta */}
-           <div className="flex items-center justify-between pt-3 mt-1 border-t border-[hsl(var(--border))]/30">
+           <div className="flex items-center justify-between pt-3 mt-1 border-t border-[hsl(var(--border))]/100">
               <span className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] flex items-center gap-2">
                 {format(new Date(doc.updatedAt), 'MMM d')}
                 
@@ -238,7 +238,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                    </div>
                 )}
                    {isOwner && doc.collaborators && doc.collaborators.length > 0 && (
-                   <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Live Collaboration">
+                   <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Broadcasting">
                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
                    </div>
