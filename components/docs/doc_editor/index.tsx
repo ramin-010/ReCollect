@@ -3,10 +3,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw , Cloud } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw, Cloud, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { SyncConflictDialog } from '../SyncConflictDialog';
+import { TaskSidebar } from './TaskSidebar';
+import { TodoDialog } from '@/components/todo/TodoDialog';
+import axiosInstance from '@/lib/utils/axios';
+import { useTodoStore } from '@/lib/store/todoStore';
+import { toast } from 'sonner';
 
 import { DocEditorProps, ToolbarPosition } from './types';
 import { useEditorSetup } from './useEditorSetup';
@@ -29,6 +34,8 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
   const [showRevertModal, setShowRevertModal] = useState(false);
+  const [showTaskSidebar, setShowTaskSidebar] = useState(false);
+  const [showQuickTaskDialog, setShowQuickTaskDialog] = useState(false);
   const [mounted, setMounted] = useState(false);
   
   const contentRef = useRef<string>('{}');
@@ -76,6 +83,10 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       // @ts-ignore - Extending storage dynamically
       editor.storage.upload = {
         openImageDialog: () => setShowImageDialog(true)
+      };
+      // @ts-ignore - Task creation from slash command
+      editor.storage.tasks = {
+        openTaskDialog: () => setShowQuickTaskDialog(true)
       };
     }
   }, [editor]);
@@ -183,6 +194,37 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     persistence.debouncedSave();
   };
 
+  // Get todoStore to add tasks
+  const { addTodo } = useTodoStore();
+
+  // Quick task creation from slash command (auto-links to doc)
+  const handleQuickTaskSave = async (data: any) => {
+    try {
+      const response = await axiosInstance.post('/api/todos', {
+        text: data.text,
+        priority: data.priority || 'medium',
+        status: 'pending',
+        dueDate: data.dueDate,
+        reminderDate: data.reminderDate,
+        references: [{
+          type: 'doc',
+          refId: doc._id,
+          title: state.title
+        }]
+      });
+      
+      if (response.data.success) {
+        addTodo(response.data.data);
+        toast.success('Task created and linked to this doc');
+      }
+      setShowQuickTaskDialog(false);
+    } catch (error: any) {
+      console.error('Failed to create task:', error);
+      toast.error(error.response?.data?.message || 'Failed to create task');
+      throw error;
+    }
+  };
+
   const hasUnsyncedChanges = state.syncStatus === 'unsynced';
 
   if (!mounted || !editor) {
@@ -271,6 +313,16 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
               title="Saving to local storage"
             />
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowTaskSidebar(true)}
+            className="text-[hsl(var(--muted-foreground))] hover:bg-emerald-500/10 hover:text-emerald-600 group-hover/header:text-[hsl(var(--foreground))]"
+            leftIcon={<CheckSquare className="w-4 h-4" />}
+            title="View linked tasks"
+          >
+            Tasks
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -416,6 +468,20 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         <span className="mx-2">•</span>
         <span>Type <kbd className="px-1 py-0.5 rounded bg-[hsl(var(--muted))] font-mono text-[10px]">/</kbd> for commands</span>
       </div>
+
+      <TaskSidebar
+        isOpen={showTaskSidebar}
+        onClose={() => setShowTaskSidebar(false)}
+        docId={doc._id}
+        docTitle={state.title}
+      />
+
+      {/* Quick Task Dialog from /task slash command */}
+      <TodoDialog
+        isOpen={showQuickTaskDialog}
+        onClose={() => setShowQuickTaskDialog(false)}
+        onSave={handleQuickTaskSave}
+      />
 
       <EditorStyles />
     </div>

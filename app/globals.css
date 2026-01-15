@@ -53,6 +53,14 @@
     --sidebar-active: 0 0% 85%;
     --divider: 0 0% 85%;
     --sidebar-foreground: 0 0% 35%;
+    
+    /* Task Input - Light Mode */
+    --task-input-bg: 0 0% 100%;      /* White input on light bg */
+    --task-input-border: 0 0% 85%;   /* Subtle border */
+    --task-input-text: 0 0% 20%;     /* Dark text */
+    --task-input-placeholder: 0 0% 60%;
+    --task-key-bg: 0 0% 95%;         /* Light key bg */
+    --task-key-text: 0 0% 50%;
   }
 
   /* Dark Mode */
@@ -88,6 +96,14 @@
     --sidebar-hover: 240 10% 10%;
     --sidebar-active: 240 10% 13%;
     --divider: 240 3.7% 18%;
+
+    /* Task Input - Dark Mode (Zinc-like) */
+    --task-input-bg: 240 5% 10%;     /* #18181b approx */
+    --task-input-border: 240 5% 16%; /* #27272a approx */
+    --task-input-text: 240 5% 96%;   /* #f4f4f5 */
+    --task-input-placeholder: 240 5% 48%; /* #71717a */ 
+    --task-key-bg: 240 5% 16%;
+    --task-key-text: 240 5% 65%;
   }
 
   /* Gray Mode */
@@ -123,6 +139,14 @@
     --sidebar-hover: 220 3% 17%;
     --sidebar-active: 220 3% 20%;
     --divider: 220 3% 22%;
+
+    /* Task Input - Gray Theme */
+    --task-input-bg: 220 3% 14%; 
+    --task-input-border: 220 3% 20%;
+    --task-input-text: 30 3% 90%;
+    --task-input-placeholder: 220 3% 50%;
+    --task-key-bg: 220 3% 20%;
+    --task-key-text: 220 3% 55%;
   }
 
   /* Dark Gray Mode - Notion's exact colors */
@@ -161,6 +185,14 @@
     --sidebar-active: 0 0% 14%;      /* #242424 - Sidebar active */
     --divider: 0 0% 16%; 
     --sidebar-foreground : 0 0% 61%;            /* #292929 - Divider lines */
+
+    /* Task Input - Dark Gray Mode */
+    --task-input-bg: 0 0% 12%;       /* Darker than card */
+    --task-input-border: 0 0% 16%;
+    --task-input-text: 0 0% 80%;
+    --task-input-placeholder: 0 0% 40%;
+    --task-key-bg: 0 0% 16%;
+    --task-key-text: 0 0% 60%;
   }
 
   /* Base styles */

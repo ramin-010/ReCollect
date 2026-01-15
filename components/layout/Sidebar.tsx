@@ -337,7 +337,7 @@ function SidebarContent({
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-[hsl(var(--divider))]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--divider))] shrink-0">
+      <div className="flex items-center justify-between p-3 border-b border-[hsl(var(--divider))] shrink-0">
         {!isCollapsed && (
           <button
             className="flex items-center gap-2 p-[6px] hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors flex-1 min-w-0"

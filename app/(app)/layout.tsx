@@ -24,8 +24,9 @@ export default function AppLayout({
   const currentView = useViewStore((state) => state.currentView);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
-  // Hide navbar when editing a document (docs view with editor open)
+  // Hide navbar when editing a document (docs view with editor open) or viewing tasks
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
+  const hideNavbar = isDocEditorOpen;
 
   
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function AppLayout({
       <div className="min-h-screen flex bg-pattern">
         <Sidebar />
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
-          {!isDocEditorOpen && <Navbar />}
+          {!hideNavbar && <Navbar />}
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
             {children}
           </main>

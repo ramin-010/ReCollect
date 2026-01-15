@@ -1,28 +1,86 @@
 import { create } from 'zustand';
 
+// Subtask type
+export interface Subtask {
+  id: string;
+  text: string;
+  isCompleted: boolean;
+}
+
+// Reference to doc or content
+export interface TaskReference {
+  type: 'doc' | 'content';
+  refId: string;
+  title?: string;
+}
+
+// Recurrence pattern
+export interface TaskRecurrence {
+  pattern: 'daily' | 'weekly' | 'monthly';
+  interval?: number;
+}
+
+// Main Task interface (Rich Task System)
 export interface Todo {
   _id: string;
   text: string;
-  isCompleted: boolean;
-  createdAt: string;
+  description?: string;
+  
+  // Status & Priority
+  status: 'pending' | 'complete';
+  priority: 'low' | 'medium' | 'high';
+  
+  // Dates
+  dueDate?: string;
   reminderDate?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+  
+  // Subtasks
+  subtasks?: Subtask[];
+  
+  // References (bi-directional)
+  references?: TaskReference[];
+  
+  // Recurrence
+  recurrence?: TaskRecurrence;
+  
+  // Time tracking
+  estimatedMinutes?: number;
+  trackedMinutes?: number;
+  
+  // Dependencies
+  blockedBy?: string[];
+  
+  // Legacy compat
+  isCompleted: boolean;
 }
 
-interface TodoState {
-  todos: Todo[];
+// Alias for cleaner naming
+export type Task = Todo;
+
+interface TaskState {
+  todos: Task[];
   isLoading: boolean;
   isInitialized: boolean;
 
   // Actions
-  setTodos: (todos: Todo[]) => void;
-  addTodo: (todo: Todo) => void;
-  updateTodo: (id: string, updates: Partial<Todo>) => void;
+  setTodos: (todos: Task[]) => void;
+  addTodo: (todo: Task) => void;
+  updateTodo: (id: string, updates: Partial<Task>) => void;
   removeTodo: (id: string) => void;
   setLoading: (loading: boolean) => void;
   reset: () => void;
+  
+  // New actions
+  fetchTasksByRef: (refId: string) => Promise<Task[]>;
+  addSubtask: (taskId: string, subtask: Subtask) => void;
+  updateSubtask: (taskId: string, subtaskId: string, updates: Partial<Subtask>) => void;
+  removeSubtask: (taskId: string, subtaskId: string) => void;
 }
 
-export const useTodoStore = create<TodoState>((set) => ({
+export const useTodoStore = create<TaskState>((set, get) => ({
   todos: [],
   isLoading: false,
   isInitialized: false,
@@ -45,5 +103,48 @@ export const useTodoStore = create<TodoState>((set) => ({
 
   setLoading: (loading) => set({ isLoading: loading }),
 
-  reset: () => set({ todos: [], isInitialized: false, isLoading: false })
+  reset: () => set({ todos: [], isInitialized: false, isLoading: false }),
+  
+  // Fetch tasks by reference ID (for doc sidebar)
+  fetchTasksByRef: async (refId: string) => {
+    // This will be called by the sidebar component
+    // Returns tasks directly, doesn't modify global state
+    return get().todos.filter(t => 
+      t.references?.some(ref => ref.refId === refId)
+    );
+  },
+  
+  // Subtask management
+  addSubtask: (taskId, subtask) => set((state) => ({
+    todos: state.todos.map(t =>
+      t._id === taskId 
+        ? { ...t, subtasks: [...(t.subtasks || []), subtask] } 
+        : t
+    )
+  })),
+  
+  updateSubtask: (taskId, subtaskId, updates) => set((state) => ({
+    todos: state.todos.map(t =>
+      t._id === taskId 
+        ? { 
+            ...t, 
+            subtasks: t.subtasks?.map(st => 
+              st.id === subtaskId ? { ...st, ...updates } : st
+            ) 
+          } 
+        : t
+    )
+  })),
+  
+  removeSubtask: (taskId, subtaskId) => set((state) => ({
+    todos: state.todos.map(t =>
+      t._id === taskId 
+        ? { ...t, subtasks: t.subtasks?.filter(st => st.id !== subtaskId) } 
+        : t
+    )
+  }))
 }));
+
+// Alias export for cleaner naming
+export const useTaskStore = useTodoStore;
+

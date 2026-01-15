@@ -108,6 +108,16 @@ const getSuggestionItems = (): CommandItem[] => [
       editor.storage.upload?.openImageDialog?.();
     },
   },
+  {
+    title: 'Create Task',
+    description: 'Add task linked to this doc',
+    icon: <CheckSquare className="w-4 h-4 text-emerald-500" />,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      // @ts-ignore - Trigger task creation dialog via editor storage
+      editor.storage.tasks?.openTaskDialog?.();
+    },
+  },
   // {
   //   title: 'Media Row',
   //   description: 'Gallery of images & links',

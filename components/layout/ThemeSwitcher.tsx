@@ -12,8 +12,8 @@ export function ThemeSwitcher() {
 
   const themes = [
     { id: 'light' as const, label: 'Light', icon: Sun },
-    { id: 'dark' as const, label: 'Dark', icon: Moon },
-    { id: 'theme-gray' as const, label: 'Gray', icon: Palette },
+    // { id: 'dark' as const, label: 'Dark', icon: Moon },
+    // { id: 'theme-gray' as const, label: 'Gray', icon: Palette },
     { id: 'theme-dark-gray' as const, label: 'Dark Gray', icon: Palette },
   ];
 

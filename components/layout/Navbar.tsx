@@ -37,8 +37,8 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-30 w-full border-b border-[hsl(var(--divider))] bg-[hsl(var(--card))]/95 backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--card))]/80">
-        <div className="flex h-20 items-center px-4 lg:px-8 gap-4">
+      <nav className="sticky top-0 z-30 w-full border-b border-[hsl(var(--divider))] bg-[hsl(var(--sidebar))]/95 backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--card))]/80">
+        <div className="flex h-18 items-center px-4 lg:px-8 gap-4">
           {/* ReCollect Logo and Brand */}
           <div className="flex items-center">
             <Logo size="lg" showText={true} className="text-[hsl(var(--foreground))]" />

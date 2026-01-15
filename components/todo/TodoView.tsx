@@ -1,30 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui-base/Button';
-import { Card } from '@/components/ui-base/Card';
 import {
   Plus,
-  CheckSquare,
+  Loader2,
   Calendar,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Bell,
-  Loader2
+  Clock,
+  Sparkles,
+  Zap,
+  CheckCircle2,
+  LayoutGrid,
+  List,
+  Search,
+  ArrowRight
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui-base/DropdownMenu';
 import { TodoDialog } from './TodoDialog';
+import { RichTaskCard } from './RichTaskCard';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';
-import { useTodoStore, Todo } from '@/lib/store/todoStore';
+import { useTodoStore, Todo, Task } from '@/lib/store/todoStore';
+import { isPast, isToday, parseISO, format } from 'date-fns';
 
 export function TodoView() {
   const {
@@ -40,302 +38,335 @@ export function TodoView() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | undefined>(undefined);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch todos from API (only if not initialized)
+  // Fetch todos
   const fetchTodos = useCallback(async () => {
     if (isInitialized) return;
-
     try {
       setLoading(true);
       const response = await axiosInstance.get('/api/todos');
-      if (response.data.success) {
-        setTodos(response.data.data);
-      }
+      if (response.data.success) setTodos(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch todos:', error);
       toast.error('Failed to load tasks');
       setLoading(false);
     }
   }, [isInitialized, setTodos, setLoading]);
 
-  useEffect(() => {
-    fetchTodos();
-  }, [fetchTodos]);
+  useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
-  // Update current time every minute to refresh due status
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
+  // Derived State
+  const stats = useMemo(() => {
+    const total = todos.length;
+    const completed = todos.filter(t => t.status === 'complete' || t.isCompleted).length;
+    const pending = total - completed;
+    const progress = total === 0 ? 0 : (completed / total) * 100;
+    return { total, completed, pending, progress };
+  }, [todos]);
 
-  const handleSaveTodo = async (data: { text: string; reminderDate?: string }) => {
+  const activeTasks = useMemo(() => {
+    return todos
+      .filter(t => (t.status !== 'complete' && !t.isCompleted))
+      .filter(t => t.text.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => {
+        // Priority sort
+        const pMap = { high: 3, medium: 2, low: 1 };
+        const pA = pMap[a.priority || 'medium'] || 1;
+        const pB = pMap[b.priority || 'medium'] || 1;
+        return pB - pA;
+      });
+  }, [todos, searchQuery]);
+
+  // Handlers (standard)
+  const handleSaveTask = async (data: any) => {
     try {
       if (editingTodo) {
-        // Update existing todo
-        const response = await axiosInstance.patch(`/api/todos/${editingTodo._id}`, {
-          text: data.text,
-          reminderDate: data.reminderDate || null
-        });
-        
+        const response = await axiosInstance.patch(`/api/todos/${editingTodo._id}`, data);
         if (response.data.success) {
-          // Use store action
           updateTodo(editingTodo._id, response.data.data);
           toast.success('Task updated');
         }
       } else {
-        // Create new todo
         const response = await axiosInstance.post('/api/todos', {
-          text: data.text,
-          reminderDate: data.reminderDate
+          ...data,
+          status: 'pending',
+          priority: data.priority || 'medium'
         });
-        
         if (response.data.success) {
-          // Use store action
           addTodo(response.data.data);
           toast.success('Task created');
         }
       }
       setEditingTodo(undefined);
     } catch (error: any) {
-      console.error('Failed to save todo:', error);
-      toast.error(error.response?.data?.message || 'Failed to save task');
-      throw error; // Re-throw so dialog knows it failed
+      toast.error('Failed to save task');
     }
   };
 
-  const handleDeleteTodo = async (id: string) => {
+  const handleDeleteTask = async (id: string) => {
     try {
-      const response = await axiosInstance.delete(`/api/todos/${id}`);
-      
-      if (response.data.success) {
-        // Use store action
-        removeTodo(id);
-        toast.success('Task deleted');
-      }
-    } catch (error: any) {
-      console.error('Failed to delete todo:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete task');
-    }
-  };
-
-  const toggleComplete = async (id: string, currentStatus: boolean) => {
-    // Optimistic update using store action
-    updateTodo(id, { isCompleted: !currentStatus });
-
-    try {
-      const response = await axiosInstance.patch(`/api/todos/${id}`, {
-        isCompleted: !currentStatus
-      });
-      
-      if (!response.data.success) {
-        // Revert on failure
-        updateTodo(id, { isCompleted: currentStatus });
-      }
+      await axiosInstance.delete(`/api/todos/${id}`);
+      removeTodo(id);
+      toast.success('Task deleted');
     } catch (error) {
-      // Revert on error
-      updateTodo(id, { isCompleted: currentStatus });
-      toast.error('Failed to update task');
+      toast.error('Failed to delete task');
     }
   };
 
-  const openEditDialog = (todo: Todo) => {
-    setEditingTodo(todo);
-    setIsDialogOpen(true);
+  const toggleComplete = async (id: string, currentlyCompleted: boolean) => {
+    const newStatus = currentlyCompleted ? 'pending' : 'complete';
+    updateTodo(id, { status: newStatus as 'pending' | 'complete', isCompleted: !currentlyCompleted });
+    axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
+       updateTodo(id, { status: currentlyCompleted ? 'complete' : 'pending', isCompleted: currentlyCompleted });
+    });
   };
 
-  const getDueStatus = (reminderDate?: string) => {
-    if (!reminderDate) return null;
-    
-    const due = new Date(reminderDate);
-    const now = currentTime;
-    const diff = due.getTime() - now.getTime();
-    
-    const isOverdue = diff < 0;
-    const absDiff = Math.abs(diff);
-    
-    const minutes = Math.floor(absDiff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    let text = '';
-    if (days > 0) text = `${days}d`;
-    else if (hours > 0) text = `${hours}h`;
-    else text = `${minutes}m`;
-
-    return {
-      text: isOverdue ? `Overdue by ${text}` : `Due in ${text}`,
-      isOverdue
-    };
+  const toggleSubtask = async (taskId: string, subtaskId: string, isCompleted: boolean) => {
+    const task = todos.find(t => t._id === taskId);
+    if (!task?.subtasks) return;
+    const updatedSubtasks = task.subtasks.map(st => st.id === subtaskId ? { ...st, isCompleted } : st);
+    updateTodo(taskId, { subtasks: updatedSubtasks });
+    axiosInstance.patch(`/api/todos/${taskId}`, { subtasks: updatedSubtasks });
   };
 
-  // Map for TodoDialog compatibility (uses 'id' instead of '_id')
-  const editingTodoForDialog = editingTodo ? {
-    id: editingTodo._id,
-    text: editingTodo.text,
-    reminderDate: editingTodo.reminderDate
-  } : undefined;
+  // Greeting
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
 
-  if (isLoading) {
-    return (
-      <div className="p-4 lg:p-14 min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-          <p className="text-[hsl(var(--muted-foreground))]">Loading tasks...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-emerald-500" /></div>;
 
   return (
-    <div className="p-4 lg:p-14 min-h-screen">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <motion.div 
-          className="flex items-center justify-between mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div>
-            <h2 className="text-3xl font-bold flex items-center gap-3">
-              <CheckSquare className="h-8 w-8 text-emerald-600" />
-              Tasks
-            </h2>
-            <p className="text-[hsl(var(--muted-foreground))] mt-2">
-              Manage your tasks and reminders
-            </p>
-          </div>
-          <Button 
-            variant="primary"
-            onClick={() => {
-              setEditingTodo(undefined);
-              setIsDialogOpen(true);
-            }}
-            leftIcon={<Plus className="h-4 w-4" />}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            Add Task
-          </Button>
-        </motion.div>
-
-        {/* Todo List */}
-        <div className="space-y-4">
-          {todos.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card variant="elevated" padding="lg" className="text-center py-12">
-                <CheckSquare className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]/30" />
-                <h3 className="text-lg font-semibold mb-2">No tasks yet</h3>
-                <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                  Add a task to get started
-                </p>
-              </Card>
-            </motion.div>
-          ) : (
-            todos.map((todo, index) => {
-              const dueStatus = getDueStatus(todo.reminderDate);
+    <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] p-6 md:p-8 font-sans selection:bg-emerald-500/30">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* HERO SECTION */}
+        <div className="relative group rounded-3xl overflow-hidden">
+          {/* Ambient Glow */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 rounded-3xl opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-1000" />
+            
+          <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-8 overflow-hidden">
+            {/* Background Texture */}
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+            
+            <div className="relative z-10 space-y-2">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-emerald-400 font-medium tracking-wide uppercase text-xs"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Productivity Hub</span>
+              </motion.div>
               
-              return (
-                <motion.div
-                  key={todo._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <div
-                    className={cn(
-                      "group relative bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4 transition-all hover:shadow-md",
-                      todo.isCompleted && "opacity-60 bg-[hsl(var(--muted))]/30"
-                    )}
-                  >
-                  <div className="flex items-start gap-4">
-                    {/* Checkbox */}
-                    <button
-                      onClick={() => toggleComplete(todo._id, todo.isCompleted)}
-                      className={cn(
-                        "mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                        todo.isCompleted 
-                          ? "bg-emerald-600 border-emerald-600 text-white" 
-                          : "border-[hsl(var(--muted-foreground))] hover:border-emerald-600"
-                      )}
-                    >
-                      {todo.isCompleted && <CheckSquare className="w-3.5 h-3.5" />}
-                    </button>
+              <motion.h1 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-white/90 to-white/50"
+              >
+                {greeting}, User.
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-white/40 text-lg max-w-md leading-relaxed"
+              >
+                You have <span className="text-white font-semibold">{stats.pending} active tasks</span> awaiting your focus. 
+                Keep the momentum flowing.
+              </motion.p>
+            </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "text-base font-medium transition-all",
-                        todo.isCompleted && "line-through text-[hsl(var(--muted-foreground))]"
-                      )}>
-                        {todo.text}
-                      </p>
-                      
-                      {/* Meta Info */}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(todo.createdAt).toLocaleDateString()}
-                        </span>
-                        
-                        {todo.reminderDate && (
-                          <span className={cn(
-                            "flex items-center gap-1 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]",
-                            dueStatus?.isOverdue && !todo.isCompleted && "text-red-600 bg-red-50 dark:bg-red-950/30",
-                            !dueStatus?.isOverdue && !todo.isCompleted && "text-blue-600 bg-blue-50 dark:bg-blue-950/30"
-                          )}>
-                            <Bell className="w-3 h-3" />
-                            {dueStatus?.text}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(todo)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          destructive 
-                          onClick={() => handleDeleteTodo(todo._id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+            {/* Velocity Ring */}
+            <div className="relative z-10 flex items-center gap-8">
+              <div className="flex flex-col items-end gap-1">
+                 <span className="text-3xl font-bold tabular-nums">{Math.round(stats.progress)}%</span>
+                 <span className="text-xs uppercase tracking-widest text-white/40">Efficiency</span>
+              </div>
+              <div className="relative w-20 h-20">
+                <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-white/5" />
+                  <motion.circle 
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: stats.progress / 100 }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" 
+                    strokeLinecap="round"
+                    className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                    strokeDasharray="1"
+                    pathLength="1"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-emerald-400 fill-emerald-400/20" />
                 </div>
-                </motion.div>
-              );
-            })
-          )}
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* QUICK INPUT SECTION */}
+        <div className="relative z-20 w-full max-w-4xl mx-auto">
+           <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 to-blue-500/30 rounded-2xl blur opacity-10 group-hover:opacity-30 transition-opacity duration-500" />
+              <div className="relative bg-[hsl(var(--task-input-bg))] border border-[hsl(var(--task-input-border))] rounded-2xl flex items-center p-3 shadow-lg">
+                 <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                 </div>
+                 <input 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim()) {
+                         // Simple NLP Parsing Logic
+                         const text = searchQuery;
+                         let dueDate = new Date();
+                         let hasDate = false;
+                         let cleanText = text;
+
+                         const lower = text.toLowerCase();
+                         
+                         // 1. "tomorrow"
+                         if (lower.includes('tomorrow')) {
+                            dueDate.setDate(dueDate.getDate() + 1);
+                            hasDate = true;
+                            cleanText = cleanText.replace(/tomorrow/gi, '');
+                         }
+
+                         // 2. "by [day of week]" (e.g. by friday)
+                         const dayMatch = lower.match(/by\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+                         if (dayMatch) {
+                            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                            const targetDay = days.indexOf(dayMatch[1]);
+                            const currentDay = new Date().getDay();
+                            let daysUntil = targetDay - currentDay;
+                            if (daysUntil <= 0) daysUntil += 7;
+                            dueDate.setDate(dueDate.getDate() + daysUntil);
+                            hasDate = true;
+                            cleanText = cleanText.replace(dayMatch[0], '');
+                         }
+
+                         // 3. "at [time]" or "6pm"
+                         // Matches: 5pm, 5:30pm, at 5pm, at 17:00
+                         const timeMatch = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+                         if (timeMatch && (lower.includes('at') || timeMatch[3])) { // Require 'at' or 'am/pm' to avoid matching random numbers
+                            let hours = parseInt(timeMatch[1]);
+                            const minutes = parseInt(timeMatch[2] || '0');
+                            const meridiem = timeMatch[3];
+
+                            if (meridiem === 'pm' && hours < 12) hours += 12;
+                            if (meridiem === 'am' && hours === 12) hours = 0;
+
+                            dueDate.setHours(hours, minutes, 0, 0);
+                            hasDate = true;
+                            cleanText = cleanText.replace(timeMatch[0], '');
+                         } else if (!hasDate) {
+                            // Default to end of day if date set but no time
+                            if (hasDate) dueDate.setHours(18, 0, 0, 0); 
+                         }
+
+                         // Default if no date found: Next status check usually doesn't apply dates
+                         // But if we found *something*, use it.
+                         
+                         handleSaveTask({ 
+                            text: cleanText.replace(/\s+/g, ' ').trim(), // Remove extra spaces left by regex
+                            priority: 'medium',
+                            dueDate: hasDate ? dueDate.toISOString() : undefined
+                         });
+                         setSearchQuery('');
+                         toast.success("Mission initiated");
+                      }
+                    }}
+                    placeholder="What is your next focus?"
+                    className="flex-1 bg-transparent border-0 text-lg text-[hsl(var(--task-input-text))] placeholder:text-[hsl(var(--task-input-placeholder))] focus:ring-0 focus:outline-none px-4 font-medium"
+                 />
+                 <div className="flex items-center gap-2 pr-2">
+                    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-[hsl(var(--task-key-bg))] rounded-lg border border-[hsl(var(--task-key-text))]/20 group-focus-within:border-emerald-500/50 transition-colors">
+                       <span className="text-xs font-semibold text-[hsl(var(--task-key-text))] uppercase tracking-wider">Enter</span>
+                       <ArrowRight className="w-3 h-3 text-[hsl(var(--task-key-text))]" />
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        {/* TOOLBAR */}
+        <div className="flex items-center justify-between">
+           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              Active Tasks
+           </h2>
+
+          <div className="flex items-center gap-3">
+             <div className="bg-[hsl(var(--muted))] rounded-lg p-1 flex items-center gap-1">
+                <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-md transition-all", viewMode === 'list' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]")}>
+                   <List className="w-4 h-4" />
+                </button>
+                <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-md transition-all", viewMode === 'grid' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]")}>
+                   <LayoutGrid className="w-4 h-4" />
+                </button>
+             </div>
+          </div>
+        </div>
+
+        {/* TASKS GRID */}
+        <div className={cn(
+          "grid gap-4",
+          viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+        )}>
+          <AnimatePresence mode="popLayout">
+            {activeTasks.length === 0 ? (
+               <motion.div 
+                 initial={{ opacity: 0 }} 
+                 animate={{ opacity: 1 }}
+                 className="col-span-full py-20 text-center space-y-4"
+               >
+                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+                    <CheckCircle2 className="w-10 h-10 text-white/20" />
+                  </div>
+                  <h3 className="text-xl font-medium text-white/60">Balance restored</h3>
+                  <p className="text-white/30">No active tasks found in your stream.</p>
+               </motion.div>
+            ) : (
+              activeTasks.map((task, idx) => (
+                <RichTaskCard 
+                  key={task._id}
+                  task={task}
+                  layout={viewMode} // Pass layout prop
+                  onToggleComplete={toggleComplete}
+                  onEdit={(t) => { setEditingTodo(t); setIsDialogOpen(true); }}
+                  onDelete={handleDeleteTask}
+                  onToggleSubtask={toggleSubtask}
+                  index={idx} // For staggered animation
+                />
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
       </div>
 
       <TodoDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        existingTodo={editingTodoForDialog}
-        onSave={handleSaveTodo}
+        existingTodo={editingTodo ? {
+          id: editingTodo._id,
+          text: editingTodo.text,
+          description: editingTodo.description,
+          priority: editingTodo.priority,
+          dueDate: editingTodo.dueDate,
+          reminderDate: editingTodo.reminderDate,
+          subtasks: editingTodo.subtasks,
+          recurrence: editingTodo.recurrence,
+          estimatedMinutes: editingTodo.estimatedMinutes
+        } : undefined}
+        onSave={handleSaveTask}
       />
     </div>
   );
