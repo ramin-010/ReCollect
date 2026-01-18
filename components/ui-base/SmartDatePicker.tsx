@@ -1,38 +1,27 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   format, 
   addDays, 
   nextSaturday, 
   setHours, 
-  setMinutes, 
-  startOfToday,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  isToday,
-  addMonths,
-  subMonths,
-  getDay
+  startOfToday
 } from 'date-fns';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
   Zap, 
   ChevronRight, 
-  ChevronLeft,
   Check,
   Moon,
-  Sun,
   Sunrise,
   Sunset
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
+import { WheelPicker } from '@/components/ui-base/WheelPicker';
 
 interface SmartDatePickerProps {
   onSelect: (date: Date) => void;
@@ -40,25 +29,16 @@ interface SmartDatePickerProps {
   onClose?: () => void;
 }
 
-type Tab = 'quick' | 'calendar' | 'time';
+type Tab = 'quick' | 'date' | 'time';
 
 export function SmartDatePicker({ onSelect, selectedDate, onClose }: SmartDatePickerProps) {
   const [activeTab, setActiveTab] = useState<Tab>('quick');
   const [internalDate, setInternalDate] = useState<Date>(selectedDate || new Date());
-  const [viewDate, setViewDate] = useState<Date>(selectedDate || new Date()); // For calendar navigation
-
-  // --- Handlers ---
   
-  const handleDateSelect = (date: Date) => {
-    // Preserve time from internalDate if set, otherwise default to current time or 9am?
-    // Actually, if we are just picking a date, we might want to keep the time.
-    const newDate = new Date(date);
-    newDate.setHours(internalDate.getHours());
-    newDate.setMinutes(internalDate.getMinutes());
+  const handleDateChange = useCallback((newDate: Date) => {
+    // WheelPicker now handles both Date and Time, so we just accept the new Date object fully.
     setInternalDate(newDate);
-    // Auto-switch to time if in calendar mode? or just stay? 
-    // Let's stay for now, but valid feedback would be visual.
-  };
+  }, []);
 
   const handleTimeSelect = (hours: number, minutes: number) => {
     const newDate = new Date(internalDate);
@@ -72,41 +52,33 @@ export function SmartDatePicker({ onSelect, selectedDate, onClose }: SmartDatePi
     onClose?.();
   };
 
-  // --- Renderers ---
-
   return (
-    <div className="w-[320px] bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="w-[300px] bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans select-none">
       {/* Header Tabs */}
       <div className="flex items-center p-1 bg-black/20 m-2 rounded-xl">
         <TabButton active={activeTab === 'quick'} onClick={() => setActiveTab('quick')} icon={Zap} label="Quick" />
-        <TabButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={CalendarIcon} label="Calendar" />
+        <TabButton active={activeTab === 'date'} onClick={() => setActiveTab('date')} icon={CalendarIcon} label="Date" />
         <TabButton active={activeTab === 'time'} onClick={() => setActiveTab('time')} icon={Clock} label="Time" />
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 min-h-[300px] relative">
+      <div className="flex-1 h-[180px] relative">
         <AnimatePresence mode="wait">
           {activeTab === 'quick' && (
             <QuickView 
               key="quick" 
               onSelect={(d) => {
                 setInternalDate(d);
-                if (d.getHours() === 0 && d.getMinutes() === 0) {
-                   // If preset didn't specify time (e.g. just "Tomorrow"), maybe ask for time?
-                   // For now, let's just select it.
-                }
-                onSelect(d); // Quick select usually confirms immediately
+                onSelect(d);
                 onClose?.();
               }} 
             />
           )}
-          {activeTab === 'calendar' && (
-             <CalendarView 
-               key="calendar" 
-               viewDate={viewDate}
-               selectedDate={internalDate}
-               onViewChange={setViewDate}
-               onSelect={handleDateSelect}
+          {activeTab === 'date' && (
+             <WheelPicker 
+               key="date" 
+               date={internalDate}
+               onChange={handleDateChange}
              />
           )}
           {activeTab === 'time' && (
@@ -119,7 +91,7 @@ export function SmartDatePicker({ onSelect, selectedDate, onClose }: SmartDatePi
         </AnimatePresence>
       </div>
       
-      {/* Footer (only for Calendar/Time manual modes) */}
+      {/* Footer (Manual Confirm) */}
       {activeTab !== 'quick' && (
         <div className="p-3 border-t border-white/5 flex justify-between items-center bg-black/20">
           <div className="text-xs text-white/50">
@@ -137,8 +109,7 @@ export function SmartDatePicker({ onSelect, selectedDate, onClose }: SmartDatePi
   );
 }
 
-// --- Sub-components ---
-
+// --- Tab Button ---
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: any; label: string }) {
   return (
     <button
@@ -154,15 +125,15 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
   );
 }
 
-// 1. Quick View
+// --- 1. Quick View ---
 function QuickView({ onSelect }: { onSelect: (date: Date) => void }) {
   const presets = [
     { label: 'Later Today', time: '18:00', icon: Sunset, get: () => setHours(startOfToday(), 18) },
     { label: 'Tomorrow Morning', time: '9:00 AM', icon: Sunrise, get: () => setHours(addDays(startOfToday(), 1), 9) },
     { label: 'Tomorrow Evening', time: '6:00 PM', icon: Moon, get: () => setHours(addDays(startOfToday(), 1), 18) },
     { label: 'This Weekend', time: 'Sat 9:00 AM', icon: CalendarIcon, get: () => setHours(nextSaturday(startOfToday()), 9) },
-    { label: 'Next Week', time: 'Mon 9:00 AM', icon: Check, get: () => setHours(addDays(startOfToday(), 7), 9) }, // Simplified "Next Week"
-    { label: 'No Date', time: 'Clear', icon: Zap, get: () => null } // Special case
+    { label: 'Next Week', time: 'Mon 9:00 AM', icon: Check, get: () => setHours(addDays(startOfToday(), 7), 9) },
+    { label: 'No Date', time: 'Clear', icon: Zap, get: () => null }
   ];
 
   return (
@@ -196,84 +167,13 @@ function QuickView({ onSelect }: { onSelect: (date: Date) => void }) {
   );
 }
 
-// 2. Calendar View
-function CalendarView({ viewDate, selectedDate, onViewChange, onSelect }: any) {
-  const days = useMemo(() => {
-    const start = startOfMonth(viewDate);
-    const end = endOfMonth(viewDate);
-    return eachDayOfInterval({ start, end });
-  }, [viewDate]);
-  
-  const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const startDayOffset = getDay(startOfMonth(viewDate));
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }} 
-      animate={{ opacity: 1, scale: 1 }} 
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="p-4"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => onViewChange(subMonths(viewDate, 1))} className="p-1 hover:bg-white/10 rounded-full text-white/60">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <div className="text-sm font-medium text-white">
-          {format(viewDate, 'MMMM yyyy')}
-        </div>
-        <button onClick={() => onViewChange(addMonths(viewDate, 1))} className="p-1 hover:bg-white/10 rounded-full text-white/60">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {weekDays.map(d => (
-          <div key={d} className="text-center text-[10px] font-medium text-white/30 uppercase">{d}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: startDayOffset }).map((_, i) => (
-          <div key={`empty-${i}`} />
-        ))}
-        {days.map(day => {
-          const isSelected = isSameDay(day, selectedDate);
-          const isCurrentDay = isToday(day);
-          
-          return (
-            <button
-              key={day.toISOString()}
-              onClick={() => onSelect(day)}
-              className={cn(
-                "h-8 rounded-lg flex items-center justify-center text-xs relative transition-all",
-                isSelected 
-                  ? "bg-indigo-500 text-white font-medium shadow-md" 
-                  : "text-white/70 hover:bg-white/10",
-                isCurrentDay && !isSelected && "text-indigo-400 font-medium",
-              )}
-            >
-               {format(day, 'd')}
-               {isCurrentDay && !isSelected && (
-                 <div className="absolute bottom-1 w-1 h-1 rounded-full bg-indigo-500" />
-               )}
-            </button>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
-}
-
-// 3. Time View (Experimental/Innovative)
+// --- 3. Time View ---
 function TimeView({ date, onChange }: { date: Date, onChange: (h: number, m: number) => void }) {
-  // Simple vertical sliders for now, maybe upgrade to circular later
   const hours = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
-  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-  
   const currentHour = date.getHours();
   const isPm = currentHour >= 12;
   const displayHour = currentHour % 12 || 12;
-  const displayMinute = Math.round(date.getMinutes() / 5) * 5; // Snap to 5
+  const displayMinute = Math.round(date.getMinutes() / 5) * 5; 
 
   const setTime = (h: number, m: number, pm: boolean) => {
     let finalH = h;
@@ -300,7 +200,6 @@ function TimeView({ date, onChange }: { date: Date, onChange: (h: number, m: num
         </div>
       </div>
 
-      {/* AM/PM Toggle */}
       <div className="flex bg-black/30 p-1 rounded-lg border border-white/5">
         <button 
           onClick={() => setTime(displayHour, displayMinute, false)}
@@ -317,9 +216,7 @@ function TimeView({ date, onChange }: { date: Date, onChange: (h: number, m: num
         </button>
       </div>
 
-      {/* Sliders Area (Fake stylized sliders/grid for now) */}
       <div className="w-full grid grid-cols-6 gap-2 mt-4">
-        {/* Simplified Hours Grid */}
         <div className="col-span-6 text-xs text-white/30 uppercase text-center mb-1">Hours</div>
         {hours.map(h => (
            <button

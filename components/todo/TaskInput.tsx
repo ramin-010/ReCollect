@@ -112,7 +112,15 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   // Handle click outside to collapse
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      // Check if click is inside the container
+      const isInsideContainer = containerRef.current && containerRef.current.contains(e.target as Node);
+      
+      // Check if click is inside a Popover/Dialog (which renders in a Portal)
+      // Radix UI usually adds data attributes or we can check for the specific class we added
+      const target = e.target as HTMLElement;
+      const isInsidePopover = target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="dialog"]');
+
+      if (!isInsideContainer && !isInsidePopover) {
         if (isExpanded && !title.trim()) {
           onExpandChange(false);
         }
