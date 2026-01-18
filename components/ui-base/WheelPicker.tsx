@@ -25,7 +25,7 @@ export function WheelPicker({ date, onChange }: WheelPickerProps) {
 
   // Time arrays
   const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
-  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
   
   // AM/PM Infinite Loop Setup (to fix alignment issues with short lists)
   // We create 100 pairs of AM/PM with unique IDs to simulate a scrollable wheel
@@ -46,7 +46,7 @@ export function WheelPicker({ date, onChange }: WheelPickerProps) {
     day: String(date.getDate()),
     year: String(date.getFullYear()),
     hour: String(date.getHours() % 12 || 12),
-    minute: String(Math.floor(date.getMinutes() / 5) * 5).padStart(2, '0'),
+    minute: String(date.getMinutes()).padStart(2, '0'),
     ampm: getInitialAmPm(date)
   });
 
@@ -86,7 +86,7 @@ export function WheelPicker({ date, onChange }: WheelPickerProps) {
       day: String(date.getDate()),
       year: String(date.getFullYear()),
       hour: String(date.getHours() % 12 || 12),
-      minute: String(Math.floor(date.getMinutes() / 5) * 5).padStart(2, '0'),
+      minute: String(date.getMinutes()).padStart(2, '0'), // No rounding
       ampm: newAmPm
     }));
   }, [date]);
