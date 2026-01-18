@@ -23,6 +23,12 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 import { parseTaskInput } from '@/lib/utils/smartDateParser';
 import { format, isToday, isTomorrow, addDays, differenceInDays } from 'date-fns';
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from '@/components/ui-base/Popover';
+import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 
 // Types
 interface TaskData {
@@ -57,6 +63,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [status, setStatus] = useState<'pending' | 'complete'>('pending');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   // Date state: suggested (from parser) vs confirmed (user accepted)
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
@@ -240,9 +247,28 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
           {/* Action Buttons (Right Side) */}
           <div className="flex items-center gap-1 shrink-0">
             {/* Calendar */}
-            <button className="p-1.5 text-white/30 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
-              <Calendar className="w-4 h-4" />
-            </button>
+            {/* Calendar - Inline Trigger */}
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button 
+                  type="button" 
+                  className={cn(
+                  "p-1.5 rounded-md transition-colors",
+                  isCalendarOpen || confirmedDueDate 
+                    ? "text-indigo-400 bg-indigo-500/10" 
+                    : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                )}>
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
+                <SmartDatePicker 
+                  selectedDate={confirmedDueDate}
+                  onSelect={setConfirmedDueDate}
+                  onClose={() => setIsCalendarOpen(false)}
+                />
+              </PopoverContent>
+            </Popover>
             
             {/* Reminder */}
             <button className="p-1.5 text-white/30 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
@@ -327,6 +353,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                 />
               </div>
 
+
               {/* Meta Bar / Footer */}
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/5">
                 <div className="flex items-center gap-2">
@@ -343,6 +370,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                       </button>
                     </div>
                   )}
+
 
                   {/* Status */}
                   <DropdownMenu>
