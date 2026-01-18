@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
 import { parseTaskInput } from '@/lib/utils/smartDateParser';
-import { format, isToday, differenceInDays } from 'date-fns';
+import { format, isToday, isTomorrow, addDays, differenceInDays } from 'date-fns';
 
 // Types
 interface TaskData {
@@ -74,19 +74,18 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const suggestedDate = parsedResult?.dueDate && !confirmedDueDate ? parsedResult.dueDate : null;
   const matchedText = parsedResult?.matchedText;
 
-  // Format relative date display
+  // Format date for display (helper)
   const getRelativeDateDisplay = (date: Date) => {
-    if (isToday(date)) {
-      return `Today, ${format(date, 'HH:mm')}`;
+    if (isToday(date)) return `Today at ${format(date, 'h:mm a')}`;
+    if (isTomorrow(date)) return `Tomorrow at ${format(date, 'h:mm a')}`;
+    if (date < addDays(new Date(), 7)) return format(date, 'EEEE h:mm a'); // e.g. "Monday 5:00 PM"
+    
+    // If year is different from current year, show year
+    if (date.getFullYear() !== new Date().getFullYear()) {
+      return format(date, 'MMM d yyyy, h:mm a'); // e.g. "Jan 1 2027, 5:00 PM"
     }
-    const daysUntil = differenceInDays(date, new Date());
-    if (daysUntil === 1) {
-      return `Tomorrow, ${format(date, 'HH:mm')}`;
-    }
-    if (daysUntil > 0 && daysUntil <= 7) {
-      return `in ${daysUntil} days`;
-    }
-    return format(date, 'MMM d, HH:mm');
+    
+    return format(date, 'MMM d, h:mm a'); // e.g. "Dec 19, 5:00 PM"
   };
 
   // Accept the suggested date
