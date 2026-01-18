@@ -8,7 +8,7 @@ import { Button } from '@/components/ui-base/Button';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { SyncConflictDialog } from '../SyncConflictDialog';
 import { TaskSidebar } from './TaskSidebar';
-import { TodoDialog } from '@/components/todo/TodoDialog';
+// import { TodoDialog } from '@/components/todo/TodoDialog';
 import axiosInstance from '@/lib/utils/axios';
 import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
@@ -477,11 +477,11 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       />
 
       {/* Quick Task Dialog from /task slash command */}
-      <TodoDialog
+      {/* <TodoDialog
         isOpen={showQuickTaskDialog}
         onClose={() => setShowQuickTaskDialog(false)}
         onSave={handleQuickTaskSave}
-      />
+      /> */}
 
       <EditorStyles />
     </div>

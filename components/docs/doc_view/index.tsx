@@ -332,7 +332,7 @@ export function DocsView() {
     <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
       {/* Header Section */}
       <div className="shrink-0 px-8 pt-8 pb-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-3 mb-1">
+        <div className="max-w-[1100px] mx-auto flex items-center gap-3 mb-1">
              <div className="w-10 h-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
                <FileText className="w-5 h-5 text-amber-500" />
              </div>
@@ -345,7 +345,7 @@ export function DocsView() {
 
       {/* View Tabs & Controls */}
       <div className="shrink-0 px-8 pb-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
              <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <LayoutGrid className="w-4 h-4" /> Gallery
@@ -416,7 +416,7 @@ export function DocsView() {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           {isLoading ? (
             <GallerySkeletonGrid count={3} />
           ) : allSortedDocs.length === 0 && !searchQuery ? (

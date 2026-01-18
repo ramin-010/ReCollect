@@ -64,6 +64,8 @@ export function Sidebar() {
   const logout = useAuthStore((state) => state.logout);
   const currentView = useViewStore((state) => state.currentView);
   const setCurrentView = useViewStore((state) => state.setCurrentView);
+  const todoFilter = useViewStore((state) => state.todoFilter);
+  const setTodoFilter = useViewStore((state) => state.setTodoFilter);
 
   const dashboardsInitialAnimationCompleted = useRef(false);
 
@@ -171,6 +173,7 @@ export function Sidebar() {
                 dashboards={dashboards}
                 currentDashboard={currentDashboard}
                 currentView={currentView}
+                todoFilter={todoFilter}
                 onDashboardClick={handleDashboardClick}
                 onDashboardAction={handleDashboardActionOpen}
                 onAllDashboardsClick={() => {
@@ -184,6 +187,10 @@ export function Sidebar() {
                 }}
                 onTodoClick={() => {
                   setCurrentView('todo');
+                  setIsMobileOpen(false);
+                }}
+                onTodoFilterChange={(filter) => {
+                  setTodoFilter(filter);
                   setIsMobileOpen(false);
                 }}
                 onExpensesClick={() => {
@@ -220,6 +227,7 @@ export function Sidebar() {
           dashboards={dashboards}
           currentDashboard={currentDashboard}
           currentView={currentView}
+          todoFilter={todoFilter}
           onDashboardClick={handleDashboardClick}
           onDashboardAction={handleDashboardActionOpen}
           onAllDashboardsClick={() => {
@@ -232,13 +240,20 @@ export function Sidebar() {
           }}
           onTodoClick={() => {
              setCurrentDashboard(null);
-            setCurrentView('todo')}}
+            setCurrentView('todo');
+          }}
+          onTodoFilterChange={(filter) => {
+            setCurrentDashboard(null);
+            setTodoFilter(filter);
+          }}
           onExpensesClick={() => {
              setCurrentDashboard(null);
-             setCurrentView('expenses')}}
+             setCurrentView('expenses');
+          }}
           onDocsClick={() => {
              setCurrentDashboard(null);
-             setCurrentView('docs')}}
+             setCurrentView('docs');
+          }}
           onNewDashboardClick={() => setIsCreateOpen(true)}
           onSettingsClick={() => setCurrentView('settings')}
           onLogout={handleLogout}
@@ -298,11 +313,13 @@ interface SidebarContentProps {
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
   currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
+  todoFilter?: 'inbox' | 'today' | 'upcoming' | 'completed';
   onDashboardClick: (dashboard: Dashboard) => void;
   onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
   onAllDashboardsClick: () => void;
   onDrawingBoardClick: () => void;
   onTodoClick: () => void;
+  onTodoFilterChange?: (filter: 'inbox' | 'today' | 'upcoming' | 'completed') => void;
   onExpensesClick: () => void;
   onDocsClick: () => void;
   onNewDashboardClick: () => void;
@@ -321,11 +338,13 @@ function SidebarContent({
   dashboards,
   currentDashboard,
   currentView,
+  todoFilter,
   onDashboardClick,
   onDashboardAction,
   onAllDashboardsClick,
   onDrawingBoardClick,
   onTodoClick,
+  onTodoFilterChange,
   onExpensesClick,
   onDocsClick,
   onNewDashboardClick,
@@ -414,19 +433,44 @@ function SidebarContent({
               {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Docs</span>}
             </MotionButton>
 
-            {/* To-Do List */}
-            <MotionButton
-              variant={currentView === 'todo' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'todo' && "bg-emerald-500/15 border-l-4 border-emerald-500 pl-2"
+            {/* To-Do List with Submenu */}
+            <div className="space-y-0.5">
+              <MotionButton
+                variant={currentView === 'todo' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                  currentView === 'todo' && "bg-emerald-500/15 border-l-4 border-emerald-500 pl-2"
+                )}
+                onClick={onTodoClick}
+                whileTap={{ scale: 0.98 }}
+                leftIcon={<CheckSquare className="h-4 w-4 text-emerald-500" />}
+              >
+                {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">To-Do List</span>}
+              </MotionButton>
+              
+              {/* Submenu Items - Only show when todo is active and not collapsed */}
+              {currentView === 'todo' && !isCollapsed && (
+                <div className="ml-6 pl-2 border-l border-white/10 space-y-0.5">
+                  {[
+                    { key: 'inbox', label: 'Inbox' },
+                    { key: 'today', label: 'Today' },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      onClick={() => onTodoFilterChange?.(item.key as any)}
+                      className={cn(
+                        "w-full text-left px-3 py-1.5 text-[13px] rounded-md transition-colors",
+                        todoFilter === item.key
+                          ? "text-emerald-400 bg-emerald-500/10"
+                          : "text-white/50 hover:text-white/70 hover:bg-white/5"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               )}
-              onClick={onTodoClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<CheckSquare className="h-4 w-4 text-emerald-500" />}
-            >
-              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">To-Do List</span>}
-            </MotionButton>
+            </div>
 
             {/* Drawing Board */}
             <MotionButton

@@ -26,7 +26,7 @@ export default function AppLayout({
   
   // Hide navbar when editing a document (docs view with editor open) or viewing tasks
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen;
+  const hideNavbar = isDocEditorOpen || currentView === 'todo';
 
   
   useEffect(() => {

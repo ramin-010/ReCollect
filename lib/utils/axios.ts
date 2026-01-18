@@ -27,7 +27,11 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        window.location.href = '/welcome';
+        const path = window.location.pathname;
+
+        if (!path.startsWith('/welcome') && !path.startsWith('/login') && !path.startsWith('/signup')) {
+          window.location.href = '/welcome';
+        }
       }
     }
     return Promise.reject(error);
