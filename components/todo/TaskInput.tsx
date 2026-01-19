@@ -22,7 +22,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
 import { parseTaskInput } from '@/lib/utils/smartDateParser';
-import { format, isToday, isTomorrow, addDays, differenceInDays } from 'date-fns';
+import { format, isToday, isTomorrow, addDays, differenceInDays, subMinutes } from 'date-fns';
+import { SmartReminderModal } from './SmartReminderModal';
+import { LabelsModal, Label, getLabelColorConfig } from './LabelsModal';
 import { 
   Popover, 
   PopoverContent, 
@@ -37,6 +39,7 @@ interface TaskData {
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'complete';
   dueDate?: string;
+  reminders?: string[];
 }
 
 interface TaskInputProps {
@@ -64,6 +67,21 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [status, setStatus] = useState<'pending' | 'complete'>('pending');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [isLabelsOpen, setIsLabelsOpen] = useState(false);
+  const [currentReminder, setCurrentReminder] = useState<Date | null>(null);
+  const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
+
+  // Handler when a label is selected - prepend to title
+  const handleLabelsChange = (labels: Label[]) => {
+    // Find newly added label (if any)
+    const newLabel = labels.find(l => !selectedLabels.some(sl => sl.id === l.id));
+    if (newLabel) {
+      // Prepend @label to title
+      setTitle(prev => `@${newLabel.name} ${prev}`.trim());
+    }
+    setSelectedLabels(labels);
+  };
   
   // Date state: suggested (from parser) vs confirmed (user accepted)
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
@@ -99,6 +117,8 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const acceptSuggestion = () => {
     if (suggestedDate && parsedResult) {
       setConfirmedDueDate(suggestedDate);
+      // Auto-set reminder to 10 minutes before
+      setCurrentReminder(subMinutes(suggestedDate, 10));
       // Replace matched text in title with clean version
       setTitle(parsedResult.cleanText);
     }
@@ -107,6 +127,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   // Clear confirmed date
   const clearConfirmedDate = () => {
     setConfirmedDueDate(null);
+    setCurrentReminder(null);
   };
 
   // Handle click outside to collapse
@@ -146,6 +167,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
       priority,
       status,
       dueDate: finalDueDate?.toISOString(),
+      reminders: currentReminder ? [currentReminder.toISOString()] : undefined,
     });
     
     // Reset
@@ -154,6 +176,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
     setPriority('medium');
     setStatus('pending');
     setConfirmedDueDate(null);
+    setCurrentReminder(null);
     onExpandChange(false);
   };
 
@@ -181,34 +204,54 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
 
   const currentPriority = PRIORITIES.find(p => p.value === priority);
 
-  // Build highlighted text content
+  // Build highlighted text content (dates + @tags)
   const getHighlightedContent = () => {
-    if (!parsedResult?.matchedSegments?.length || confirmedDueDate || !title) return null;
+    if (!title) return null;
 
-    // To avoid complexity, we can use a regex constructed from segments
-    // Escape regex characters in segments
-    const uniqueSegments = Array.from(new Set(parsedResult.matchedSegments)).sort((a: string, b: string) => b.length - a.length);
+    // Build segments to highlight
+    const highlightSegments: { text: string; type: 'date' | 'tag' }[] = [];
 
-    // Construct a regex that matches any of the segments
+    // Add date segments if not confirmed
+    if (parsedResult?.matchedSegments?.length && !confirmedDueDate) {
+      parsedResult.matchedSegments.forEach((segment: string) => {
+        highlightSegments.push({ text: segment, type: 'date' });
+      });
+    }
+
+    // Add @tag segments
+    const tagMatches = title.match(/@\w+/g);
+    if (tagMatches) {
+      tagMatches.forEach((tag) => {
+        highlightSegments.push({ text: tag, type: 'tag' });
+      });
+    }
+
+    if (highlightSegments.length === 0) return null;
+
+    // Sort by length descending to avoid partial matches
+    const uniqueTexts = Array.from(new Set(highlightSegments.map(s => s.text))).sort((a, b) => b.length - a.length);
+
+    // Build regex
     const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`(${uniqueSegments.map(escapeRegExp).join('|')})`, 'gi');
+    const pattern = new RegExp(`(${uniqueTexts.map(escapeRegExp).join('|')})`, 'gi');
     
     const splitParts = title.split(pattern);
 
     return (
-        <div 
-          className="absolute inset-0 flex items-center font-medium pointer-events-none overflow-hidden whitespace-pre"
-          aria-hidden="true"
-        >
-          {splitParts.map((part, i) => {
-            const isMatch = uniqueSegments.some((s: string) => s.toLowerCase() === part.toLowerCase());
-            return isMatch ? (
-               <span key={i} className="bg-indigo-500/20 text-white rounded-sm">{part}</span>
-            ) : (
-               <span key={i} className="text-white">{part}</span>
-            );
-          })}
-        </div>
+      <div 
+        className="absolute inset-0 flex items-center font-medium pointer-events-none overflow-hidden whitespace-pre"
+        aria-hidden="true"
+      >
+        {splitParts.map((part, i) => {
+          const segment = highlightSegments.find(s => s.text.toLowerCase() === part.toLowerCase());
+          if (segment?.type === 'tag') {
+            return <span key={i} className="bg-blue-500/10 text-blue-300 rounded-sm">{part}</span>;
+          } else if (segment?.type === 'date') {
+            return <span key={i} className="bg-indigo-500/20 text-white rounded-sm">{part}</span>;
+          }
+          return <span key={i} className="text-white">{part}</span>;
+        })}
+      </div>
     );
   };
     
@@ -236,7 +279,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
           <div className="relative flex-1">
             {/* Backdrop layer - text with highlight background */}
             {highlightedOverlay}
-            {/* Actual input - text is visible only when no highlight */}
+            {/* Actual input */}
             <input
               ref={inputRef}
               type="text"
@@ -272,45 +315,42 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
               <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
                 <SmartDatePicker 
                   selectedDate={confirmedDueDate}
-                  onSelect={setConfirmedDueDate}
+                  onSelect={(date) => {
+                    setConfirmedDueDate(date);
+                    if (date) {
+                      setCurrentReminder(subMinutes(date, 10));
+                    } else {
+                      setCurrentReminder(null);
+                    }
+                  }}
                   onClose={() => setIsCalendarOpen(false)}
                 />
               </PopoverContent>
             </Popover>
             
             {/* Reminder */}
-            <button className="p-1.5 text-white/30 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
-              <Bell className="w-4 h-4" />
-            </button>
-            
-            {/* Priority */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={cn(
-                  "p-1.5 rounded-md transition-colors",
-                  currentPriority ? currentPriority.color : "text-white/30 hover:text-white/60 hover:bg-white/5"
-                )}>
-                  <Flag className="w-4 h-4" />
+            <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
+              <PopoverTrigger asChild>
+                <button 
+                  className={cn(
+                    "p-1.5 rounded-md transition-colors",
+                    isReminderOpen || currentReminder
+                      ? "text-indigo-400 bg-indigo-500/10" 
+                      : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                  )}
+                >
+                  <Bell className="w-4 h-4" />
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10">
-                {PRIORITIES.map((p) => (
-                  <DropdownMenuItem 
-                    key={p.value} 
-                    onClick={() => setPriority(p.value as 'low' | 'medium' | 'high')}
-                    className={cn("focus:bg-white/10", p.color)}
-                  >
-                    <Flag className="w-3.5 h-3.5 mr-2" />
-                    <span>{p.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* More Options */}
-            <button className="p-1.5 text-white/30 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
+                <SmartReminderModal 
+                  dueDate={confirmedDueDate || suggestedDate}
+                  onSetReminder={setCurrentReminder}
+                  onClose={() => setIsReminderOpen(false)}
+                  currentReminder={currentReminder}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -380,28 +420,6 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                   )}
 
 
-                  {/* Status */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 rounded-md border border-white/10 transition-colors">
-                        {STATUSES.find(s => s.value === status)?.icon}
-                        <span>{STATUSES.find(s => s.value === status)?.label}</span>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10">
-                      {STATUSES.map((s) => (
-                        <DropdownMenuItem 
-                          key={s.value} 
-                          onClick={() => setStatus(s.value as 'pending' | 'complete')}
-                          className="text-white/70 focus:text-white focus:bg-white/10"
-                        >
-                          {s.icon}
-                          <span className="ml-2">{s.label}</span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
                   {/* Assignee */}
                   <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white/40 hover:text-white/60 hover:bg-white/5 rounded-md border border-dashed border-white/10 transition-colors">
                     <User className="w-3.5 h-3.5" />
@@ -409,9 +427,55 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                   </button>
 
                   {/* Labels */}
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white/40 hover:text-white/60 hover:bg-white/5 rounded-md border border-dashed border-white/10 transition-colors">
-                    <Tag className="w-3.5 h-3.5" />
-                    <span>Labels</span>
+                  <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+                    <PopoverTrigger asChild>
+                      <button className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                        selectedLabels.length > 0
+                          ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/20"
+                          : "text-white/40 hover:text-white/60 hover:bg-white/5 border-dashed border-white/10"
+                      )}>
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>{selectedLabels.length > 0 ? `${selectedLabels.length} Labels` : 'Labels'}</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="start" side="bottom" sideOffset={8}>
+                      <LabelsModal
+                        selectedLabels={selectedLabels}
+                        onLabelsChange={handleLabelsChange}
+                        onClose={() => setIsLabelsOpen(false)}
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Priority */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                        currentPriority ? `${currentPriority.color} ${currentPriority.bg} border-current/20` : "text-white/40 hover:text-white/60 hover:bg-white/5 border-dashed border-white/10"
+                      )}>
+                        <Flag className="w-3.5 h-3.5" />
+                        <span>{currentPriority?.label || 'Priority'}</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10">
+                      {PRIORITIES.map((p) => (
+                        <DropdownMenuItem 
+                          key={p.value} 
+                          onClick={() => setPriority(p.value as 'low' | 'medium' | 'high')}
+                          className={cn("focus:bg-white/10", p.color)}
+                        >
+                          <Flag className="w-3.5 h-3.5 mr-2" />
+                          <span>{p.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* More Options */}
+                  <button className="p-1.5 text-white/40 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
 

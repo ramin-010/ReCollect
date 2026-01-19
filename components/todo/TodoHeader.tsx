@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
+import { FlipClock } from '@/components/ui-base/FlipClock';
 
 interface TodoHeaderProps {
   greeting: string;
@@ -16,7 +17,7 @@ interface TodoHeaderProps {
 }
 
 const backgroundImages: string[] = [
-   'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_fxnzpofxnzpofxnz_PhotoGrid_ic5rhc.webp',
+  //  'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_fxnzpofxnzpofxnz_PhotoGrid_ic5rhc.webp',
 
 ];
 
@@ -40,11 +41,11 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const currentImage = backgroundImages.length > 0 ? backgroundImages[currentImageIndex] : null;
 
   return (
-    <div className=" relative w-full h-[30vh] min-h-[200px] overflow-hidden">
+    <div className="relative w-full h-[35vh] min-h-[260px] overflow-hidden -mt-16 pt-16">
         {/* Background Layer */}
         <div className="absolute inset-0 z-0">
-            {/* Default Gradient Background (shown when no images or as base) */}
-            <div className={`absolute inset-0 bg-gradient-to-r from-emerald-900/40 via-blue-900/40 to-purple-900/40 transition-opacity duration-1000 ${currentImage ? 'opacity-60' : 'opacity-100'}`} />
+            {/* Default Gradient Background */}
+            <div className={`absolute inset-0 bg-gradient-to-r from-zinc-900 via-neutral-900 to-zinc-900`} />
             
              {/* Slider Images */}
             <AnimatePresence mode="wait">
@@ -54,21 +55,14 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                         src={currentImage}
                         alt="Header background"
                         initial={{ opacity: 0, scale: 1.05 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        animate={{ opacity: 0.4, scale: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 1.2 }}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover grayscale opacity-30 mix-blend-overlay"
                     />
                 )}
             </AnimatePresence>
 
-             {/* Overlay Gradient for readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--sidebar-bg))] via-black/40 to-transparent" />
-            
-            {/* Fade to Page Background */}
-            <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[hsl(var(--background))] to-transparent z-0 pointer-events-none" />
-            
-             {/* Dynamic Ambient Glow */}
              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 opacity-30 blur-3xl" />
 
              {/* Noise Texture */}
@@ -76,17 +70,16 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
         </div>
 
 
-      <div className="relative z-10 w-full h-full max-w-[1200px] mx-auto px-6 md:px-6  flex flex-col justify-end">
+      <div className="relative z-10 w-full h-full max-w-[1400px] mx-auto px-12 flex items-end justify-between pb-3">
         
-        <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-8">
-            {/* Foreground Content (Static) */}
-            <div className="space-y-4">
+        {/* LEFT: Greeting (Elegant Serif) */}
+        <div className="flex flex-col justify-end space-y-1 mb-2">
             <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-emerald-400 font-medium tracking-wide uppercase text-xs"
+                className="flex items-center gap-2 text-emerald-500/80 font-medium tracking-widest uppercase text-[9px] mb-2"
             >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3 h-3" />
                 <span>Productivity Hub</span>
             </motion.div>
             
@@ -94,28 +87,43 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-5xl md:text-7xl font-bold tracking-tight text-white drop-shadow-sm leading-none"
+                className="text-4xl lg:text-5xl font-light tracking-tight text-white/90 font-serif"
             >
-                {greeting}, {name}.
+                Good {greeting.split(' ')[1] || 'Day'}, <br/>
+                <span className="font-bold font-sans text-white">{name}.</span>
             </motion.h1>
             
             <motion.p 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-white/70 text-lg max-w-md leading-relaxed font-medium"
+                className="text-white/40 text-xs font-medium pl-1 mt-1 border-l-2 border-emerald-500/30"
             >
-                You have <span className="text-white font-semibold">{stats.pending} active tasks</span> awaiting your focus.
+                {stats.pending} tasks pending review.
             </motion.p>
-            </div>
+        </div>
 
-            {/* Velocity Ring - Scaled */ }
-            <div className="flex items-center gap-6 pb-2">
-                <div className="flex flex-col items-end gap-1">
-                    <span className="text-4xl font-bold tabular-nums text-white drop-shadow-md">{Math.round(stats.progress)}%</span>
-                    <span className="text-[10px] uppercase tracking-widest text-white/60 font-semibold">Efficiency</span>
+        {/* CENTER: The Prism Clock (Sophisticated Watermark) */}
+        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none">
+             {/* Main Clock - Watermark Style */}
+             <div className="relative z-0 opacity-30 mix-blend-overlay scale-125 origin-bottom">
+                <FlipClock transparent scale={0.43} showSeconds={false} className="text-white" />
+             </div>
+        </div>
+
+        {/* RIGHT: Floating Stats (Minimal) */}
+        <div className="flex flex-col items-end justify-end mb-2 z-10">
+             <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-5"
+            >
+                <div className="flex flex-col items-end">
+                    <span className="text-3xl font-bold tabular-nums text-white tracking-tighter drop-shadow-md">{Math.round(stats.progress)}%</span>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-emerald-400 font-bold opacity-80">Efficiency</span>
                 </div>
-                <div className="relative w-24 h-24">
+                <div className="relative w-14 h-14">
                     <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/10" />
                     <motion.circle 
@@ -124,17 +132,18 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                         transition={{ duration: 1.5, ease: "easeOut" }}
                         cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
                         strokeLinecap="round"
-                        className="text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]"
+                        className="text-emerald-500 drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]"
                         strokeDasharray="1"
                         pathLength="1"
                     />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                    <Zap className="w-8 h-8 text-emerald-400 fill-emerald-400/20" />
+                        <Zap className="w-5 h-5 text-emerald-400 fill-emerald-400/10" />
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
+
       </div>
     </div>
   );
