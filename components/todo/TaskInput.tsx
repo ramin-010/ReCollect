@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Circle, 
@@ -16,7 +17,8 @@ import {
   ListPlus,
   ChevronDown,
   CornerDownRight,
-  Plus
+  Plus,
+  Paperclip
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -93,6 +95,11 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const [isSubtaskFormOpen, setIsSubtaskFormOpen] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
   const [subtaskDescription, setSubtaskDescription] = useState('');
+
+  // Image attachment state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const descriptionEditorRef = useRef<HTMLDivElement>(null);
 
   
   const handleLabelsChange = (labels: Label[]) => {
@@ -475,6 +482,55 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
               </PopoverContent>
             </Popover>
 
+
+
+            {/* Attachment Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
+              title="Add attachment"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files) {
+                  // We need to pass these files to the editor
+                  // Dispatch a custom event or update the editor content directly
+                  // Since we don't have direct access to the editor's insertImage function from here easily without lifting state up more complexly,
+                  // we'll use a hack to dispatch an event that the editor listens to, or just pass the files via props if we refactor.
+                  // BETTER: Let's pass a ref to the editor component so we can call insertImage on it.
+                  // But for now, let's just trigger the file read here and append to description.
+                  
+                  Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      if (event.target?.result as string) {
+                         const src = event.target?.result as string;
+                         const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: inline-block; margin: 4px 0;">
+                           <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
+                           <button class="img-expand-btn" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 6px; background: rgba(0,0,0,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                               <polyline points="15 3 21 3 21 9"></polyline>
+                               <polyline points="9 21 3 21 3 15"></polyline>
+                               <line x1="21" y1="3" x2="14" y2="10"></line>
+                               <line x1="3" y1="21" x2="10" y2="14"></line>
+                             </svg>
+                           </button>
+                         </div>`;
+                         setDescription(prev => prev + imgHtml);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  });
+              }}}
+            />
           </div>
         </div>
 
@@ -520,6 +576,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                 <TaskDescriptionEditor
                   content={description}
                   onChange={setDescription}
+                  onImageClick={setPreviewImage}
                   placeholder="Add description..."
                 />
               </div>
@@ -740,6 +797,41 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
           )}
         </AnimatePresence>
       </div>
+
+      {/* Image Preview Modal with Smooth Animation */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            onClick={() => setPreviewImage(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="relative max-w-[80vw] max-h-[80vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={previewImage} 
+                alt="Preview"
+                className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
+              />
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
