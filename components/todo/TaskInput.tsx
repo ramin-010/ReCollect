@@ -16,9 +16,7 @@ import {
   ListPlus,
   ChevronDown,
   CornerDownRight,
-  Plus,
-  Paperclip,
-  Expand
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -39,6 +37,7 @@ import {
   PopoverTrigger 
 } from '@/components/ui-base/Popover';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
+import { TaskDescriptionEditor } from './TaskDescriptionEditor';
 
 
 interface TaskData {
@@ -94,12 +93,6 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const [isSubtaskFormOpen, setIsSubtaskFormOpen] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
   const [subtaskDescription, setSubtaskDescription] = useState('');
-
-  // Attachments state
-  const [attachments, setAttachments] = useState<string[]>([]);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   
   const handleLabelsChange = (labels: Label[]) => {
@@ -247,14 +240,12 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
       dueDate: finalDueDate?.toISOString(),
       reminders: currentReminder ? [currentReminder.toISOString()] : undefined,
       subtasks: subtasks.filter(t => t.trim().length > 0),
-      attachments: attachments.length > 0 ? attachments : undefined,
     });
     
     
     setTitle('');
     setDescription('');
     setSubtasks([]);
-    setAttachments([]);
     setPriority('medium');
     setStatus('pending');
     setConfirmedDueDate(null);
@@ -484,34 +475,6 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
               </PopoverContent>
             </Popover>
 
-            {/* Attachment */}
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const files = e.target.files;
-                if (files) {
-                  Array.from(files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      if (event.target?.result) {
-                        setAttachments(prev => [...prev, event.target!.result as string]);
-                      }
-                    };
-                    reader.readAsDataURL(file);
-                  });
-                }
-              }}
-            />
           </div>
         </div>
 
@@ -554,71 +517,12 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
             >
               {/* Description */}
               <div className="px-4 pb-3">
-                <textarea
-                  ref={descriptionRef}
-                  value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value);
-                    // Auto-expand
-                    e.target.style.height = 'auto';
-                    e.target.style.height = e.target.scrollHeight + 'px';
-                  }}
-                  onPaste={(e) => {
-                    const items = e.clipboardData?.items;
-                    if (items) {
-                      for (const item of Array.from(items)) {
-                        if (item.type.startsWith('image/')) {
-                          const file = item.getAsFile();
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setAttachments(prev => [...prev, event.target!.result as string]);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }
-                      }
-                    }
-                  }}
+                <TaskDescriptionEditor
+                  content={description}
+                  onChange={setDescription}
                   placeholder="Add description..."
-                  rows={1}
-                  className="w-full bg-transparent text-sm text-white/70 placeholder:text-white/30 focus:outline-none resize-none pl-8 min-h-[24px] max-h-[96px] overflow-y-auto"
                 />
               </div>
-
-              {/* Attachments Preview */}
-              {attachments.length > 0 && (
-                <div className="px-4 pb-3 pl-12">
-                  <div className="flex flex-wrap gap-2">
-                    {attachments.map((attachment, index) => (
-                      <div key={index} className="relative group inline-block cursor-pointer">
-                        <img 
-                          src={attachment} 
-                          alt={`Attachment ${index + 1}`}
-                          className="max-w-[280px] max-h-[180px] rounded-md border border-white/10"
-                          onDoubleClick={() => setPreviewImage(attachment)}
-                        />
-                        {/* Expand button */}
-                        <button
-                          onClick={() => setPreviewImage(attachment)}
-                          className="absolute bottom-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Expand className="w-3.5 h-3.5 text-white" />
-                        </button>
-                        {/* Delete button */}
-                        <button
-                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3 text-white" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Subtasks Section */}
               {subtasks.length > 0 && (
@@ -836,39 +740,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
           )}
         </AnimatePresence>
       </div>
-
-      {/* Image Preview Modal */}
-      <AnimatePresence>
-        {previewImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-            onClick={() => setPreviewImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-[90vw] max-h-[90vh]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img 
-                src={previewImage!} 
-                alt="Preview"
-                className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
-              />
-              <button
-                onClick={() => setPreviewImage(null)}
-                className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
+
