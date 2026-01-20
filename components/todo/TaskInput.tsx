@@ -513,17 +513,25 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                     reader.onload = (event) => {
                       if (event.target?.result as string) {
                          const src = event.target?.result as string;
-                         const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: inline-block; margin: 4px 0;">
+                         const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
                            <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
-                           <button class="img-expand-btn" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 6px; background: rgba(0,0,0,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
-                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                               <polyline points="15 3 21 3 21 9"></polyline>
-                               <polyline points="9 21 3 21 3 15"></polyline>
-                               <line x1="21" y1="3" x2="14" y2="10"></line>
-                               <line x1="3" y1="21" x2="10" y2="14"></line>
-                             </svg>
-                           </button>
-                         </div>`;
+                           <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
+                             <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                 <polyline points="15 3 21 3 21 9"></polyline>
+                                 <polyline points="9 21 3 21 3 15"></polyline>
+                                 <line x1="21" y1="3" x2="14" y2="10"></line>
+                                 <line x1="3" y1="21" x2="10" y2="14"></line>
+                               </svg>
+                             </button>
+                             <button class="img-delete-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                 <line x1="18" y1="6" x2="6" y2="18"></line>
+                                 <line x1="6" y1="6" x2="18" y2="18"></line>
+                               </svg>
+                             </button>
+                           </div>
+                         </div><p style="margin: 0; min-height: 1em;"></p>`;
                          setDescription(prev => prev + imgHtml);
                       }
                     };

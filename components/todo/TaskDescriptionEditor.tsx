@@ -34,7 +34,7 @@ export function TaskDescriptionEditor({
     isInternalChange.current = false;
   }, [content]);
 
-  // Handle clicks on expand buttons
+  // Handle clicks on expand and delete buttons
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     
@@ -50,7 +50,22 @@ export function TaskDescriptionEditor({
         onImageClickRef.current(img.src);
       }
     }
-  }, []);
+    
+    // Check if clicked on delete button
+    if (target.classList.contains('img-delete-btn') || target.closest('.img-delete-btn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Find the parent container and remove it
+      const container = target.closest('.img-container');
+      if (container && editorRef.current) {
+        container.remove();
+        // Trigger input event to sync state
+        isInternalChange.current = true;
+        onChange(editorRef.current.innerHTML);
+      }
+    }
+  }, [onChange]);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
@@ -59,19 +74,27 @@ export function TaskDescriptionEditor({
     }
   }, [onChange]);
 
-  // Create image HTML with expand button overlay
+  // Create image HTML with expand and delete button overlays
   const createImageHtml = (src: string) => {
-    return `<div class="img-container" contenteditable="false" style="position: relative; display: inline-block; margin: 4px 0;">
+    return `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
       <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
-      <button class="img-expand-btn" style="position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; border-radius: 6px; background: rgba(0,0,0,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 3 21 3 21 9"></polyline>
-          <polyline points="9 21 3 21 3 15"></polyline>
-          <line x1="21" y1="3" x2="14" y2="10"></line>
-          <line x1="3" y1="21" x2="10" y2="14"></line>
-        </svg>
-      </button>
-    </div>`;
+      <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
+        <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+        <button class="img-delete-btn" style="width: 20px; height: 20px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div><p style="margin: 0; min-height: 1em;"></p>`;
   };
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -96,10 +119,20 @@ export function TaskDescriptionEditor({
                   const temp = document.createElement('div');
                   temp.innerHTML = imgHtml;
                   const frag = document.createDocumentFragment();
+                  let lastNode: Node | null = null;
                   while (temp.firstChild) {
+                    lastNode = temp.firstChild;
                     frag.appendChild(temp.firstChild);
                   }
                   range.insertNode(frag);
+                  
+                  // Move cursor after the inserted content and clear selection
+                  if (lastNode) {
+                    range.setStartAfter(lastNode);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
                 }
                 handleInput();
               }
@@ -118,7 +151,7 @@ export function TaskDescriptionEditor({
     <div className="relative pl-8">
       {isEmpty && (
         <div 
-          className="absolute top-0 left-8 text-sm text-white/30 pointer-events-none select-none"
+          className="absolute top-0 left-8 text-sm  text-white/30 pointer-events-none select-none"
         >
           {placeholder}
         </div>
@@ -136,13 +169,23 @@ export function TaskDescriptionEditor({
         }}
       />
       
-      {/* CSS for hover effect on expand button */}
+      {/* CSS for hover effect on image overlay */}
       <style jsx global>{`
-        .img-container:hover .img-expand-btn {
+        .img-container {
+          user-select: none;
+        }
+        .img-container::selection,
+        .img-container *::selection {
+          background: transparent;
+        }
+        .img-container:hover .img-overlay {
           opacity: 1 !important;
         }
         .img-expand-btn:hover {
-          background: rgba(0,0,0,0.8) !important;
+          background: rgba(0,0,0,0.9) !important;
+        }
+        .img-delete-btn:hover {
+          background: rgba(185,28,28,1) !important;
         }
       `}</style>
     </div>
