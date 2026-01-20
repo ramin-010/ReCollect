@@ -50,15 +50,22 @@ interface LabelsModalProps {
   selectedLabels: Label[];
   onLabelsChange: (labels: Label[]) => void;
   onClose: () => void;
+  initialSearchQuery?: string;
 }
 
 export function LabelsModal({ 
   selectedLabels, 
   onLabelsChange, 
-  onClose
+  onClose,
+  initialSearchQuery = ''
 }: LabelsModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [storedLabels, setStoredLabels] = useState<Label[]>([]);
+
+  // Sync with parent's search query
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
 
   // Load stored labels on mount
   useEffect(() => {
