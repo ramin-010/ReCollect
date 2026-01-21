@@ -55,7 +55,7 @@ export function TodoView() {
   // Stats
   const stats = useMemo(() => {
     const total = todos.length;
-    const completed = todos.filter(t => t.status === 'complete' || t.isCompleted).length;
+    const completed = todos.filter(t => t.status === 'complete').length;
     const pending = total - completed;
     const progress = total === 0 ? 0 : (completed / total) * 100;
     return { total, completed, pending, progress };
@@ -67,25 +67,25 @@ export function TodoView() {
     
     switch (activeFilter) {
       case 'inbox':
-        result = result.filter(t => t.status !== 'complete' && !t.isCompleted);
+        result = result.filter(t => t.status !== 'complete');
         break;
       case 'today':
         result = result.filter(t => {
-          if (t.status === 'complete' || t.isCompleted) return false;
+          if (t.status === 'complete') return false;
           if (!t.dueDate) return false;
           return isToday(parseISO(t.dueDate));
         });
         break;
       case 'upcoming':
         result = result.filter(t => {
-          if (t.status === 'complete' || t.isCompleted) return false;
+          if (t.status === 'complete') return false;
           if (!t.dueDate) return false;
           const date = parseISO(t.dueDate);
           return !isPast(date) || isToday(date);
         });
         break;
       case 'completed':
-        result = result.filter(t => t.status === 'complete' || t.isCompleted);
+        result = result.filter(t => t.status === 'complete');
         break;
     }
 
@@ -102,20 +102,14 @@ export function TodoView() {
   }, [todos, activeFilter, priorityFilter]);
 
   // Handlers
+  // Note: TaskInput now handles the API call directly via todoApi.createTodo
+  // This callback only receives the result to add to the local store
   const handleSaveTask = async (data: any) => {
-    try {
-      const response = await axiosInstance.post('/api/todos', {
-        ...data,
-        status: data.status || 'pending',
-        priority: data.priority || 'medium'
-      });
-      if (response.data.success) {
-        addTodo(response.data.data);
-        toast.success('Task created');
-      }
-    } catch (error: any) {
-      toast.error('Failed to save task');
+    // If data has _id, it means it came from the API response - just add to store
+    if (data._id) {
+      addTodo(data);
     }
+    // If no _id, the TaskInput handles the API call, we don't need to do anything
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -130,9 +124,9 @@ export function TodoView() {
 
   const toggleComplete = async (id: string, currentlyCompleted: boolean) => {
     const newStatus = currentlyCompleted ? 'pending' : 'complete';
-    updateTodo(id, { status: newStatus as 'pending' | 'complete', isCompleted: !currentlyCompleted });
+    updateTodo(id, { status: newStatus as 'pending' | 'complete' });
     axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
-      updateTodo(id, { status: currentlyCompleted ? 'complete' : 'pending', isCompleted: currentlyCompleted });
+      updateTodo(id, { status: currentlyCompleted ? 'complete' : 'pending' });
     });
   };
 
@@ -287,7 +281,7 @@ export function TodoView() {
             ) : (
               <div className="divide-y divide-white/5">
                 {filteredTasks.map((task, idx) => {
-                  const isComplete = task.isCompleted || task.status === 'complete';
+                  const isComplete = task.status === 'complete';
                   return (
                     <motion.div 
                       key={task._id}
@@ -320,7 +314,7 @@ export function TodoView() {
                         "flex-1 text-[15px] transition-all",
                         isComplete ? "line-through text-white/30" : "text-white/90"
                       )}>
-                        {task.text}
+                        {task.title}
                       </span>
                       
                       {/* Priority Dot */}

@@ -4,19 +4,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Tag, Plus, Check, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Preset colors for labels
-const LABEL_COLORS = [
-  { name: 'red', bg: 'bg-red-500/20', text: 'text-red-400', dot: 'bg-red-500' },
-  { name: 'orange', bg: 'bg-orange-500/20', text: 'text-orange-400', dot: 'bg-orange-500' },
-  { name: 'amber', bg: 'bg-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-500' },
-  { name: 'green', bg: 'bg-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-500' },
-  { name: 'teal', bg: 'bg-teal-500/20', text: 'text-teal-400', dot: 'bg-teal-500' },
-  { name: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' },
-  { name: 'indigo', bg: 'bg-indigo-500/20', text: 'text-indigo-400', dot: 'bg-indigo-500' },
-  { name: 'purple', bg: 'bg-purple-500/20', text: 'text-purple-400', dot: 'bg-purple-500' },
-  { name: 'pink', bg: 'bg-pink-500/20', text: 'text-pink-400', dot: 'bg-pink-500' },
-  { name: 'gray', bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-500' },
-];
+// Default label style (Simplification)
+const DEFAULT_LABEL_COLOR = { name: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' };
+
 
 const STORAGE_KEY = 'recollect-labels';
 
@@ -104,11 +94,10 @@ export function LabelsModal({
   const handleCreateLabel = () => {
     if (!searchQuery.trim()) return;
     
-    const randomColor = LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)].name;
     const newLabel: Label = {
       id: `label-${Date.now()}`,
       name: searchQuery.trim(),
-      color: randomColor,
+      color: DEFAULT_LABEL_COLOR.name,
     };
     
     // Save to localStorage
@@ -122,8 +111,8 @@ export function LabelsModal({
   };
 
   // Get color config
-  const getColorConfig = (colorName: string) => {
-    return LABEL_COLORS.find(c => c.name === colorName) || LABEL_COLORS[5];
+  const getColorConfig = (_colorName: string) => {
+    return DEFAULT_LABEL_COLOR;
   };
 
   return (
@@ -185,6 +174,7 @@ export function LabelsModal({
           <span>Create label</span>
         </button>
       )}
+      
 
       {/* Empty state - no labels yet */}
       {storedLabels.length === 0 && !searchQuery.trim() && (
@@ -196,7 +186,6 @@ export function LabelsModal({
   );
 }
 
-// Helper to get color config (exported for use in TaskInput)
-export function getLabelColorConfig(colorName: string) {
-  return LABEL_COLORS.find(c => c.name === colorName) || LABEL_COLORS[5];
+export function getLabelColorConfig(_colorName: string) {
+  return DEFAULT_LABEL_COLOR;
 }

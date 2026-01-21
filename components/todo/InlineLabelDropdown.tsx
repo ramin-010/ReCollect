@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo, useRef, forwardRef, useImperativeH
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+
 const STORAGE_KEY = 'recollect-labels';
-const LABEL_COLORS = ['red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'purple', 'pink', 'gray'];
+const DEFAULT_LABEL_COLOR = 'blue';
 
 export interface Label {
   id: string;
@@ -98,11 +99,10 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
     const handleCreateLabel = () => {
       if (!searchQuery.trim()) return;
       
-      const randomColor = LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)];
       const newLabel: Label = {
         id: `label-${Date.now()}`,
         name: searchQuery.trim(),
-        color: randomColor,
+        color: DEFAULT_LABEL_COLOR,
       };
       
       // Save to localStorage
@@ -209,18 +209,6 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
 InlineLabelDropdown.displayName = 'InlineLabelDropdown';
 
 // Re-export getLabelColorConfig for use elsewhere
-export function getLabelColorConfig(colorName: string) {
-  const LABEL_COLOR_CONFIGS = [
-    { name: 'red', bg: 'bg-red-500/20', text: 'text-red-400', dot: 'bg-red-500' },
-    { name: 'orange', bg: 'bg-orange-500/20', text: 'text-orange-400', dot: 'bg-orange-500' },
-    { name: 'amber', bg: 'bg-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-500' },
-    { name: 'green', bg: 'bg-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-500' },
-    { name: 'teal', bg: 'bg-teal-500/20', text: 'text-teal-400', dot: 'bg-teal-500' },
-    { name: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' },
-    { name: 'indigo', bg: 'bg-indigo-500/20', text: 'text-indigo-400', dot: 'bg-indigo-500' },
-    { name: 'purple', bg: 'bg-purple-500/20', text: 'text-purple-400', dot: 'bg-purple-500' },
-    { name: 'pink', bg: 'bg-pink-500/20', text: 'text-pink-400', dot: 'bg-pink-500' },
-    { name: 'gray', bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-500' },
-  ];
-  return LABEL_COLOR_CONFIGS.find(c => c.name === colorName) || LABEL_COLOR_CONFIGS[5];
+export function getLabelColorConfig(_colorName: string) {
+  return { name: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' };
 }

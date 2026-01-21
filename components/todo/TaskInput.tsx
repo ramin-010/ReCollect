@@ -32,6 +32,9 @@ import { parseTaskInput } from '@/lib/utils/smartDateParser';
 import { format, isToday, isTomorrow, addDays, differenceInDays, subMinutes } from 'date-fns';
 import { SmartReminderModal } from './SmartReminderModal';
 import { LabelsModal, Label, getLabelColorConfig } from './LabelsModal';
+import { todoApi } from '@/lib/api/todoApi';
+import { toast } from 'sonner';
+import { nanoid } from 'nanoid';
 import { InlineLabelDropdown, InlineLabelDropdownHandle } from './InlineLabelDropdown';
 import { 
   Popover, 
@@ -43,18 +46,19 @@ import { TaskDescriptionEditor } from './TaskDescriptionEditor';
 
 
 interface TaskData {
-  text: string;
+  title: string;
   description?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'complete';
   dueDate?: string;
-  reminders?: string[];
-  subtasks?: string[];
-  attachments?: string[];
+  reminderDate?: string;
+  subtasks?: { id: string; text: string; isCompleted: boolean }[];
+  labels?: { id: string; name: string; color: string }[];
+  recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
 }
 
 interface TaskInputProps {
-  onSave: (task: TaskData) => void;
+  onSave?: (task: TaskData) => void; // Optional callback after API success
   isExpanded: boolean;
   onExpandChange: (expanded: boolean) => void;
 }
@@ -230,34 +234,81 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   }, [isExpanded, title, onExpandChange]);
 
   
-  const handleSave = () => {
-    if (!title.trim()) return;
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+
+  const handleSave = async () => {
+    console.log('[TaskInput] handleSave called. isSaving:', isSaving, 'savingRef:', savingRef.current);
     
+    // Double-guard with both state and ref
+    if (!title.trim() || isSaving || savingRef.current) {
+      console.log('[TaskInput] Blocked - already saving or no title');
+      return;
+    }
+    
+    savingRef.current = true;
+    setIsSaving(true);
     
     const finalDueDate = confirmedDueDate || suggestedDate;
-    const taskText = confirmedDueDate 
+    const taskTitle = confirmedDueDate 
       ? title.trim() 
       : (parsedResult?.cleanText || title.trim());
     
-    onSave({
-      text: taskText,
+    // Build subtasks with IDs
+    const formattedSubtasks = subtasks
+      .filter(t => t.trim().length > 0)
+      .map(text => ({ id: nanoid(8), text: text.trim(), isCompleted: false }));
+    
+    // Build recurrence if set
+    const recurrenceData = isRecurring 
+      ? { 
+          pattern: (recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly') as 'daily' | 'weekly' | 'monthly', 
+          interval: recurringInterval 
+        }
+      : undefined;
+    
+    const taskData: TaskData = {
+      title: taskTitle,
       description: description.trim() || undefined,
       priority,
       status,
       dueDate: finalDueDate?.toISOString(),
-      reminders: currentReminder ? [currentReminder.toISOString()] : undefined,
-      subtasks: subtasks.filter(t => t.trim().length > 0),
-    });
+      reminderDate: currentReminder?.toISOString(),
+      subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
+      labels: selectedLabels.length > 0 ? selectedLabels : undefined,
+      recurrence: recurrenceData,
+    };
     
+    console.log('[TaskInput] Calling todoApi.createTodo...');
     
-    setTitle('');
-    setDescription('');
-    setSubtasks([]);
-    setPriority('medium');
-    setStatus('pending');
-    setConfirmedDueDate(null);
-    setCurrentReminder(null);
-    onExpandChange(false);
+    try {
+      const result = await todoApi.createTodo(taskData);
+      
+      if (result.success && result.data) {
+        toast.success('Task created!');
+        onSave?.(result.data); // Pass API response (with _id) to parent for store update
+        
+        // Reset form
+        setTitle('');
+        setDescription('');
+        setSubtasks([]);
+        setSelectedLabels([]);
+        setPriority('medium');
+        setStatus('pending');
+        setConfirmedDueDate(null);
+        setCurrentReminder(null);
+        setIsRecurring(false);
+        onExpandChange(false);
+      } else {
+        toast.error(result.message || 'Failed to create task');
+      }
+    } catch (error: any) {
+      console.error('[TaskInput] Save failed:', error);
+      toast.error(error.response?.data?.message || 'Failed to create task');
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   

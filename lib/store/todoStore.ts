@@ -23,7 +23,7 @@ export interface TaskRecurrence {
 // Main Task interface (Rich Task System)
 export interface Todo {
   _id: string;
-  text: string;
+  title: string;
   description?: string;
   
   // Status & Priority
@@ -46,15 +46,7 @@ export interface Todo {
   // Recurrence
   recurrence?: TaskRecurrence;
   
-  // Time tracking
-  estimatedMinutes?: number;
-  trackedMinutes?: number;
-  
-  // Dependencies
-  blockedBy?: string[];
-  
   // Legacy compat
-  isCompleted: boolean;
 }
 
 // Alias for cleaner naming
