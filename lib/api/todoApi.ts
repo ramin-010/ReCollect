@@ -73,15 +73,12 @@ function extractImagesFromHtml(html: string): {
 
   console.log('[extractImages] Found', imgElements.length, 'img elements');
 
+  // Extract images and clean up HTML
   imgElements.forEach((img, index) => {
     const src = img.getAttribute('src');
-    if (!src) {
-      console.log('[extractImages] Image', index, 'has no src');
-      return;
-    }
+    if (!src) return;
 
-    console.log('[extractImages] Image', index, 'src starts with:', src.substring(0, 50));
-
+    // Handle base64 images
     if (src.startsWith('data:image/')) {
       const imageId = nanoid(10);
       imageNodeIds.push(imageId);
@@ -94,8 +91,6 @@ function extractImagesFromHtml(html: string): {
       if (colonIndex !== -1 && semicolonIndex !== -1 && commaIndex !== -1) {
         const mimeType = src.substring(colonIndex + 1, semicolonIndex);
         const base64Data = src.substring(commaIndex + 1);
-
-        console.log('[extractImages] MimeType:', mimeType, 'Base64 length:', base64Data.length);
 
         try {
           const byteCharacters = atob(base64Data);
@@ -118,6 +113,29 @@ function extractImagesFromHtml(html: string): {
       }
     }
   });
+
+  // Clean up the DOM: Remove overlays and unwrap images if needed
+  // We want to store only the <img> tag, not the editing UI
+  const containers = doc.querySelectorAll('.img-container');
+  containers.forEach(container => {
+    const img = container.querySelector('img');
+    if (img) {
+      // Remove overlay if present
+      const overlay = container.querySelector('.img-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+      
+      // Move image out of container and replace container with image
+      // But preserve the style we want to persist (like max-width)
+      // Actually, for now, let's keep the container if it provides layout, 
+      // but DEFINITELY remove the overlay buttons
+    }
+  });
+
+  // Alternatively, stricter cleanup: remove .img-overlay elements directly
+  const overlays = doc.querySelectorAll('.img-overlay');
+  overlays.forEach(el => el.remove());
 
   console.log('[extractImages] Total extracted:', images.length);
 

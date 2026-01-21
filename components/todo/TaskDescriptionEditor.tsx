@@ -24,11 +24,67 @@ export function TaskDescriptionEditor({
     onImageClickRef.current = onImageClick;
   }, [onImageClick]);
 
-  // Sync content from parent
+  // Hydrate images with UI on load
+  const hydrateImages = (container: HTMLElement) => {
+    // Find all raw images that aren't already wrapped or are missing overlays
+    const images = container.querySelectorAll('img');
+    let hasChanges = false;
+
+    images.forEach(img => {
+      // If image is already in a container and has overlay, skip
+      if (img.closest('.img-container') && img.parentElement?.querySelector('.img-overlay')) {
+        return;
+      }
+      
+      // Get the parent container if it exists, otherwise we'll wrap it
+      let wrapper = img.closest('.img-container');
+      
+      // Create the overlay HTML
+      const overlayHtml = `
+      <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
+        <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+        <button class="img-delete-btn" style="width: 20px; height: 20px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>`;
+
+      if (wrapper) {
+        // Just add the overlay if wrapper exists but overlay is missing
+        wrapper.insertAdjacentHTML('beforeend', overlayHtml);
+      } else {
+        // Wrap the image
+        const newWrapper = document.createElement('div');
+        newWrapper.className = 'img-container';
+        newWrapper.contentEditable = 'false';
+        newWrapper.style.cssText = 'position: relative; display: block; width: fit-content; margin: 8px 0;';
+        
+        img.parentNode?.insertBefore(newWrapper, img);
+        newWrapper.appendChild(img);
+        newWrapper.insertAdjacentHTML('beforeend', overlayHtml);
+        hasChanges = true;
+      }
+    });
+    
+    return hasChanges;
+  };
+
+  // Sync content from parent and hydrate
   useEffect(() => {
     if (editorRef.current && !isInternalChange.current) {
       if (content !== editorRef.current.innerHTML) {
         editorRef.current.innerHTML = content;
+        // Hydrate any static images with UI controls
+        hydrateImages(editorRef.current);
       }
     }
     isInternalChange.current = false;

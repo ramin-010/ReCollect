@@ -18,7 +18,8 @@ import {
   ChevronDown,
   CornerDownRight,
   Plus,
-  Paperclip
+  Paperclip,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -846,10 +847,20 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                 {/* Create Button */}
                 <Button
                   onClick={handleSave}
-                  disabled={!title.trim()}
-                  className="bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50"
+                  disabled={!title.trim() || isSaving}
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 min-w-[80px]"
                 >
-                  Create task
+                  {isSaving ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Creating</span>
+                    </div>
+                  ) : (
+                    <>
+                      Create Task
+                      {/* <span className="ml-2 opacity-60 text-xs">Cmd+Enter</span> */}
+                    </>
+                  )}
                 </Button>
               </div>
             </motion.div>
