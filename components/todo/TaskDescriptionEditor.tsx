@@ -219,7 +219,7 @@ export function TaskDescriptionEditor({
         onInput={handleInput}
         onPaste={handlePaste}
         onClick={handleClick}
-        className="text-sm text-white/70 focus:outline-none max-h-[176px] overflow-y-auto min-h-[20px] empty:min-h-0"
+        className="text-sm text-white/70 focus:outline-none max-h-[200px] overflow-y-auto min-h-[20px] empty:min-h-0"
         style={{ 
           wordBreak: 'break-word',
         }}

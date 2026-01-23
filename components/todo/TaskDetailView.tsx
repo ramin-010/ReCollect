@@ -33,6 +33,8 @@ interface TaskDetailViewProps {
 export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailViewProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
+  const [newSubtaskText, setNewSubtaskText] = useState('');
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const { updateTodo } = useTodoStore();
 
   useEffect(() => {
@@ -61,16 +63,27 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
     onUpdate(task._id, { status: newStatus });
   };
 
-  const handleAddSubtask = async () => {
-    const text = prompt("New subtask:");
-    if (text) {
-      const newSubtask: Subtask = {
-        id: crypto.randomUUID(),
-        text,
-        isCompleted: false
-      };
-      const newSubtasks = [...(task.subtasks || []), newSubtask];
-      onUpdate(task._id, { subtasks: newSubtasks });
+  const handleAddSubtask = () => {
+    if (!newSubtaskText.trim()) return;
+    
+    const newSubtask: Subtask = {
+      id: crypto.randomUUID(),
+      text: newSubtaskText.trim(),
+      isCompleted: false
+    };
+    const newSubtasks = [...(task.subtasks || []), newSubtask];
+    onUpdate(task._id, { subtasks: newSubtasks });
+    setNewSubtaskText('');
+    setIsAddingSubtask(false);
+  };
+
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddSubtask();
+    } else if (e.key === 'Escape') {
+      setNewSubtaskText('');
+      setIsAddingSubtask(false);
     }
   };
 
@@ -197,7 +210,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                   )}
                 </div>
                 <button 
-                  onClick={handleAddSubtask}
+                  onClick={() => setIsAddingSubtask(true)}
                   className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition-all"
                 >
                   <Plus className="w-4 h-4" />
@@ -234,8 +247,44 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                   </div>
                 ))}
                 
-                {(!task.subtasks || task.subtasks.length === 0) && (
-                  <p className="text-sm text-white/20 italic py-2">No subtasks yet</p>
+                {/* Inline Add Subtask Input */}
+                {isAddingSubtask ? (
+                  <div className="flex items-center gap-3 py-2 px-3 -mx-3">
+                    <div className="w-4 h-4 rounded border border-dashed border-white/20 shrink-0" />
+                    <input
+                      type="text"
+                      value={newSubtaskText}
+                      onChange={(e) => setNewSubtaskText(e.target.value)}
+                      onKeyDown={handleSubtaskKeyDown}
+                      onBlur={() => {
+                        if (!newSubtaskText.trim()) {
+                          setIsAddingSubtask(false);
+                        }
+                      }}
+                      placeholder="Add subtask..."
+                      className="flex-1 bg-transparent text-sm text-white/80 placeholder-white/30 border-none outline-none"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleAddSubtask}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewSubtaskText('');
+                        setIsAddingSubtask(false);
+                      }}
+                      className="text-white/30 hover:text-white/60"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  (!task.subtasks || task.subtasks.length === 0) && (
+                    <p className="text-sm text-white/20 italic py-2">No subtasks yet</p>
+                  )
                 )}
               </div>
             </div>
