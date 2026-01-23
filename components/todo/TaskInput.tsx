@@ -90,18 +90,18 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const [currentReminder, setCurrentReminder] = useState<Date | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   
-  // Recurring task state
+
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState(1);
   const [recurringUnit, setRecurringUnit] = useState<'day' | 'week' | 'month'>('week');
   
-  // Subtasks state
+
   const [subtasks, setSubtasks] = useState<string[]>([]);
   const [isSubtaskFormOpen, setIsSubtaskFormOpen] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
   const [subtaskDescription, setSubtaskDescription] = useState('');
 
-  // Image attachment state
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
@@ -241,7 +241,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
   const handleSave = async () => {
     console.log('[TaskInput] handleSave called. isSaving:', isSaving, 'savingRef:', savingRef.current);
     
-    // Double-guard with both state and ref
+
     if (!title.trim() || isSaving || savingRef.current) {
       console.log('[TaskInput] Blocked - already saving or no title');
       return;
@@ -251,16 +251,20 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
     setIsSaving(true);
     
     const finalDueDate = confirmedDueDate || suggestedDate;
-    const taskTitle = confirmedDueDate 
+
+    let rawTitle = confirmedDueDate 
       ? title.trim() 
       : (parsedResult?.cleanText || title.trim());
     
-    // Build subtasks with IDs
+
+    const taskTitle = rawTitle.replace(/@\w+\s?/g, '').trim();
+    
+
     const formattedSubtasks = subtasks
       .filter(t => t.trim().length > 0)
       .map(text => ({ id: nanoid(8), text: text.trim(), isCompleted: false }));
     
-    // Build recurrence if set
+
     const recurrenceData = isRecurring 
       ? { 
           pattern: (recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly') as 'daily' | 'weekly' | 'monthly', 
@@ -289,7 +293,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
         toast.success('Task created!');
         onSave?.(result.data); // Pass API response (with _id) to parent for store update
         
-        // Reset form
+
         setTitle('');
         setDescription('');
         setSubtasks([]);
@@ -327,27 +331,37 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
       
       const labelMatch = textBeforeCursor.match(/@(\w+)\s?$/);
       if (labelMatch) {
-        e.preventDefault();
         const labelName = labelMatch[1];
-        const fullMatch = labelMatch[0]; 
+        const fullMatch = labelMatch[0];
         
-        
-        const newTitle = title.slice(0, cursorPos - fullMatch.length) + title.slice(cursorPos);
-        setTitle(newTitle);
-        
-        
-        setSelectedLabels(prev => 
-          prev.filter(label => label.name.toLowerCase() !== labelName.toLowerCase())
+        // ONLY delete the whole label block if it's already a CONFIRMED label
+        // (i.e. present in selectedLabels state)
+        // Otherwise, let default backspace happen (delete 1 char)
+        const isConfirmedLabel = selectedLabels.some(
+          l => l.name.toLowerCase() === labelName.toLowerCase()
         );
-        
-        
-        setTimeout(() => {
-          if (inputRef.current) {
-            const newPos = cursorPos - fullMatch.length;
-            inputRef.current.setSelectionRange(newPos, newPos);
-          }
-        }, 0);
-        return;
+
+        if (isConfirmedLabel) {
+            e.preventDefault();
+            
+            
+            const newTitle = title.slice(0, cursorPos - fullMatch.length) + title.slice(cursorPos);
+            setTitle(newTitle);
+            
+            
+            setSelectedLabels(prev => 
+              prev.filter(label => label.name.toLowerCase() !== labelName.toLowerCase())
+            );
+            
+            
+            setTimeout(() => {
+              if (inputRef.current) {
+                const newPos = cursorPos - fullMatch.length;
+                inputRef.current.setSelectionRange(newPos, newPos);
+              }
+            }, 0);
+            return;
+        }
       }
     }
 
@@ -553,12 +567,12 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
               onChange={(e) => {
                 const files = e.target.files;
                 if (files) {
-                  // We need to pass these files to the editor
-                  // Dispatch a custom event or update the editor content directly
-                  // Since we don't have direct access to the editor's insertImage function from here easily without lifting state up more complexly,
-                  // we'll use a hack to dispatch an event that the editor listens to, or just pass the files via props if we refactor.
-                  // BETTER: Let's pass a ref to the editor component so we can call insertImage on it.
-                  // But for now, let's just trigger the file read here and append to description.
+
+
+
+
+
+
                   
                   Array.from(files).forEach(file => {
                     const reader = new FileReader();
