@@ -89,6 +89,8 @@ export function EditorStyles() {
         font-size: 16px;
         line-height: 1.75;
         color: hsl(var(--foreground));
+        max-width : 1130px;
+        margin : 0 auto;
       }
       .notion-editor .ProseMirror > * + * {
         margin-top: 0.75em;

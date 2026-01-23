@@ -646,7 +646,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
               className="overflow-hidden"
             >
               {/* Description */}
-              <div className="px-4 pb-3">
+              <div className="px-4 pl-13 pb-3">
                 <TaskDescriptionEditor
                   content={description}
                   onChange={setDescription}

@@ -204,10 +204,10 @@ export function TaskDescriptionEditor({
   const isEmpty = !content || content === '<br>' || content === '<p></p>';
 
   return (
-    <div className="relative pl-8">
+    <div className="relative ">
       {isEmpty && (
         <div 
-          className="absolute top-0 left-8 text-sm  text-white/30 pointer-events-none select-none"
+          className="absolute top-0  text-sm  text-white/30 pointer-events-none select-none"
         >
           {placeholder}
         </div>

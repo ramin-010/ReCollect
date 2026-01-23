@@ -264,4 +264,75 @@ export const todoApi = {
     const response = await axiosInstance.get('/api/todos');
     return response.data.data || [];
   },
+
+  /**
+   * Update an existing todo
+   */
+  async updateTodo(id: string, updates: Partial<CreateTodoPayload>): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
+    console.log('[todoApi] Updating todo:', id, updates);
+    try {
+      const response = await axiosInstance.patch(`/api/todos/${id}`, updates);
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Update failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update task'
+      };
+    }
+  },
+
+  /**
+   * Delete a todo
+   */
+  async deleteTodo(id: string): Promise<{ success: boolean; message?: string }> {
+    console.log('[todoApi] Deleting todo:', id);
+    try {
+      const response = await axiosInstance.delete(`/api/todos/${id}`);
+      return {
+        success: true,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Delete failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to delete task'
+      };
+    }
+  },
+
+  /**
+   * Update a subtask within a todo
+   */
+  async updateSubtask(todoId: string, subtaskId: string, updates: { isCompleted?: boolean; text?: string }): Promise<{ success: boolean; message?: string }> {
+    console.log('[todoApi] Updating subtask:', todoId, subtaskId, updates);
+    try {
+      // For now, this fetches the todo, updates the subtask, and saves - since we don't have a dedicated subtask endpoint
+      const response = await axiosInstance.get(`/api/todos`);
+      const todos = response.data.data || [];
+      const todo = todos.find((t: TodoResponse) => t._id === todoId);
+      
+      if (!todo) {
+        return { success: false, message: 'Todo not found' };
+      }
+
+      const updatedSubtasks = todo.subtasks?.map((st: any) => 
+        st.id === subtaskId ? { ...st, ...updates } : st
+      ) || [];
+
+      await axiosInstance.patch(`/api/todos/${todoId}`, { subtasks: updatedSubtasks });
+      return { success: true };
+    } catch (error: any) {
+      console.error('[todoApi] Subtask update failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update subtask'
+      };
+    }
+  },
 };

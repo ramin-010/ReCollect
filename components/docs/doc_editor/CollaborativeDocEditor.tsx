@@ -445,7 +445,7 @@ function CollaborativeEditorContent({
 
 
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--background))]">
+    <div className="h-full flex flex-col  bg-[hsl(var(--background))]">
        {/* Floating Toolbar - only show when editable */}
        {editor && !readOnly && (
         <FloatingToolbar
@@ -672,10 +672,10 @@ function CollaborativeEditorContent({
               onChange={handleTitleChange}
               placeholder="New Page"
               readOnly={readOnly}
-              className={`w-full text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
+              className={`w-full pl-8 text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
               style={{ fontFamily: '"Noto Sans", "Roboto", sans-serif' }}
             />
-            <div className="w-16 h-1 bg-amber-500 rounded-full" />
+            <div className="w-16 ml-8 h-1 bg-amber-500 rounded-full" />
           </div>
 
           <div className="notion-editor relative">
@@ -699,7 +699,7 @@ function CollaborativeEditorContent({
         </div>
       </div>
       
-      <div className="px-6 py-2 text-xs text-[hsl(var(--muted-foreground))/50] text-center shrink-0">
+      <div className="px-6 py-2 text-xs text-[hsl(var(--muted-foreground))/50]  text-center shrink-0">
         <span className="flex items-center justify-center gap-2">
            <div className={`w-1.5 h-1.5 rounded-full ${provider.isSynced ? 'bg-green-500' : 'bg-amber-500'}`} />
            {provider.isSynced ? 'All changes saved & live' : 'Offline'}
@@ -872,7 +872,7 @@ export function CollaborativeDocEditor({ doc, onBack, readOnly = false }: Collab
 
 
   return (
-    <div className="relative h-full">
+    <div className="relative  h-full">
       <div className={`h-full transition-all duration-500 ${wasRemovedByOwner ? 'pointer-events-none select-none' : ''}`}>
         {ydoc && provider ? (
           <CollaborativeEditorContent 

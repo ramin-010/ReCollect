@@ -43,6 +43,10 @@ export interface Todo {
   // References (bi-directional)
   references?: TaskReference[];
   
+  // New Fields
+  labels?: { id: string; name: string; color: string }[];
+  assignee?: string;
+
   // Recurrence
   recurrence?: TaskRecurrence;
   
