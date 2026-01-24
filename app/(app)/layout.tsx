@@ -1,7 +1,7 @@
 // app/(app)/layout.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
@@ -12,6 +12,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateNoteProvider } from '@/lib/context/CreateNoteContext';
 import { useViewStore } from '@/lib/store/viewStore';
+import { QuickTaskAdd } from '@/components/todo/QuickTaskAdd';
 
 export default function AppLayout({
   children,
@@ -24,10 +25,25 @@ export default function AppLayout({
   const currentView = useViewStore((state) => state.currentView);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
+  // Quick Task Add modal state
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  
   // Hide navbar when editing a document (docs view with editor open) or viewing tasks
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
   const hideNavbar = isDocEditorOpen || currentView === 'todo';
 
+  // Global keyboard shortcut for Ctrl+K (Quick Add Task)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsQuickAddOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -94,6 +110,12 @@ export default function AppLayout({
           </main>
         </div>
       </div>
+      
+      {/* Global Quick Add Task Modal (Ctrl+K) */}
+      <QuickTaskAdd 
+        isOpen={isQuickAddOpen} 
+        onClose={() => setIsQuickAddOpen(false)} 
+      />
     </CreateNoteProvider>
   );
 }

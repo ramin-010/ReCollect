@@ -62,6 +62,8 @@ interface TaskInputProps {
   onSave?: (task: TaskData) => void; // Optional callback after API success
   isExpanded: boolean;
   onExpandChange: (expanded: boolean) => void;
+  isQuickAdd?: boolean; // If true, hide description/subtasks for simpler UX
+  onClose?: () => void; // Callback when input should close (for quick add modal)
 }
 
 
@@ -77,7 +79,7 @@ const STATUSES = [
   { value: 'complete', label: 'Done', icon: <Circle className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" /> },
 ];
 
-export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps) {
+export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = false, onClose }: TaskInputProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -379,7 +381,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
       e.preventDefault();
       handleSave();
     }
-    if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !suggestedDate) {
+    if (e.key === 'Enter' && !e.shiftKey && (!isExpanded || isQuickAdd) && !suggestedDate) {
       e.preventDefault();
       handleSave();
     }
@@ -635,7 +637,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
           )}
         </AnimatePresence>
 
-        {/* Expanded Section - Description & Meta Bar */}
+        {/* Expanded Section - Description & Meta Bar (hidden in quick add mode) */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -712,6 +714,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
 
 
               {/* Meta Bar / Footer */}
+              {!isQuickAdd && (
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/5">
                 <div className="flex items-center gap-2">
                   {/* Confirmed Due Date (shown in footer after accepting) */}
@@ -877,6 +880,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange }: TaskInputProps
                   )}
                 </Button>
               </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
