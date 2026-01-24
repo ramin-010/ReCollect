@@ -46,6 +46,12 @@ import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 import { TaskDescriptionEditor } from './TaskDescriptionEditor';
 
 
+interface TaskReference {
+  type: 'doc' | 'content';
+  refId: string;
+  title?: string;
+}
+
 interface TaskData {
   title: string;
   description?: string;
@@ -56,6 +62,7 @@ interface TaskData {
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: { id: string; name: string; color: string }[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
+  references?: TaskReference[];
 }
 
 interface TaskInputProps {
@@ -64,6 +71,7 @@ interface TaskInputProps {
   onExpandChange: (expanded: boolean) => void;
   isQuickAdd?: boolean; // If true, hide description/subtasks for simpler UX
   onClose?: () => void; // Callback when input should close (for quick add modal)
+  initialReferences?: TaskReference[]; // Pre-filled references for linking to docs/content
 }
 
 
@@ -79,7 +87,7 @@ const STATUSES = [
   { value: 'complete', label: 'Done', icon: <Circle className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" /> },
 ];
 
-export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = false, onClose }: TaskInputProps) {
+export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = false, onClose, initialReferences }: TaskInputProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -157,6 +165,15 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
+
+  // Auto-focus on mount
+  useEffect(() => {
+    // Small timeout to ensure modal animation/render is ready
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   
   const handleInlineSelectLabel = (label: Label) => {
@@ -284,6 +301,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
       subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       recurrence: recurrenceData,
+      references: initialReferences && initialReferences.length > 0 ? initialReferences : undefined,
     };
     
     console.log('[TaskInput] Calling todoApi.createTodo...');
@@ -448,9 +466,15 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
       className="w-full"
       onKeyDown={handleKeyDown}
     >
-      <div className={cn(
-        "relative bg-[#2a2a2a] border border-white/10 rounded-xl transition-all duration-200",
-        isExpanded && "border-white/20 shadow-lg"
+      <motion.div 
+        animate={{ 
+          borderColor: (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
+          boxShadow: (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
+        }}
+        transition={{ duration: 0.3 }}
+        className={cn(
+        "relative bg-[#2a2a2a] rounded-xl border border-transparent transition-colors duration-200",
+        // isExpanded && "border-white/20 shadow-lg" // Handled by motion now
       )}>
         {/* Main Input Row */}
         <div className="flex items-center gap-3 px-4 py-3.5">
@@ -494,119 +518,133 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
           </div>
 
           {/* Action Buttons (Right Side) */}
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Calendar */}
-            {/* Calendar - Inline Trigger */}
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button 
-                  type="button" 
-                  className={cn(
-                  "p-1.5 rounded-md transition-colors",
-                  isCalendarOpen || confirmedDueDate 
-                    ? "text-indigo-400" 
-                    : "text-white/30 hover:text-white/60"
-                )}>
-                  <Calendar className="w-4 h-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
-                <SmartDatePicker 
-                  selectedDate={confirmedDueDate}
-                  onSelect={(date) => {
-                    setConfirmedDueDate(date);
-                    if (date) {
-                      setCurrentReminder(subMinutes(date, 10));
-                    } else {
-                      setCurrentReminder(null);
-                    }
-                  }}
-                  onClose={() => setIsCalendarOpen(false)}
-                />
-              </PopoverContent>
-            </Popover>
-            
-            {/* Reminder */}
-            <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
-              <PopoverTrigger asChild>
-                <button 
-                  className={cn(
-                    "p-1.5 rounded-md transition-colors",
-                    isReminderOpen || currentReminder
-                      ? "text-indigo-400" 
-                      : "text-white/30 hover:text-white/60"
-                  )}
+          <div className="flex items-center gap-1 shrink-0 min-h-[32px]">
+            <AnimatePresence mode="wait" initial={false}>
+              {!(isSaving && isQuickAdd) ? (
+                <motion.div
+                  key="actions"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center gap-1"
                 >
-                  <Bell className="w-4 h-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
-                <SmartReminderModal 
-                  dueDate={confirmedDueDate || suggestedDate}
-                  onSetReminder={setCurrentReminder}
-                  onClose={() => setIsReminderOpen(false)}
-                  currentReminder={currentReminder}
-                />
-              </PopoverContent>
-            </Popover>
-
-
-
-            {/* Attachment Button */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
-              title="Add attachment"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const files = e.target.files;
-                if (files) {
-
-
-
-
-
-
+                  {/* Calendar - Inline Trigger */}
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <button 
+                        type="button" 
+                        className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        isCalendarOpen || confirmedDueDate 
+                          ? "text-indigo-400" 
+                          : "text-white/30 hover:text-white/60"
+                      )}>
+                        <Calendar className="w-4 h-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
+                      <SmartDatePicker 
+                        selectedDate={confirmedDueDate}
+                        onSelect={(date) => {
+                          setConfirmedDueDate(date);
+                          if (date) {
+                            setCurrentReminder(subMinutes(date, 10));
+                          } else {
+                            setCurrentReminder(null);
+                          }
+                        }}
+                        onClose={() => setIsCalendarOpen(false)}
+                      />
+                    </PopoverContent>
+                  </Popover>
                   
-                  Array.from(files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      if (event.target?.result as string) {
-                         const src = event.target?.result as string;
-                         const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
-                           <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
-                           <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
-                             <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                 <polyline points="15 3 21 3 21 9"></polyline>
-                                 <polyline points="9 21 3 21 3 15"></polyline>
-                                 <line x1="21" y1="3" x2="14" y2="10"></line>
-                                 <line x1="3" y1="21" x2="10" y2="14"></line>
-                               </svg>
-                             </button>
-                             <button class="img-delete-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                 <line x1="18" y1="6" x2="6" y2="18"></line>
-                                 <line x1="6" y1="6" x2="18" y2="18"></line>
-                               </svg>
-                             </button>
-                           </div>
-                         </div><p style="margin: 0; min-height: 1em;"></p>`;
-                         setDescription(prev => prev + imgHtml);
-                      }
-                    };
-                    reader.readAsDataURL(file);
-                  });
-              }}}
-            />
+                  {/* Reminder */}
+                  <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
+                    <PopoverTrigger asChild>
+                      <button 
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors",
+                          isReminderOpen || currentReminder
+                            ? "text-indigo-400" 
+                            : "text-white/30 hover:text-white/60"
+                        )}
+                      >
+                        <Bell className="w-4 h-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="end" side="bottom" sideOffset={8}>
+                      <SmartReminderModal 
+                        dueDate={confirmedDueDate || suggestedDate}
+                        onSetReminder={setCurrentReminder}
+                        onClose={() => setIsReminderOpen(false)}
+                        currentReminder={currentReminder}
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Attachment Button */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
+                    title="Add attachment"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) {
+                        Array.from(files).forEach(file => {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            if (event.target?.result as string) {
+                               const src = event.target?.result as string;
+                               const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
+                                 <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
+                                 <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
+                                   <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                       <polyline points="15 3 21 3 21 9"></polyline>
+                                       <polyline points="9 21 3 21 3 15"></polyline>
+                                       <line x1="21" y1="3" x2="14" y2="10"></line>
+                                       <line x1="3" y1="21" x2="10" y2="14"></line>
+                                     </svg>
+                                   </button>
+                                   <button class="img-delete-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                       <line x1="18" y1="6" x2="6" y2="18"></line>
+                                       <line x1="6" y1="6" x2="18" y2="18"></line>
+                                     </svg>
+                                   </button>
+                                 </div>
+                               </div><p style="margin: 0; min-height: 1em;"></p>`;
+                               setDescription(prev => prev + imgHtml);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                    }}}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="loader"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center justify-center px-2"
+                >
+                  <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -884,7 +922,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       {/* Image Preview Modal with Smooth Animation */}
       <AnimatePresence>

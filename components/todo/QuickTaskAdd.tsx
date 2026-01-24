@@ -81,12 +81,12 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                 <Command className="w-3.5 h-3.5" />
                 <span>Quick Add Task</span>
               </div>
-              <button
+              {/* <button
                 onClick={onClose}
                 className="p-1 text-white/40 hover:text-white/70 rounded transition-colors"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </button> */}
             </div>
 
             {/* Task Input */}

@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 
 export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
-export type TodoFilterType = 'inbox' | 'today' | 'upcoming' | 'completed';
+export type TodoFilterType = 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
 
 interface ViewState {
   currentView: ViewType;
@@ -14,6 +14,6 @@ interface ViewState {
 export const useViewStore = create<ViewState>((set) => ({
   currentView: 'dashboard',
   todoFilter: 'inbox',
-  setCurrentView: (view) => set({ currentView: view }),
+  setCurrentView: (view) => set({ currentView: view }), 
   setTodoFilter: (filter) => set({ todoFilter: filter, currentView: 'todo' }),
 }));

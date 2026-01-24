@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut, Eye } from 'lucide-react';
+import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut, Eye, ListTodo, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -25,6 +25,13 @@ import { EditorStyles } from './EditorStyles';
 import { CoverPicker } from './CoverPicker';
 import { FloatingToolbar } from './FloatingToolbar';
 import { ImageUploadDialog } from '../ImageUploadDialog';
+import { DocTasksPanel } from '../DocTasksPanel';
+import { TaskInput } from '@/components/todo/TaskInput';
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from '@/components/ui-base/Popover';
 
 interface CollaborativeDocEditorProps {
   doc: Doc;
@@ -81,6 +88,25 @@ function CollaborativeEditorContent({
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const [isTasksPanelOpen, setIsTasksPanelOpen] = useState(false);
+  const [isTaskInputPopoverOpen, setIsTaskInputPopoverOpen] = useState(false);
+  const [isTaskInputExpanded, setIsTaskInputExpanded] = useState(true);
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+
+  // Ctrl+K shortcut - opens task input popover + sidebar (overrides global QuickTaskAdd on this page)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsTaskInputPopoverOpen(true);
+        setIsTasksPanelOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase to intercept before global handler
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, []);
 
   // Check if current user is the owner
   const isOwner = doc.role === 'owner' || 
@@ -445,7 +471,7 @@ function CollaborativeEditorContent({
 
 
   return (
-    <div className="h-full flex flex-col  bg-[hsl(var(--background))]">
+    <div className="h-full flex flex-col  bg-oklch">
        {/* Floating Toolbar - only show when editable */}
        {editor && !readOnly && (
         <FloatingToolbar
@@ -497,6 +523,38 @@ function CollaborativeEditorContent({
                {provider.isSynced ? 'Live' : 'Connecting...'}
              </span>
            </div>
+           
+           {/* Tasks Button with Dropdown Input */}
+           <Popover open={isTaskInputPopoverOpen} onOpenChange={(open) => {
+             setIsTaskInputPopoverOpen(open);
+             if (open) setIsTasksPanelOpen(true); // Open sidebar when popover opens
+           }}>
+             <PopoverTrigger asChild>
+               <button
+                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white/5 border border-[hsl(var(--muted-foreground))]/30 group-hover/header:border-[hsl(var(--foreground))]/50 hover:bg-white/10 transition-colors"
+                 title="Add task linked to this doc"
+               >
+                 <ListTodo className="w-3.5 h-3.5 text-amber-500" />
+                 <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]">Tasks</span>
+                 <ChevronDown className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+               </button>
+             </PopoverTrigger>
+             <PopoverContent 
+               align="end" 
+               className="w-110 p-3 "
+             >
+               <TaskInput
+                 isExpanded={isTaskInputExpanded}
+                 onExpandChange={setIsTaskInputExpanded}
+                 isQuickAdd={true}
+                 initialReferences={[{ type: 'doc', refId: doc._id, title: title }]}
+                 onSave={() => {
+                   setTaskRefreshKey(k => k + 1);
+                   setIsTaskInputPopoverOpen(false);
+                 }}
+               />
+             </PopoverContent>
+           </Popover>
            
            {/* Collaborators List */}
            {mergedCollaborators.length > 0 && (
@@ -665,7 +723,7 @@ function CollaborativeEditorContent({
         />
 
         <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
-          <div className="mb-0 pl-4">
+          <div className="mb-0 ">
             <input
               type="text"
               value={title}
@@ -707,6 +765,15 @@ function CollaborativeEditorContent({
       </div>
 
       <EditorStyles />
+      
+      {/* Doc Tasks Panel */}
+      <DocTasksPanel
+        key={taskRefreshKey}
+        isOpen={isTasksPanelOpen}
+        onClose={() => setIsTasksPanelOpen(false)}
+        docId={doc._id}
+        docTitle={title}
+      />
     </div>
   );
 }

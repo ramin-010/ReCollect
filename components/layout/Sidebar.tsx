@@ -313,13 +313,13 @@ interface SidebarContentProps {
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
   currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
-  todoFilter?: 'inbox' | 'today' | 'upcoming' | 'completed';
+  todoFilter?: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
   onDashboardClick: (dashboard: Dashboard) => void;
   onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
   onAllDashboardsClick: () => void;
   onDrawingBoardClick: () => void;
   onTodoClick: () => void;
-  onTodoFilterChange?: (filter: 'inbox' | 'today' | 'upcoming' | 'completed') => void;
+  onTodoFilterChange?: (filter: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes') => void;
   onExpensesClick: () => void;
   onDocsClick: () => void;
   onNewDashboardClick: () => void;
@@ -453,7 +453,7 @@ function SidebarContent({
                 <div className="ml-6 pl-2 border-l border-white/10 space-y-0.5">
                   {[
                     { key: 'inbox', label: 'Inbox' },
-                    { key: 'today', label: 'Today' },
+                    { key: 'workspace', label: 'Workspace' },
                   ].map((item) => (
                     <button
                       key={item.key}

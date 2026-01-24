@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   ChevronDown,
   ArrowUpDown,
-  Search
+  Search,
+  FileText,
+  StickyNote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -20,7 +22,7 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 
 // Filter types
-type FilterType = 'inbox' | 'today' | 'upcoming' | 'completed';
+type FilterType = 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
 type SortType = 'priority' | 'dueDate' | 'createdAt';
 
 interface TaskFilterBarProps {
@@ -36,6 +38,8 @@ const FILTERS: { value: FilterType; label: string; icon: React.ReactNode }[] = [
   { value: 'inbox', label: 'Inbox', icon: <Inbox className="w-4 h-4" /> },
   { value: 'today', label: 'Today', icon: <Calendar className="w-4 h-4" /> },
   { value: 'upcoming', label: 'Upcoming', icon: <Clock className="w-4 h-4" /> },
+  { value: 'docs', label: 'Docs', icon: <FileText className="w-4 h-4" /> },
+  { value: 'notes', label: 'Notes', icon: <StickyNote className="w-4 h-4" /> },
   { value: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-4 h-4" /> },
 ];
 

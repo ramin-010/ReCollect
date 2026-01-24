@@ -13,6 +13,12 @@ export interface TodoLabel {
   color: string;
 }
 
+export interface TaskReference {
+  type: 'doc' | 'content';
+  refId: string;
+  title?: string;
+}
+
 export interface CreateTodoPayload {
   title: string;
   description?: string; // HTML string with potential base64 images
@@ -24,6 +30,7 @@ export interface CreateTodoPayload {
   labels?: TodoLabel[];
   assignee?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
+  references?: TaskReference[];
 }
 
 export interface TodoResponse {
@@ -41,6 +48,7 @@ export interface TodoResponse {
   assignee?: string;
   assignedAt?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
+  references?: TaskReference[];
   createdAt: string;
   updatedAt: string;
 }
@@ -204,6 +212,7 @@ export const todoApi = {
       if (payload.labels) formData.append('labels', JSON.stringify(payload.labels));
       if (payload.assignee) formData.append('assignee', payload.assignee);
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
+      if (payload.references) formData.append('references', JSON.stringify(payload.references));
 
       console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
 
@@ -239,6 +248,7 @@ export const todoApi = {
           labels: payload.labels,
           assignee: payload.assignee,
           recurrence: payload.recurrence,
+          references: payload.references,
         });
 
         console.log('[todoApi] Response success:', response.data.success);
