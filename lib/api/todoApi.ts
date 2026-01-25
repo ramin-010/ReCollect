@@ -79,11 +79,9 @@ function extractImagesFromHtml(html: string): {
   const doc = parser.parseFromString(html, 'text/html');
   const imgElements = doc.querySelectorAll('img');
 
-  console.log('[extractImages] Found', imgElements.length, 'img elements');
-
   // Extract images and clean up HTML
   imgElements.forEach((img, index) => {
-    const src = img.getAttribute('src');
+    const src = img.getAttribute('src') || img.src;
     if (!src) return;
 
     // Handle base64 images
@@ -91,7 +89,7 @@ function extractImagesFromHtml(html: string): {
       const imageId = nanoid(10);
       imageNodeIds.push(imageId);
 
-      // Extract mime type - base64 data can contain +, /, = characters
+      // Extract mime type
       const colonIndex = src.indexOf(':');
       const semicolonIndex = src.indexOf(';');
       const commaIndex = src.indexOf(',');
@@ -113,8 +111,6 @@ function extractImagesFromHtml(html: string): {
 
           img.setAttribute('data-image-id', imageId);
           img.setAttribute('src', `__PENDING_UPLOAD_${imageId}__`);
-          
-          console.log('[extractImages] Successfully extracted image', imageId);
         } catch (e) {
           console.error('[extractImages] Failed to decode base64:', e);
         }
@@ -122,30 +118,9 @@ function extractImagesFromHtml(html: string): {
     }
   });
 
-  // Clean up the DOM: Remove overlays and unwrap images if needed
-  // We want to store only the <img> tag, not the editing UI
-  const containers = doc.querySelectorAll('.img-container');
-  containers.forEach(container => {
-    const img = container.querySelector('img');
-    if (img) {
-      // Remove overlay if present
-      const overlay = container.querySelector('.img-overlay');
-      if (overlay) {
-        overlay.remove();
-      }
-      
-      // Move image out of container and replace container with image
-      // But preserve the style we want to persist (like max-width)
-      // Actually, for now, let's keep the container if it provides layout, 
-      // but DEFINITELY remove the overlay buttons
-    }
-  });
-
-  // Alternatively, stricter cleanup: remove .img-overlay elements directly
+  // Clean up the DOM: Remove overlays
   const overlays = doc.querySelectorAll('.img-overlay');
   overlays.forEach(el => el.remove());
-
-  console.log('[extractImages] Total extracted:', images.length);
 
   return {
     processedHtml: doc.body.innerHTML,
@@ -279,20 +254,68 @@ export const todoApi = {
    * Update an existing todo
    */
   async updateTodo(id: string, updates: Partial<CreateTodoPayload>): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] Updating todo:', id, updates);
+    console.log('[todoApi] ========== START updateTodo ==========');
+    console.log('[todoApi] ID:', id);
+    console.log('[todoApi] Updates:', Object.keys(updates));
+
+    const { processedHtml, images, imageNodeIds } = updates.description
+      ? extractImagesFromHtml(updates.description)
+      : { processedHtml: undefined, images: [], imageNodeIds: [] };
+
     try {
-      const response = await axiosInstance.patch(`/api/todos/${id}`, updates);
-      return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message
-      };
+      if (images.length > 0) {
+        console.log('[todoApi] Building FormData for update...');
+        const formData = new FormData();
+
+        for (const { imageId, blob, mimeType } of images) {
+          const ext = getExtension(mimeType);
+          formData.append(`image_${imageId}`, blob, `image.${ext}`);
+        }
+
+        // Use the processed HTML if we had a description
+        const finalDescription = processedHtml !== undefined ? processedHtml : updates.description;
+        
+        // Append all fields to FormData
+        Object.entries(updates).forEach(([key, value]) => {
+          if (key === 'description') {
+            formData.append('description', finalDescription as string);
+          } else if (value !== undefined) {
+            if (typeof value === 'object') {
+              formData.append(key, JSON.stringify(value));
+            } else {
+              formData.append(key, String(value));
+            }
+          }
+        });
+
+        formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
+
+        const response = await axiosInstance.patch(`/api/todos/${id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message
+        };
+      } else {
+        // Simple JSON update
+        const response = await axiosInstance.patch(`/api/todos/${id}`, updates);
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message
+        };
+      }
     } catch (error: any) {
       console.error('[todoApi] Update failed:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update task'
       };
+    } finally {
+      console.log('[todoApi] ========== END updateTodo ==========');
     }
   },
 

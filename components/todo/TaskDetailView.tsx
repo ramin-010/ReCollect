@@ -35,26 +35,37 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
   const [description, setDescription] = useState(task.description || '');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
-  const { updateTodo } = useTodoStore();
+  const [isSaving, setIsSaving] = useState(false);
+  const { updateTodo: updateLocalStore } = useTodoStore();
 
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description || '');
   }, [task]);
 
-  const handleTitleBlur = () => {
-    if (title !== task.title) {
-      onUpdate(task._id, { title });
-    }
-  };
+  const hasChanges = title !== task.title || description !== (task.description || '');
 
-  const handleDescriptionChange = (newContent: string) => {
-    setDescription(newContent);
-  };
+  const handleSave = async () => {
+    if (!hasChanges || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const updates: Partial<Task> = {};
+      if (title !== task.title) updates.title = title;
+      if (description !== (task.description || '')) updates.description = description;
 
-  const saveDescription = () => {
-    if (description !== task.description) {
-      onUpdate(task._id, { description });
+      const result = await todoApi.updateTodo(task._id, updates);
+      if (result.success && result.data) {
+        onUpdate(task._id, result.data);
+        toast.success('Task updated');
+      } else {
+        toast.error(result.message || 'Failed to update task');
+      }
+    } catch (error) {
+      console.error('Update failed:', error);
+      toast.error('Failed to update task');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -92,7 +103,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       st.id === subtaskId ? { ...st, isCompleted: !currentStatus } : st
     );
     if (!newSubtasks) return;
-    updateTodo(task._id, { subtasks: newSubtasks });
+    updateLocalStore(task._id, { subtasks: newSubtasks });
     
     try {
       if (todoApi.updateSubtask) {
@@ -133,7 +144,24 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           <span className="text-sm">Back</span>
         </button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+             <button
+               onClick={handleSave}
+               disabled={isSaving}
+               className="flex items-center gap-2 px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-all"
+             >
+               {isSaving ? (
+                 <>
+                   <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                   Saving...
+                 </>
+               ) : (
+                 'Save Changes'
+               )}
+             </button>
+          )}
+
           <button
             onClick={toggleComplete}
             className={cn(
@@ -166,7 +194,6 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleTitleBlur}
             className={cn(
               "w-full bg-transparent text-2xl font-semibold border-none outline-none focus:ring-0 p-0 mb-1 transition-colors",
               isComplete ? "text-white/40 line-through" : "text-white placeholder-white/20"
@@ -181,10 +208,10 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           </p>
 
           {/* Description */}
-          <div className="min-h-[200px] p-0" onBlur={saveDescription}>
+          <div className="min-h-[200px] p-0">
             <TaskDescriptionEditor 
               content={description}
-              onChange={handleDescriptionChange}
+              onChange={setDescription}
               placeholder="Write a description..."
             />
           </div>

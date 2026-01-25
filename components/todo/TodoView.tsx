@@ -149,18 +149,18 @@ export function TodoView() {
     });
   };
 
-  const handleUpdateTask = async (id: string, updates: any) => {
-      // Optimistic update
+  const handleUpdateTask = useCallback(async (id: string, updates: any) => {
+      // Synchronize local store
       updateTodo(id, updates);
       
-      setSelectedTask((prev: any) => prev ? { ...prev, ...updates } : prev);
-
-      try {
-          await axiosInstance.patch(`/api/todos/${id}`, updates);
-      } catch (e) {
-          toast.error("Failed to save changes");
-      }
-  };
+      // Update local selection if needed
+      setSelectedTask((prev: any) => {
+          if (prev && prev._id === id) {
+              return { ...prev, ...updates };
+          }
+          return prev;
+      });
+  }, [updateTodo, setSelectedTask]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
