@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, Plus, ChevronDown } from 'lucide-react';
-import { TaskInput } from './TaskInput';
-import { TodoHeader } from './TodoHeader';
+import { TaskInput } from '@/components/todo/TaskInput';
+import { TodoHeader } from '@/components/todo/TodoHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';

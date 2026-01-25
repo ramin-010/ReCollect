@@ -202,6 +202,7 @@
 
   html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shift */
   }
 
   body {
@@ -302,23 +303,27 @@
   content: none;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Minimal & Pretty */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted));
-  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 10px;
+  border: 1px solid transparent; /* Creates padding around thumb */
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.4);
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 
 /* Professional Card Styles */

@@ -44,7 +44,7 @@ export const AbstractGraph = () => {
               r="4"
               fill="#fff"
            >
-              <motion.animateMotion 
+              <animateMotion
                  dur="3s" 
                  repeatCount="indefinite"
                  path={`M 0 0 L ${nodes[2].x - nodes[0].x} ${nodes[2].y - nodes[0].y}`}

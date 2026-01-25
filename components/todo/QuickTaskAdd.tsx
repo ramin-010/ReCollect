@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Command } from 'lucide-react';
@@ -15,6 +15,17 @@ interface QuickTaskAddProps {
 export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const [mounted, setMounted] = useState(false);
   const { addTodo } = useTodoStore();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Small timeout to ensure modal animation/render is ready
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     setMounted(true);
@@ -91,6 +102,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
 
             {/* Task Input */}
             <TaskInput
+              ref={inputRef}
               onSave={handleSave}
               isExpanded={true}
               onExpandChange={() => {}}

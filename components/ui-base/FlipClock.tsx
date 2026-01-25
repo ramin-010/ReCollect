@@ -7,6 +7,7 @@ interface FlipClockProps {
   scale?: number;
   transparent?: boolean;
   showSeconds?: boolean;
+  mode?: 'clock' | 'stopwatch'; // Controlled mode
 }
 
 // Two-digit card component with flip animation
@@ -17,8 +18,8 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
   useEffect(() => {
     if (value !== currentValue) {
       setAnimatingFrom(currentValue);
-      const topTimer = setTimeout(() => setCurrentValue(value), 300);
-      const endTimer = setTimeout(() => setAnimatingFrom(null), 600);
+      const topTimer = setTimeout(() => setCurrentValue(value), 700);
+      const endTimer = setTimeout(() => setAnimatingFrom(null), 1200);
       return () => { clearTimeout(topTimer); clearTimeout(endTimer); };
     }
   }, [value, currentValue]);
@@ -31,7 +32,6 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
     color: 'currentColor', // Use parent color
     fontFamily: "'Oswald', 'Impact', sans-serif",
     lineHeight: 1,
-    fontVariantNumeric: 'tabular-nums',
     letterSpacing: '0px',
     position: 'absolute',
     left: '50%',
@@ -39,6 +39,9 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
     transform: 'translate(-50%, -50%) scaleY(1.3)',
     whiteSpace: 'nowrap',
     textShadow: transparent ? 'none' : '0 4px 12px rgba(0,0,0,0.5)', 
+    width: '100%',
+    textAlign: 'center',
+    fontVariantNumeric: 'tabular-nums',
   };
   
   const halfStyle: React.CSSProperties = {
@@ -54,13 +57,13 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
   // We make top half taller, bottom half shorter.
   // BUT we must shift text UP by the same amount so it stays centered in the CARD,
   // effectively moving the cut DOWN through the text.
-  const cutOffset = 8 * scale; 
+  const cutOffset = 18 * scale; 
   const topHeight = `calc(50% + ${cutOffset}px)`;
   const bottomHeight = `calc(50% - ${cutOffset}px)`;
   const textOffsetMargin = `-${cutOffset}px`;
 
   // Explicit border for the cut, even in transparent mode, so it's visible on the text
-  const cutBorder = '1px solid rgba(0,0,0,0.1)';
+  const cutBorder = '2px solid rgba(0,0,0,0.1)';
 
   return (
     <div className="relative" style={{ perspective: '1000px' }}>
@@ -92,6 +95,7 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
           style={{ 
             ...halfStyle, 
             height: topHeight,
+            borderBottom: cutBorder,
             top: 0, 
             zIndex: isAnimating ? 3 : 0,
             transformOrigin: 'bottom center',
@@ -113,7 +117,8 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
             style={{ 
               ...halfStyle, 
               height: bottomHeight,
-              bottom: 0, 
+              bottom: 0,
+              borderTop: cutBorder, 
               top: 'auto',
               zIndex: 2,  
               transformOrigin: 'top center',
@@ -143,12 +148,12 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
 
       <style jsx global>{`
         .flip-top-animation {
-          animation: flipDown 400ms ease-in forwards;
+          animation: flipDown 500ms ease-in forwards;
         }
         
         .flip-bottom-animation {
           transform: rotateX(90deg);
-          animation: flipUp 400ms ease-out 400ms forwards;
+          animation: flipUp 500ms ease-out 500ms forwards !important;
         }
         
         @keyframes flipDown {
@@ -165,53 +170,148 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
   );
 }
 
-export function FlipClock({ className = '', scale = 1, transparent = false, showSeconds = false }: FlipClockProps) {
+export function FlipClock({ className = '', scale = 1, transparent = false, showSeconds = false, mode = 'clock' }: FlipClockProps) {
   const [time, setTime] = useState(new Date());
+  
+  // Stopwatch state
+  const [isRunning, setIsRunning] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Clock tick
+  useEffect(() => {
+    if (mode === 'clock') {
+        const interval = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(interval);
+    }
+  }, [mode]);
+
+  // Stopwatch tick
+  useEffect(() => {
+    let animationFrame: number;
+    
+    if (mode === 'stopwatch' && isRunning && startTime !== null) {
+      const updateTimer = () => {
+        const now = Date.now();
+        setElapsedTime(now - startTime);
+        animationFrame = requestAnimationFrame(updateTimer);
+      };
+      animationFrame = requestAnimationFrame(updateTimer);
+    }
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [mode, isRunning, startTime]);
 
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
-
-    const interval = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(interval);
   }, []);
 
-  const hours = time.getHours();
-  const minutes = time.getMinutes();
-  const seconds = time.getSeconds();
-  
-  // Convert 24h to 12h format
-  const h12 = hours % 12 || 12;
+  const handleStartStop = () => {
+    if (isRunning) {
+      // Pause
+      setIsRunning(false);
+      setStartTime(null); 
+    } else {
+      // Start
+      setIsRunning(true);
+      setStartTime(Date.now() - elapsedTime);
+    }
+  };
 
-  const hoursStr = String(h12).padStart(2, '0');
-  const minutesStr = String(minutes).padStart(2, '0');
-  const secondsStr = String(seconds).padStart(2, '0');
+  const handleReset = () => {
+    setIsRunning(false);
+    setStartTime(null);
+    setElapsedTime(0);
+  };
+
+  // Get display values
+  let displayHours, displayMinutes, displaySeconds;
+
+  if (mode === 'clock') {
+      const hours = time.getHours();
+      const minutes = time.getMinutes();
+      const seconds = time.getSeconds();
+      const h12 = hours % 12 || 12;
+      displayHours = String(h12).padStart(2, '0');
+      displayMinutes = String(minutes).padStart(2, '0');
+      displaySeconds = String(seconds).padStart(2, '0');
+  } else {
+      // Stopwatch formatting
+      const totalSeconds = Math.floor(elapsedTime / 1000);
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      
+      displayHours = String(h).padStart(2, '0');
+      displayMinutes = String(m).padStart(2, '0');
+      displaySeconds = String(s).padStart(2, '0');
+  }
 
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
-        {/* Removed background line in transparent mode */}
-      {!transparent && <div 
-        style={{ 
-          position: 'absolute',
-          left: '-50vw',
-          right: '-50vw',
-          top: '50%',
-          height: `${4 * scale}px`,
-          background: '#0a0a0a',
-          zIndex: 0,
-        }}
-      />}
-      
-      {/* Cards */}
-      <div className={`flex relative z-10`} style={{ gap: `${(transparent ? 24 : 16) * scale}px` }}>
-        <FlipCard value={hoursStr} scale={scale} transparent={transparent} />
-        <FlipCard value={minutesStr} scale={scale} transparent={transparent} />
-        {showSeconds && (
-          <FlipCard value={secondsStr} scale={scale} transparent={transparent} />
+    <div className={`relative flex flex-col items-center justify-center group ${className}`}>
+        <div className="relative flex items-center justify-center">
+            {/* Removed background line in transparent mode */}
+            {!transparent && <div 
+                style={{ 
+                position: 'absolute',
+                left: '-50vw',
+                right: '-50vw',
+                top: '50%',
+                height: `${4 * scale}px`,
+                background: '#0a0a0a',
+                zIndex: 0,
+                }}
+            />}
+            
+            {/* Cards */}
+            <div className={`flex relative z-10`} style={{ gap: `${(transparent ? 24 : 16) * scale}px` }}>
+                <FlipCard value={displayHours} scale={scale} transparent={transparent} />
+                <FlipCard value={displayMinutes} scale={scale} transparent={transparent} />
+                {(showSeconds || mode === 'stopwatch') && (
+                <FlipCard value={displaySeconds} scale={scale} transparent={transparent} />
+                )}
+            </div>
+        </div>
+
+        {/* Controls Overlay - Persistent in Stopwatch Mode */}
+        {mode === 'stopwatch' && (
+        <div 
+            className="absolute top-1/2 -translate-y-1/2 -right-16 flex flex-col items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300"
+            style={{ zIndex: 100 }}
+        >
+            <div className="flex flex-col items-center bg-black/60 backdrop-blur-md rounded-xl p-1.5 border border-white/10 shadow-xl gap-2">
+                 <button
+                    onClick={handleStartStop}
+                    className={`p-1.5 rounded-lg transition-all ${isRunning ? 'text-red-400 hover:bg-red-500/20' : 'text-emerald-400 hover:bg-emerald-500/20'}`}
+                    title={isRunning ? 'Stop' : 'Start'}
+                 >
+                    {isRunning ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
+                    ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                    )}
+                 </button>
+                 
+                 <button
+                    onClick={handleReset}
+                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:rotate-180 transition-all"
+                    title="Reset"
+                 >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74-2.74L3 12" />
+                    </svg>
+                 </button>
+            </div>
+        </div>
         )}
-      </div>
     </div>
   );
 }

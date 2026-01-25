@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Zap } from 'lucide-react';
+import { Sparkles, Zap, Timer, Clock } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { FlipClock } from '@/components/ui-base/FlipClock';
 
@@ -18,12 +18,12 @@ interface TodoHeaderProps {
 
 const backgroundImages: string[] = [
   //  'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1765275333/Gemini_Generated_Image_fxnzpofxnzpofxnz_PhotoGrid_ic5rhc.webp',
-
 ];
 
 export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const user = useAuthStore((state) => state.user);
+  const [clockMode, setClockMode] = useState<'clock' | 'stopwatch'>('clock');
 
   const raw_name = user?.name || "User";
   const name = raw_name.charAt(0).toUpperCase() + raw_name.slice(1).toLowerCase();
@@ -41,9 +41,9 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const currentImage = backgroundImages.length > 0 ? backgroundImages[currentImageIndex] : null;
 
   return (
-    <div className="relative w-full h-[35vh] min-h-[260px] overflow-hidden -mt-16 pt-16">
+    <div className="relative w-full h-[35vh] min-h-[260px] -mt-16 pt-16">
         {/* Background Layer */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
             {/* Default Gradient Background */}
             <div className={`absolute inset-0 bg-gradient-to-r from-zinc-900 via-neutral-900 to-zinc-900`} />
             
@@ -104,10 +104,29 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
         </div>
 
         {/* CENTER: The Prism Clock (Sophisticated Watermark) */}
-        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none">
+        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex flex-col items-center select-none z-20">
              {/* Main Clock - Watermark Style */}
-             <div className="relative z-0 opacity-30 mix-blend-overlay scale-125 origin-bottom">
-                <FlipClock transparent scale={0.43} showSeconds={false} className="text-white" />
+             <div className="relative opacity-50 mix-blend-overlay scale-125 origin-bottom group">
+                <FlipClock 
+                  transparent 
+                  scale={0.40} 
+                  showSeconds={false} 
+                  mode={clockMode}
+                  className="text-white cursor-pointer" 
+                />
+                
+                 {/* Mode Toggle Button - Icon Only, Bottom Right of Clock */}
+                 <button
+                    onClick={() => setClockMode(prev => prev === 'clock' ? 'stopwatch' : 'clock')}
+                    className="absolute -bottom-1 -right-6 p-2 rounded-full text-white/30 hover:text-white transition-all transform hover:scale-110 active:scale-95"
+                    title={clockMode === 'clock' ? 'Switch to Stopwatch' : 'Return to Clock'}
+                 >
+                    {clockMode === 'clock' ? (
+                        <Timer className="w-4 h-4" />
+                    ) : (
+                        <Clock className="w-4 h-4" />
+                    )}
+                 </button>
              </div>
         </div>
 

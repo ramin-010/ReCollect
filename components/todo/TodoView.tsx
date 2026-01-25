@@ -179,7 +179,7 @@ export function TodoView() {
   }
 
   return (
-    <div className="min-h-screen bg-oklch text-[hsl(var(--foreground))] font-sans pb-20 selection:bg-emerald-500/30">
+    <div className="min-h-screen  text-[hsl(var(--foreground))] font-sans pb-20 selection:bg-emerald-500/30">
       
       {/* Header Area - Always visible */}
       <AnimatePresence>

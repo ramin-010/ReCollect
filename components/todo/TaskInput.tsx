@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -82,12 +82,9 @@ const PRIORITIES = [
 ];
 
 
-const STATUSES = [
-  { value: 'pending', label: 'Backlog', icon: <Circle className="w-3.5 h-3.5" /> },
-  { value: 'complete', label: 'Done', icon: <Circle className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" /> },
-];
 
-export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = false, onClose, initialReferences }: TaskInputProps) {
+
+export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({ onSave, isExpanded, onExpandChange, isQuickAdd = false, onClose, initialReferences }, ref) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -163,17 +160,18 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => inputRef.current!);
   const containerRef = useRef<HTMLDivElement>(null);
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
 
   // Auto-focus on mount
-  useEffect(() => {
-    // Small timeout to ensure modal animation/render is ready
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 10);
-    return () => clearTimeout(timer);
-  }, []);
+  // useEffect(() => {
+  //   // Small timeout to ensure modal animation/render is ready
+  //   const timer = setTimeout(() => {
+  //     inputRef.current?.focus();
+  //   }, 10);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   
   const handleInlineSelectLabel = (label: Label) => {
@@ -233,25 +231,63 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
   };
 
   
+  // Track if interaction started inside the container
+  const isMouseDownInsideRef = useRef(false);
+  const isExpandedRef = useRef(isExpanded);
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      
-      const isInsideContainer = containerRef.current && containerRef.current.contains(e.target as Node);
-      
-      
-      
+    isExpandedRef.current = isExpanded;
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      // Check if interaction starts inside
       const target = e.target as HTMLElement;
+      const isInsideContainer = containerRef.current && containerRef.current.contains(target);
+      const isInsidePopover = target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="dialog"]');
+      
+      if (isInsideContainer || isInsidePopover) {
+        isMouseDownInsideRef.current = true;
+      } else {
+        isMouseDownInsideRef.current = false;
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      // If interaction started inside, ignore this click (it's a drag or layout shift case)
+      if (isMouseDownInsideRef.current) {
+        isMouseDownInsideRef.current = false; // Reset
+        return;
+      }
+
+      if (!isExpandedRef.current && !title.trim()) return;
+
+      const target = e.target as HTMLElement;
+      const isInsideContainer = containerRef.current && containerRef.current.contains(target);
       const isInsidePopover = target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="dialog"]');
 
-      if (!isInsideContainer && !isInsidePopover) {
-        if (isExpanded && !title.trim()) {
-          onExpandChange(false);
+      // Check if the target is an interactive element (button, link, input, etc.)
+      // We want to keep the input open if the user clicks these, allowing interaction without layout shift
+      const isInteractive = target.closest(
+        'button, a, input, textarea, select, [role="button"], [role="checkbox"], [role="menuitem"], [role="option"], [role="switch"], [role="tab"]'
+      );
+
+      if (!isInsideContainer && !isInsidePopover && !isInteractive) {
+        // Only close if we are expanded and there is no title
+        if (isExpandedRef.current && !title.trim()) {
+           onExpandChange(false);
         }
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isExpanded, title, onExpandChange]);
+
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('click', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [title, onExpandChange]); // Removed isExpanded from deps, using ref
 
   
   const [isSaving, setIsSaving] = useState(false);
@@ -399,7 +435,7 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
       e.preventDefault();
       handleSave();
     }
-    if (e.key === 'Enter' && !e.shiftKey && (!isExpanded || isQuickAdd) && !suggestedDate) {
+    if (e.key === 'Enter' && !e.shiftKey && !suggestedDate) {
       e.preventDefault();
       handleSave();
     }
@@ -960,5 +996,6 @@ export function TaskInput({ onSave, isExpanded, onExpandChange, isQuickAdd = fal
       </AnimatePresence>
     </div>
   );
-}
+});
+TaskInput.displayName = 'TaskInput';
 
