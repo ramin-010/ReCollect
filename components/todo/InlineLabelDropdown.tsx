@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Tag, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import axiosInstance from '@/lib/utils/axios';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 
 
-const STORAGE_KEY = 'recollect-labels';
 const DEFAULT_LABEL_COLOR = 'blue';
 
 export interface Label {
@@ -26,91 +28,93 @@ export interface InlineLabelDropdownHandle {
   handleKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
-// Helper to get stored labels
-function getStoredLabels(): Label[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Helper to save labels
-function saveLabelsToStorage(labels: Label[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
-  } catch {}
-}
-
 export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineLabelDropdownProps>(
   ({ isOpen, searchQuery, onSelectLabel, onCreateLabel, onClose }, ref) => {
-    const [storedLabels, setStoredLabels] = useState<Label[]>([]);
+    const [fetchedLabels, setFetchedLabels] = useState<Label[]>([]);
     const [highlightedIndex, setHighlightedIndex] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Load stored labels on mount
+    const debouncedSearch = useDebounce(searchQuery, 300);
+
+    // Fetch tags from API and map to Labels
     useEffect(() => {
-      setStoredLabels(getStoredLabels());
-    }, []);
+        if (!isOpen) return;
+        
+        const fetchTags = async () => {
+             // If empty query, maybe show recent or common tags? Or nothing.
+             // For now, if empty, we can show nothing or keep previous results.
+             if (!debouncedSearch.trim()) {
+                 setFetchedLabels([]);
+                 return;
+             }
+            
+            setIsLoading(true);
+            try {
+                const res = await axiosInstance.get(`/api/tagQuery/search?q=${encodeURIComponent(debouncedSearch)}`);
+                if (res.data.success) {
+                    // Map tags strings/objects to Label interface
+                    // Backend returns { name: string, ... } or just strings?
+                    // TagQuery usually returns objects or strings. Let's assume object { name }
+                    // Actually, content.controller returns tags as { checked: boolean, name: string }? 
+                    // No, `tagQuery.controller` usually returns array of objects { name: string, count: number }
+                    
+                    const tags = res.data.data || [];
+                    const labels: Label[] = tags.map((t: any) => ({
+                        id: t._id || `tag-${t.name}`,
+                        name: t.name,
+                        color: DEFAULT_LABEL_COLOR
+                    }));
+                    setFetchedLabels(labels);
+                }
+            } catch (err) {
+                console.error("Failed to search tags", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    // Reload labels when dropdown opens
-    useEffect(() => {
-      if (isOpen) {
-        setStoredLabels(getStoredLabels());
-        setHighlightedIndex(0);
-      }
-    }, [isOpen]);
-
-    // Filtered labels based on search
-    const filteredLabels = useMemo(() => {
-      if (!searchQuery.trim()) {
-        return storedLabels.slice(0, 5);
-      }
-      return storedLabels.filter(label =>
-        label.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }, [searchQuery, storedLabels]);
+        fetchTags();
+    }, [debouncedSearch, isOpen]);
 
     // Check if exact match exists
     const exactMatch = useMemo(() => {
-      return storedLabels.some(
-        label => label.name.toLowerCase() === searchQuery.toLowerCase()
+      // Use locally fetched labels to check for exact match
+      return fetchedLabels.some(
+        label => label.name.toLowerCase() === searchQuery.trim().toLowerCase()
       );
-    }, [searchQuery, storedLabels]);
-
-    // Reset highlighted index when filtered labels change
-    useEffect(() => {
-      setHighlightedIndex(0);
-    }, [filteredLabels.length, searchQuery]);
+    }, [searchQuery, fetchedLabels]);
 
     // Has create option?
-    const hasCreateOption = searchQuery.trim() && !exactMatch;
-    const totalOptions = filteredLabels.length + (hasCreateOption ? 1 : 0);
+    const hasCreateOption = searchQuery.trim().length > 0 && !exactMatch;
+    
+    // Display options are simply the fetched labels
+    const displayOptions = fetchedLabels;
+    const totalOptions = displayOptions.length + (hasCreateOption ? 1 : 0);
+
+    // Reset highlighted index
+    useEffect(() => {
+      setHighlightedIndex(0);
+    }, [displayOptions.length, hasCreateOption]);
 
     // Select existing label
     const handleSelectLabel = (label: Label) => {
       onSelectLabel(label);
+      onClose();
     };
 
-    // Create new label
+    // Create new label (Just creates a label object to pass back, backend handles actual creation on save)
     const handleCreateLabel = () => {
       if (!searchQuery.trim()) return;
       
       const newLabel: Label = {
-        id: `label-${Date.now()}`,
+        id: `new-${Date.now()}`, // Temporary ID
         name: searchQuery.trim(),
         color: DEFAULT_LABEL_COLOR,
       };
       
-      // Save to localStorage
-      const updatedLabels = [newLabel, ...storedLabels];
-      saveLabelsToStorage(updatedLabels);
-      setStoredLabels(updatedLabels);
-      
       onCreateLabel(newLabel);
+      onClose();
     };
 
     // Expose keyboard handler to parent
@@ -130,12 +134,11 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
         }
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (hasCreateOption && highlightedIndex >= filteredLabels.length) {
-            handleCreateLabel();
-          } else if (filteredLabels[highlightedIndex]) {
-            handleSelectLabel(filteredLabels[highlightedIndex]);
+          
+          if (highlightedIndex < displayOptions.length) {
+              handleSelectLabel(displayOptions[highlightedIndex]);
           } else if (hasCreateOption) {
-            handleCreateLabel();
+              handleCreateLabel();
           }
           return true;
         }
@@ -159,44 +162,73 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.1 }}
-            className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#1e1e1e] border border-white/10 rounded-lg overflow-hidden shadow-xl"
+            className="absolute left-0 top-full mt-2 z-50 min-w-[220px] bg-[#1e1e1e] border border-white/10 rounded-lg overflow-hidden shadow-2xl backdrop-blur-md"
           >
-            {/* Existing labels */}
-            {filteredLabels.map((label, index) => {
-              const isHighlighted = index === highlightedIndex;
-              return (
-                <button
-                  key={label.id}
-                  onClick={() => handleSelectLabel(label)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
-                    isHighlighted ? "bg-white/10" : "hover:bg-white/5"
-                  )}
-                >
-                  <span className="text-white/80">{label.name}</span>
-                </button>
-              );
-            })}
+
+            {/* Fetched labels */}
+            {displayOptions.length > 0 && (
+              <div className="py-1">
+                <div className="px-3 py-1 text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                  Suggestions
+                </div>
+                {displayOptions.map((label, index) => {
+                  const isHighlighted = index === highlightedIndex;
+                  return (
+                    <button
+                      key={label.id}
+                      onClick={() => handleSelectLabel(label)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
+                        isHighlighted ? "bg-indigo-500/20 text-indigo-100" : "text-white/70 hover:bg-white/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-3.5 h-3.5 opacity-40" />
+                        <span>{label.name}</span>
+                      </div>
+                      {isHighlighted && <CornerDownLeft className="w-3 h-3 opacity-40" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             
             {/* Create new label option */}
             {hasCreateOption && (
-              <button
-                onClick={handleCreateLabel}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
-                  filteredLabels.length > 0 && "border-t border-white/5",
-                  highlightedIndex >= filteredLabels.length ? "bg-white/10" : "hover:bg-white/5"
+              <div className={cn("py-1", displayOptions.length > 0 && "border-t border-white/5")}>
+                {!displayOptions.length && (
+                   <div className="px-3 py-1 text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                     No matches found
+                   </div>
                 )}
-              >
-                <span className="text-white/50">Label not found.</span>
-                <span className="text-white/80 font-medium">Create {searchQuery}</span>
-              </button>
+                <button
+                  onClick={handleCreateLabel}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
+                    highlightedIndex === displayOptions.length ? "bg-indigo-500/20 text-indigo-100" : "text-white/70 hover:bg-white/5"
+                  )}
+                >
+                  <div className="flex flex-col">
+                      <span className="text-xs opacity-50">Create new tag</span>
+                      <span className="font-medium text-indigo-300">@{searchQuery.trim()}</span>
+                  </div>
+                  {(highlightedIndex === displayOptions.length || !displayOptions.length) && (
+                    <CornerDownLeft className="w-3 h-3 opacity-40" />
+                  )}
+                </button>
+              </div>
             )}
             
-            {/* Empty state */}
-            {filteredLabels.length === 0 && !searchQuery.trim() && (
-              <div className="px-3 py-2 text-xs text-white/40">
-                Type to search or create a label
+            {/* Loading state */}
+            {isLoading && (
+                 <div className="px-3 py-3 flex items-center gap-2 text-xs text-white/40 border-t border-white/5">
+                    <div className="w-3 h-3 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                    Searching tags...
+                 </div>
+            )}
+            {!isLoading && displayOptions.length === 0 && !hasCreateOption && (
+              <div className="px-3 py-4 text-center text-xs text-white/30 italic">
+                Type to find tags
               </div>
             )}
           </motion.div>

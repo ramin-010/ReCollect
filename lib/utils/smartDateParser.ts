@@ -173,7 +173,8 @@ export function parseTaskInput(text: string): ParsedTaskInput {
   }
 
   // 6. Date of month: "on the 20th", "on 15th", "by the 25th"
-  const datePattern = /(?:on|by)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i;
+  // Added negative lookahead to prevent matching if followed by time-like colon/dot + number
+  const datePattern = /(?:on|by)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?(?!\s*[:.]\s*\d)\b/i;
   const dateMatch = lower.match(datePattern);
   if (dateMatch && !dayMatch && !hasDate) {
     const dayOfMonth = parseInt(dateMatch[1]);
@@ -186,7 +187,7 @@ export function parseTaskInput(text: string): ParsedTaskInput {
       hasDate = true;
       confidence = 'high';
       addMatch(dateMatch[0]);
-      cleanText = cleanText.replace(new RegExp(dateMatch[0], 'gi'), '');
+      cleanText = cleanText.replace(new RegExp(dateMatch[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
     }
   }
 
@@ -210,19 +211,14 @@ export function parseTaskInput(text: string): ParsedTaskInput {
     hasDate = true;
     confidence = 'high';
     addMatch(fullDateMatch[0]);
-    cleanText = cleanText.replace(new RegExp(fullDateMatch[0], 'gi'), '');
+    cleanText = cleanText.replace(new RegExp(fullDateMatch[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
   }
 
   // ============ TIME PATTERNS ============
   
-  // Time: "at 6pm", "by 6:30 am", "6pm", "at 14:00"
-  // Also supports short format: "5p", "10a", "9:30p"
-  // Regex updated to be more permissive about word boundaries when time follows other text
-  const timePattern = /(?:at|by)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)\b|(?:\b(?:at|by)\s+)(\d{1,2})(?::(\d{2}))?(?!\d)/i;
-  
-  // We need to check which part of the regex matched because of the OR
-  // First part: times with am/pm/a/p suffix (e.g. "6pm", "12am")
-  // Second part: times with explicit prefix but no suffix (e.g. "at 14:00")
+  // Time: "at 6pm", "by 6:30 am", "6pm", "at 14:00", "2 : 30 pm", "2.30pm"
+  // Supports spaces around colon, dot separator, and optional space before meridiem
+  const timePattern = /(?:at|by)?\s*(\d{1,2})\s*([:.]|(?=\s*(?:am|pm|a|p)\b))\s*(\d{2})?\s*(am|pm|a|p)\b|(?:\b(?:at|by)\s+)(\d{1,2})\s*([:.]\s*(\d{2}))?(?!\d)/i;
   
   const timeMatch = lower.match(timePattern);
   
@@ -231,16 +227,16 @@ export function parseTaskInput(text: string): ParsedTaskInput {
     let minutes = 0;
     let meridiem: string | undefined;
     
-    // Group 1-3 match times with suffix
+    // Group 1-4 match times with meridiem suffix (e.g. "6pm", "2 : 30 pm")
     if (timeMatch[1]) {
       hours = parseInt(timeMatch[1]);
-      minutes = parseInt(timeMatch[2] || '0');
-      meridiem = timeMatch[3]?.toLowerCase();
+      minutes = parseInt(timeMatch[3] || '0');
+      meridiem = timeMatch[4]?.toLowerCase();
     } 
-    // Group 4-5 match times with prefix (at/by) and NO suffix
-    else if (timeMatch[4]) {
-      hours = parseInt(timeMatch[4]);
-      minutes = parseInt(timeMatch[5] || '0');
+    // Group 5-7 match times with explicit prefix but no suffix (e.g. "at 14:00")
+    else if (timeMatch[5]) {
+      hours = parseInt(timeMatch[5]);
+      minutes = parseInt(timeMatch[7] || '0');
     }
 
     // Convert to 24-hour format if meridiem is present

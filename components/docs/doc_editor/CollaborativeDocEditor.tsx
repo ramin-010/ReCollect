@@ -26,7 +26,7 @@ import { CoverPicker } from './CoverPicker';
 import { FloatingToolbar } from './FloatingToolbar';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { DocTasksPanel } from '../DocTasksPanel';
-import { TaskInput } from '@/components/todo/TaskInput';
+import { TaskInput } from '@/components/todo/task_Input';
 import { 
   Popover, 
   PopoverContent, 
@@ -471,7 +471,7 @@ function CollaborativeEditorContent({
 
 
   return (
-    <div className="h-full flex flex-col  bg-oklch">
+    <div className="h-full flex flex-col  bg-[hsl(var(--background))]">
        {/* Floating Toolbar - only show when editable */}
        {editor && !readOnly && (
         <FloatingToolbar

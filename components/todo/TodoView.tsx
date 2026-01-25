@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, Plus, ChevronDown, Briefcase } from 'lucide-react';
-import { TaskInput } from './TaskInput';
+import { TaskInput } from './task_Input';
 import { TodoHeader } from './TodoHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -153,7 +153,6 @@ export function TodoView() {
       // Optimistic update
       updateTodo(id, updates);
       
-      // Update selected task in local state as well to reflect changes immediately in Detail view
       setSelectedTask((prev: any) => prev ? { ...prev, ...updates } : prev);
 
       try {

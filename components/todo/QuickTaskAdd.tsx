@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Command } from 'lucide-react';
-import { TaskInput } from './TaskInput';
+import { TaskInput } from './task_Input';
 import { useTodoStore } from '@/lib/store/todoStore';
 
 interface QuickTaskAddProps {
