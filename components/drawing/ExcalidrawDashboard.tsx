@@ -8,6 +8,7 @@ import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { useTheme } from 'next-themes';
 import { debounce } from 'lodash';
+import { cn } from '@/lib/utils';
 
 import { 
   PenTool, 
@@ -22,7 +23,9 @@ import {
   Clock,
   ArrowLeft,
   Cloud,
-  CloudOff
+  CloudOff,
+  Pin,
+  PinOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
@@ -46,7 +49,8 @@ export function ExcalidrawDashboard() {
     isInitialized,
     addDrawing,
     updateDrawing,
-    deleteDrawing: removeDrawingStore 
+    deleteDrawing: removeDrawingStore,
+    togglePin
   } = useWhiteboardStore();
 
   const [currentDrawing, setCurrentDrawing] = useState<Drawing | null>(null);
@@ -365,29 +369,35 @@ export function ExcalidrawDashboard() {
     const isDark =resolvedTheme === 'theme-dark-gray';
     
     return (
-      <div className={`fixed inset-0 z-[100] bg-white ${isDark ? 'dark:bg-zinc-900' : ''} flex flex-col`}>
-        {/* Editor Header */}
-        <div className="h-14 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 bg-[hsl(var(--surface))]">
+      <div className={`fixed inset-0 z-[100] bg-[hsl(var(--background))] flex flex-col`}>
+        {/* Editor Header - Architect Style */}
+        <div className="h-14 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 bg-[hsl(var(--background))]/80 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={closeEditor}
+              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg px-2"
               leftIcon={<ArrowLeft className="w-4 h-4" />}
             >
               Back
             </Button>
-            <span className="font-medium">{currentDrawing?.name}</span>
+            <div className="h-4 w-px bg-[hsl(var(--border))] mx-1" />
+            <span className="text-[hsl(var(--foreground))] font-medium text-sm tracking-wide truncate max-w-[200px] md:max-w-md">
+              {currentDrawing?.name}
+            </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="text-xs text-muted-foreground mr-2">
-              Auto-save enabled
+            <div className="hidden md:flex items-center gap-2 text-[10px] text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-widest bg-[hsl(var(--muted))]/50 px-3 py-1 rounded-md border border-[hsl(var(--border))] mr-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              Live
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={exportDrawing}
+              className="bg-[hsl(var(--card))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] h-9"
               leftIcon={<Download className="w-4 h-4" />}
             >
               Export
@@ -397,6 +407,7 @@ export function ExcalidrawDashboard() {
               size="sm"
               onClick={() => saveCurrentDrawing(false)}
               isLoading={isLoading}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg px-4 h-9 shadow-sm"
               leftIcon={<Save className="w-4 h-4" />}
             >
               Save
@@ -444,128 +455,316 @@ export function ExcalidrawDashboard() {
     );
   }
 
+  // Split drawings into Active (Pinned) and Archive
+  const activeProjects = drawings.filter(d => d.isPinned);
+  const archiveProjects = drawings.filter(d => !d.isPinned).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-1">Drawing Board</h1>
-          <p className="text-[hsl(var(--muted-foreground))]">
-            Create and manage your visual notes and diagrams
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            New Drawing
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-          >
-            Back to Dashboard
-          </Button>
-        </div>
-      </div>
+    <div className="h-full flex flex-col relative overflow-hidden bg-[hsl(var(--background))]">
+      {/* Architectural Grid Background */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.4] dark:opacity-[0.2]"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, 
+              hsl(var(--foreground) / 0.1) 1px, 
+              transparent 1px
+            ),
+            linear-gradient(to bottom, 
+              hsl(var(--foreground) / 0.1) 1px, 
+              transparent 1px
+            )
+          `,
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(circle at 50% 0%, black 40%, transparent 100%)'
+        }}
+      />
 
-      {/* Drawings Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Existing Drawings */}
-        {drawings.map((drawing, index) => (
-          <motion.div
-            key={drawing.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1 }}
-          >
-            <Card
-              variant="interactive"
-              padding="none"
-              className="cursor-pointer group overflow-hidden flex flex-col h-[400px] relative transition-shadow duration-300 hover:shadow-2xl border-0 ring-1 ring-black/5 dark:ring-white/10 rounded-xl"
-              onClick={() => openDrawing(drawing)}
+      <div className="relative z-10 w-full max-w-[1600px] mx-auto px-8 py-8 flex flex-col h-full overflow-y-auto custom-scrollbar">
+        {/* Header Section - Floating & Minimal */}
+        <div className="flex items-end justify-between gap-6 mb-12 pb-6 border-b border-[hsl(var(--border))]/40">
+          <div className="space-y-1">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-xs font-bold tracking-wider uppercase mb-2"
             >
-            {/* Thumbnail */}
-            <div className="w-full h-full bg-[hsl(var(--muted))]/20 relative bg-[radial-gradient(#00000015_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff15_1px,transparent_1px)] [background-size:20px_20px]">
-              {drawing.thumbnail ? (
-                <img
-                  src={drawing.thumbnail}
-                  alt={drawing.name}
-                  className="w-full h-full object-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <FileImage className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
-                </div>
-              )}
-              
-              {/* Hover Overlay */}
+              <PenTool className="w-3 h-3" />
+              <span>Studio</span>
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl font-bold tracking-tight text-[hsl(var(--foreground))]"
+            >
+              Architect's Desk
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-[hsl(var(--muted-foreground))] text-lg font-medium"
+            >
+              Your infinite canvas for visual thinking.
+            </motion.p>
+          </div>
 
-            </div>
-
-            {/* Drawing Info - Positioned at Bottom with Dark Background */}
-            {/* Drawing Info - Floating Glass Bar */}
-            <div className="absolute bottom-3 left-3 right-3 bg-black/60 backdrop-blur-md rounded-lg p-3 border border-white/10 shadow-lg transform transition-transform duration-200">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h4 className="font-medium text-sm truncate flex-1 text-white" title={drawing.name}>
-                  {drawing.name}
-                </h4>
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-300">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  <span>{new Date(drawing.updatedAt).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="flex items-center gap-1 opacity-100">
-                  {/* Cloud Sync Button */}
-                  <button
-                    className={`p-1 rounded transition-colors ${cloudSyncedIds.has(drawing.id) ? 'text-green-400' : 'hover:bg-white/20 text-blue-400'}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!cloudSyncedIds.has(drawing.id)) {
-                        setDrawingToSync(drawing);
-                        setShowCloudSyncModal(true);
-                      }
-                    }}
-                    title={cloudSyncedIds.has(drawing.id) ? 'Synced to Cloud' : 'Sync to Cloud'}
-                  >
-                    <Cloud className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    className="p-1 hover:bg-white/20 rounded transition-colors"
-                    onClick={(e) => handleDuplicate(drawing, e)}
-                    title="Duplicate"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-white" />
-                  </button>
-                  <button
-                    className="p-1 hover:bg-white/20 rounded transition-colors"
-                    onClick={(e) => handleRenameClick(drawing, e)}
-                    title="Rename"
-                  >
-                    <PenTool className="w-3.5 h-3.5 text-white" />
-                  </button>
-                  <button
-                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteDrawing(drawing.id);
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Card>
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+             <Button
+              variant="outline"
+              onClick={() => setCurrentView('dashboard')}
+              className="border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
+            >
+              Exit Studio
+            </Button>
           </motion.div>
-        ))}
+        </div>
+
+        {/* Content Area - Divided into Workbench and Library */}
+        
+        {/* SECTION 1: THE WORKBENCH (Pinned / Active) */}
+        {activeProjects.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="text-xs font-bold uppercase tracking-widest text-[hsl(var(--muted-foreground))]">Active Workbench</span>
+              <div className="h-px flex-1 bg-[hsl(var(--border))]/40" />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+              {activeProjects.map((drawing) => (
+                <motion.div
+                  key={drawing.id}
+                  layoutId={drawing.id}
+                  className="group relative aspect-[1.8] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1"
+                  onClick={() => openDrawing(drawing)}
+                >
+                  {/* Workbench Sheet Content */}
+                  <div className="absolute inset-0 z-0 bg-[hsl(var(--muted))]/10">
+                    {drawing.thumbnail && (
+                        <img
+                          src={drawing.thumbnail}
+                          alt={drawing.name}
+                          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-500"
+                        />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--background))] via-transparent to-transparent opacity-80" />
+                  </div>
+
+                  {/* Pinned Indicator */}
+                  <div className="absolute top-4 right-4 z-20">
+                    <button
+                      className="p-2 rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 transition-transform"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePin(drawing.id);
+                        toast.success("Moved to Library");
+                      }}
+                      title="Unpin from Workbench"
+                    >
+                      <PinOff className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  </div>
+
+                  {/* Workbench Info */}
+                  <div className="absolute bottom-6 left-6 right-6 z-20">
+                     <h3 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-2">{drawing.name}</h3>
+                     <div className="flex items-center gap-4 text-xs text-[hsl(var(--muted-foreground))] font-medium">
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[hsl(var(--background))]/50 border border-[hsl(var(--border))] backdrop-blur-md">
+                          <Clock className="w-3.5 h-3.5" />
+                          Last edited {new Date(drawing.updatedAt).toLocaleDateString()}
+                        </span>
+                        {cloudSyncedIds.has(drawing.id) && (
+                          <span className="flex items-center gap-1.5 text-indigo-500">
+                             <Cloud className="w-3.5 h-3.5" />
+                             Synced
+                          </span>
+                        )}
+                     </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 2: THE LIBRARY (Archive / All) */}
+        <div>
+           {activeProjects.length > 0 && (
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <span className="text-xs font-bold uppercase tracking-widest text-[hsl(var(--muted-foreground))]">Library</span>
+                <div className="h-px flex-1 bg-[hsl(var(--border))]/40" />
+              </div>
+           )}
+
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-20">
+
+          
+          {/* 1. The "Draft New" Card - Intentional & Inviting */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.02, translateY: -4 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setShowCreateDialog(true)}
+            className="group relative aspect-[1.4] rounded-2xl border border-[hsl(var(--border))] bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--muted))]/20 cursor-pointer overflow-hidden shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300"
+          >
+            {/* Subtle Grid Pattern inside the card */}
+            <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:16px_16px]" />
+            
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+               <div className="w-16 h-16 rounded-full bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/10 transition-all duration-500">
+                  <Plus className="w-6 h-6 text-indigo-500/70 group-hover:text-indigo-500 transition-colors" />
+               </div>
+               <div>
+                 <h3 className="font-semibold text-[hsl(var(--foreground))] text-lg group-hover:text-indigo-500 transition-colors">New Blueprint</h3>
+                 <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 font-medium tracking-wide">Start a fresh idea</p>
+               </div>
+            </div>
+            {/* Corner accent */}
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-white/0 to-indigo-500/5 rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+          </motion.div>
+        
+        {/* Existing Drawings - Sorted by Date */}
+        {archiveProjects.map((drawing, index) => {
+             const isRecent = (new Date().getTime() - new Date(drawing.updatedAt).getTime()) < 24 * 60 * 60 * 1000;
+             
+             return (
+              <motion.div
+                key={drawing.id}
+                layoutId={drawing.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <Card
+                  variant="default"
+                  padding="none"
+                  className="group relative aspect-[1.4] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 select-none"
+                  onClick={() => openDrawing(drawing)}
+                >
+                  {/* Sheet Content (Thumbnail) */}
+                  <div className="absolute inset-0 z-0 bg-[hsl(var(--muted))]/10 group-hover:bg-[hsl(var(--background))] transition-colors duration-500">
+                    {drawing.thumbnail ? (
+                      <img
+                        src={drawing.thumbnail}
+                        alt={drawing.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Palette className="w-12 h-12 text-[hsl(var(--muted-foreground))]/10" />
+                      </div>
+                    )}
+                    
+                    {/* Gradient for text readability */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[hsl(var(--card))] via-[hsl(var(--card))]/90 to-transparent" />
+                  </div>
+
+                  {/* Badges: Recent & Cloud */}
+                  <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 items-end">
+                    {cloudSyncedIds.has(drawing.id) && (
+                       <div className="bg-indigo-500/10 backdrop-blur-md border border-indigo-500/20 text-indigo-500 p-1.5 rounded-lg shadow-sm">
+                          <Cloud className="w-3.5 h-3.5" />
+                       </div>
+                    )}
+                    {isRecent && !cloudSyncedIds.has(drawing.id) && (
+                      <div className="bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        Active
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sheet Metadata */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <div className="flex items-end justify-between">
+                      <div className="min-w-0 flex-1 mr-4">
+                        <h4 className="text-[hsl(var(--foreground))] font-semibold text-base leading-tight truncate group-hover:text-indigo-500 transition-colors">
+                          {drawing.name}
+                        </h4>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider flex items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <Clock className="w-3 h-3" />
+                            {new Date(drawing.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Floating Tools */}
+                      <div className="flex items-center gap-0.5 bg-[hsl(var(--foreground))]/5 backdrop-blur-md border border-[hsl(var(--border))]/50 rounded-lg p-1 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 shadow-lg">
+                        <button
+                          className={cn(
+                            "p-1.5 rounded-md transition-all hover:bg-[hsl(var(--background))]",
+                            drawing.isPinned
+                                ? "text-indigo-500 bg-indigo-500/10"
+                                : "text-[hsl(var(--muted-foreground))] hover:text-indigo-500"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePin(drawing.id);
+                            toast.success("Pinned to Workbench");
+                          }}
+                          title="Pin to Workbench"
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="w-px h-3 bg-[hsl(var(--border))]/50 mx-0.5" />
+                        <button
+                          className={cn(
+                            "p-1.5 rounded-md transition-all hover:bg-[hsl(var(--background))]",
+                            cloudSyncedIds.has(drawing.id) 
+                              ? "text-indigo-500" 
+                              : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!cloudSyncedIds.has(drawing.id)) {
+                              setDrawingToSync(drawing);
+                              setShowCloudSyncModal(true);
+                            }
+                          }}
+                          title="Sync to Cloud"
+                        >
+                          <Cloud className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-md text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--background))] transition-all"
+                          onClick={(e) => handleDuplicate(drawing, e)}
+                          title="Duplicate"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-md text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--background))] transition-all"
+                          onClick={(e) => handleRenameClick(drawing, e)}
+                          title="Rename"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-md text-[hsl(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteDrawing(drawing.id);
+                          }}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+             );
+        })}
+        </div>
+        </div>
       </div>
 
       <CreateDrawingDialog

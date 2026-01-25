@@ -8,6 +8,7 @@ export interface Drawing {
   createdAt: string;
   updatedAt: string;
   isCloudSynced?: boolean;
+  isPinned?: boolean;
 }
 
 interface WhiteboardState {
@@ -20,6 +21,7 @@ interface WhiteboardState {
   addDrawing: (drawing: Drawing) => void;
   updateDrawing: (id: string, updates: Partial<Drawing>) => void;
   deleteDrawing: (id: string) => void;
+  togglePin: (id: string) => void;
   setLoading: (loading: boolean) => void;
   initialize: () => void;
   reset: () => void;
@@ -44,6 +46,12 @@ export const useWhiteboardStore = create<WhiteboardState>((set) => ({
 
   deleteDrawing: (id) => set((state) => ({
     drawings: state.drawings.filter(d => d.id !== id)
+  })),
+
+  togglePin: (id) => set((state) => ({
+    drawings: state.drawings.map(d => 
+      d.id === id ? { ...d, isPinned: !d.isPinned } : d
+    )
   })),
 
   setLoading: (loading) => set({ isLoading: loading }),
