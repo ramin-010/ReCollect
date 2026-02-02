@@ -57,8 +57,15 @@ export function DrawingCard({
           <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--background))] via-transparent to-transparent opacity-80" />
         </div>
 
-        {/* Pinned Indicator - Functioning as Unpin button for workbench items */}
-        <div className="absolute top-4 right-4 z-20">
+        {/* Top Actions - Unpin and Delete */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <button
+            className="p-2 rounded-full bg-red-500/80 text-white shadow-lg shadow-red-500/20 hover:scale-110 hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100"
+            onClick={(e) => onDelete(drawing.id, e)}
+            title="Delete Drawing"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
           <button
             className="p-2 rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 transition-transform"
             onClick={(e) => onPin(drawing.id, e)}

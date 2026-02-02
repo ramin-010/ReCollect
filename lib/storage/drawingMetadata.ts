@@ -8,7 +8,8 @@
 import { get, set, del, keys } from 'idb-keyval';
 
 export interface DrawingMetadata {
-  id: string;
+  id: string;         // MongoDB _id (primary identifier)
+  localId?: string;   // Original local timestamp ID (for offline-first sync)
   name: string;
   thumbnail?: string;
   createdAt: string;

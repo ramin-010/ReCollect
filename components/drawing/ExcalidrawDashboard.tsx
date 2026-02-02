@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
+import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog';
 
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -40,6 +41,12 @@ export function ExcalidrawDashboard() {
     isSaving,
     hasUnsavedChanges,
     
+    // Delete dialog
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    deleteTargetDrawing,
+    isDeleting,
+    
     setShowCreateDialog,
     setRenamingDrawing,
     setHasUnsavedChanges,
@@ -49,6 +56,7 @@ export function ExcalidrawDashboard() {
     openDrawing,
     closeEditor,
     handleDeleteDrawing,
+    confirmDeleteDrawing,
     handleDuplicate,
     handleRenameClick,
     handleRenameConfirm,
@@ -100,6 +108,8 @@ export function ExcalidrawDashboard() {
         {/* Editor Canvas - Yjs handles persistence automatically */}
         <ExcalidrawYjsEditor
           drawingId={currentDrawing?.id || ''}
+          drawingName={currentDrawing?.name || 'Untitled'}
+          isOwner={true}
           theme={isDark ? 'dark' : 'light'}
           onStateChange={(hasChanges) => setHasUnsavedChanges(hasChanges)}
         />
@@ -291,6 +301,14 @@ export function ExcalidrawDashboard() {
         mode={renamingDrawing ? 'rename' : 'create'}
       />
 
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDeleteDrawing}
+        isLoading={isDeleting}
+        title={`Delete "${deleteTargetDrawing?.name || 'Drawing'}"?`}
+        description="This action cannot be undone. The drawing and all its data will be permanently removed."
+      />
 
     </div>
   );
