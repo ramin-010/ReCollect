@@ -108,9 +108,12 @@ export function ExcalidrawYjsEditor({
     const ydoc = ydocRef.current;
     const yData = ydoc.getMap<any>('data');
     
+    // Filter out soft-deleted elements (Excalidraw marks deleted items with isDeleted: true)
+    const activeElements = elements.filter(el => !el.isDeleted);
+    
     ydoc.transact(() => {
-      // Save elements as JSON string
-      yData.set('elements', JSON.stringify(elements));
+      // Save only active (non-deleted) elements as JSON string
+      yData.set('elements', JSON.stringify(activeElements));
       
       // Save only persistable appState properties
       const persistableState = {
@@ -126,7 +129,7 @@ export function ExcalidrawYjsEditor({
     
     // Log state size for benchmarking (collaboration strategy decision)
     const stateSize = Y.encodeStateAsUpdate(ydoc).byteLength;
-    console.log(`[YjsEditor] State size: ${(stateSize / 1024).toFixed(2)} KB (${elements.length} elements)`);
+    console.log(`[YjsEditor] State size: ${(stateSize / 1024).toFixed(2)} KB (${activeElements.length} active / ${elements.length} total elements)`);
     
     onStateChange?.(true);
   }, [onStateChange]);
