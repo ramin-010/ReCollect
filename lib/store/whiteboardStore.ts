@@ -7,7 +7,6 @@ export interface Drawing {
   thumbnail?: string;
   createdAt: string;
   updatedAt: string;
-  isCloudSynced?: boolean;
   isPinned?: boolean;
 }
 

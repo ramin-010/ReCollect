@@ -42,13 +42,13 @@ export function useDocPersistence({
   const { updateDoc, addDoc } = useDocStore();
   const [mounted, setMounted] = useState(false);
   
-  // Conflict State
+
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
 
-  // 1. Initial Load & Sync Logic
+
   useEffect(() => {
     setMounted(true);
     return () => {
@@ -66,19 +66,19 @@ export function useDocPersistence({
 
         try {
           localData = await offlineStorage.loadDoc(doc._id);
-          // Load local data immediately if available
+
           if (localData && localData.yjsState) {
             const content = yjsStateToJson(localData.yjsState);
             editor.commands.setContent(content, { emitUpdate: false });
             contentRef.current = JSON.stringify(content);
             
-            // USE HYDRATE instead of setTitle/setCoverImage
+
             actions.hydrate({
               title: localData.title,
               coverImage: localData.coverImage
             });
             
-            // Set sync status from local data
+
             if (localData.syncStatus === 'pending') {
                actions.setSyncStatus('unsynced');
             } else {
@@ -97,18 +97,18 @@ export function useDocPersistence({
         
         actions.setIsSyncing(false);
 
-        // Sync Logic: Compare Local vs Server
+
         if (localData && serverData) {
           const serverUpdatedAt = new Date(serverData.updatedAt).getTime();
           const localUpdatedAt = localData.updatedAt;
 
-          // Check if local is dirty (pending or undefined/legacy)
+
           const isLocalDirty = localData.syncStatus !== 'synced';
 
           if (serverUpdatedAt > localUpdatedAt && isLocalDirty) {
             console.log('[SyncDebug] Conflict detected - local dirty & server newer');
-            // Conflict: Server is newer BUT we have unsynced local changes
-            // Show conflict dialog FIRST, let user decide before switching to collab
+
+
             setConflictData({
               localUpdatedAt,
               serverUpdatedAt,
@@ -120,7 +120,7 @@ export function useDocPersistence({
             return; // Wait for user to resolve conflict
           } else if (serverUpdatedAt > localUpdatedAt) {
             console.log('[SyncDebug] Server newer, accepting server');
-            // Server is newer and clean local state -> Update local from server
+
             if (serverData.yjsState) {
               const content = yjsStateToJson(serverData.yjsState);
               editor.commands.setContent(content, { emitUpdate: false });
@@ -149,8 +149,8 @@ export function useDocPersistence({
           }
         }
         
-        // After sync logic, check if server has collaborators and switch to collab mode
-        // (only reached if no conflict dialog was shown)
+
+
         if (serverData?.collaborators && serverData.collaborators.length > 0) {
           const localHasCollabs = doc.collaborators && doc.collaborators.length > 0;
           if (!localHasCollabs) {
@@ -159,11 +159,11 @@ export function useDocPersistence({
               collaborators: serverData.collaborators,
               role: serverData.role || 'owner'
             });
-            // Store update will cause DocsView to switch to CollaborativeDocEditor
+
             return;
           }
         } else if (!localData && serverData) {
-            // Only server data exists -> hydrate local
+
           if (serverData.yjsState) {
             const content = yjsStateToJson(serverData.yjsState);
             editor.commands.setContent(content, { emitUpdate: false });
@@ -184,12 +184,12 @@ export function useDocPersistence({
           );
           actions.markSynced();
         } else if (!localData && !serverData) {
-          // New doc
+
           const content = getInitialContent();
           if (content) {
             editor.commands.setContent(content, { emitUpdate: false });
           }
-          // New docs start as synced (empty) until edited
+
           actions.markSynced();
         }
       };
@@ -199,7 +199,7 @@ export function useDocPersistence({
   }, [mounted, editor, doc._id]);
 
 
-  // 2. Saving Logic
+
   const debouncedSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
@@ -215,13 +215,13 @@ export function useDocPersistence({
         const content = JSON.parse(contentRef.current);
         const yjsState = jsonToYjsState(content);
         
-        // Load existing to preserve serverUpdatedAt
+
         const existingOfflineDoc = await offlineStorage.loadDoc(doc._id);
         const serverUpdatedAt = existingOfflineDoc?.serverUpdatedAt;
         
         await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending', serverUpdatedAt);
         
-        // Update global store so UI reflects the change immediately
+
         updateDoc(doc._id, {
           title, 
           coverImage,
@@ -246,10 +246,10 @@ export function useDocPersistence({
       const content = JSON.parse(contentRef.current);
       const yjsState = jsonToYjsState(content);
       
-      // 1. Save locally first
+
       await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       
-      // 2. Send to backend
+
       const result = await docApi.saveDoc(doc._id, {
         content,
         title,
@@ -260,17 +260,17 @@ export function useDocPersistence({
         const serverYjsState = result.data.yjsState;
         const serverUpdatedAt = new Date(result.updatedAt).getTime();
         
-        // Update Editor if needed (optional, typically we trust our local state unless server transformed it)
+
          if (editor && serverYjsState) {
           const serverContent = yjsStateToJson(serverYjsState);
           editor.commands.setContent(serverContent, { emitUpdate: false });
           contentRef.current = JSON.stringify(serverContent);
         }
         
-        // Mark as synced locally
+
         await offlineStorage.saveDoc(doc._id, serverYjsState || yjsState, title, coverImage, 'synced', serverUpdatedAt);
         
-        // Update global store
+
         updateDoc(doc._id, { yjsState: serverYjsState || yjsState, title, hasUnsyncedChanges: false });
         
         actions.markSynced(); // Mark as fully synced
@@ -286,17 +286,17 @@ export function useDocPersistence({
   }, [doc._id, title, coverImage, updateDoc, editor, contentRef, actions]);
 
 
-  // 3. Conflict Resolution Handlers
+
   const handleKeepMine = useCallback(async () => {
     if (doc._id) {
       const content = JSON.parse(contentRef.current);
       const yjsState = jsonToYjsState(content);
       
-      // Save locally as pending
+
       await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending');
       actions.markDirty();
       
-      // If doc has collaborators, switch to collab mode with pending content
+
       const serverCollabs = conflictData?.serverDoc?.collaborators;
       if (serverCollabs && serverCollabs.length > 0) {
         updateDoc(doc._id, { 
@@ -345,7 +345,7 @@ export function useDocPersistence({
       });
       toast.success('Server version loaded');
       
-      // If doc has collaborators, trigger switch to CollaborativeDocEditor
+
       if (server.collaborators && server.collaborators.length > 0) {
         updateDoc(doc._id, { 
           collaborators: server.collaborators,
@@ -359,18 +359,18 @@ export function useDocPersistence({
 
   const handleSaveAsNew = useCallback(async () => {
     if (doc._id && conflictData?.serverDoc && editor) {
-      // 1. Prepare local content
+
       const localContent = JSON.parse(contentRef.current);
       const localYjsState = jsonToYjsState(localContent);
       const localTitle = `${title} (Local Copy)`;
       
-      // 2. Check if a local copy already exists for this doc
+
       const docs = useDocStore.getState().docs;
       const existingLocalCopy = docs.find(d => d.sourceDocId === doc._id);
       console.log('existing local copy', existingLocalCopy)
       if (existingLocalCopy) {
-        // UPDATE existing local copy instead of creating a new one
-        // Pass the existing sourceDocId to preserve it
+
+
         await offlineStorage.saveDoc(existingLocalCopy._id, localYjsState, localTitle, coverImage, 'pending', undefined, existingLocalCopy.sourceDocId);
         updateDoc(existingLocalCopy._id, {
           title: localTitle,
@@ -380,10 +380,10 @@ export function useDocPersistence({
         });
         toast.success(`Updated existing local copy.`);
       } else {
-        // CREATE new local copy with sourceDocId to track origin
+
         const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Pass sourceDocId as the last parameter for IndexedDB persistence
+
         await offlineStorage.saveDoc(localId, localYjsState, localTitle, coverImage, 'pending', undefined, doc._id);
         
         addDoc({
@@ -402,7 +402,7 @@ export function useDocPersistence({
         toast.success(`Local copy saved as "${localTitle}".`);
       }
       
-      // 3. Revert current doc to server version
+
       const server = conflictData.serverDoc;
       if (server.yjsState) {
         const serverContent = yjsStateToJson(server.yjsState);

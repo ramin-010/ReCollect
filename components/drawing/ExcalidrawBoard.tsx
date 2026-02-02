@@ -1,4 +1,4 @@
-// ReCollect - Excalidraw Drawing Board Integration
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Dynamically import Excalidraw to avoid SSR issues
+
 const Excalidraw = dynamic(
   async () => {
     const module = await import('@excalidraw/excalidraw');
@@ -56,25 +56,25 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
   const [gridMode, setGridMode] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // Auto-save functionality
+  
   useEffect(() => {
     if (!excalidrawAPI || !isAutoSaveEnabled) return;
 
     const saveInterval = setInterval(() => {
       handleSave();
-    }, 30000); // Auto-save every 30 seconds
+    }, 30000); 
 
     return () => clearInterval(saveInterval);
   }, [excalidrawAPI, isAutoSaveEnabled]);
 
-  // Load initial data
+  
   useEffect(() => {
     if (excalidrawAPI && initialData) {
       excalidrawAPI.updateScene(initialData);
     }
   }, [excalidrawAPI, initialData]);
 
-  // Save drawing
+  
   const handleSave = useCallback(async () => {
     if (!excalidrawAPI) return;
 
@@ -103,7 +103,7 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
     }
   }, [excalidrawAPI, onSave]);
 
-  // Export drawing
+  
   const handleExport = async (format: 'png' | 'svg' | 'json') => {
     if (!excalidrawAPI) return;
 
@@ -137,7 +137,7 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
     }
   };
 
-  // Download file helper
+  
   const downloadFile = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -149,7 +149,7 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Import drawing
+  
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -176,7 +176,7 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
     input.click();
   };
 
-  // Clear canvas
+  
   const handleClear = () => {
     if (!excalidrawAPI) return;
     
@@ -186,7 +186,7 @@ export const ExcalidrawBoard: React.FC<ExcalidrawBoardProps> = ({
     }
   };
 
-  // Share drawing
+  
   const handleShare = async () => {
     if (!excalidrawAPI || !onShare) return;
 

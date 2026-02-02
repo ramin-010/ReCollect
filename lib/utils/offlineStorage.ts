@@ -1,6 +1,6 @@
 export const DB_NAME = 'RecollectDB_Doc';
 export const STORE_NAME = 'docs';
-export const DB_VERSION = 3; // Bumped for yjsState migration
+export const DB_VERSION = 10; // Bumped to fix VersionError (3 < 4)
 
 export interface OfflineDoc {
   id: string;
