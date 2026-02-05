@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { HocuspocusProvider } from '@hocuspocus/provider';
 import { drawingOfflineStorage } from '@/lib/storage/drawingOfflineStorage';
 import { drawingApi, ServerDrawing, ExcalidrawFile } from '@/lib/api/drawingApi';
 import { toast } from 'sonner';
@@ -16,11 +17,13 @@ const Excalidraw = dynamic(
 interface ExcalidrawYjsEditorProps {
   drawingId: string;
   drawingName: string;
-  isOwner?: boolean;  // For cloud sync conflict detection
+  isOwner?: boolean;
+  collaborationEnabled?: boolean;
   theme?: 'light' | 'dark';
   onReady?: () => void;
   onStateChange?: (hasUnsavedChanges: boolean) => void;
   onSyncStatusChange?: (status: 'synced' | 'unsynced' | 'offline') => void;
+  onCollaboratorCountChange?: (count: number) => void;
 }
 
 interface ConflictData {
@@ -29,18 +32,17 @@ interface ConflictData {
   serverDrawing: ServerDrawing;
 }
 
-/**
- * Excalidraw editor with Yjs persistence via IndexedDB.
- * Supports cloud sync with conflict detection for owners.
- */
+
 export function ExcalidrawYjsEditor({
   drawingId,
   drawingName,
   isOwner = true,
+  collaborationEnabled = false,
   theme = 'dark',
   onReady,
   onStateChange,
   onSyncStatusChange,
+  onCollaboratorCountChange,
 }: ExcalidrawYjsEditorProps) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,18 +56,22 @@ export function ExcalidrawYjsEditor({
   
   const ydocRef = useRef<Y.Doc | null>(null);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
+  const providerRef = useRef<HocuspocusProvider | null>(null);
+  const excalidrawAPIRef = useRef<any>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const cloudSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const prevStateSizeRef = useRef<number>(0);
   const nameRef = useRef(drawingName);
+  const isRemoteUpdateRef = useRef(false);
+  
+  useEffect(() => {
+    excalidrawAPIRef.current = excalidrawAPI;
+  }, [excalidrawAPI]);
   const serverFilesRef = useRef<Record<string, ExcalidrawFile>>({});
 
-  // Helper: Get current yjsState as base64 (handles large arrays)
   const getYjsStateBase64 = useCallback(() => {
     if (!ydocRef.current) return null;
     const state = Y.encodeStateAsUpdate(ydocRef.current);
-    
-    // Use chunked encoding to avoid stack overflow on large arrays
     const CHUNK_SIZE = 8192;
     let binary = '';
     for (let i = 0; i < state.length; i += CHUNK_SIZE) {
@@ -75,7 +81,6 @@ export function ExcalidrawYjsEditor({
     return btoa(binary);
   }, []);
 
-  // Helper: Apply yjsState from base64
   const applyYjsStateFromBase64 = useCallback((base64: string) => {
     if (!ydocRef.current) return;
     const binary = atob(base64);
@@ -86,42 +91,34 @@ export function ExcalidrawYjsEditor({
     Y.applyUpdate(ydocRef.current, state);
   }, []);
 
-  // Initialize Yjs doc and IndexedDB persistence, then check cloud
-  useEffect(() => {
+    useEffect(() => {
     if (!drawingId) return;
     nameRef.current = drawingName;
 
     const ydoc = new Y.Doc();
     ydocRef.current = ydoc;
 
+
     const persistence = new IndexeddbPersistence(`drawing_${drawingId}`, ydoc);
     persistenceRef.current = persistence;
 
     persistence.on('synced', async () => {
-      // Load elements from Y.Array of Y.Maps
       const yElements = ydoc.getArray<Y.Map<any>>('elements');
       const yAppState = ydoc.getMap<any>('appState');
       
-      // Initial load from local
       let elements = yElements.toArray().map(yMap => yMap.toJSON());
       let appState: any = yAppState.size > 0 ? yAppState.toJSON() : null;
       
-      console.log(`[YjsEditor] Local: ${elements.length} elements for ${drawingId}`);
-      
-      // Store initial state size
       prevStateSizeRef.current = Y.encodeStateAsUpdate(ydoc).byteLength;
       
-      // Check offline storage for sync status
-      const offlineData = await drawingOfflineStorage.loadDrawing(drawingId);
+            const offlineData = await drawingOfflineStorage.loadDrawing(drawingId);
       
-      // If owner, check server for newer version
-      if (isOwner) {
+            if (isOwner) {
         try {
           const serverData = await drawingApi.fetchDrawing(drawingId);
-          console.log(`[YjsEditor] Server fetch: ${serverData ? 'found' : 'not found'}, yjsState: ${serverData?.yjsState ? 'yes' : 'no'}, cloudImages: ${serverData?.cloudImages?.length || 0}`);
+
           
-          // Build files from cloudImages
-          const cloudFiles: Record<string, ExcalidrawFile> = {};
+                    const cloudFiles: Record<string, ExcalidrawFile> = {};
           if (serverData?.cloudImages && serverData.cloudImages.length > 0) {
             for (const img of serverData.cloudImages) {
               cloudFiles[img.imageId] = {
@@ -131,23 +128,20 @@ export function ExcalidrawYjsEditor({
                 isCloudUploaded: true,
               };
             }
-            console.log(`[YjsEditor] Built ${Object.keys(cloudFiles).length} files from cloudImages`);
+
             serverFilesRef.current = cloudFiles;
           }
           
-          // KEY FIX: If local is empty and server has data, always apply server state
-          const localIsEmpty = elements.length === 0;
+                    const localIsEmpty = elements.length === 0;
           
           if (serverData?.yjsState && localIsEmpty) {
-            // Local is empty, server has data - apply server state
-            console.log('[YjsEditor] Local empty, applying server state...');
+            
             applyYjsStateFromBase64(serverData.yjsState);
             elements = yElements.toArray().map(yMap => yMap.toJSON());
             appState = yAppState.size > 0 ? yAppState.toJSON() : null;
-            console.log(`[YjsEditor] After server apply: ${elements.length} elements`);
+
             
-            // Update offline storage to mark as synced
-            await drawingOfflineStorage.saveDrawing(
+                        await drawingOfflineStorage.saveDrawing(
               drawingId,
               serverData.yjsState,
               serverData.name,
@@ -157,31 +151,26 @@ export function ExcalidrawYjsEditor({
             );
             setSyncStatus('synced');
             
-            // Set cloud files will be done after all conditions
-          } else if (serverData && offlineData) {
+                      } else if (serverData && offlineData) {
             const serverUpdatedAt = new Date(serverData.updatedAt).getTime();
             const localUpdatedAt = offlineData.updatedAt;
             const isPending = offlineData.syncStatus === 'pending';
             
-            // Conflict: Server newer AND local has pending changes
-            if (serverUpdatedAt > localUpdatedAt && isPending) {
-              console.log('[YjsEditor] Conflict detected - server newer + local pending');
+                        if (serverUpdatedAt > localUpdatedAt && isPending) {
+
               setConflictData({
                 localUpdatedAt,
                 serverUpdatedAt,
                 serverDrawing: serverData,
               });
               setShowConflictDialog(true);
-              // Still load local for now, wait for user decision
-            } else if (serverUpdatedAt > localUpdatedAt && serverData.yjsState) {
-              // Server newer, no local changes - accept server
-              console.log('[YjsEditor] Server newer, applying...');
+                          } else if (serverUpdatedAt > localUpdatedAt && serverData.yjsState) {
+              
               applyYjsStateFromBase64(serverData.yjsState);
               elements = yElements.toArray().map(yMap => yMap.toJSON());
               appState = yAppState.size > 0 ? yAppState.toJSON() : null;
               
-              // Update offline storage
-              await drawingOfflineStorage.saveDrawing(
+                            await drawingOfflineStorage.saveDrawing(
                 drawingId,
                 serverData.yjsState,
                 serverData.name,
@@ -191,14 +180,12 @@ export function ExcalidrawYjsEditor({
               );
               setSyncStatus('synced');
             } else if (isPending) {
-              // Local newer with pending changes
-              setSyncStatus('unsynced');
+                            setSyncStatus('unsynced');
             } else {
               setSyncStatus('synced');
             }
           } else if (serverData?.yjsState && !offlineData) {
-            // No local offlineData, apply server
-            console.log('[YjsEditor] No offlineData, applying server...');
+            
             applyYjsStateFromBase64(serverData.yjsState);
             elements = yElements.toArray().map(yMap => yMap.toJSON());
             appState = yAppState.size > 0 ? yAppState.toJSON() : null;
@@ -218,9 +205,8 @@ export function ExcalidrawYjsEditor({
           setSyncStatus('offline');
         }
         
-        // ALWAYS set cloud files from server (fixes second open bug)
-        if (Object.keys(serverFilesRef.current).length > 0) {
-          console.log(`[YjsEditor] Setting initialFiles from cloudImages: ${Object.keys(serverFilesRef.current).length} files`);
+                if (Object.keys(serverFilesRef.current).length > 0) {
+
           setInitialFiles(serverFilesRef.current);
         }
       }
@@ -233,7 +219,7 @@ export function ExcalidrawYjsEditor({
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (cloudSaveTimeoutRef.current) clearTimeout(cloudSaveTimeoutRef.current);
+
       persistence.destroy();
       persistenceRef.current = null;
       ydoc.destroy();
@@ -242,20 +228,103 @@ export function ExcalidrawYjsEditor({
     };
   }, [drawingId, drawingName, isOwner, applyYjsStateFromBase64]);
 
-  // Notify sync status changes
+    const hasShownCollabToastRef = useRef(false);
+  const onCollaboratorCountChangeRef = useRef(onCollaboratorCountChange);
+  
+    useEffect(() => {
+    onCollaboratorCountChangeRef.current = onCollaboratorCountChange;
+  }, [onCollaboratorCountChange]);
+  
   useEffect(() => {
+    if (!collaborationEnabled || !drawingId || !ydocRef.current) return;
+    
+    const ydoc = ydocRef.current;
+const collabUrl = process.env.NEXT_PUBLIC_COLLAB_URL || 'ws://localhost:1234';
+    const documentName = `drawing_${drawingId}`;
+    
+    const provider = new HocuspocusProvider({
+      url: collabUrl,
+      name: documentName,
+      document: ydoc,
+            onConnect: () => {
+        if (!hasShownCollabToastRef.current) {
+          hasShownCollabToastRef.current = true;
+          toast.success('Real-time collaboration connected!');
+        }
+      },
+      onSynced: () => {
+        const yElements = ydoc.getArray('elements');
+        const currentElements = yElements.toArray();
+        
+        ydoc.transact(() => {
+          const marker = ydoc.getMap('_syncMarker');
+          marker.set('lastSync', Date.now());
+        });
+      },
+      onDisconnect: () => {},
+      onAuthenticationFailed: (data: any) => {
+        toast.error('Collaboration auth failed: ' + (data?.reason || 'Unknown'));
+      },
+      onAwarenessUpdate: ({ states }) => {
+        onCollaboratorCountChangeRef.current?.(states.length);
+      },
+    });
+    
+    providerRef.current = provider;
+    
+    const yElements = ydoc.getArray<Y.Map<any>>('elements');
+    const yAppState = ydoc.getMap<any>('appState');
+    
+    const elementsObserver = (events: Y.YEvent<any>[]) => {
+      const api = excalidrawAPIRef.current;
+      const isLocal = events.some(e => e.transaction.local);
+      
+      if (!api || isLocal) return;
+      
+      isRemoteUpdateRef.current = true;
+      const elements = yElements.toArray().map((yMap) => yMap.toJSON());
+      api.updateScene({ elements });
+      
+      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+    };
+    
+    const appStateObserver = (event: Y.YMapEvent<any>) => {
+      const api = excalidrawAPIRef.current;
+      if (!api || event.transaction.local) return;
+      
+      isRemoteUpdateRef.current = true;
+      const appState = yAppState.toJSON();
+      const safeState: any = {};
+      if (appState.viewBackgroundColor) safeState.viewBackgroundColor = appState.viewBackgroundColor;
+      if (appState.theme) safeState.theme = appState.theme;
+      
+      if (Object.keys(safeState).length > 0) {
+        api.updateScene({ appState: safeState });
+      }
+      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+    };
+    
+    yElements.observeDeep(elementsObserver);
+    yAppState.observe(appStateObserver);
+    
+    return () => {
+      yElements.unobserveDeep(elementsObserver);
+      yAppState.unobserve(appStateObserver);
+      provider.destroy();
+      providerRef.current = null;
+    };
+  }, [collaborationEnabled, drawingId]); 
+    useEffect(() => {
     onSyncStatusChange?.(syncStatus);
   }, [syncStatus, onSyncStatusChange]);
 
-  // Notify when ready
-  useEffect(() => {
+    useEffect(() => {
     if (excalidrawAPI && isSynced) {
       onReady?.();
     }
   }, [excalidrawAPI, isSynced, onReady]);
 
-  // Sync elements to Yjs with delta tracking
-  const syncToYjs = useCallback((elements: readonly any[], appState: any) => {
+    const syncToYjs = useCallback((elements: readonly any[], appState: any) => {
     if (!ydocRef.current) return;
     
     const ydoc = ydocRef.current;
@@ -340,8 +409,7 @@ export function ExcalidrawYjsEditor({
         `${(newStateSize / 1024).toFixed(2)} KB total (${activeElements.length} elements)`
       );
       
-      // Mark as unsynced and save to offline storage
-      if (isOwner) {
+            if (isOwner) {
         setSyncStatus('unsynced');
         const yjsState = getYjsStateBase64();
         if (yjsState) {
@@ -359,42 +427,59 @@ export function ExcalidrawYjsEditor({
     onStateChange?.(true);
   }, [drawingId, isOwner, getYjsStateBase64, onStateChange]);
 
-  // Debounced local save
-  const handleChange = useCallback((elements: readonly any[], appState: any) => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    const handleChange = useCallback((elements: readonly any[], appState: any) => {
+        if (isRemoteUpdateRef.current) {
+      return;
+    }
+    
+        if (collaborationEnabled) {
+      syncToYjs(elements, appState);
+      return;
+    }
+    
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
     saveTimeoutRef.current = setTimeout(() => {
       syncToYjs(elements, appState);
     }, 300);
-  }, [syncToYjs]);
+  }, [syncToYjs, collaborationEnabled]);
 
-  // Save to cloud (with image upload support)
-  const saveToCloud = useCallback(async () => {
+      useEffect(() => {
+    if (!collaborationEnabled || !excalidrawAPI) return;
+    
+    const pollInterval = setInterval(() => {
+      if (isRemoteUpdateRef.current) return;       
+      const elements = excalidrawAPI.getSceneElements();
+      const appState = excalidrawAPI.getAppState();
+      
+            if (appState.editingElement || appState.draggingElement || appState.resizingElement) {
+        syncToYjs(elements, appState);
+      }
+    }, 100);     
+    return () => clearInterval(pollInterval);
+  }, [collaborationEnabled, excalidrawAPI, syncToYjs]);
+
+    const saveToCloud = useCallback(async () => {
     if (!isOwner || !excalidrawAPI) return;
     
     const yjsState = getYjsStateBase64();
     if (!yjsState) return;
     
     try {
-      // Get current elements and files
-      const elements = excalidrawAPI.getSceneElements();
+            const elements = excalidrawAPI.getSceneElements();
       const files = excalidrawAPI.getFiles() as Record<string, ExcalidrawFile>;
       
-      // IMPORTANT: Calculate which fileIds are ACTUALLY used by image elements on canvas
-      // This is different from getFiles() which returns cached files even after deletion
-      const usedFileIds = new Set<string>();
+                  const usedFileIds = new Set<string>();
       for (const element of elements) {
-        // Image elements have a fileId property
-        if (element.type === 'image' && element.fileId && !element.isDeleted) {
+                if (element.type === 'image' && element.fileId && !element.isDeleted) {
           usedFileIds.add(element.fileId);
         }
       }
       
       const allFileIds = Array.from(usedFileIds);
-      console.log(`[YjsEditor] Cloud save: ${Object.keys(files).length} files in cache, ${allFileIds.length} actually used by elements`);
+
       
-      // Find pending files (only from used files, dataURL starts with 'data:' and not cloudUploaded)
-      const pendingFiles: ExcalidrawFile[] = [];
+            const pendingFiles: ExcalidrawFile[] = [];
       for (const fileId of allFileIds) {
         const fileData = files[fileId];
         if (fileData && 
@@ -405,7 +490,7 @@ export function ExcalidrawYjsEditor({
         }
       }
       
-      console.log(`[YjsEditor] Cloud save: ${pendingFiles.length} pending upload`);
+
       
       const result = await drawingApi.saveDrawing(
         drawingId, 
@@ -418,8 +503,7 @@ export function ExcalidrawYjsEditor({
       );
       
       if (result.success) {
-        // Update files with cloud URLs if any were uploaded
-        if (result.imageUrlMap && Object.keys(result.imageUrlMap).length > 0) {
+                if (result.imageUrlMap && Object.keys(result.imageUrlMap).length > 0) {
           const updatedFiles = { ...files };
           for (const [imageId, data] of Object.entries(result.imageUrlMap)) {
             if (updatedFiles[imageId]) {
@@ -430,9 +514,8 @@ export function ExcalidrawYjsEditor({
               };
             }
           }
-          // Update Excalidraw with cloud URLs
-          excalidrawAPI.addFiles(Object.values(updatedFiles));
-          console.log(`[YjsEditor] Updated ${Object.keys(result.imageUrlMap).length} files with cloud URLs`);
+                    excalidrawAPI.addFiles(Object.values(updatedFiles));
+
         }
         
         const serverUpdatedAt = new Date(result.updatedAt).getTime();
@@ -453,8 +536,7 @@ export function ExcalidrawYjsEditor({
     }
   }, [drawingId, isOwner, excalidrawAPI, getYjsStateBase64]);
 
-  // Conflict resolution handlers
-  const handleKeepLocal = useCallback(async () => {
+    const handleKeepLocal = useCallback(async () => {
     setShowConflictDialog(false);
     setConflictData(null);
     setSyncStatus('unsynced');
@@ -466,8 +548,7 @@ export function ExcalidrawYjsEditor({
     
     applyYjsStateFromBase64(conflictData.serverDrawing.yjsState);
     
-    // Reload elements
-    if (ydocRef.current) {
+        if (ydocRef.current) {
       const yElements = ydocRef.current.getArray<Y.Map<any>>('elements');
       const yAppState = ydocRef.current.getMap<any>('appState');
       
@@ -497,8 +578,7 @@ export function ExcalidrawYjsEditor({
     toast.success('Loaded server version');
   }, [conflictData, drawingId, excalidrawAPI, applyYjsStateFromBase64]);
 
-  // Keyboard shortcut for cloud save
-  useEffect(() => {
+    useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -510,11 +590,10 @@ export function ExcalidrawYjsEditor({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [saveToCloud]);
 
-  // Cleanup
-  useEffect(() => {
+    useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (cloudSaveTimeoutRef.current) clearTimeout(cloudSaveTimeoutRef.current);
+
     };
   }, []);
 
@@ -533,8 +612,7 @@ export function ExcalidrawYjsEditor({
   if (initialAppState) {
     initialData.appState = initialAppState;
   }
-  // Include files from server cloudImages
-  if (Object.keys(initialFiles).length > 0) {
+    if (Object.keys(initialFiles).length > 0) {
     initialData.files = initialFiles;
   }
 

@@ -12,11 +12,13 @@ import {
   PenTool, 
   Trash2, 
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Share2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
 import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog';
+import { ShareDrawingModal } from './ShareDrawingModal';
 
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -64,7 +66,29 @@ export function ExcalidrawDashboard() {
   } = useDrawingDashboard();
 
   const { resolvedTheme } = useTheme();
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [collaboratorCount, setCollaboratorCount] = useState(0);
   
+  // Check share status when opening a drawing
+  useEffect(() => {
+    if (currentDrawing?.id && showEditor) {
+      // Fetch share status from API
+      import('@/lib/api/drawingApi').then(({ drawingApi }) => {
+        drawingApi.getShareStatus(currentDrawing.id).then((result) => {
+          if (result.success) {
+            setShareEnabled(result.shareEnabled);
+            console.log('[Dashboard] Share status:', result.shareEnabled ? 'ENABLED' : 'disabled');
+          }
+        }).catch(() => {
+          setShareEnabled(false);
+        });
+      });
+    } else {
+      setShareEnabled(false);
+      setCollaboratorCount(0);
+    }
+  }, [currentDrawing?.id, showEditor]);
 
 
 
@@ -92,7 +116,28 @@ export function ExcalidrawDashboard() {
           </div>
           
           <div className="flex items-center gap-3">
-             {/* 4. Persistence Indicators */}
+             {/* Collaboration Indicator */}
+             {shareEnabled && (
+               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+                 <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                 <span className="text-xs font-medium text-green-400">
+                   {collaboratorCount > 1 ? `${collaboratorCount} online` : 'Live'}
+                 </span>
+               </div>
+             )}
+             
+             {/* Share Button */}
+             <Button
+               variant="ghost"
+               size="sm"
+               onClick={() => setShowShareModal(true)}
+               className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg"
+               leftIcon={<Share2 className="w-4 h-4" />}
+             >
+               Share
+             </Button>
+             
+             {/* Persistence Indicators */}
              {isSaving && (
                 <span className="text-sm text-blue-400/80 animate-pulse">Syncing...</span>
              )}
@@ -110,8 +155,22 @@ export function ExcalidrawDashboard() {
           drawingId={currentDrawing?.id || ''}
           drawingName={currentDrawing?.name || 'Untitled'}
           isOwner={true}
+          collaborationEnabled={shareEnabled}
           theme={isDark ? 'dark' : 'light'}
           onStateChange={(hasChanges) => setHasUnsavedChanges(hasChanges)}
+          onCollaboratorCountChange={(count) => setCollaboratorCount(count)}
+        />
+        
+        {/* Share Modal */}
+        <ShareDrawingModal
+          drawingId={currentDrawing?.id || ''}
+          drawingName={currentDrawing?.name || 'Untitled'}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onShareStatusChange={(enabled) => {
+            setShareEnabled(enabled);
+            console.log('[Dashboard] Share status changed:', enabled ? 'ENABLED' : 'disabled');
+          }}
         />
       </div>
     );

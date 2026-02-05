@@ -183,4 +183,64 @@ export const drawingApi = {
       data: response.data.data,
     };
   },
+
+  // ========== Share Management ==========
+
+  /**
+   * Enable sharing and get share token
+   */
+  async enableShare(id: string): Promise<{ success: boolean; shareToken?: string; shareEnabled: boolean }> {
+    console.log('[drawingApi] Enabling share for:', id);
+    const response = await axiosInstance.post(`/api/drawings/${id}/share`);
+    return {
+      success: response.data.success,
+      shareToken: response.data.shareToken,
+      shareEnabled: response.data.shareEnabled,
+    };
+  },
+
+  /**
+   * Disable sharing
+   */
+  async disableShare(id: string): Promise<{ success: boolean; shareEnabled: boolean }> {
+    console.log('[drawingApi] Disabling share for:', id);
+    const response = await axiosInstance.delete(`/api/drawings/${id}/share`);
+    return {
+      success: response.data.success,
+      shareEnabled: response.data.shareEnabled,
+    };
+  },
+
+  /**
+   * Get share status for a drawing
+   */
+  async getShareStatus(id: string): Promise<{ success: boolean; shareToken?: string; shareEnabled: boolean }> {
+    const response = await axiosInstance.get(`/api/drawings/${id}/share`);
+    return {
+      success: response.data.success,
+      shareToken: response.data.shareToken || undefined,
+      shareEnabled: response.data.shareEnabled,
+    };
+  },
+
+  /**
+   * Get shared drawing by token (public, no auth required)
+   */
+  async getSharedDrawing(token: string): Promise<{
+    success: boolean;
+    data?: {
+      _id: string;
+      name: string;
+      yjsState?: string;
+      owner: { name: string; email: string; avatar?: string };
+      cloudImages?: Array<{ imageId: string; cloudUrl: string; cloudPublicId: string }>;
+    };
+  }> {
+    console.log('[drawingApi] Fetching shared drawing:', token);
+    const response = await axiosInstance.get(`/api/drawings/public/shared/${token}`);
+    return {
+      success: response.data.success,
+      data: response.data.data,
+    };
+  },
 };
