@@ -53,6 +53,7 @@ export function ExcalidrawYjsEditor({
   const [syncStatus, setSyncStatus] = useState<'synced' | 'unsynced' | 'offline'>('synced');
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
+  const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
   
   const ydocRef = useRef<Y.Doc | null>(null);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
@@ -267,10 +268,34 @@ const collabUrl = process.env.NEXT_PUBLIC_COLLAB_URL || 'ws://localhost:1234';
       },
       onAwarenessUpdate: ({ states }) => {
         onCollaboratorCountChangeRef.current?.(states.length);
+        
+        // Update collaborators for cursor presence
+        const newCollaborators = new Map<string, any>();
+        states.forEach((state: any) => {
+          if (state.user && state.clientId !== provider.awareness?.clientID) {
+            newCollaborators.set(state.user.id || state.clientId, {
+              pointer: state.pointer,
+              username: state.user.name || 'Anonymous',
+              color: { 
+                background: state.user.color || '#6366F1', 
+                stroke: state.user.color || '#6366F1' 
+              },
+              selectedElementIds: state.selectedElementIds || {},
+            });
+          }
+        });
+        setCollaborators(newCollaborators);
       },
     });
     
     providerRef.current = provider;
+    
+    // Set local user awareness
+    provider.awareness?.setLocalStateField('user', {
+      id: `owner-${drawingId}`,
+      name: 'You',
+      color: '#6366F1', // Indigo
+    });
     
     const yElements = ydoc.getArray<Y.Map<any>>('elements');
     const yAppState = ydoc.getMap<any>('appState');
@@ -314,6 +339,14 @@ const collabUrl = process.env.NEXT_PUBLIC_COLLAB_URL || 'ws://localhost:1234';
       providerRef.current = null;
     };
   }, [collaborationEnabled, drawingId]); 
+
+  // Update collaborators in Excalidraw when they change
+  useEffect(() => {
+    if (collaborationEnabled && excalidrawAPI && collaborators.size >= 0) {
+      excalidrawAPI.updateScene({ collaborators });
+    }
+  }, [collaborationEnabled, excalidrawAPI, collaborators]);
+
     useEffect(() => {
     onSyncStatusChange?.(syncStatus);
   }, [syncStatus, onSyncStatusChange]);
@@ -623,6 +656,12 @@ const collabUrl = process.env.NEXT_PUBLIC_COLLAB_URL || 'ws://localhost:1234';
         theme={theme}
         initialData={Object.keys(initialData).length > 0 ? initialData : undefined}
         onChange={(elements, appState) => handleChange(elements, appState)}
+        onPointerUpdate={collaborationEnabled && providerRef.current ? (payload: any) => {
+          providerRef.current?.awareness?.setLocalStateField('pointer', payload.pointer);
+          providerRef.current?.awareness?.setLocalStateField('selectedElementIds', 
+            excalidrawAPI?.getAppState()?.selectedElementIds || {}
+          );
+        } : undefined}
         UIOptions={{
           canvasActions: {
             loadScene: false,

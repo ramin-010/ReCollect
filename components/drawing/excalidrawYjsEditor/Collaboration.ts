@@ -1,0 +1,141 @@
+import { useEffect, useRef, useState } from 'react';
+import * as Y from 'yjs';
+import { HocuspocusProvider } from '@hocuspocus/provider';
+import { toast } from 'sonner';
+
+export function useCollaboration(
+  collaborationEnabled: boolean,
+  drawingId: string,
+  ydocRef: React.MutableRefObject<Y.Doc | null>,
+  excalidrawAPIRef: React.MutableRefObject<any>,
+  isRemoteUpdateRef: React.MutableRefObject<boolean>,
+  onCollaboratorCountChange?: (count: number) => void,
+  onCollabEnd?: () => void  // Called when transitioning from collab to personal mode
+) {
+  const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
+  const [collabUserCount, setCollabUserCount] = useState(0);
+  const providerRef = useRef<HocuspocusProvider | null>(null);
+  const hasShownCollabToastRef = useRef(false);
+  const onCollaboratorCountChangeRef = useRef(onCollaboratorCountChange);
+  const onCollabEndRef = useRef(onCollabEnd);
+  const prevUserCountRef = useRef(0);
+  
+  useEffect(() => {
+    onCollaboratorCountChangeRef.current = onCollaboratorCountChange;
+  }, [onCollaboratorCountChange]);
+  
+  useEffect(() => {
+    onCollabEndRef.current = onCollabEnd;
+  }, [onCollabEnd]);
+  
+  useEffect(() => {
+    if (!collaborationEnabled || !drawingId || !ydocRef.current) return;
+    
+    const ydoc = ydocRef.current;
+    const collabUrl = process.env.NEXT_PUBLIC_COLLAB_URL || 'ws://localhost:1234';
+    const documentName = `drawing_${drawingId}`;
+    
+    const provider = new HocuspocusProvider({
+      url: collabUrl,
+      name: documentName,
+      document: ydoc,
+      onConnect: () => {
+        if (!hasShownCollabToastRef.current) {
+          hasShownCollabToastRef.current = true;
+          toast.success('Real-time collaboration connected!');
+        }
+      },
+      onAuthenticationFailed: (data: any) => {
+        toast.error('Collaboration auth failed: ' + (data?.reason || 'Unknown'));
+      },
+      onAwarenessUpdate: ({ states }) => {
+        const userCount = states.length;
+        
+        // Only update state if count actually changed (avoid unnecessary re-renders)
+        if (userCount !== prevUserCountRef.current) {
+          setCollabUserCount(userCount);
+          onCollaboratorCountChangeRef.current?.(userCount);
+          
+          // Detect transition: Collab → Personal (all collaborators left)
+          if (userCount <= 1 && prevUserCountRef.current > 1) {
+            onCollabEndRef.current?.();
+          }
+          prevUserCountRef.current = userCount;
+        }
+        
+        // Only rebuild collaborators map if there are other users (skip when alone)
+        
+        const newCollaborators = new Map<string, any>();
+        states.forEach((state: any) => {
+          if (state.user && state.clientId !== provider.awareness?.clientID) {
+            newCollaborators.set(state.user.id || state.clientId, {
+              pointer: state.pointer,
+              username: state.user.name || 'Anonymous',
+              color: { 
+                background: state.user.color || '#6366F1', 
+                stroke: state.user.color || '#6366F1' 
+              },
+              selectedElementIds: state.selectedElementIds || {},
+            });
+          }
+        });
+        setCollaborators(newCollaborators);
+      },
+    });
+    
+    providerRef.current = provider;
+    
+    provider.awareness?.setLocalStateField('user', {
+      id: `owner-${drawingId}`,
+      name: 'You',
+      color: '#6366F1',
+    });
+    
+    const yElements = ydoc.getArray<Y.Map<any>>('elements');
+    const yAppState = ydoc.getMap<any>('appState');
+    
+    const elementsObserver = (events: Y.YEvent<any>[]) => {
+      const api = excalidrawAPIRef.current;
+      const isLocal = events.some(e => e.transaction.local);
+      
+      if (!api || isLocal) return;
+      
+      isRemoteUpdateRef.current = true;
+      const elements = yElements.toArray().map((yMap) => yMap.toJSON());
+      api.updateScene({ elements });
+      
+      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+    };
+    
+    const appStateObserver = (event: Y.YMapEvent<any>) => {
+      const api = excalidrawAPIRef.current;
+      if (!api || event.transaction.local) return;
+      
+      isRemoteUpdateRef.current = true;
+      const appState = yAppState.toJSON();
+      const safeState: any = {};
+      if (appState.viewBackgroundColor) safeState.viewBackgroundColor = appState.viewBackgroundColor;
+      if (appState.theme) safeState.theme = appState.theme;
+      
+      if (Object.keys(safeState).length > 0) {
+        api.updateScene({ appState: safeState });
+      }
+      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+    };
+    
+    yElements.observeDeep(elementsObserver);
+    yAppState.observe(appStateObserver);
+    
+    return () => {
+      yElements.unobserveDeep(elementsObserver);
+      yAppState.unobserve(appStateObserver);
+      provider.destroy();
+      providerRef.current = null;
+    };
+  }, [collaborationEnabled, drawingId]);
+  
+  // Derived: Are we in active collab mode (more than just self)?
+  const isCollabMode = collabUserCount > 1;
+  
+  return { collaborators, providerRef, collabUserCount, isCollabMode };
+}

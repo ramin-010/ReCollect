@@ -28,7 +28,7 @@ import {
   deleteDrawingMetadata,
   createDrawingMetadata,
 } from '@/lib/storage/drawingMetadata';
-import { ExcalidrawYjsEditor } from './ExcalidrawYjsEditor';
+import { ExcalidrawYjsEditor } from './excalidrawYjsEditor/ExcalidrawYjsEditor';
 import { DrawingCard } from './DrawingCard';
 import { useDrawingDashboard } from './useDrawingDashboard';
 

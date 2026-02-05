@@ -58,6 +58,7 @@ export default function SharedDrawingPage() {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const excalidrawAPIRef = useRef<any>(null);
   const [initialFiles, setInitialFiles] = useState<Record<string, ExcalidrawFile>>({});
+  const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
   
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<HocuspocusProvider | null>(null);
@@ -156,12 +157,41 @@ export default function SharedDrawingPage() {
         setIsLoading(false);
       },
       onAwarenessUpdate: ({ states }) => {
-        setConnectedUsers(states.length);
+        const userCount = states.length;
+        
+        // Only update count if it changed (avoid unnecessary re-renders)
+        setConnectedUsers(prev => prev !== userCount ? userCount : prev);
+        
+        // Update collaborators for cursor presence
+        const newCollaborators = new Map<string, any>();
+        states.forEach((state: any) => {
+          if (state.user && state.clientId !== provider.awareness?.clientID) {
+            newCollaborators.set(state.user.id || state.clientId, {
+              pointer: state.pointer,
+              username: state.user.name || 'Owner',
+              color: { 
+                background: state.user.color || '#6366F1', 
+                stroke: state.user.color || '#6366F1' 
+              },
+              selectedElementIds: state.selectedElementIds || {},
+            });
+          }
+        });
+        setCollaborators(newCollaborators);
       },
     });
     
     providerRef.current = provider;
     
+    // Set local user awareness (Guest with random color)
+    const guestColors = ['#F59E0B', '#10B981', '#EC4899', '#8B5CF6', '#EF4444'];
+    const randomColor = guestColors[Math.floor(Math.random() * guestColors.length)];
+    provider.awareness?.setLocalStateField('user', {
+      id: `guest-${Date.now()}`,
+      name: 'Guest',
+      color: randomColor,
+    });
+
     const yElements = ydoc.getArray('elements');
     const yAppState = ydoc.getMap('appState');
 
@@ -195,6 +225,13 @@ export default function SharedDrawingPage() {
       }
     });
   }, [shareToken]);
+
+  // Update collaborators in Excalidraw when they change
+  useEffect(() => {
+    if (excalidrawAPI && collaborators.size >= 0) {
+      excalidrawAPI.updateScene({ collaborators });
+    }
+  }, [excalidrawAPI, collaborators]);
 
   const handleChange = useCallback((elements: readonly any[], appState: any) => {
     if (isRemoteUpdateRef.current) {
@@ -409,6 +446,12 @@ export default function SharedDrawingPage() {
             initialData={initialData as any}
             onChange={handleChange}
             langCode="en"
+            onPointerUpdate={providerRef.current ? (payload: any) => {
+              providerRef.current?.awareness?.setLocalStateField('pointer', payload.pointer);
+              providerRef.current?.awareness?.setLocalStateField('selectedElementIds', 
+                excalidrawAPI?.getAppState()?.selectedElementIds || {}
+              );
+            } : undefined}
             UIOptions={{
               canvasActions: {
                 saveToActiveFile: false,
