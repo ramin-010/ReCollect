@@ -243,30 +243,36 @@ export default function SharedDrawingPage() {
     const activeElements = elements.filter(el => !el.isDeleted);
     const yElements = ydocRef.current.getArray<Y.Map<any>>('elements');
     
-    // Build set of existing Y.Doc element IDs
-    const yElementIds = new Set<string>();
-    yElements.forEach(yMap => {
+    const yElementCount = yElements.length;
+    const localCount = activeElements.length;
+    
+    // Build map once for O(1) lookups - the real perf win was removing O(n²) nested loops    
+    const yElementMap = new Map<string, { index: number; yMap: Y.Map<any>; version: number }>();
+    yElements.forEach((yMap, index) => {
       const id = yMap.get('id');
-      if (id) yElementIds.add(id);
+      const version = yMap.get('version') || 0;
+      if (id) {
+        yElementMap.set(id, { index, yMap, version });
+      }
     });
     
-    // Only sync if there are NEW elements that don't exist in Y.Doc
-    // This means the receiver user is actually drawing something new
-    const newElements = activeElements.filter(el => !yElementIds.has(el.id));
-    const hasLocalNewElements = newElements.length > 0;
-    
-    // Also check if local elements have higher versions (user is editing their own elements)
+    // Check for new elements or edits using O(1) Map lookup
+    let hasLocalNewElements = false;
     let hasLocalEdits = false;
-    activeElements.forEach(el => {
-      yElements.forEach(yMap => {
-        if (yMap.get('id') === el.id && el.version > (yMap.get('version') || 0)) {
-          hasLocalEdits = true;
-        }
-      });
-    });
     
-    // Check for deletions (local has fewer elements than remote)
-    const hasDeletions = yElements.length > activeElements.length;
+    for (const el of activeElements) {
+      const existing = yElementMap.get(el.id);
+      if (!existing) {
+        hasLocalNewElements = true;
+        break;
+      } else if (el.version > existing.version) {
+        hasLocalEdits = true;
+        break;
+      }
+    }
+    
+    // Check for deletions
+    const hasDeletions = yElementCount > localCount;
 
     // Only sync if user is actively creating, editing, OR deleting
     if (!hasLocalNewElements && !hasLocalEdits && !hasDeletions) {
@@ -278,16 +284,6 @@ export default function SharedDrawingPage() {
     
     const ydoc = ydocRef.current;
     const yAppState = ydoc.getMap<any>('appState');
-    
-    // Build map of existing Y elements
-    const yElementMap = new Map<string, { index: number; yMap: Y.Map<any>; version: number }>();
-    yElements.forEach((yMap, index) => {
-      const id = yMap.get('id');
-      const version = yMap.get('version') || 0;
-      if (id) {
-        yElementMap.set(id, { index, yMap, version });
-      }
-    });
     
     const processedIds = new Set<string>();
     

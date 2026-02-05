@@ -12,7 +12,6 @@ export function useYjsInitialization(
   isOwner: boolean,
   ydocRef: React.MutableRefObject<Y.Doc | null>,
   persistenceRef: React.MutableRefObject<IndexeddbPersistence | null>,
-  prevStateSizeRef: React.MutableRefObject<number>,
   serverFilesRef: React.MutableRefObject<Record<string, ExcalidrawFile>>,
   nameRef: React.MutableRefObject<string>
 ) {
@@ -46,8 +45,6 @@ export function useYjsInitialization(
         
         let elements = yElements.toArray().map(yMap => yMap.toJSON());
         let appState: any = yAppState.size > 0 ? yAppState.toJSON() : null;
-        
-        prevStateSizeRef.current = Y.encodeStateAsUpdate(ydoc).byteLength;
         
         const offlineData = await drawingOfflineStorage.loadDrawing(drawingId);
         

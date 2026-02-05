@@ -31,14 +31,15 @@ export function applyYjsStateFromBase64(ydoc: Y.Doc | null, base64: string): boo
 export function syncElementsToYjs(
   ydoc: Y.Doc,
   elements: readonly any[],
-  appState: any,
-  prevStateSizeRef: React.MutableRefObject<number>
-): { addedCount: number; updatedCount: number; deletedCount: number; deltaSize: number } {
+  appState: any
+): { addedCount: number; updatedCount: number; deletedCount: number } {
   const yElements = ydoc.getArray<Y.Map<any>>('elements');
   const yAppState = ydoc.getMap<any>('appState');
   
   const activeElements = elements.filter(el => !el.isDeleted);
   
+  // Build map of existing Y elements - O(n) which is acceptable
+  // The real performance wins were removing Y.encodeStateAsUpdate and O(n²) nested loops
   const yElementMap = new Map<string, { index: number; yMap: Y.Map<any>; version: number }>();
   yElements.forEach((yMap, index) => {
     const id = yMap.get('id');
@@ -104,11 +105,7 @@ export function syncElementsToYjs(
     }
   });
   
-  const newStateSize = Y.encodeStateAsUpdate(ydoc).byteLength;
-  const deltaSize = Math.abs(newStateSize - prevStateSizeRef.current);
-  prevStateSizeRef.current = newStateSize;
-  
-  return { addedCount, updatedCount, deletedCount, deltaSize };
+  return { addedCount, updatedCount, deletedCount };
 }
 
 export function extractUsedFiles(elements: readonly any[], files: Record<string, any>): {

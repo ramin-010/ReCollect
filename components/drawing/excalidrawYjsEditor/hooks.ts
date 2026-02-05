@@ -24,7 +24,6 @@ export function useExcalidrawYjs(
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
   const excalidrawAPIRef = useRef<any>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const prevStateSizeRef = useRef<number>(0);
   const nameRef = useRef(drawingName);
   const isRemoteUpdateRef = useRef(false);
   const serverFilesRef = useRef<Record<string, ExcalidrawFile>>({});
@@ -51,7 +50,6 @@ export function useExcalidrawYjs(
     isOwner,
     ydocRef,
     persistenceRef,
-    prevStateSizeRef,
     serverFilesRef,
     nameRef
   );
@@ -110,22 +108,13 @@ export function useExcalidrawYjs(
   const syncToYjs = useCallback((elements: readonly any[], appState: any) => {
     if (!ydocRef.current) return;
     
-    const { addedCount, updatedCount, deletedCount, deltaSize } = syncElementsToYjs(
+    const { addedCount, updatedCount, deletedCount } = syncElementsToYjs(
       ydocRef.current,
       elements,
-      appState,
-      prevStateSizeRef
+      appState
     );
     
     if (addedCount > 0 || updatedCount > 0 || deletedCount > 0) {
-      // Only log in development to avoid production overhead
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          `[YjsEditor] Delta: +${addedCount} ~${updatedCount} -${deletedCount} | ` +
-          `${(deltaSize / 1024).toFixed(2)} KB delta`
-        );
-      }
-      
       // Skip IndexedDB during active collab - Hocuspocus handles persistence
       // Only save to IndexedDB when in personal mode (not collaborating)
       if (isOwner && !isCollabMode) {
