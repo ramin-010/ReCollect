@@ -70,7 +70,7 @@ export function TaskSidebar({
     setIsCreating(true);
     try {
       const response = await axiosInstance.post('/api/todos', {
-        text: newTaskText.trim(),
+        title: newTaskText.trim(),
         priority: 'medium',
         status: 'pending',
         references: [{
@@ -100,12 +100,14 @@ export function TaskSidebar({
     const newStatus = task.status === 'complete' ? 'pending' : 'complete';
     
     // Optimistic update
+    const completedAt = newStatus === 'complete' ? new Date().toISOString() : undefined;
+    
     setTasks(prev => prev.map(t => 
       t._id === task._id 
-        ? { ...t, status: newStatus, isCompleted: newStatus === 'complete' } 
+        ? { ...t, status: newStatus, completedAt } 
         : t
     ));
-    updateTodo(task._id, { status: newStatus as 'pending' | 'complete', isCompleted: newStatus === 'complete' });
+    updateTodo(task._id, { status: newStatus as 'pending' | 'complete', completedAt });
     
     try {
       await axiosInstance.patch(`/api/todos/${task._id}`, { status: newStatus });
@@ -113,10 +115,10 @@ export function TaskSidebar({
       // Revert
       setTasks(prev => prev.map(t => 
         t._id === task._id 
-          ? { ...t, status: task.status, isCompleted: task.isCompleted } 
+          ? { ...t, status: task.status, completedAt: task.completedAt } 
           : t
       ));
-      updateTodo(task._id, { status: task.status, isCompleted: task.isCompleted });
+      updateTodo(task._id, { status: task.status, completedAt: task.completedAt });
       toast.error('Failed to update task');
     }
   };
@@ -243,7 +245,7 @@ export function TaskSidebar({
                           "text-sm leading-snug",
                           task.status === 'complete' && "line-through text-[hsl(var(--muted-foreground))]"
                         )}>
-                          {task.text}
+                          {task.title}
                         </p>
                         
                         {/* Priority badge */}

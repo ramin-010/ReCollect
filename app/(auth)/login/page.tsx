@@ -33,7 +33,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 type EmailFormData = z.infer<typeof emailSchema>;
 type ResetFormData = z.infer<typeof resetSchema>;
 
-export default function LoginPage() {
+import { Suspense } from 'react';
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
@@ -348,5 +350,21 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <LoginForm />
+    </Suspense>
   );
 }

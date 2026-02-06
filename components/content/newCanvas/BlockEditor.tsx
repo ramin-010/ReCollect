@@ -69,7 +69,7 @@ export function BlockEditor({
           keepMarks: true,
           keepAttributes: false,
         },
-      }),
+      }) as any,
       Placeholder.configure({
         placeholder: "Type '/' for commands...",
         includeChildren: true,

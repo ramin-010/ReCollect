@@ -288,7 +288,7 @@ export function ExpenseView() {
                       cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                       contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                       labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Spent']}
+                      formatter={(value: number | undefined) => [value ? `₹${value.toLocaleString('en-IN')}` : '₹0', 'Spent']}
                     />
                     <Bar dataKey="amount" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={28} />
                   </BarChart>
@@ -312,7 +312,7 @@ export function ExpenseView() {
                       cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                       contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                       labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Spent']}
+                      formatter={(value: number | undefined) => [value ? `₹${value.toLocaleString('en-IN')}` : '₹0', 'Spent']}
                     />
                     <Bar dataKey="amount" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={28} />
                   </BarChart>
