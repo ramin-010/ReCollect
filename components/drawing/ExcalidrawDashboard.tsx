@@ -18,7 +18,7 @@ import {
 import { toast } from 'sonner';
 import { CreateDrawingDialog } from './CreateDrawingDialog';
 import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog';
-import { ShareDrawingModal } from './ShareDrawingModal';
+import { CloudSyncModal } from './CloudSyncModal';
 
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -97,59 +97,6 @@ export function ExcalidrawDashboard() {
     
     return (
       <div className={`fixed inset-0 z-[100]  bg-[hsl(var(--background))] flex flex-col`}>
-        {/* Editor Header - Architect Style */}
-        <div className="h-14 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 bg-[hsl(var(--background))]/80 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={closeEditor}
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg px-2"
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
-            >
-              Back
-            </Button>
-            <div className="h-4 w-px bg-[hsl(var(--border))] mx-1" />
-            <span className="text-[hsl(var(--foreground))] font-medium text-sm tracking-wide truncate max-w-[200px] md:max-w-md">
-              {currentDrawing?.name}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-3">
-             {/* Collaboration Indicator */}
-             {shareEnabled && (
-               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
-                 <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                 <span className="text-xs font-medium text-green-400">
-                   {collaboratorCount > 1 ? `${collaboratorCount} online` : 'Live'}
-                 </span>
-               </div>
-             )}
-             
-             {/* Share Button */}
-             <Button
-               variant="ghost"
-               size="sm"
-               onClick={() => setShowShareModal(true)}
-               className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg"
-               leftIcon={<Share2 className="w-4 h-4" />}
-             >
-               Share
-             </Button>
-             
-             {/* Persistence Indicators */}
-             {isSaving && (
-                <span className="text-sm text-blue-400/80 animate-pulse">Syncing...</span>
-             )}
-             {hasUnsavedChanges && !isSaving && (
-                <span   
-                  className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
-                  title="Saving to local storage"
-                />
-             )}
-          </div>
-        </div>
-
         {/* Editor Canvas - Yjs handles persistence automatically */}
         <ExcalidrawYjsEditor
           drawingId={currentDrawing?.id || ''}
@@ -159,18 +106,15 @@ export function ExcalidrawDashboard() {
           theme={isDark ? 'dark' : 'light'}
           onStateChange={(hasChanges) => setHasUnsavedChanges(hasChanges)}
           onCollaboratorCountChange={(count) => setCollaboratorCount(count)}
+          onBack={closeEditor}
+          onShare={() => setShowShareModal(true)}
         />
         
         {/* Share Modal */}
-        <ShareDrawingModal
-          drawingId={currentDrawing?.id || ''}
-          drawingName={currentDrawing?.name || 'Untitled'}
+        <CloudSyncModal
+          drawing={currentDrawing}
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
-          onShareStatusChange={(enabled) => {
-            setShareEnabled(enabled);
-            console.log('[Dashboard] Share status changed:', enabled ? 'ENABLED' : 'disabled');
-          }}
         />
       </div>
     );

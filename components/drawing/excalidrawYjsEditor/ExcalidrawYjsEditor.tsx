@@ -4,6 +4,9 @@ import React, { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { ExcalidrawYjsEditorProps } from './types';
 import { useExcalidrawYjs } from './hooks';
+import { Button } from '@/components/ui-base/Button';
+import { useTheme } from 'next-themes';
+import { ArrowLeft, Share2 } from 'lucide-react';
 
 const Excalidraw = dynamic(
   () => import('@excalidraw/excalidraw').then((mod) => mod.Excalidraw),
@@ -20,6 +23,8 @@ export function ExcalidrawYjsEditor({
   onStateChange,
   onSyncStatusChange,
   onCollaboratorCountChange,
+  onBack,
+  onShare,
 }: ExcalidrawYjsEditorProps) {
   const {
     excalidrawAPI,
@@ -71,6 +76,8 @@ export function ExcalidrawYjsEditor({
     return Object.keys(data).length > 0 ? data : undefined;
   }, [initialElements, initialAppState, initialFiles]);
 
+  const { resolvedTheme } = useTheme();
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -80,7 +87,63 @@ export function ExcalidrawYjsEditor({
   }
 
   return (
-    <div className="flex-1 relative">
+    <div className="flex-1 relative h-full w-full">
+      {/* Custom Header Overlay */}
+      <div className="absolute top-[16px] left-[71px] z-[5] flex items-center gap-4 pointer-events-auto font-sans">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="h-9 px-3 gap-2 rounded-lg bg-[#232329] hover:bg-muted border border-border/40 hover:border-border/60 text-muted-foreground hover:text-foreground transition-all font-medium backdrop-blur-sm shadow-sm"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </Button>
+        )}
+        <div className="h-5 w-px bg-border/40" />
+        <span className="text-sm font-medium opacity-90 select-none text-foreground tracking-wide  py-1.5 rounded-lg ">
+          {drawingName}
+        </span>
+      </div>
+
+      {/* Custom Top-Right Toolbar - Aligned with Left Toolbar */}
+      <div className="absolute top-[16px] right-[155px] z-[5] flex items-center gap-3 pointer-events-auto">
+        <div className="flex items-center gap-2  rounded-lg p-1 transition-all ">
+          {collaborationEnabled && (
+             <div className="flex items-center pl-3 rounded-md ">
+               {/* Custom "Broadcasting" Animation */}
+               <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Broadcasting">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+               </div>
+               
+               <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                 {collaborators.size > 1 ? `${collaborators.size} online` : ''}
+               </span>
+             </div>
+           )}
+           
+           {/* Persistence Status */}
+           {(syncStatus === 'unsynced') && (
+              <span className="px-2 text-xs text-blue-500 animate-pulse font-medium">Saving...</span>
+           )}
+        
+           {onShare && (
+             <Button
+               variant="ghost"
+               size="sm"
+               onClick={onShare}
+               className="h-7 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md px-3"
+             >
+               <Share2 className="w-3.5 h-3.5" />
+               <span>Share</span>
+             </Button>
+           )}
+        </div>
+      </div>
+
       <Excalidraw
         excalidrawAPI={(api) => setExcalidrawAPI(api)}
         theme={theme}
@@ -92,7 +155,8 @@ export function ExcalidrawYjsEditor({
             loadScene: false,
             saveToActiveFile: false,
             export: false,
-            saveAsImage: false
+            saveAsImage: false,
+            toggleTheme: false, // We control theme externally
           }
         }}
       />

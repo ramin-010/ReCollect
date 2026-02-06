@@ -10,6 +10,8 @@ export interface ExcalidrawYjsEditorProps {
   onStateChange?: (hasUnsavedChanges: boolean) => void;
   onSyncStatusChange?: (status: 'synced' | 'unsynced' | 'offline') => void;
   onCollaboratorCountChange?: (count: number) => void;
+  onBack?: () => void;
+  onShare?: () => void;
 }
 
 export interface ConflictData {

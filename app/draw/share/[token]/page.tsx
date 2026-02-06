@@ -435,6 +435,43 @@ export default function SharedDrawingPage() {
 
       {/* Editor Canvas */}
       <div className="flex-1 relative overflow-hidden">
+        {/* Custom Header Overlay */}
+        <div className="absolute top-[16px] left-[71px] z-[5] flex items-center gap-4 pointer-events-auto font-sans">
+          <Link href="/">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 px-3 gap-2 rounded-lg bg-[#1e1e1e] hover:bg-muted border border-border/40 hover:border-border/60 text-muted-foreground hover:text-foreground transition-all font-medium backdrop-blur-sm shadow-sm"
+              title="Return Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </Button>
+          </Link>
+          <div className="h-5 w-px bg-border/40" />
+          <span className="text-sm font-medium opacity-90 select-none text-foreground tracking-wide py-1.5 rounded-lg">
+            {drawing.name}
+          </span>
+        </div>
+
+        {/* Custom Top-Right Toolbar - Aligned with Left Toolbar */}
+        <div className="absolute top-[16px] right-[155px] z-[5] flex items-center gap-3 pointer-events-auto">
+          <div className="flex items-center gap-2 rounded-lg p-1 transition-all">
+            {isConnected && (
+               <div className="flex items-center pl-3 rounded-md">
+                 {/* Custom "Broadcasting" Animation */}
+                 <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Connected">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                 </div>
+                 
+                 <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                   {connectedUsers > 1 ? `${connectedUsers} online` : ''}
+                 </span>
+               </div>
+             )}
+          </div>
+        </div>
         {isYjsSynced && initialData && (
           <Excalidraw
             excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
@@ -459,15 +496,7 @@ export default function SharedDrawingPage() {
           />
         )}
         
-        {/* Collaboration Indicator */}
-        <div className="absolute bottom-4 right-14 pointer-events-none">
-          <div className="bg-[hsl(var(--card))]/90 backdrop-blur-sm border border-[hsl(var(--border))] rounded-full px-4 py-1.5 shadow-xl">
-             <p className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-widest flex items-center gap-2">
-               <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-zinc-500'}`} />
-               {isConnected ? 'Real-time Sync Active' : 'Connecting...'}
-             </p>
-          </div>
-        </div>
+
       </div>
     </div>
   );

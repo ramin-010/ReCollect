@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui-base/Button';
-import { Cloud, X, Check, Sparkles } from 'lucide-react';
-import axiosInstance from '@/lib/utils/axios';
+import { Cloud, X, Check, Sparkles, Copy, Globe, Lock, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { drawingApi } from '@/lib/api/drawingApi';
 import { toast } from 'sonner';
 
 interface CloudSyncModalProps {
@@ -13,10 +13,8 @@ interface CloudSyncModalProps {
   drawing: {
     id: string;
     name: string;
-    data: any;
     thumbnail?: string;
   } | null;
-  onSyncComplete: (drawingId: string) => void;
 }
 
 // Notion-style animated character component
@@ -99,101 +97,69 @@ const CloudCharacter = () => (
   </motion.svg>
 );
 
-export function CloudSyncModal({ isOpen, onClose, drawing, onSyncComplete }: CloudSyncModalProps) {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState(false);
-  const [limitReached, setLimitReached] = useState(false);
+export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps) {
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Helper to convert base64 dataURL to Blob
-  const dataURLtoBlob = (dataURL: string): Blob | null => {
-    try {
-      const arr = dataURL.split(',');
-      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
+  useEffect(() => {
+    if (!isOpen || !drawing) return;
+    
+    const fetchStatus = async () => {
+      setIsLoading(true);
+      try {
+        const status = await drawingApi.getShareStatus(drawing.id);
+        setShareEnabled(status.shareEnabled);
+        setShareToken(status.shareToken || null);
+      } catch (err) {
+        console.error('[CloudSyncModal] Failed to fetch share status:', err);
+      } finally {
+        setIsLoading(false);
       }
-      return new Blob([u8arr], { type: mime });
-    } catch (e) {
-      console.error('Failed to convert dataURL to Blob:', e);
-      return null;
+    };
+    
+    fetchStatus();
+  }, [drawing?.id, isOpen]);
+
+  const shareUrl = shareToken 
+    ? `${window.location.origin}/draw/share/${shareToken}`
+    : null;
+
+  const handleToggleShare = async () => {
+    if (!drawing) return;
+    setIsToggling(true);
+    try {
+      if (shareEnabled) {
+        await drawingApi.disableShare(drawing.id);
+        setShareEnabled(false);
+        setShareToken(null);
+        toast.success('Sharing disabled');
+      } else {
+        const result = await drawingApi.enableShare(drawing.id);
+        setShareEnabled(true);
+        setShareToken(result.shareToken || null);
+        toast.success('Sharing enabled');
+      }
+    } catch (err) {
+      console.error('[CloudSyncModal] Failed to toggle share:', err);
+      toast.error('Failed to update sharing');
+    } finally {
+      setIsToggling(false);
     }
   };
 
-  const handleSync = async () => {
-    if (!drawing) return;
-
-    setIsSyncing(true);
-    setLimitReached(false);
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    
     try {
-      const formData = new FormData();
-      const imageFileIds: string[] = [];
-      
-      // Clone the data to avoid mutating the original
-      const dataToSend = JSON.parse(JSON.stringify(drawing.data));
-
-      // Extract images from Excalidraw files object
-      if (dataToSend.files && typeof dataToSend.files === 'object') {
-        for (const [fileId, fileData] of Object.entries(dataToSend.files as Record<string, any>)) {
-          // Check if this file has a base64 dataURL (not already cloud uploaded)
-          if (fileData.dataURL && fileData.dataURL.startsWith('data:') && !fileData.isCloudUploaded) {
-            const blob = dataURLtoBlob(fileData.dataURL);
-            if (blob) {
-              const file = new File([blob], `${fileId}.webp`, { type: blob.type });
-              formData.append(`image_${fileId}`, file);
-              imageFileIds.push(fileId);
-              
-              // Remove the base64 data from the JSON (will be replaced by cloud URL on backend)
-              dataToSend.files[fileId] = {
-                ...fileData,
-                dataURL: 'PENDING_UPLOAD'
-              };
-            }
-          }
-        }
-      }
-
-      // Upload thumbnail if it's a base64 data URL
-      if (drawing.thumbnail && drawing.thumbnail.startsWith('data:')) {
-        const thumbnailBlob = dataURLtoBlob(drawing.thumbnail);
-        if (thumbnailBlob) {
-          const thumbnailFile = new File([thumbnailBlob], 'thumbnail.webp', { type: thumbnailBlob.type });
-          formData.append('thumbnail', thumbnailFile);
-        }
-      } else {
-        formData.append('thumbnail', drawing.thumbnail || '');
-      }
-
-      formData.append('localId', drawing.id);
-      formData.append('name', drawing.name);
-      formData.append('data', JSON.stringify(dataToSend));
-      formData.append('imageFileIds', JSON.stringify(imageFileIds));
-
-      await axiosInstance.post('/api/drawings/sync', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      setSyncSuccess(true);
-      onSyncComplete(drawing.id);
-      toast.success('Drawing synced to cloud!');
-      
-      setTimeout(() => {
-        setSyncSuccess(false);
-        onClose();
-      }, 1500);
-    } catch (error: any) {
-      // Check if it's a limit reached error (403)
-      if (error.response?.status === 403) {
-        setLimitReached(true);
-      } else {
-        toast.error('Failed to sync drawing', {
-          description: error.response?.data?.message || 'Please try again'
-        });
-      }
-    } finally {
-      setIsSyncing(false);
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('Link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Failed to copy');
     }
   };
 
@@ -243,31 +209,35 @@ export function CloudSyncModal({ isOpen, onClose, drawing, onSyncComplete }: Clo
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium">
-                    <Sparkles className="w-3 h-3" />
-                    New Feature
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors duration-300 ${
+                    shareEnabled 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400'
+                  }`}>
+                    {shareEnabled ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                    {shareEnabled ? 'Live on Web' : 'Private'}
                   </span>
                 </motion.div>
 
                 {/* Title & Description */}
                 <motion.div 
-                  className="text-center mb-5"
+                  className="text-center mb-6"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
                 >
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    Save to the cloud ☁️
+                    Collaborate with anyone 🌏
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                    Your drawings will be safely stored and accessible from any device. Never lose your work again!
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
+                    Share a live link to draw together in real-time. No sign-up required for guests!
                   </p>
                 </motion.div>
 
                 {/* Drawing preview card */}
                 {drawing && (
                   <motion.div
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 mb-5"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 mb-6"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -285,70 +255,79 @@ export function CloudSyncModal({ isOpen, onClose, drawing, onSyncComplete }: Clo
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{drawing.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Ready to sync</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {shareEnabled ? 'Ready to share' : 'Private drawing'}
+                      </p>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Limit Reached Warning */}
-                {limitReached && (
-                  <motion.div
-                    className="mb-5 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
-                        <span className="text-xl">⚠️</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-amber-900 dark:text-amber-200 text-sm mb-1">
-                          Cloud Sync Limit Reached
-                        </h3>
-                        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                          Free users can sync up to <strong>3 drawings</strong> to the cloud. Delete an existing cloud drawing to sync a new one, or upgrade for unlimited cloud storage.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Action buttons */}
+                {/* Share Controls */}
                 <motion.div
-                  className="space-y-2"
+                  className="space-y-4"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 }}
                 >
-                  {!limitReached ? (
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={handleSync}
-                      isLoading={isSyncing}
-                      disabled={syncSuccess}
-                      leftIcon={syncSuccess ? <Check className="w-4 h-4" /> : <Cloud className="w-4 h-4" />}
-                      className={`w-full ${syncSuccess ? 'bg-green-500 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-700'}`}
-                    >
-                      {syncSuccess ? 'Synced!' : 'Sync to Cloud'}
-                    </Button>
+                  {isLoading ? (
+                    <div className="h-24 flex items-center justify-center">
+                      <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    </div>
                   ) : (
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={onClose}
-                      className="w-full bg-amber-500 hover:bg-amber-600"
-                    >
-                      Got it
-                    </Button>
+                    <>
+                      {/* Main Toggle Button */}
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={handleToggleShare}
+                        isLoading={isToggling}
+                        leftIcon={shareEnabled ? <LinkIcon className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                        className={`w-full transition-all duration-300 font-medium ${
+                          shareEnabled 
+                            ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white' 
+                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20'
+                        }`}
+                      >
+                        {shareEnabled ? 'Disable Live Link' : 'Generate Live Link'}
+                      </Button>
+
+                      {/* Link Copy Section */}
+                      <AnimatePresence>
+                        {shareEnabled && shareUrl && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                            className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1"
+                          >
+                            <div className="flex-1 px-3 py-2 overflow-hidden">
+                              <p className="text-xs font-medium text-zinc-400 mb-0.5">Share this link</p>
+                              <p className="text-sm text-zinc-900 dark:text-white truncate font-mono">{shareUrl}</p>
+                            </div>
+                            
+                            <div className="flex gap-1">
+                              <button
+                                onClick={handleCopy}
+                                className="p-2.5 rounded-lg bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 shadow-sm border border-zinc-200 dark:border-zinc-600 transition-colors"
+                                title="Copy link"
+                              >
+                                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                              </button>
+                              <a
+                                href={shareUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2.5 rounded-lg bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 shadow-sm border border-zinc-200 dark:border-zinc-600 transition-colors"
+                                title="Open in new tab"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
                   )}
-                  
-                  <button
-                    onClick={onClose}
-                    className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                  >
-                    {limitReached ? 'Close' : 'Maybe later'}
-                  </button>
                 </motion.div>
               </div>
             </div>
