@@ -241,7 +241,9 @@ export const useTaskInput = (
       acceptSuggestion();
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    
+    // Save on plain Enter (when no suggestion is pending) or Ctrl/Cmd+Enter
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSave();
     }

@@ -63,7 +63,7 @@ function FlipCard({ value, scale = 1, transparent = false }: { value: string; sc
   const textOffsetMargin = `-${cutOffset}px`;
 
   // Explicit border for the cut, even in transparent mode, so it's visible on the text
-  const cutBorder = '2px solid rgba(0,0,0,0.1)';
+  const cutBorder = scale < 1 ? '1px solid rgba(0,0,0,0.1)' : '2px solid rgba(0,0,0,0.1)';
 
   return (
     <div className="relative" style={{ perspective: '1000px' }}>
