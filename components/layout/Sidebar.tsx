@@ -487,6 +487,7 @@ function SidebarContent({
             </MotionButton>
 
             {/* Expenses */}
+            {/* Expenses - Hidden for now as per product decision
             <MotionButton
               variant={currentView === 'expenses' ? "secondary" : "ghost"}
               className={cn(
@@ -499,6 +500,7 @@ function SidebarContent({
             >
               {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Expenses</span>}
             </MotionButton>
+            */}
           </div>
 
           {/* YOUR DASHBOARDS: List - can scroll */}
