@@ -12,10 +12,13 @@ export const useTaskInput = (
   onSave: TaskInputProps['onSave'],
   onExpandChange: TaskInputProps['onExpandChange'],
   isExpanded: boolean,
-  initialReferences?: TaskInputProps['initialReferences']
+  initialReferences?: TaskInputProps['initialReferences'],
+  initialTitle?: TaskInputProps['initialTitle'],
+  initialDescription?: TaskInputProps['initialDescription'],
+  demoMode?: boolean
 ) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initialTitle || '');
+  const [description, setDescription] = useState(initialDescription || '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [status, setStatus] = useState<'pending' | 'complete'>('pending');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -119,10 +122,17 @@ export const useTaskInput = (
   };
 
   const handleSave = async () => {
-    console.log('[TaskInput] handleSave called. isSaving:', isSaving, 'savingRef:', savingRef.current);
+    console.log('[TaskInput] handleSave called. isSaving:', isSaving, 'savingRef:', savingRef.current, 'demoMode:', demoMode);
     
     if (!title.trim() || isSaving || savingRef.current) {
       console.log('[TaskInput] Blocked - already saving or no title');
+      return;
+    }
+    
+    // In demo mode, just show a mock success without making API calls
+    if (demoMode) {
+      console.log('[TaskInput] Demo mode - skipping API call');
+      toast.success('Task created! (Demo)');
       return;
     }
     

@@ -3,6 +3,18 @@ import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { toast } from 'sonner';
 
+// Helper to compare collaborator Maps (shallow pointer comparison)
+function areCollaboratorsEqual(a: Map<string, any>, b: Map<string, any>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [key, val] of a) {
+    const bVal = b.get(key);
+    if (!bVal) return false;
+    // Compare pointer position (most frequently changing field)
+    if (val?.pointer?.x !== bVal?.pointer?.x || val?.pointer?.y !== bVal?.pointer?.y) return false;
+  }
+  return true;
+}
+
 export function useCollaboration(
   collaborationEnabled: boolean,
   drawingId: string,
@@ -19,6 +31,7 @@ export function useCollaboration(
   const onCollaboratorCountChangeRef = useRef(onCollaboratorCountChange);
   const onCollabEndRef = useRef(onCollabEnd);
   const prevUserCountRef = useRef(0);
+  const collaboratorsRef = useRef<Map<string, any>>(new Map());
   
   useEffect(() => {
     onCollaboratorCountChangeRef.current = onCollaboratorCountChange;
@@ -79,7 +92,12 @@ export function useCollaboration(
             });
           }
         });
-        setCollaborators(newCollaborators);
+        
+        // Only update state if collaborators actually changed
+        if (!areCollaboratorsEqual(newCollaborators, collaboratorsRef.current)) {
+          collaboratorsRef.current = newCollaborators;
+          setCollaborators(newCollaborators);
+        }
       },
     });
     

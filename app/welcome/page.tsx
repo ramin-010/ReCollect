@@ -22,7 +22,11 @@ import { Button } from '@/components/ui-base/Button';
 import { Logo } from '@/components/brand/Logo';
 import { cn } from '@/lib/utils';
 import { CinematicDocsViewer } from '@/components/brand/CinematicDocsViewer';
+import { Doodle } from '@/components/brand/Doodle';
+import { CommunityDoodles } from '@/components/brand/CommunityDoodles';
 import { CinematicWhiteboardViewer } from '@/components/brand/CinematicWhiteboardViewer';
+import { LandingTaskDemo } from '@/components/brand/LandingTaskDemo';
+
 
 // --- Media Placeholder Component ---
 function MediaPlaceholder({ type, prompt, height = "h-64 md:h-96" }: { type: string, prompt: string, height?: string }) {
@@ -70,18 +74,43 @@ export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] selection:bg-indigo-500/30 font-sans overflow-x-hidden">
       
-      {/* --- Navigation ---commented for now temporarily */}
-      {/* <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-white/5 bg-[hsl(var(--background))]/80 backdrop-blur-md">
+      {/* --- Navigation --- */}
+      <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-white/5 bg-[#0A0A0A]/20 backdrop-blur-lg">
         <div className="max-w-[1400px] mx-auto px-6 h-full flex items-center justify-between">
             <div className="flex items-center gap-2">
                 <Logo size="lg" />
             </div>
-            <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/login')}>Sign In</Button>
-                <Button variant="primary" size="sm" onClick={() => router.push('/signup')} className="font-semibold shadow-lg shadow-indigo-500/20">Get Started</Button>
+            <div className="flex items-center gap-6">
+                {/* Community Widget as Sign Up Trigger */}
+                <div 
+                    onClick={() => router.push('/signup')}
+                    className="hidden md:flex items-center gap-3 cursor-pointer group"
+                >
+                    <div className="flex -space-x-2 group-hover:scale-105 transition-transform">
+                        {[0, 1, 2].map((i) => (
+                            <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0A0A0A] bg-white overflow-hidden">
+                                <img 
+                                    src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${['felix','zack','aneka'][i]}&backgroundColor=transparent`}
+                                    alt="User"
+                                    className="w-full h-full object-cover scale-150 translate-y-1"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 font-medium group-hover:text-white transition-colors">Join the Community</span>
+                        <span className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">Sign Up Free</span>
+                    </div>
+                </div>
+
+                <div className="w-px h-8 bg-white/10 hidden md:block" />
+
+                <Button variant="ghost" size="sm" onClick={() => router.push('/login')} className="text-gray-400 hover:text-white hover:bg-white/5">
+                    Sign In
+                </Button>
             </div>
         </div>
-      </nav> */}
+      </nav>
 
       {/* --- 1. HERO SECTION (Original Design + Video Overlay) --- */}
       <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[90vh] flex flex-col justify-center">
@@ -89,8 +118,12 @@ export default function WelcomePage() {
         <motion.div style={{ y: y1 }} className="absolute top-20 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -z-10" />
         <motion.div style={{ y: y2 }} className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl -z-10" />
         
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        
         {/* HERO ANIMATED GRADIENT MESH */}
         <div className="absolute inset-0 -z-5 overflow-hidden pointer-events-none">
+          
             {/* Animated Gradient Orbs */}
             <div className="absolute top-0 left-0 w-full h-full">
                 <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-blue-600/20 to-indigo-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '8s' }} />
@@ -133,26 +166,35 @@ export default function WelcomePage() {
                    and building connections between your thoughts. Never lose a brilliant idea again.
                  </p>
                  
-                 <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
-                   <Button
-                     variant="primary"
-                     size="lg"
-                     onClick={() => router.push('/signup')}
-                     className="gap-2"
-                   >
-                     Start Free Now
-                     <ArrowRight className="w-5 h-5" />
-                   </Button>
-                 </div>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={() => router.push('/signup')}
+                      className="gap-3 pl-4 pr-6"
+                    >
+                      {/* Integrated Doodle inside Button */}
+                      <div className="w-8 h-8 rounded-full bg-white overflow-hidden border-2 border-white/20 shadow-sm relative -ml-1">
+                          <img 
+                            src="https://api.dicebear.com/9.x/lorelei/svg?seed=callie&backgroundColor=transparent" 
+                            alt="Me"
+                            className="w-full h-full object-cover scale-150 translate-y-1"
+                          />
+                      </div>
+                      <span className="font-bold">Start Free Now</span>
+                      <ArrowRight className="w-4 h-4 opacity-70" />
+                    </Button>
+                    
+                  </div>
                </div>
              </div>
       </section>
 
       {/* --- 2. DOCS (The Editor) --- */}
-      <section className="py-12 px-6 border-t border-white/5 bg-white/[0.02]">
+      <section className="py-12 px-6 border-t border-white/5 bg-[hsl(var(--sidebar-bg))]">
         <div className="max-w-8xl mx-auto space-y-8">
-             <div className="text-center max-w-2xl mx-auto space-y-3">
-                <FeatureBadge icon={CheckCircle2} text="The Editor" color="blue" />
+             <div className="text-center max-w-2xl mx-auto space-y-3 relative flex flex-col items-center">
+                {/* <FeatureBadge icon={CheckCircle2} text="The Editor" color="blue" /> */}
                 <h2 className="text-3xl md:text-5xl font-bold leading-tight">Docs that feel like magic.</h2>
                 <p className="text-base text-[hsl(var(--muted-foreground))]">
                     Real-time collaboration, slash commands, and integrated tasks—all in one place.
@@ -165,21 +207,20 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 3. TASKS HUB (Connectivity) --- */}
-      <section className="py-32 px-6 border-t border-white/5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent opacity-50" />
-        <div className="max-w-5xl mx-auto text-center space-y-12 relative z-10">
-            <FeatureBadge icon={CheckCircle2} text="Central Triage" color="emerald" />
-            <h2 className="text-5xl md:text-7xl font-bold tracking-tight">The Central Hub <br/> for your work.</h2>
-            <p className="text-xl text-[hsl(var(--muted-foreground))] max-w-2xl mx-auto">
-                Stop scattering to-dos across ten different apps. Tasks in ReCollect live inside your Docs, Notes, and Whiteboards—but they all sync to one master list.
-            </p>
-            
-            <div className="w-full max-w-4xl mx-auto">
-                <MediaPlaceholder 
-                    type="Motion Graphic" 
-                    prompt="Motion graphic: Icons of Docs/Notes flowing particles into a central 'Task List' panel. Glowing connections." 
-                    height="h-64 md:h-[500px]"
-                />
+      <section className="py-10 px-6 border-t border-white/5 relative overflow-hidden min-h-[50vh] flex flex-col items-center justify-center">
+
+        
+        <div className="max-w-4xl w-full text-center space-y-4 relative z-10">
+            <div className="space-y-4">
+                <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight">
+                    Your Workflow, <br/> <span className="text-emerald-500">Synchronized.</span>
+                </h2>
+                
+            </div>
+
+            {/* Interactive Demo */}
+            <div className="w-full flex justify-center min-h-[50vh] ">
+                <LandingTaskDemo />
             </div>
         </div>
       </section>

@@ -28,6 +28,17 @@ const Excalidraw = dynamic(
 );
 import '@excalidraw/excalidraw/index.css';
 
+// Helper to compare collaborator Maps (shallow pointer comparison)
+function areCollaboratorsEqual(a: Map<string, any>, b: Map<string, any>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [key, val] of a) {
+    const bVal = b.get(key);
+    if (!bVal) return false;
+    if (val?.pointer?.x !== bVal?.pointer?.x || val?.pointer?.y !== bVal?.pointer?.y) return false;
+  }
+  return true;
+}
+
 interface SharedDrawingData {
   _id: string;
   name: string;
@@ -64,6 +75,7 @@ export default function SharedDrawingPage() {
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const isRemoteUpdateRef = useRef(false); // Prevent echo when receiving remote updates
   const lastElementCountRef = useRef(0); // Track element count to detect real changes
+  const collaboratorsRef = useRef<Map<string, any>>(new Map());
   
 
   useEffect(() => {
@@ -177,7 +189,12 @@ export default function SharedDrawingPage() {
             });
           }
         });
-        setCollaborators(newCollaborators);
+        
+        // Only update state if collaborators actually changed
+        if (!areCollaboratorsEqual(newCollaborators, collaboratorsRef.current)) {
+          collaboratorsRef.current = newCollaborators;
+          setCollaborators(newCollaborators);
+        }
       },
     });
     
@@ -396,47 +413,12 @@ export default function SharedDrawingPage() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-[hsl(var(--background))] flex flex-col">
-      {/* Header */}
-      <div className="h-14 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 bg-[hsl(var(--background))]/80 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] rounded-lg px-2"
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
-            >
-              Back
-            </Button>
-          </Link>
-          <div className="h-4 w-px bg-[hsl(var(--border))]" />
-          <span className="text-[hsl(var(--foreground))] font-medium text-sm truncate max-w-[200px] md:max-w-md">
-            {drawing.name}
-          </span>
-          <div className="hidden md:flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] ml-2">
-            <Globe className="w-3.5 h-3.5" />
-            <span>Shared by {drawing.owner.name}</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-           <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-             isConnected 
-               ? 'bg-green-500/10 text-green-500 border border-green-500/20' 
-               : 'bg-zinc-500/10 text-zinc-500 border border-zinc-500/20'
-           }`}>
-             <Users className="w-3 h-3" />
-             <span>{connectedUsers} Online</span>
-           </div>
-           
-
-        </div>
-      </div>
+      {/* Header removed to avoid duplication with custom overlay */}
 
       {/* Editor Canvas */}
       <div className="flex-1 relative overflow-hidden">
         {/* Custom Header Overlay */}
-        <div className="absolute top-[16px] left-[71px] z-[5] flex items-center gap-4 pointer-events-auto font-sans">
+        <div className="absolute top-4 left-4 md:top-[16px] md:left-[71px] z-[5] flex items-center gap-4 pointer-events-auto font-sans">
           <Link href="/">
             <Button
               variant="ghost"
@@ -455,7 +437,7 @@ export default function SharedDrawingPage() {
         </div>
 
         {/* Custom Top-Right Toolbar - Aligned with Left Toolbar */}
-        <div className="absolute top-[16px] right-[155px] z-[5] flex items-center gap-3 pointer-events-auto">
+        <div className="absolute top-4 right-4 md:top-[16px] md:right-[155px] z-[5] flex items-center gap-3 pointer-events-auto">
           <div className="flex items-center gap-2 rounded-lg p-1 transition-all">
             {isConnected && (
                <div className="flex items-center pl-3 rounded-md">
