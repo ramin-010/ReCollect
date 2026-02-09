@@ -25,6 +25,10 @@ export interface TaskInputProps {
   isQuickAdd?: boolean;
   onClose?: () => void;
   initialReferences?: TaskReference[];
+  initialTitle?: string;
+  initialDescription?: string;
+  /** When true, disables API calls and shows mock success - for landing page demos */
+  demoMode?: boolean;
 }
 
 export const PRIORITIES = [

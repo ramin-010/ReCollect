@@ -50,7 +50,10 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   onExpandChange, 
   isQuickAdd = false, 
   onClose, 
-  initialReferences 
+  initialReferences,
+  initialTitle,
+  initialDescription,
+  demoMode = false
 }, ref) => {
   const {
     // State
@@ -91,7 +94,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     clearConfirmedDate,
     handleSave,
     handleKeyDown,
-  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences);
+  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode);
 
   useImperativeHandle(ref, () => inputRef.current!);
 
@@ -126,6 +129,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               onFocus={() => onExpandChange(true)}
               placeholder="Create a new task..."
               autoComplete="off"
+              suppressHydrationWarning={demoMode}
               className={cn(
                 "w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative",
                 highlightedOverlay ? "text-transparent caret-white" : "text-white"

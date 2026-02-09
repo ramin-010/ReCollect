@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Zap, CheckSquare, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AVATAR_COLLECTION } from './CommunityDoodles';
 
 const slides = [
   {
@@ -35,9 +36,7 @@ const slides = [
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/20'
-  },
-  
-  
+  }
 ];
 
 export function CinematicDocsViewer() {
@@ -47,35 +46,36 @@ export function CinematicDocsViewer() {
   // Auto-rotate slides
   useEffect(() => {
     // Keep hover pause for accessibility/usability
-   
-    
     const interval = setInterval(() => {
       setActiveTab((prev) => (prev + 1) % slides.length);
-    }, 4000); // 6 seconds per slide
+    }, 4000); // 4 seconds per slide to verify rotation quickly
 
     return () => clearInterval(interval);
   }, [isHovering]);
 
+  // Pick 4 specific collaborators for the Docs Demo
+
+
+  // Contextual Comments for each slide - Lorelei avatars (#2, #3, #5)
+  const slideComments = [
+    { text: "Assigned to @design-team 🎨", user: AVATAR_COLLECTION[2] }, // #2 Lorelei/Felix
+    { text: "I'm editing this live! ⚡", user: AVATAR_COLLECTION[24] },   // #3 Lorelei/Zack
+    { text: "/generate limits", user: AVATAR_COLLECTION[51] },           // #5 Lorelei/Callie
+  ];
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4">
+    <div className="w-full max-w-7xl  mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
-        className="relative aspect-video w-full rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl overflow-hidden group"
+        className="relative aspect-video max-h-[85vh] w-full rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl overflow-hidden group"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
         {/* macOS Window Controls */}
-        {/* <div className="absolute top-4 left-4 z-20 flex gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500/80" />
-            <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-            <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-        </div>
-        
-      
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] text-gray-500 font-mono backdrop-blur-sm">
-            <Command className="w-3 h-3" />
-            <span>recollect.app/docs/roadmap</span>
-        </div> */}
+       
+
+        {/* Live Collaborators Cluster (Subtle, Static) */}
+       
 
         {/* Content Transition */}
         <AnimatePresence mode="wait">
@@ -97,19 +97,32 @@ export function CinematicDocsViewer() {
         </AnimatePresence>
 
         {/* Text Overlay (Bottom Left) */}
-        <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black via-black/80 to-transparent pt-20">
+        <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black via-black/80 to-transparent pt-32">
              <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
+                className="relative"
              >
-                <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border bg-black/50 backdrop-blur-md", slides[activeTab].color, slides[activeTab].border)}>
-                    {React.createElement(slides[activeTab].icon, { size: 14 })}
+             
+                {/* Title with Large Integrated Avatar */}
+                <h3 className="text-3xl md:text-5xl font-bold text-white mb-4 flex items-center gap-4">
+                    <div className="relative group/avatar cursor-pointer">
+                        <div className={cn("absolute inset-0 rounded-full blur-md opacity-50 group-hover/avatar:opacity-100 transition-opacity", slides[activeTab].bg.replace('bg-', 'bg-'))} />
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-white/20 bg-white shadow-2xl relative z-10 overflow-hidden">
+                            <img 
+                                src={`https://api.dicebear.com/9.x/${slideComments[activeTab % slideComments.length].user.style}/svg?seed=${slideComments[activeTab % slideComments.length].user.seed}&backgroundColor=transparent`}
+                                alt="User"
+                                className="w-full h-full object-cover scale-150 translate-y-1"
+                            />
+                        </div>
+                        {/* Status Indicator Dot */}
+                    </div>
+                    
                     <span>{slides[activeTab].title}</span>
-                </div>
-                <h3 className="text-2xl md:text-4xl font-bold text-white mb-2">{slides[activeTab].title}</h3>
-                <p className="text-gray-300 max-w-xl text-lg">{slides[activeTab].desc}</p>
+                </h3>
+                <p className="text-gray-300 max-w-xl text-lg leading-relaxed">{slides[activeTab].desc}</p>
              </motion.div>
         </div>
         
