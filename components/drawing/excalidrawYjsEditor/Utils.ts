@@ -38,66 +38,94 @@ export function syncElementsToYjs(
   
   const activeElements = elements.filter(el => !el.isDeleted);
   
-  // Build map of existing Y elements - O(n) which is acceptable
-  // The real performance wins were removing Y.encodeStateAsUpdate and O(n²) nested loops
+  // SINGLE-PASS optimization: Build yElementMap once, used for both change detection AND transact
   const yElementMap = new Map<string, { index: number; yMap: Y.Map<any>; version: number }>();
-  yElements.forEach((yMap, index) => {
+  
+  // Efficient iterator (O(N))
+  let index = 0;
+  for (const yMap of yElements) {
     const id = yMap.get('id');
     const version = yMap.get('version') || 0;
     if (id) {
       yElementMap.set(id, { index, yMap, version });
     }
-  });
+    index++;
+  }
   
-  let addedCount = 0;
-  let updatedCount = 0;
-  let deletedCount = 0;
+  // Single-pass: detect changes AND collect work items simultaneously
+  const newElements: any[] = [];
+  const updatedElements: { element: any; yMap: Y.Map<any> }[] = [];
   const processedIds = new Set<string>();
   
+  for (const el of activeElements) {
+    processedIds.add(el.id);
+    const existing = yElementMap.get(el.id);
+    
+    if (!existing) {
+      newElements.push(el);
+    } else if (el.version > existing.version) {
+      updatedElements.push({ element: el, yMap: existing.yMap });
+    }
+  }
+  
+  // Collect deletions
+  const indicesToDelete: number[] = [];
+  yElementMap.forEach(({ index }, id) => {
+    if (!processedIds.has(id)) {
+      indicesToDelete.push(index);
+    }
+  });
+  
+  const addedCount = newElements.length;
+  const updatedCount = updatedElements.length;
+  const deletedCount = indicesToDelete.length;
+
+  // Check appState changes
+  const persistableState = {
+    viewBackgroundColor: appState.viewBackgroundColor,
+    theme: appState.theme,
+  };
+  
+  let appStateChanged = false;
+  for (const [key, value] of Object.entries(persistableState)) {
+    if (yAppState.get(key) !== value) {
+      appStateChanged = true;
+      break;
+    }
+  }
+  
+  // Skip transact entirely if nothing changed
+  if (addedCount === 0 && updatedCount === 0 && deletedCount === 0 && !appStateChanged) {
+    return { addedCount: 0, updatedCount: 0, deletedCount: 0 };
+  }
+  
+  // Single transact with pre-computed work — no redundant iteration
   ydoc.transact(() => {
-    activeElements.forEach(element => {
-      processedIds.add(element.id);
-      const existing = yElementMap.get(element.id);
-      
-      if (!existing) {
-        const yMap = new Y.Map();
-        for (const [key, value] of Object.entries(element)) {
+    // Add new elements
+    for (const element of newElements) {
+      const yMap = new Y.Map();
+      for (const [key, value] of Object.entries(element)) {
+        yMap.set(key, value);
+      }
+      yElements.push([yMap]);
+    }
+    
+    // Update changed elements
+    for (const { element, yMap } of updatedElements) {
+      for (const [key, value] of Object.entries(element)) {
+        if (yMap.get(key) !== value) {
           yMap.set(key, value);
         }
-        yElements.push([yMap]);
-        addedCount++;
-      } else if (existing.version !== element.version) {
-        for (const [key, value] of Object.entries(element)) {
-          if (existing.yMap.get(key) !== value) {
-            existing.yMap.set(key, value);
-          }
-        }
-        updatedCount++;
       }
-    });
+    }
     
-    const indicesToDelete: number[] = [];
-    yElementMap.forEach(({ index }, id) => {
-      if (!processedIds.has(id)) {
-        indicesToDelete.push(index);
-        deletedCount++;
-      }
-    });
-    
+    // Delete removed elements (reverse order to preserve indices)
     indicesToDelete.sort((a, b) => b - a);
-    indicesToDelete.forEach(index => {
+    for (const index of indicesToDelete) {
       yElements.delete(index, 1);
-    });
+    }
     
-    const persistableState = {
-      viewBackgroundColor: appState.viewBackgroundColor,
-      scrollX: appState.scrollX,
-      scrollY: appState.scrollY,
-      zoom: appState.zoom,
-      theme: appState.theme,
-      gridSize: appState.gridSize,
-    };
-    
+    // Sync appState
     for (const [key, value] of Object.entries(persistableState)) {
       if (yAppState.get(key) !== value) {
         yAppState.set(key, value);

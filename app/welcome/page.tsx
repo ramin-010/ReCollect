@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, useScroll, useTransform } from "framer-motion";
 import { 
   ArrowRight, 
@@ -26,6 +27,7 @@ import { Doodle } from '@/components/brand/Doodle';
 import { CommunityDoodles } from '@/components/brand/CommunityDoodles';
 import { CinematicWhiteboardViewer } from '@/components/brand/CinematicWhiteboardViewer';
 import { LandingTaskDemo } from '@/components/brand/LandingTaskDemo';
+import { CinematicSecurity } from '@/components/brand/CinematicSecurity';
 
 
 // --- Media Placeholder Component ---
@@ -191,7 +193,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 2. DOCS (The Editor) --- */}
-      <section className="py-12 px-6 border-t border-white/5 bg-[hsl(var(--sidebar-bg))]">
+      <section className="py-24 px-6 border-t border-white/5 bg-[hsl(var(--welcome-bg))]">
         <div className="max-w-8xl mx-auto space-y-8">
              <div className="text-center max-w-2xl mx-auto space-y-3 relative flex flex-col items-center">
                 {/* <FeatureBadge icon={CheckCircle2} text="The Editor" color="blue" /> */}
@@ -207,7 +209,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 3. TASKS HUB (Connectivity) --- */}
-      <section className="py-10 px-6 border-t border-white/5 relative overflow-hidden min-h-[50vh] flex flex-col items-center justify-center">
+      <section className="py-20 px-6 border-t border-white/5 relative overflow-hidden min-h-[50vh] flex flex-col items-center justify-center ">
 
         
         <div className="max-w-4xl w-full text-center space-y-4 relative z-10">
@@ -225,41 +227,43 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- 4. WHITEBOARD (Excalidraw++) --- */}
       {/* --- 4. WHITEBOARD (Infinite Canvas) --- */}
-      <section className="py-24 px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-             <div className="order-2 lg:order-1">
-                 {/* Cinematic Code Animation */}
+      <section className="py-24 px-6 border-t border-white/5 relative overflow-hidden bg-[hsl(var(--welcome-bg))]">
+        {/* Background Gradient for Depth */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-purple-900/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr] gap-10 lg:gap-16 items-center">
+             {/* Cinematic Viewer — Left */}
+             <div className="w-full relative order-2 lg:order-1">
                  <CinematicWhiteboardViewer />
              </div>
-             <div className="order-1 lg:order-2 space-y-8">
-                <FeatureBadge icon={Layers} text="Infinite Canvas" color="purple" />
-                <h2 className="text-4xl md:text-6xl font-bold leading-tight">Think bigger <br/> and faster.</h2>
-                <div className="space-y-6 text-lg text-[hsl(var(--muted-foreground))]">
-                    <p>
-                        A whiteboard engine built for speed. We've optimized the sync protocol to be 
-                        <span className="text-white font-bold"> 3x faster</span> than standard implementations. 
-                        Zero lag, even with hundreds of nodes.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                        <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                            <h4 className="font-bold text-white mb-1 flex items-center gap-2">
-                                <Zap className="w-4 h-4 text-amber-400" />
-                                Instant Sync
-                            </h4>
-                            <p className="text-sm opacity-60">Low-latency websocket connection.</p>
-                        </div>
-                        <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                            <h4 className="font-bold text-white mb-1 flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                Local First
-                            </h4>
-                            <p className="text-sm opacity-60">Works offline, syncs when you're back.</p>
-                        </div>
-                    </div>
+
+             {/* Text — Right */}
+             <div className="space-y-6 text-center lg:text-right order-1 lg:order-2">
+                <div className="flex justify-center lg:justify-end mb-2">
+                    <FeatureBadge icon={Layers} text="Infinite Canvas" color="purple" />
                 </div>
+                
+                {/* Funky Typography */}
+                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9]">
+                    <span className="block text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
+                        Think Bigger.
+                    </span>
+                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 relative">
+                        Move Faster.
+                        {/* Funky Underline */}
+                        <svg className="absolute w-full h-3 -bottom-1 left-0 text-purple-500 opacity-60" viewBox="0 0 200 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.00025 6.99997C2.00025 6.99997 101.996 -1.82855 198.006 2.99996" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+                    </span>
+                </h2>
+                
+                <p className="text-lg md:text-xl text-[hsl(var(--muted-foreground))] leading-relaxed">
+                    A whiteboard engine built for speed. We've optimized the sync protocol to be 
+                    <span className="text-white font-bold mx-1"> 3x faster</span> than standard implementations. 
+                    Zero lag, even with hundreds of nodes.
+                </p>
              </div>
+          </div>
         </div>
       </section>
 
@@ -287,7 +291,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 6. QUICK CAPTURE (Speed) --- */}
-      <section className="py-24 px-6 border-t border-white/5 flex items-center justify-center min-h-[40vh]">
+      <section className="py-24 px-6 border-t border-white/5 flex items-center justify-center min-h-[40vh] bg-[hsl(var(--welcome-bg))]">
         <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-pink-500">
@@ -305,40 +309,11 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- 7. PRIVACY & SECURITY --- */}
-      <section className="py-24 px-6 border-t border-white/5 bg-[#050505]">
-        <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div className="space-y-8">
-                     <FeatureBadge icon={ShieldCheck} text="Security First" color="rose" />
-                     <h2 className="text-4xl font-bold">Your data is <br/> yours alone.</h2>
-                     <p className="text-lg text-[hsl(var(--muted-foreground))]">
-                        We built ReCollect with a Zero-Knowledge architecture. Your thoughts are encrypted locally before they ever touch our servers.
-                     </p>
-                     
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
-                        {[
-                            { title: 'Local First', desc: 'Works offline, syncs later.' },
-                            { title: 'E2E Encrypted', desc: 'Military grade encryption.' },
-                            { title: 'Zero Knowledge', desc: 'We can\'t see your notes.' },
-                        ].map(item => (
-                            <div key={item.title} className="p-4 rounded-xl bg-white/5 border border-white/5">
-                                <Lock className="w-6 h-6 text-rose-500 mb-3" />
-                                <h4 className="font-bold text-sm mb-1">{item.title}</h4>
-                                <p className="text-xs text-gray-500">{item.desc}</p>
-                            </div>
-                        ))}
-                     </div>
-                </div>
-                <div>
-                     <MediaPlaceholder type="Abstract Security" prompt="Abstract glowing cube enclosed by metallic transparent shields. Safe, fortress vibe." />
-                </div>
-            </div>
-        </div>
-      </section>
+      {/* --- 7. PRIVACY & SECURITY (New Cinematic Component) --- */}
+      <CinematicSecurity />
 
       {/* --- 8. FOOTER CTA --- */}
-      <section className="relative py-40 px-6 border-t border-white/5 overflow-hidden">
+      <section className="relative py-40 pb-10 px-6 border-t border-white/5 overflow-hidden">
          {/* Deep Space Background Placeholder */}
          <div className="absolute inset-0 -z-10 bg-black">
              <div className="absolute inset-0 opacity-40">
@@ -364,8 +339,8 @@ export default function WelcomePage() {
             </div>
             <div className="pt-24 flex items-center justify-center gap-8 text-sm text-gray-500 font-medium">
                 <span>© 2026 ReCollect Inc.</span>
-                <a href="#" className="hover:text-white transition-colors">Privacy</a>
-                <a href="#" className="hover:text-white transition-colors">Terms</a>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
                 <a href="#" className="hover:text-white transition-colors">Twitter</a>
             </div>
          </div>

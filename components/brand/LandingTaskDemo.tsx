@@ -95,9 +95,8 @@ export function LandingTaskDemo() {
                 onClose={() => {}}
                 isQuickAdd={false}
                 demoMode={true}
-                initialTitle="Review Q3 Roadmap with Design Team @design"
-                initialDescription={`<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
-                </div><p>Let's finalize the new dashboard layout and component system.</p>`}
+                initialTitle="Review Q3 Roadmap with Design Team @design by Monday 12pm"
+                initialDescription="<p>Let's finalize the new dashboard layout and component system.</p>"
               />
           </div>
 

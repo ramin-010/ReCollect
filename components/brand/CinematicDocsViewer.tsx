@@ -11,7 +11,7 @@ const slides = [
     id: 'tasks',
     title: 'Integrated Tasks',
     desc: 'Tasks live right inside your docs. Assign, date, and track work without switching context.',
-    image: '/doc/of4.png',
+    image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658873/of4_osyddh.png',
     icon: CheckSquare,
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
@@ -21,7 +21,7 @@ const slides = [
     id: 'collab',
     title: 'Real-Time Collaboration',
     desc: 'Work together with your team in real-time. See cursors, edits, and presence instantly.',
-    image: '/doc/02f5.png',
+    image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658866/02f5_gvfyh9.png',
     icon: Users,
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
@@ -31,7 +31,7 @@ const slides = [
     id: 'slash',
     title: 'Power at Your Fingertips',
     desc: 'Type "/" to unlock a world of possibilities. Headers, lists, media, and more without lifting your hands.',
-    image: '/doc/of3.png',
+    image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658873/of3_a9xovn.png',
     icon: Zap,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
@@ -42,6 +42,14 @@ const slides = [
 export function CinematicDocsViewer() {
   const [activeTab, setActiveTab] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+
+  // Preload all slide images on mount for instant display
+  useEffect(() => {
+    slides.forEach((slide) => {
+      const img = new Image();
+      img.src = slide.image;
+    });
+  }, []);
 
   // Auto-rotate slides
   useEffect(() => {
@@ -67,7 +75,7 @@ export function CinematicDocsViewer() {
     <div className="w-full max-w-7xl  mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
-        className="relative aspect-video max-h-[85vh] w-full rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl overflow-hidden group"
+        className="relative aspect-video max-h-[89vh] w-full rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl overflow-hidden group"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
@@ -91,6 +99,7 @@ export function CinematicDocsViewer() {
                 <img 
                     src={slides[activeTab].image} 
                     alt={slides[activeTab].title} 
+                    fetchPriority="high"
                     className="w-full h-full object-contain object-top"
                 />
             </motion.div>

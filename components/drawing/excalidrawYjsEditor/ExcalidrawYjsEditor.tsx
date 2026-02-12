@@ -83,6 +83,15 @@ export function ExcalidrawYjsEditor({
     return Object.keys(data).length > 0 ? data : undefined;
   }, [initialElements, initialAppState, initialFiles]);
 
+  // Fix infinite loop: Excalidraw calls this callback on EVERY render
+  // with a new API object reference. Unguarded setState would trigger
+  // re-render → callback called again → infinite loop.
+  // Guard: only set state once (null → api), then use ref for updates.
+  const handleExcalidrawAPI = useCallback((api: any) => {
+    excalidrawAPIRef.current = api;
+    setExcalidrawAPI((prev: any) => prev ? prev : api);
+  }, [setExcalidrawAPI, excalidrawAPIRef]);
+
   const { resolvedTheme } = useTheme();
 
   if (isLoading) {
@@ -200,10 +209,10 @@ export function ExcalidrawYjsEditor({
       </div>
 
       <Excalidraw
-        excalidrawAPI={(api) => setExcalidrawAPI(api)}
-        theme={theme}
+        excalidrawAPI={handleExcalidrawAPI}
+
         initialData={initialData}
-        onChange={(elements, appState) => handleChange(elements, appState)}
+        onChange={handleChange}
         onPointerUpdate={collaborationEnabled && providerRef.current ? handlePointerUpdate : undefined}
         UIOptions={{
           canvasActions: {
@@ -211,7 +220,7 @@ export function ExcalidrawYjsEditor({
             saveToActiveFile: false,
             export: false,
             saveAsImage: false,
-            toggleTheme: false, // We control theme externally
+          
           }
         }}
       />

@@ -93,10 +93,15 @@ export function useCollaboration(
           }
         });
         
-        // Only update state if collaborators actually changed
+        // Only update if collaborators actually changed
         if (!areCollaboratorsEqual(newCollaborators, collaboratorsRef.current)) {
           collaboratorsRef.current = newCollaborators;
-          setCollaborators(newCollaborators);
+          // Update Excalidraw directly via ref — bypasses React render cycle
+          // This eliminates ~16-32ms latency per cursor update
+          const api = excalidrawAPIRef.current;
+          if (api) {
+            api.updateScene({ collaborators: newCollaborators });
+          }
         }
       },
     });
@@ -112,17 +117,30 @@ export function useCollaboration(
     const yElements = ydoc.getArray<Y.Map<any>>('elements');
     const yAppState = ydoc.getMap<any>('appState');
     
+    // rAF batching: coalesce multiple Yjs updates into one scene update per frame
+    let pendingRaf: number | null = null;
+    
     const elementsObserver = (events: Y.YEvent<any>[]) => {
       const api = excalidrawAPIRef.current;
       const isLocal = events.some(e => e.transaction.local);
       
       if (!api || isLocal) return;
       
-      isRemoteUpdateRef.current = true;
-      const elements = yElements.toArray().map((yMap) => yMap.toJSON());
-      api.updateScene({ elements });
-      
-      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+      // Schedule ONE scene update per animation frame
+      // Multiple Yjs updates arriving within the same frame get coalesced
+      if (pendingRaf === null) {
+        pendingRaf = requestAnimationFrame(() => {
+          pendingRaf = null;
+          const currentApi = excalidrawAPIRef.current;
+          if (!currentApi) return;
+          
+          isRemoteUpdateRef.current = true;
+          const elements = yElements.toArray().map((yMap) => yMap.toJSON());
+          currentApi.updateScene({ elements });
+          // Clear flag on NEXT frame — ensures React's async onChange is covered
+          requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
+        });
+      }
     };
     
     const appStateObserver = (event: Y.YMapEvent<any>) => {
@@ -138,13 +156,15 @@ export function useCollaboration(
       if (Object.keys(safeState).length > 0) {
         api.updateScene({ appState: safeState });
       }
-      setTimeout(() => { isRemoteUpdateRef.current = false; }, 50);
+      // Clear flag on NEXT frame — ensures React's async onChange is covered
+      requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
     };
     
     yElements.observeDeep(elementsObserver);
     yAppState.observe(appStateObserver);
     
     return () => {
+      if (pendingRaf !== null) cancelAnimationFrame(pendingRaf);
       yElements.unobserveDeep(elementsObserver);
       yAppState.unobserve(appStateObserver);
       provider.destroy();
