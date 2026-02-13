@@ -19,6 +19,7 @@ function SmartBlockComponent({
   id,
   type = 'text',
   content,
+  language,
   url,
   stackItems,
   width,
@@ -145,10 +146,12 @@ function SmartBlockComponent({
               type={type}
               content={content}
               url={url}
+              language={language}
               isEditing={isEditing}
               onUpdate={(newContent) => onUpdateBlock?.(id, { content: newContent })}
               onBlur={() => setIsEditing(false)}
               onDelete={() => onDeleteBlock?.(id)}
+              onLanguageChange={(lang) => onUpdateBlock?.(id, { language: lang })}
             />
             <TaskProgressBar taskStats={type === 'text' ? taskStats : null} />
           </>

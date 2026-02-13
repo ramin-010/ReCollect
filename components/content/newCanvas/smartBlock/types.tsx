@@ -2,6 +2,7 @@ export interface SmartBlockProps {
   id: string;
   type?: 'text' | 'image' | 'embed' | 'code' | 'stack';
   content: string;
+  language?: string;
   url?: string;   stackItems?: any[];   width: number;
   height: number | 'auto';
   x: number;

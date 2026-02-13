@@ -7,6 +7,7 @@ import { CodeBlock } from '../CodeBlock';
 import { BlockEditor } from '../BlockEditor';
 import { cn } from '@/lib/utils';
 import { TaskStats } from './types';
+import { CALLOUT_READ_STYLES } from '../CalloutExtension';
 
 interface DragHandleProps {
   isVisible: boolean;
@@ -189,20 +190,24 @@ interface BlockContentProps {
   type: 'text' | 'image' | 'embed' | 'code' | 'stack';
   content: string;
   url?: string;
+  language?: string;
   isEditing: boolean;
   onUpdate: (content: string) => void;
   onBlur: () => void;
   onDelete?: () => void;
+  onLanguageChange?: (language: string) => void;
 }
 
 export const BlockContent: React.FC<BlockContentProps> = ({ 
   type, 
   content, 
   url, 
+  language,
   isEditing, 
   onUpdate, 
   onBlur,
-  onDelete
+  onDelete,
+  onLanguageChange
 }) => {
   if (type === 'text') {
     if (isEditing) {
@@ -217,6 +222,7 @@ export const BlockContent: React.FC<BlockContentProps> = ({
       );
     }
     return (
+      <>
       <div 
         className={`
           prose prose-sm  border-none dark:prose-invert max-w-none leading-normal 
@@ -276,6 +282,9 @@ export const BlockContent: React.FC<BlockContentProps> = ({
         `}
         dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
       />
+      {/* Callout styles for read-only rendering */}
+      <style>{CALLOUT_READ_STYLES}</style>
+      </>
     );
   }
 
@@ -301,7 +310,13 @@ export const BlockContent: React.FC<BlockContentProps> = ({
   if (type === 'code') {
     return (
       <div className="w-full h-full">
-        <CodeBlock code={content} />
+        <CodeBlock 
+          code={content} 
+          language={language}
+          editable={true}
+          onUpdate={onUpdate}
+          onLanguageChange={onLanguageChange}
+        />
       </div>
     );
   }
