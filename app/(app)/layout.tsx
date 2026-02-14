@@ -30,7 +30,9 @@ export default function AppLayout({
   
   // Hide navbar when editing a document (docs view with editor open) or viewing tasks
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || currentView === 'todo';
+  const hideNavbar = isDocEditorOpen || currentView === 'todo' || currentView === 'slides';
+  const hideSidebar = currentView === 'slides';
+  
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function AppLayout({
   return (
     <CreateNoteProvider>
       <div className="min-h-screen flex bg-pattern">
-        <Sidebar />
+        {!hideSidebar && <Sidebar />}
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
           {!hideNavbar && <Navbar />}
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">

@@ -1,7 +1,7 @@
 // lib/store/viewStore.ts
 import { create } from 'zustand';
 
-export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
+export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs' | 'slides';
 export type TodoFilterType = 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
 
 interface ViewState {

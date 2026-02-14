@@ -47,7 +47,7 @@ export function LandingTaskDemo() {
              <div className="w-full h-full max-w-[1400px] mx-auto relative">
                 
                 {/* 1. Second Brain (Top Left) */}
-                <div className="absolute top-[4%] left-[2%] sm:left-[-10%] max-w-[280px] text-right sm:text-left transform -rotate-2 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute top-[4%] left-[2%] sm:left-[-10%] max-w-[280px] text-right sm:text-left transform -rotate-2 opacity-75 hover:opacity-100 transition-opacity duration-500">
                     <h3 className="text-xl sm:text-2xl text-emerald-300/80 mb-1 font-bold">Your Second Brain</h3>
                     <p className="text-lg sm:text-xl text-white/50 leading-tight">
                         Keeps all your tasks, reminders, and workflows in check without the chaos.
@@ -55,7 +55,7 @@ export function LandingTaskDemo() {
                 </div>
 
                 {/* 2. Context Integration (Top Right) */}
-                <div className="absolute top-[4%] right-[2%] sm:right-[-10%] max-w-[280px] text-left sm:text-right transform rotate-2 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute top-[4%] right-[2%] sm:right-[-10%] max-w-[280px] text-left sm:text-right transform rotate-2 opacity-75 hover:opacity-100 transition-opacity duration-500">
                      <h3 className="text-xl sm:text-2xl text-purple-300/80 mb-1 font-bold">Deep Integration</h3>
                     <p className="text-lg sm:text-xl text-white/50 leading-tight">
                         Manage tasks specifically for Docs, Whiteboards & Notes right where you work.
@@ -63,7 +63,7 @@ export function LandingTaskDemo() {
                 </div>
 
                 {/* 3. Collaboration (Bottom Left) */}
-                <div className="absolute bottom-[4%] left-[2%] sm:left-[-10%] max-w-[280px] text-right sm:text-left transform rotate-1 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute bottom-[4%] left-[2%] sm:left-[-10%] max-w-[280px] text-right sm:text-left transform rotate-1 opacity-75 hover:opacity-100 transition-opacity duration-500">
                     <h3 className="text-xl sm:text-2xl text-blue-300/80 mb-1 font-bold">Healthy Collaboration</h3>
                     <p className="text-lg sm:text-xl text-white/50 leading-tight">
                         Assign tasks and sync with your team instantly for smoother workflows.
@@ -71,7 +71,7 @@ export function LandingTaskDemo() {
                 </div>
 
                 {/* 4. Smart Reminders (Bottom Right) */}
-                <div className="absolute bottom-[4%] right-[2%] sm:right-[-10%] max-w-[280px] text-left sm:text-right transform -rotate-1 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute bottom-[4%] right-[2%] sm:right-[-10%] max-w-[280px] text-left sm:text-right transform -rotate-1 opacity-75 hover:opacity-100 transition-opacity duration-500">
                      <h3 className="text-xl sm:text-2xl text-amber-300/80 mb-1 font-bold">Smart Timing</h3>
                     <p className="text-lg sm:text-xl text-white/50 leading-tight">
                         Intelligent 10-min before reminders ensure you never miss a beat.
