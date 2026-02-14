@@ -40,7 +40,14 @@ function SmartBlockComponent({
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-    const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
+  // Auto-enter edit mode if selected and empty (freshly created) 
+  useEffect(() => {
+    if (isSelected && type === 'text' && !content && !isEditing) {
+      setIsEditing(true);
+    }
+  }, [isSelected, type, content]);
+
+  const bgColor = color || ''; // Default to transparent instead of card-bg 
 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
@@ -96,11 +103,12 @@ function SmartBlockComponent({
       id={`smart-block-${id}`}       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "relative rounded-xl border transition-all duration-200 group flex flex-col backdrop-blur-sm",
+        "relative rounded-xl border transition-all duration-200 group flex flex-col",
+        color ? "backdrop-blur-sm" : "",
         isEditing ? "shadow-md" : "shadow-none",
         isSelected ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20" : "border-[hsl(var(--border))]/50",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
-        bgColor
+        bgColor 
       )}
       style={{
         width: '100%',
