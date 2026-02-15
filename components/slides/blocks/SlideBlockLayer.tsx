@@ -105,15 +105,12 @@ const BlockWrapperComponent = ({
   const handleResize = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     const isText = block.type === 'text';
     // Direct DOM manipulation for performance (avoids React render loop)
-    if (isText && block.width && smartBlockRef.current) {
-      const newWidth = ref.offsetWidth;
-      const scale = newWidth / block.width;
-      const currentFontSize = block.fontSize || 14;
-      const newFontSize = Math.round(currentFontSize * scale * 10) / 10;
-      
-      smartBlockRef.current.style.fontSize = `${newFontSize}px`;
+    // For text blocks, only update width
+    if (isText && smartBlockRef.current) {
+      // No font size update, just ensure width is applied if needed
+      // The actual width update will happen in handleResizeStop
     }
-  }, [block.type, block.width, block.fontSize]);
+  }, [block.type]); // Removed block.width, block.fontSize as they are no longer used here
 
   const zIndex = isSelected ? 20 : 10;
   const isText = block.type === 'text';

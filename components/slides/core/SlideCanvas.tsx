@@ -6,6 +6,7 @@ import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide } from './SingleSlide';
 import { Button } from '@/components/ui-base/Button';
+import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 
 // ---------------------------------------------------------------------------
 // SlideCanvas — Main Entry Point
@@ -138,12 +139,13 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
   }, [slides]);
 
   return (
-    <div className="relative w-full h-full bg-[hsl(var(--background))]/50 overflow-auto" id="slide-canvas-viewport">
-      {/* Scrollable slide area */}
-      <div
+    <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none">
+      <EditorStyles />
+      <div 
         ref={viewportRef}
-        className="flex flex-col items-center py-8 min-h-full transition-transform duration-75 ease-out origin-top"
+        className="flex flex-col items-center py-8 min-h-full transition-transform duration-75 ease-out origin-top overflow-auto bg-[hsl(var(--background))]/50"
         style={{ transform: `scale(${zoom})` }}
+        id="slide-canvas-viewport"
         onWheel={handleWheel}
         onClick={(e) => {
           if (e.target === viewportRef.current) {

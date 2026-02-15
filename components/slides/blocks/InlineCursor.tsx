@@ -41,7 +41,7 @@ interface InlineCursorProps {
   maxWidth?: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, fontSize = 14, maxWidth }: InlineCursorProps) {
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -72,8 +72,8 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     autofocus: 'end',
     editorProps: {
       attributes: {
-        class: 'outline-none prose prose-sm dark:prose-invert max-w-none',
-        style: `caret-color: hsl(var(--foreground)); color: hsl(var(--foreground)); font-size: ${fontSize}px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;`,
+        class: 'outline-none max-w-none',
+        style: `caret-color: hsl(var(--foreground)); color: hsl(var(--foreground)); line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0; padding: 0 4px;`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -156,7 +156,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           padding: 0 !important;
         }
       `}</style>
-      <div className="inline-cursor-editor">
+      <div className="inline-cursor-editor notion-editor">
         <EditorContent
           editor={editor}
           style={{

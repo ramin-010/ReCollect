@@ -176,9 +176,7 @@ function SmartBlockComponent({
 
       {/* Content Area */}
       <div 
-        ref={contentRef}
         className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'))}
-        style={type === 'text' ? { fontSize: `${currentFontSize}px` } : {}}
       >
         {type !== 'stack' ? (
           <>
