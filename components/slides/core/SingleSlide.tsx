@@ -511,6 +511,7 @@ export function SingleSlide({
             y={cursorPos.y}
             initialContent={editingBlockContent}
             fontSize={editingBlockFontSize}
+            color={editingBlockData?.color}
             // maxWidth removed to allow auto-expansion during edit
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}

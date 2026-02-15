@@ -165,8 +165,8 @@ function SmartBlockComponent({
         onAnchorMouseUp={(side, e) => onAnchorMouseUp?.(id, side, e)}
       />
 
-      {/* Color Control - Floating "Inside" Top Right (Only when Editing, not for stacks) */}
-      {isEditing && type !== 'stack' && (
+      {/* Color Control - Visible on Selection or Editing */}
+      {(isSelected || isEditing) && type !== 'stack' && (
             <ColorControl 
             isVisible={true} 
             currentColor={color}
@@ -176,7 +176,11 @@ function SmartBlockComponent({
 
       {/* Content Area */}
       <div 
-        className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'))}
+        className={cn(
+          "flex-1 overflow-hidden relative z-10 transition-colors duration-200 rounded-lg", 
+          (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'),
+          color // Apply the background color class
+        )}
       >
         {type !== 'stack' ? (
           <>

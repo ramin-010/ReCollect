@@ -56,7 +56,7 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
     const [showPalette, setShowPalette] = useState(false);
   
     const COLORS = [
-      { name: 'Default', value: 'bg-[hsl(var(--card-bg))]' }, // Default
+      { name: 'Default', value: '' }, // Default (Transparent)
       { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
       { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
       { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
@@ -66,7 +66,7 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
   
     return (
       <div className={cn(
-        "absolute top-1 left-1 flex flex-col items-end gap-1 transition-opacity z-[100] pointer-events-auto",
+        "absolute top-0 left-0 flex items-start gap-1 transition-opacity z-[100] pointer-events-auto",
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <div className="flex items-center gap-1">
@@ -84,9 +84,9 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
             </button>
         </div>
   
-        {/* Expanded Color Swatches - Slide Left */}
+        {/* Expanded Color Swatches - Slide Right */}
         {showPalette && (
-            <div className="absolute top-0 right-8 flex items-center gap-1 p-1 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-right-1 w-max">
+            <div className="absolute top-0 left-8 flex items-center gap-1 p-1.5 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-left-2 w-max ml-1 z-50">
                 {COLORS.map((c) => (
                    <button
                      key={c.name}

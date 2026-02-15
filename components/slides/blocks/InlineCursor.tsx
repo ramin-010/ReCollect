@@ -11,6 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
 import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
+import { cn } from '@/lib/utils';
 
 /**
  * InlineCursor — a "naked" TipTap editor that appears as just a blinking cursor.
@@ -35,13 +36,14 @@ interface InlineCursorProps {
   onChange?: (html: string) => void;
   /** Zoom level of the parent container for correct sizing */
   zoom?: number;
-  /** Font size in pixels (to match block scaling) */
   fontSize?: number;
+  /** Background color class */
+  color?: string;
   /** Constrain width to match block width */
   maxWidth?: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth }: InlineCursorProps) {
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth, color }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -156,7 +158,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           padding: 0 !important;
         }
       `}</style>
-      <div className="inline-cursor-editor notion-editor">
+      <div className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}>
         <EditorContent
           editor={editor}
           style={{
