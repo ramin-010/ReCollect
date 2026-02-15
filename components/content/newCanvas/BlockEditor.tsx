@@ -120,13 +120,8 @@ export function BlockEditor({
     onFocus: () => onFocus?.(),
     onBlur: () => {
       // Flush any pending debounced save immediately on blur
+      // This ensures pasted content is saved when user clicks outside
       debouncedOnChange.flush();
-      
-      // Auto-delete if empty on blur
-      if (editor && editor.getText().trim() === '' && !editor.isActive('image') && !editor.isActive('embed')) {
-         onDelete?.();
-      }
-      
       onBlur?.();
     },
   });

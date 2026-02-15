@@ -3,7 +3,10 @@ export interface SmartBlockProps {
   type?: 'text' | 'image' | 'embed' | 'code' | 'stack';
   content: string;
   language?: string;
-  url?: string;   stackItems?: any[];   width: number;
+  url?: string;
+  stackItems?: any[];
+  fontSize?: number;
+  width: number;
   height: number | 'auto';
   x: number;
   y: number;
@@ -17,7 +20,10 @@ export interface SmartBlockProps {
   onDimensionsChange?: (id: string, width: number, height: number) => void;
   isConnectionDragging?: boolean;
   readOnly?: boolean;
-  color?: string; }
+  color?: string;
+  /** If provided, double-click on text blocks calls this instead of opening inline editor */
+  onEditRequest?: (id: string) => void;
+}
 
 export interface TaskStats {
   total: number;

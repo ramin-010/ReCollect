@@ -56,7 +56,7 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
     const [showPalette, setShowPalette] = useState(false);
   
     const COLORS = [
-      { name: 'Default', value: '' }, // Default (Transparent)
+      { name: 'Default', value: 'bg-[hsl(var(--card-bg))]' }, // Default
       { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
       { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
       { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },

@@ -4,6 +4,7 @@ import React, { useCallback, useRef, useMemo, useState } from 'react';
 import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING } from './types';
 import { Connection, BlockDims } from '@/types/canvas';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
+import { InlineCursor } from '../blocks/InlineCursor';
 import { SlideBlockMenu } from '../blocks/SlideBlockMenu';
 import { NativeConnectionLayer } from '@/components/content/newCanvas/NativeConnectionLayer';
 import { ConnectionLayer } from '@/components/content/newCanvas/ConnectionLayer';
@@ -16,7 +17,7 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 function snapToGuide(y: number): number {
   // Offset -19px so visual text baseline sits closer to the line
-  const offset = -19;
+  const offset = -20;
   // Snap the "visual baseline" (y - offset) to the nearest grid line, then shift back
   return Math.round((y - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
 }
@@ -72,6 +73,30 @@ export function SingleSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragControllerInstance] = useState(() => new DragController());
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
+
+  // ---- Inline cursor state (naked cursor on click) ----
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+  // If editing an existing block, this ID is set. If null, we are creating a new block.
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  
+  // Computed: Get data for likely editing block
+  const editingBlockData = useMemo(() => {
+    if (!editingBlockId) return null;
+    return blocks.find(b => b.blockId === editingBlockId);
+  }, [editingBlockId, blocks]);
+
+  const editingBlockContent = editingBlockData?.content;
+  
+  const editingBlockFontSize = useMemo(() => {
+    if (!editingBlockData) return 14;
+    
+    // 1. Use explicit font size if available
+    if (editingBlockData.fontSize) return editingBlockData.fontSize;
+
+    // 2. Legacy fallback: Scale based on width (assuming 300px base)
+    const width = editingBlockData.width;
+    return 14 * Math.max(0.5, (width || 300) / 300);
+  }, [editingBlockData]);
 
   // Slide connections state (local setter that also calls parent)
   const setConnections = useCallback(
@@ -176,7 +201,7 @@ export function SingleSlide({
     [slideId, onAddBlock, blocks, onDeleteBlock]
   );
 
-  // ---- Single click creates text block (snapped to guide) ----
+  // ---- Single click spawns inline cursor (snapped to guide) ----
   const handleSingleClick = useCallback(
     (e: React.MouseEvent) => {
       // Only create on direct click on canvas background (not on blocks)
@@ -191,31 +216,102 @@ export function SingleSlide({
 
       onSlideClick(slideId);
 
-      const hasSelection = !!selectedBlockId || !!selectedConnectionId;
+      const hadSelection = !!selectedBlockId || !!selectedConnectionId;
 
       // 2. Deselect everything
       onSelectBlock('');
       onSelectConnection(null);
 
-      // 3. Create new snapped block ONLY if we didn't just deselect something
-      if (!hasSelection) {
+      // 3. Dismiss existing cursor
+      setCursorPos(null);
+      setEditingBlockId(null);
+
+      // 4. Spawn inline cursor ONLY if we didn't just deselect something
+      if (!hadSelection) {
         const rect = containerRef.current!.getBoundingClientRect();
         const x = (e.clientX - rect.left) / zoom;
         const rawY = (e.clientY - rect.top) / zoom;
         const y = snapToGuide(rawY);
-        onAddBlock(slideId, 'text', x, y);
+        setCursorPos({ x, y });
       }
     },
-    [slideId, onAddBlock, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId]
+    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId]
   );
 
-  // ---- Double click creates text block (backward compat) ----
+  // ---- Inline cursor handlers ----
+  const handleCursorCommit = useCallback(
+    (html: string, dims?: { width: number; height: number }) => {
+      // Case A: Editing existing block
+      if (editingBlockId) {
+        // Only update content. Preserve existing width/fontSize unless we want to "shrink wrap"?
+        // If the user typed more text, we generally want the block to grow?
+        // Excalidraw: Text block width grows with text (if not manually resized to wrap?)
+        // Our InlineCursor grows. If we don't update block width, the block will be too small/large?
+        // YES, we MUST update width to match the text width on commit!
+        // But what about fontSize? Keep existing.
+        
+        onUpdateBlock(editingBlockId, { 
+          content: html,
+          width: dims ? dims.width + 10 : undefined, // Add small buffer
+          height: dims ? dims.height : undefined,
+        });
+        setEditingBlockId(null);
+        setCursorPos(null);
+        return;
+      }
+
+      // Case B: Creating new block
+      if (!cursorPos) return;
+      const blockId = onAddBlock(slideId, 'text', cursorPos.x, cursorPos.y);
+      if (blockId) {
+        onUpdateBlock(blockId, { 
+          content: html,
+          width: dims ? dims.width + 10 : 300, // Start with auto-width
+          height: dims ? dims.height : 'auto',
+          fontSize: 14,
+        });
+      }
+      setCursorPos(null);
+    },
+    [cursorPos, slideId, onAddBlock, onUpdateBlock, editingBlockId]
+  );
+
+  const handleCursorDiscard = useCallback(() => {
+    // If we were creating a NEW block, just discard.
+    // If we were editing an EXISTING block, we might want to keep it if it wasn't empty?
+    // The InlineCursor only calls onDiscard if content is empty.
+    // So if existing block became empty, we should arguably delete it or leave it empty?
+    // Excalidraw deletes empty text blocks on blur.
+    
+    if (editingBlockId) {
+       // Optional: Delete existing block if it became empty?
+       // For now, let's just exit edit mode. The InlineCursor logic calls onDiscard when *empty*.
+       // If user cleared the text, maybe we should delete the block?
+       // Let's delete it to match behavior.
+       onDeleteBlock(editingBlockId);
+    }
+    
+    setCursorPos(null);
+    setEditingBlockId(null);
+  }, [editingBlockId, onDeleteBlock]);
+
+  // ---- Handle request to edit existing block (double click) ----
+  const handleEditRequest = useCallback((blockId: string) => {
+    const block = blocks.find(b => b.blockId === blockId);
+    if (block && block.type === 'text') {
+      setEditingBlockId(blockId);
+      setCursorPos({ x: block.x, y: block.y });
+    }
+  }, [blocks]);
+
+  // ---- Double click on background (no-op, just prevent default) ----
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      // Prevent double-click from creating a SECOND block
-      // (single click already creates one)
-      e.preventDefault();
-      e.stopPropagation();
+      // Only block if clicking directly on canvas background
+      if (e.target === containerRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     },
     []
   );
@@ -349,6 +445,8 @@ export function SingleSlide({
           isConnectionDragging={!!activeDragStart}
           dragController={dragControllerInstance}
           zoom={zoom}
+          onEditRequest={handleEditRequest}
+          editingBlockId={editingBlockId}
         />
 
         {/* Connection Layer (draft connections during anchor drag) */}
@@ -387,8 +485,23 @@ export function SingleSlide({
           <SlideBlockMenu onAddBlock={handleAddBlockFromMenu} />
         )}
 
+        {/* Inline Cursor (naked text input) */}
+        {cursorPos && (
+          <InlineCursor
+            key={editingBlockId || 'new-cursor'} // Force remount when switching modes
+            x={cursorPos.x}
+            y={cursorPos.y}
+            initialContent={editingBlockContent}
+            fontSize={editingBlockFontSize}
+            maxWidth={editingBlockData?.width}
+            onCommit={handleCursorCommit}
+            onDiscard={handleCursorDiscard}
+            zoom={zoom}
+          />
+        )}
+
         {/* Empty state — click hint */}
-        {blocks.length === 0 && (
+        {blocks.length === 0 && !cursorPos && (
           <div
             className="absolute inset-0 flex items-center justify-center cursor-text"
             onClick={handleSingleClick}

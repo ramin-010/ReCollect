@@ -25,6 +25,7 @@ interface SlideBlockLayerProps {
   isConnectionDragging?: boolean;
   dragController?: DragController;
   zoom?: number;
+  onEditRequest?: (id: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,7 @@ interface BlockWrapperProps {
   isConnectionDragging?: boolean;
   dragController?: DragController;
   zoom?: number;
+  onEditRequest?: (id: string) => void;
 }
 
 const BlockWrapperComponent = ({
@@ -63,7 +65,9 @@ const BlockWrapperComponent = ({
   isConnectionDragging,
   dragController,
   zoom,
-}: BlockWrapperProps) => {
+  onEditRequest,
+  editingBlockId,
+}: BlockWrapperProps & { editingBlockId?: string | null }) => {
 
   const handleRndDragStop = useCallback((_e: any, d: any) => {
     onDragStop(block.blockId, d.x, d.y);
@@ -76,15 +80,29 @@ const BlockWrapperComponent = ({
   }, [block.blockId, onDragStart, dragController]);
 
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
-    onUpdateBlock(block.blockId, {
-      width: ref.offsetWidth,
-      height: ref.offsetHeight,
+    const isText = block.type === 'text';
+    const newWidth = ref.offsetWidth;
+    const newHeight = isText ? 'auto' : ref.offsetHeight;
+
+    const updates: Partial<SlideBlockData> = {
+      width: newWidth,
+      height: newHeight,
       x: position.x,
       y: position.y,
-    });
-  }, [block.blockId, onUpdateBlock]);
+    };
+
+    // Scale font size if text block (Excalidraw style)
+    if (isText && block.width) {
+      const scale = newWidth / block.width;
+      const currentFontSize = block.fontSize || 14;
+      updates.fontSize = Math.round(currentFontSize * scale * 10) / 10; // Round to 1 decimal
+    }
+
+    onUpdateBlock(block.blockId, updates);
+  }, [block.blockId, block.type, block.width, block.fontSize, onUpdateBlock]);
 
   const zIndex = isSelected ? 20 : 10;
+  const isText = block.type === 'text';
 
   return (
     <Rnd
@@ -94,19 +112,19 @@ const BlockWrapperComponent = ({
       position={{ x: block.x, y: block.y }}
       size={{
         width: block.width,
-        height: block.height === 'auto' ? 'auto' : block.height,
+        height: isText ? 'auto' : (block.height === 'auto' ? 'auto' : block.height),
       }}
       onDragStop={handleRndDragStop}
       onDragStart={handleRndDragStart}
       dragHandleClassName="smart-block-drag-handle"
       bounds="parent"
       enableResizing={{
-        top: false, right: false, bottom: false, left: false,
-        topRight: false, bottomRight: true, bottomLeft: false, topLeft: false,
+        top: false, right: isText, bottom: !isText, left: false,
+        topRight: false, bottomRight: !isText, bottomLeft: false, topLeft: false,
       }}
       onResizeStop={handleResizeStop}
       className="z-10"
-      style={{ zIndex }}
+      style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto' }}
     >
       <SmartBlock
         id={block.blockId}
@@ -124,10 +142,10 @@ const BlockWrapperComponent = ({
         onFocus={onSelectBlock}
         onAnchorMouseDown={onAnchorMouseDown}
         onAnchorMouseUp={onAnchorMouseUp}
-        onDimensionsChange={onDimensionsChange}
-        readOnly={readOnly}
         isConnectionDragging={isConnectionDragging}
         color={block.color}
+        fontSize={block.fontSize}
+        onEditRequest={onEditRequest}
       />
     </Rnd>
   );
@@ -139,7 +157,10 @@ const BlockWrapper = memo(BlockWrapperComponent, (prev, next) => {
     prev.isSelected === next.isSelected &&
     prev.readOnly === next.readOnly &&
     prev.isConnectionDragging === next.isConnectionDragging &&
-    prev.zoom === next.zoom
+    prev.zoom === next.zoom &&
+    prev.onEditRequest === next.onEditRequest &&
+    prev.editingBlockId === next.editingBlockId &&
+    prev.block.fontSize === next.block.fontSize
   );
 });
 
@@ -162,7 +183,9 @@ function SlideBlockLayerComponent({
   isConnectionDragging,
   dragController,
   zoom,
-}: SlideBlockLayerProps) {
+  onEditRequest,
+  editingBlockId,
+}: SlideBlockLayerProps & { editingBlockId?: string | null }) {
   return (
     <>
       {blocks.map(block => (
@@ -182,6 +205,8 @@ function SlideBlockLayerComponent({
           isConnectionDragging={isConnectionDragging}
           dragController={dragController}
           zoom={zoom}
+          onEditRequest={onEditRequest}
+          editingBlockId={editingBlockId}
         />
       ))}
     </>

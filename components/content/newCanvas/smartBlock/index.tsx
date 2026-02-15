@@ -36,18 +36,14 @@ function SmartBlockComponent({
   onDimensionsChange,
   readOnly,
   isConnectionDragging,
-  color }: SmartBlockProps) {
+  color,
+  onEditRequest,
+  fontSize,
+}: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Auto-enter edit mode if selected and empty (freshly created) 
-  useEffect(() => {
-    if (isSelected && type === 'text' && !content && !isEditing) {
-      setIsEditing(true);
-    }
-  }, [isSelected, type, content]);
-
-  const bgColor = color || ''; // Default to transparent instead of card-bg 
+    const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
@@ -97,29 +93,62 @@ function SmartBlockComponent({
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  // ---- Font sizing ----
+  // Prioritize explicit fontSize. Fallback to legacy width-based scaling.
+  const BASE_FONT_SIZE = 14;
+  const BASE_WIDTH = 300;
+  
+  let currentFontSize = 14;
+  if (type === 'text') {
+    if (fontSize) {
+      currentFontSize = fontSize;
+    } else {
+      // Legacy scaling
+      currentFontSize = BASE_FONT_SIZE * Math.max(0.5, (width || BASE_WIDTH) / BASE_WIDTH);
+    }
+  }
+
+  // ---- Minimal text preview (no box when not editing) ----
+  const isMinimalText = type === 'text' && !isEditing;
+
   return (
     <motion.div
       ref={blockRef}
       id={`smart-block-${id}`}       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "relative rounded-xl border transition-all duration-200 group flex flex-col",
-        color ? "backdrop-blur-sm" : "",
-        isEditing ? "shadow-md" : "shadow-none",
-        isSelected ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20" : "border-[hsl(var(--border))]/50",
+        "relative transition-all duration-200 group flex flex-col",
+        // Text blocks: minimal in preview, boxed in edit
+        isMinimalText
+          ? "rounded-none border-transparent bg-transparent shadow-none"
+          : "rounded-xl border backdrop-blur-sm " + (isEditing ? "shadow-md" : "shadow-none"),
+        // Selection highlight (always, even for minimal text)
+        isSelected && !isMinimalText
+          ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20"
+          : isSelected && isMinimalText
+            ? "ring-1 ring-[hsl(var(--brand-primary))]/40 rounded-md"
+            : !isMinimalText ? "border-[hsl(var(--border))]/50" : "",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
-        bgColor 
+        !isMinimalText && bgColor
       )}
       style={{
         width: '100%',
         height: '100%',
+        ...(type === 'text' ? { fontSize: `${currentFontSize}px` } : {}),
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         onFocus?.(id);
-                if (type === 'text') {
-          setIsEditing(true);
+      }}
+      onDoubleClick={(e) => {
+        if (type === 'text') {
+          e.stopPropagation();
+          if (onEditRequest) {
+            onEditRequest(id);
+          } else {
+            setIsEditing(true);
+          }
         }
       }}
     >
@@ -147,7 +176,7 @@ function SmartBlockComponent({
       )}
 
       {/* Content Area */}
-      <div className={cn("flex-1  overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-4' : 'p-0')}>
+      <div className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'))}>
         {type !== 'stack' ? (
           <>
             <BlockContent 
@@ -251,7 +280,11 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.isConnectionDragging === next.isConnectionDragging &&
     prev.readOnly === next.readOnly &&
     prev.color === next.color &&
-    prev.stackItems === next.stackItems   );
+    prev.readOnly === next.readOnly &&
+    prev.color === next.color &&
+    prev.stackItems === next.stackItems &&
+    prev.onEditRequest === next.onEditRequest
+  );
 };
 
 export const SmartBlock = React.memo(SmartBlockComponent, arePropsEqual);

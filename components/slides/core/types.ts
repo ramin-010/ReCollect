@@ -24,6 +24,7 @@ export interface SlideBlockData {
   height: number | 'auto';
   language?: string;
   color?: string;
+  fontSize?: number; // Custom font size (default 14)
   // Legacy/Compatibility fields
   url?: string;
   imageId?: string;
@@ -47,4 +48,4 @@ export const SLIDE_MIN_HEIGHT = 700;
 export const SLIDE_GAP = 24;
 export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 1.5;
-export const GUIDE_LINE_SPACING = 40;
+export const GUIDE_LINE_SPACING = 35;
