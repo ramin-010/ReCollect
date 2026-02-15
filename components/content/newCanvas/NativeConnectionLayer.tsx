@@ -188,13 +188,31 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             
             if (blockEl && containerEl) {
                 const contRect = containerEl.getBoundingClientRect();
-                const bRect = blockEl.getBoundingClientRect();
+
+                let activeBlockGeo;
                 
-                                                const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
-                const y = (bRect.top - contRect.top + containerEl.scrollTop) / currentZoom;
-                const w = bRect.width / currentZoom;
-                const h = bRect.height / currentZoom;
-                const activeBlockGeo = { x, y, w, h };
+                // Try current offset from controller first (fastest/live)
+                // Note: activeOffset is {x, y} relative to parent, untransformed?
+                // Rnd d.x/d.y are usually translation or position values.
+                // We need to confirm coordinate space.
+                // Assuming Rnd x/y matches block.x/y space (internal coordinates).
+                if (dragController.activeOffset) {
+                    const { x, y } = dragController.activeOffset;
+                    // We need width/height too.
+                    const w = blockEl ? (blockEl.offsetWidth) : 200; 
+                    const h = blockEl ? (blockEl.offsetHeight) : 200;
+                    activeBlockGeo = { x, y, w, h };
+                } else if (blockEl) {
+                    // Fallback to DOM read
+                    const bRect = blockEl.getBoundingClientRect();
+                    const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
+                    const y = (bRect.top - contRect.top + containerEl.scrollTop) / currentZoom;
+                    const w = bRect.width / currentZoom;
+                    const h = bRect.height / currentZoom;
+                    activeBlockGeo = { x, y, w, h };
+                }
+
+                if (!activeBlockGeo) return;
 
                 currentConnections.forEach(conn => {
                                         if (conn.hidden) return;

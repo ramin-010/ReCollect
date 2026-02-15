@@ -15,6 +15,7 @@ interface SlideBlockLayerProps {
   selectedBlockId: string | null;
   readOnly?: boolean;
   onDragStop: (id: string, x: number, y: number) => void;
+  onDrag?: (id: string, x: number, y: number) => void;
   onDragStart?: (id: string) => void;
   onUpdateBlock: (id: string, data: Partial<SlideBlockData>) => void;
   onDeleteBlock: (id: string) => void;
@@ -37,6 +38,7 @@ interface BlockWrapperProps {
   isSelected: boolean;
   readOnly?: boolean;
   onDragStop: (id: string, x: number, y: number) => void;
+  onDrag?: (id: string, x: number, y: number) => void;
   onDragStart?: (id: string) => void;
   onUpdateBlock: (id: string, data: Partial<SlideBlockData>) => void;
   onDeleteBlock: (id: string) => void;
@@ -55,6 +57,7 @@ const BlockWrapperComponent = ({
   isSelected,
   readOnly,
   onDragStop,
+  onDrag,
   onDragStart,
   onUpdateBlock,
   onDeleteBlock,
@@ -79,6 +82,12 @@ const BlockWrapperComponent = ({
     onDragStart?.(block.blockId);
     dragController?.startDrag(block.blockId);
   }, [block.blockId, onDragStart, dragController]);
+
+  const handleRndDrag = useCallback((_e: any, d: any) => {
+    onDrag?.(block.blockId, d.x, d.y);
+    // Notify controller of live position
+    dragController?.update(block.blockId, d.x, d.y);
+  }, [block.blockId, onDrag, dragController]);
 
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     const isText = block.type === 'text';
@@ -126,6 +135,7 @@ const BlockWrapperComponent = ({
         height: isText ? 'auto' : (block.height === 'auto' ? 'auto' : block.height),
       }}
       onDragStop={handleRndDragStop}
+      onDrag={handleRndDrag}
       onDragStart={handleRndDragStart}
       dragHandleClassName="smart-block-drag-handle"
       bounds="parent"
@@ -186,6 +196,7 @@ function SlideBlockLayerComponent({
   selectedBlockId,
   readOnly,
   onDragStop,
+  onDrag,
   onDragStart,
   onUpdateBlock,
   onDeleteBlock,
@@ -208,6 +219,7 @@ function SlideBlockLayerComponent({
           isSelected={block.blockId === selectedBlockId}
           readOnly={readOnly}
           onDragStop={onDragStop}
+          onDrag={onDrag}
           onDragStart={onDragStart}
           onUpdateBlock={onUpdateBlock}
           onDeleteBlock={onDeleteBlock}
