@@ -40,11 +40,12 @@ function SmartBlockComponent({
   onEditRequest,
   fontSize,
   contentRef,
+  isConnected,
 }: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-    const bgColor = color || 'bg-[hsl(var(--card-bg))]'; 
+    const bgColor = color; 
 
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
@@ -109,8 +110,9 @@ function SmartBlockComponent({
     }
   }
 
-  // ---- Minimal text preview (no box when not editing) ----
-  const isMinimalText = type === 'text' && !isEditing;
+  // ---- Minimal text preview (no box when not editing AND not connected AND no color) ----
+  // If color is set, we treat it as a "card" regardless of connection or edit state
+  const isMinimalText = type === 'text' && !isEditing && !isConnected && !color;
 
   return (
     <motion.div
@@ -122,13 +124,16 @@ function SmartBlockComponent({
         // Text blocks: minimal in preview, boxed in edit
         isMinimalText
           ? "rounded-none border-transparent bg-transparent shadow-none"
-          : "rounded-xl border backdrop-blur-sm " + (isEditing ? "shadow-md" : "shadow-none"),
+          : "rounded-md border backdrop-blur-sm " + (isEditing ? "shadow-md" : "shadow-none"),
         // Selection highlight (always, even for minimal text)
         isSelected && !isMinimalText
           ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20"
           : isSelected && isMinimalText
             ? "ring-1 ring-[hsl(var(--brand-primary))]/40 rounded-md"
-            : !isMinimalText ? "border-[hsl(var(--border))]/50" : "",
+            // If connected (and thus !isMinimalText), use full opacity border. specific check for isConnected
+            : isConnected 
+              ? "border-[hsl(var(--border-light))]" 
+              : "border-white/50",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
         !isMinimalText && bgColor
       )}
@@ -178,8 +183,9 @@ function SmartBlockComponent({
       <div 
         className={cn(
           "flex-1 overflow-hidden relative z-10 transition-colors duration-200 rounded-lg", 
-          (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'),
-          color // Apply the background color class
+          (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0')
+          // Removed inner color application to avoid double-stacking intensity
+          // color is now handled exclusively by the outer container when !isMinimalText
         )}
       >
         {type !== 'stack' ? (
@@ -287,7 +293,8 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.color === next.color &&
     prev.fontSize === next.fontSize &&
     prev.stackItems === next.stackItems &&
-    prev.onEditRequest === next.onEditRequest
+    prev.onEditRequest === next.onEditRequest &&
+    prev.isConnected === next.isConnected
   );
 };
 

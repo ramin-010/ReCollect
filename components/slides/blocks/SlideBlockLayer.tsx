@@ -4,7 +4,7 @@ import React, { memo, useCallback, useState, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/content/newCanvas/smartBlock/index';
 import { DragController } from '@/components/content/newCanvas/DragController';
-import { SlideBlockData } from '../core/types';
+import { SlideBlockData, Connection } from '../core/types';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -12,6 +12,7 @@ import { SlideBlockData } from '../core/types';
 
 interface SlideBlockLayerProps {
   blocks: SlideBlockData[];
+  connections: Connection[];
   selectedBlockId: string | null;
   readOnly?: boolean;
   onDragStop: (id: string, x: number, y: number) => void;
@@ -36,6 +37,7 @@ interface SlideBlockLayerProps {
 interface BlockWrapperProps {
   block: SlideBlockData;
   isSelected: boolean;
+  isConnected: boolean;
   readOnly?: boolean;
   onDragStop: (id: string, x: number, y: number) => void;
   onDrag?: (id: string, x: number, y: number) => void;
@@ -55,6 +57,7 @@ interface BlockWrapperProps {
 const BlockWrapperComponent = ({
   block,
   isSelected,
+  isConnected,
   readOnly,
   onDragStop,
   onDrag,
@@ -160,6 +163,7 @@ const BlockWrapperComponent = ({
         x={block.x}
         y={block.y}
         isSelected={isSelected}
+        isConnected={isConnected}
         onUpdateBlock={onUpdateBlock}
         onDeleteBlock={onDeleteBlock}
         onFocus={onSelectBlock}
@@ -178,6 +182,7 @@ const BlockWrapper = memo(BlockWrapperComponent, (prev, next) => {
   return (
     prev.block === next.block &&
     prev.isSelected === next.isSelected &&
+    prev.isConnected === next.isConnected &&
     prev.readOnly === next.readOnly &&
     prev.isConnectionDragging === next.isConnectionDragging &&
     prev.zoom === next.zoom &&
@@ -193,6 +198,7 @@ const BlockWrapper = memo(BlockWrapperComponent, (prev, next) => {
 
 function SlideBlockLayerComponent({
   blocks,
+  connections,
   selectedBlockId,
   readOnly,
   onDragStop,
@@ -217,6 +223,7 @@ function SlideBlockLayerComponent({
           key={block.blockId}
           block={block}
           isSelected={block.blockId === selectedBlockId}
+          isConnected={connections?.some(c => c.fromBlock === block.blockId || c.toBlock === block.blockId)}
           readOnly={readOnly}
           onDragStop={onDragStop}
           onDrag={onDrag}

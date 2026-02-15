@@ -24,6 +24,7 @@ export interface SmartBlockProps {
   /** If provided, double-click on text blocks calls this instead of opening inline editor */
   onEditRequest?: (id: string) => void;
   contentRef?: React.RefObject<HTMLDivElement | null>;
+  isConnected?: boolean;
 }
 
 export interface TaskStats {

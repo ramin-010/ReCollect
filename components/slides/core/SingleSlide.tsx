@@ -405,7 +405,7 @@ export function SingleSlide({
           minHeight: SLIDE_MIN_HEIGHT,
           height: computedHeight,
           backgroundColor: backgroundColor || 'hsl(var(--card-bg))',
-          overflow: 'visible',
+          overflow: 'hidden',
         }}
       >
         {/* Dot grid background */}
@@ -450,6 +450,7 @@ export function SingleSlide({
         {/* Blocks */}
         <SlideBlockLayer
           blocks={blocks}
+          connections={connections}
           selectedBlockId={selectedBlockId}
           readOnly={readOnly}
           onDragStop={handleDragStopWithController}
