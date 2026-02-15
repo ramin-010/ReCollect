@@ -23,6 +23,7 @@ export interface SmartBlockProps {
   color?: string;
   /** If provided, double-click on text blocks calls this instead of opening inline editor */
   onEditRequest?: (id: string) => void;
+  contentRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export interface TaskStats {

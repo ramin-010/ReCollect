@@ -39,6 +39,7 @@ function SmartBlockComponent({
   color,
   onEditRequest,
   fontSize,
+  contentRef,
 }: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -134,7 +135,6 @@ function SmartBlockComponent({
       style={{
         width: '100%',
         height: '100%',
-        ...(type === 'text' ? { fontSize: `${currentFontSize}px` } : {}),
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -154,8 +154,7 @@ function SmartBlockComponent({
     >
       <DragHandle isVisible={isHovered || isSelected} />
       
-      {/* Controls Overlay (Delete) - Top Right (Outside) */}
-      <ControlsOverlay isVisible={isHovered || isSelected} onDelete={() => onDeleteBlock?.(id)} />
+
 
       {/* Anchor Points (Visible on Hover or dragging) */}
       <AnchorPoints 
@@ -176,7 +175,11 @@ function SmartBlockComponent({
       )}
 
       {/* Content Area */}
-      <div className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'))}>
+      <div 
+        ref={contentRef}
+        className={cn("flex-1 overflow-hidden relative z-10", (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0'))}
+        style={type === 'text' ? { fontSize: `${currentFontSize}px` } : {}}
+      >
         {type !== 'stack' ? (
           <>
             <BlockContent 
@@ -280,8 +283,7 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.isConnectionDragging === next.isConnectionDragging &&
     prev.readOnly === next.readOnly &&
     prev.color === next.color &&
-    prev.readOnly === next.readOnly &&
-    prev.color === next.color &&
+    prev.fontSize === next.fontSize &&
     prev.stackItems === next.stackItems &&
     prev.onEditRequest === next.onEditRequest
   );

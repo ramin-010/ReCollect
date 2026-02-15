@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useMemo, useState, useEffect } from 'react';
 import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING } from './types';
 import { Connection, BlockDims } from '@/types/canvas';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
@@ -303,6 +303,24 @@ export function SingleSlide({
       setCursorPos({ x: block.x, y: block.y });
     }
   }, [blocks]);
+
+  // Global keyboard shortcuts (Delete/Backspace)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete selected block
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId && !editingBlockId) {
+        // Prevent backspace from navigating back or other default actions
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) {
+           return;
+        }
+        e.preventDefault();
+        onDeleteBlock(selectedBlockId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBlockId, editingBlockId, onDeleteBlock]);
 
   // ---- Double click on background (no-op, just prevent default) ----
   const handleDoubleClick = useCallback(

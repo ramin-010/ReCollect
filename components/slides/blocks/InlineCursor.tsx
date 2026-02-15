@@ -3,6 +3,14 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
+import Link from '@tiptap/extension-link';
+import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
+import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
 
 /**
  * InlineCursor — a "naked" TipTap editor that appears as just a blinking cursor.
@@ -40,19 +48,31 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: false,
-        blockquote: false,
-        bulletList: false,
-        orderedList: false,
-        codeBlock: false,
-        horizontalRule: false,
+        heading: { levels: [1, 2, 3] },
+        bulletList: { keepMarks: true, keepAttributes: false },
+        orderedList: { keepMarks: true, keepAttributes: false },
       }) as any,
+      Placeholder.configure({
+        placeholder: "Type '/' for commands...",
+        includeChildren: true,
+        showOnlyCurrent: true,
+      }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Highlight.configure({ multicolor: true }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: 'text-blue-500 underline cursor-pointer hover:text-blue-600' },
+      }),
+      SlashCommands,
+      CalloutExtension,
     ],
     content: initialContent || '',
     autofocus: 'end',
     editorProps: {
       attributes: {
-        class: 'outline-none',
+        class: 'outline-none prose prose-sm dark:prose-invert max-w-none',
         style: `caret-color: hsl(var(--foreground)); color: hsl(var(--foreground)); font-size: ${fontSize}px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;`,
       },
     },

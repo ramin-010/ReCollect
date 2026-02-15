@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/content/newCanvas/smartBlock/index';
 import { DragController } from '@/components/content/newCanvas/DragController';
@@ -68,6 +68,7 @@ const BlockWrapperComponent = ({
   onEditRequest,
   editingBlockId,
 }: BlockWrapperProps & { editingBlockId?: string | null }) => {
+  const smartBlockRef = useRef<HTMLDivElement>(null);
 
   const handleRndDragStop = useCallback((_e: any, d: any) => {
     onDragStop(block.blockId, d.x, d.y);
@@ -95,11 +96,24 @@ const BlockWrapperComponent = ({
     if (isText && block.width) {
       const scale = newWidth / block.width;
       const currentFontSize = block.fontSize || 14;
-      updates.fontSize = Math.round(currentFontSize * scale * 10) / 10; // Round to 1 decimal
+      updates.fontSize = Math.round(currentFontSize * scale * 10) / 10;
     }
 
     onUpdateBlock(block.blockId, updates);
   }, [block.blockId, block.type, block.width, block.fontSize, onUpdateBlock]);
+
+  const handleResize = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
+    const isText = block.type === 'text';
+    // Direct DOM manipulation for performance (avoids React render loop)
+    if (isText && block.width && smartBlockRef.current) {
+      const newWidth = ref.offsetWidth;
+      const scale = newWidth / block.width;
+      const currentFontSize = block.fontSize || 14;
+      const newFontSize = Math.round(currentFontSize * scale * 10) / 10;
+      
+      smartBlockRef.current.style.fontSize = `${newFontSize}px`;
+    }
+  }, [block.type, block.width, block.fontSize]);
 
   const zIndex = isSelected ? 20 : 10;
   const isText = block.type === 'text';
@@ -122,6 +136,7 @@ const BlockWrapperComponent = ({
         top: false, right: isText, bottom: !isText, left: false,
         topRight: false, bottomRight: !isText, bottomLeft: false, topLeft: false,
       }}
+      onResize={handleResize}
       onResizeStop={handleResizeStop}
       className="z-10"
       style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto' }}
@@ -129,6 +144,7 @@ const BlockWrapperComponent = ({
       <SmartBlock
         id={block.blockId}
         type={block.type}
+        contentRef={smartBlockRef}
         content={block.content}
         language={block.language}
         url={block.url}
