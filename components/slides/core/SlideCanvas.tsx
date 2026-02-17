@@ -7,6 +7,8 @@ import { useSlideState } from './useSlideState';
 import { SingleSlide } from './SingleSlide';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
+import { usePasteHandler } from '@/components/content/newCanvas/smartCanvas/usePasteHandler';
+import { BlockData } from '@/components/content/newCanvas/smartCanvas/types';
 
 // ---------------------------------------------------------------------------
 // SlideCanvas — Main Entry Point
@@ -30,10 +32,55 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     getBlocksForSlide,
     getConnectionsForSlide,
     setConnectionsForSlide,
+    setBlocks,
   } = useSlideState(initialContent, onChange);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
+
+  // ---- Paste support (reuse SmartCanvas paste handler) ----
+  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
+  const activeSlideIdRef = useRef(activeSlideId);
+  activeSlideIdRef.current = activeSlideId;
+
+  // Wrap setBlocks so pasted BlockData objects get the active slideId injected
+  const pasteSetBlocks = useCallback<React.Dispatch<React.SetStateAction<BlockData[]>>>(
+    (action) => {
+      setBlocks((prev: SlideBlockData[]) => {
+        const currentSlideId = activeSlideIdRef.current;
+        if (!currentSlideId) return prev;
+
+        // Resolve the next value from the action (it could be a function or a value)
+        const nextBlocks = typeof action === 'function'
+          ? (action as (prev: BlockData[]) => BlockData[])(prev)
+          : action;
+
+        // Find newly added blocks (not in prev) and inject slideId
+        const prevIds = new Set(prev.map(b => b.blockId));
+        return nextBlocks.map(b => {
+          if (!prevIds.has(b.blockId)) {
+            // New block from paste — inject slideId
+            return { ...b, slideId: currentSlideId } as SlideBlockData;
+          }
+          return b as SlideBlockData;
+        });
+      });
+    },
+    [setBlocks]
+  );
+
+  usePasteHandler(pasteSetBlocks, mousePositionRef);
+
+  // Track mouse for paste-at-cursor
+  const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
+    if (viewportRef.current) {
+      const rect = viewportRef.current.getBoundingClientRect();
+      mousePositionRef.current = {
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
+      };
+    }
+  }, [zoom]);
 
   // ---- Zoom Handlers ----
   const handleZoom = useCallback((delta: number) => {
@@ -147,6 +194,7 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
         style={{ transform: `scale(${zoom})` }}
         id="slide-canvas-viewport"
         onWheel={handleWheel}
+        onMouseMove={handleViewportMouseMove}
         onClick={(e) => {
           if (e.target === viewportRef.current) {
             setSelectedBlockId(null);

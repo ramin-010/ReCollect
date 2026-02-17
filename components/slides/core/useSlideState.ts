@@ -169,7 +169,7 @@ export function useSlideState(
       text: { width: 300, height: 'auto', content: '' },
       code: { width: 450, height: 300, content: '// Start typing your code...\n' },
       image: { width: 300, height: 'auto', content: '' },
-      embed: { width: 350, height: 220, content: '' },
+      embed: { width: 300, height: 160, content: '' },
     };
     const d = defaults[type] || defaults.text;
 

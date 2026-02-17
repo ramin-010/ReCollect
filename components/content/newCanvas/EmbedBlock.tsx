@@ -89,18 +89,17 @@ export function EmbedBlock({ url, className }: EmbedBlockProps) {
   // Twitter/X Embed
   if (type === 'twitter') {
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        draggable={false}
-        onDragStart={(e) => e.preventDefault()}
+      <div
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          window.open(url, '_blank');
+        }}
         className={cn(
-          "block w-full h-full rounded-lg border border-[hsl(var(--border))] overflow-hidden transition-all hover:shadow-lg group",
+          "block w-full h-full rounded-lg border border-[hsl(var(--border))] overflow-hidden transition-all hover:shadow-lg group cursor-pointer",
           className
         )}
       >
-        <div className="bg-gradient-to-br from-sky-500/15 to-transparent p-4 h-full flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-sky-500/15 to-transparent p-4 h-full flex flex-col justify-between pointer-events-none">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
@@ -114,10 +113,10 @@ export function EmbedBlock({ url, className }: EmbedBlockProps) {
           </div>
           <div className="flex items-center gap-1.5 mt-3 text-xs text-sky-400 group-hover:text-sky-300 transition-colors">
             <ExternalLink className="w-3 h-3" />
-            <span>View on X</span>
+            <span>Double-click to view</span>
           </div>
         </div>
-      </a>
+      </div>
     );
   }
 
@@ -125,20 +124,19 @@ export function EmbedBlock({ url, className }: EmbedBlockProps) {
   const domainColor = getDomainColor(domain);
 
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      draggable={false}
-      onDragStart={(e) => e.preventDefault()}
+    <div
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        window.open(url, '_blank');
+      }}
       className={cn(
         "block w-full h-full rounded-lg border overflow-hidden transition-all duration-200",
-        "hover:shadow-lg hover:scale-[1.01] group",
+        "hover:shadow-lg hover:scale-[1.01] group cursor-pointer",
         className
       )}
     >
       <div className={cn(
-        "h-full flex flex-col bg-gradient-to-br p-4",
+        "h-full flex flex-col bg-gradient-to-br p-4 pointer-events-none",
         domainColor
       )}>
         {/* Top: Favicon + Domain */}
@@ -169,10 +167,10 @@ export function EmbedBlock({ url, className }: EmbedBlockProps) {
         {/* Bottom: CTA */}
         <div className="flex items-center gap-1.5 mt-3 text-xs text-[hsl(var(--foreground))]/60 group-hover:text-[hsl(var(--foreground))]/80 transition-colors">
           <Globe className="w-3 h-3" />
-          <span>Open link</span>
+          <span>Double-click to open</span>
           <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
-    </a>
+    </div>
   );
 }

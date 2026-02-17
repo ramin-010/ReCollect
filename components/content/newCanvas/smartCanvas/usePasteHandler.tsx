@@ -149,8 +149,8 @@ export const usePasteHandler = (
                       content: text.trim(),
                       x: pasteX,
                       y: pasteY,
-                      width: 350,
-                      height: 220
+                      width: 300,
+                      height: 160
                   };
                   setBlocks(prev => [...prev, newBlock]);
            } 
@@ -170,7 +170,9 @@ export const usePasteHandler = (
            // Text: only create new block if no element is focused (canvas background)
            else if (document.activeElement === document.body || 
                     document.activeElement?.id === 'smart-canvas-viewport' ||
-                    document.activeElement?.closest('#smart-canvas-viewport')) {
+                    document.activeElement?.closest('#smart-canvas-viewport') ||
+                    document.activeElement?.id === 'slide-canvas-viewport' ||
+                    document.activeElement?.closest('#slide-canvas-viewport')) {
                e.preventDefault();
                const newBlock: BlockData = {
                   blockId: uuidv4(),

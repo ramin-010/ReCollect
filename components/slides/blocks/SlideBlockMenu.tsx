@@ -17,7 +17,7 @@ import { SlideBlockData } from '../core/types';
 // ---------------------------------------------------------------------------
 
 interface SlideBlockMenuProps {
-  onAddBlock: (type: SlideBlockData['type'], x?: number, y?: number) => void;
+  onAddBlock: (type: SlideBlockData['type'], x?: number, y?: number, content?: string) => void;
   onAddImage?: (file: File) => void;
 }
 
@@ -53,7 +53,7 @@ export function SlideBlockMenu({ onAddBlock, onAddImage }: SlideBlockMenuProps) 
 
   const handleUrlSubmit = () => {
     if (!urlValue.trim()) return;
-    onAddBlock('embed');
+    onAddBlock('embed', undefined, undefined, urlValue);
     setUrlValue('');
     setShowUrlInput(false);
     setIsOpen(false);

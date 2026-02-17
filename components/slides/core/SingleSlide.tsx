@@ -15,10 +15,10 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 // Snap helper — snaps Y to nearest guide line
 // ---------------------------------------------------------------------------
 
+// Snap visual baseline to nearest grid line
 function snapToGuide(y: number): number {
-  // Offset -19px so visual text baseline sits closer to the line
-  const offset = -20;
-  // Snap the "visual baseline" (y - offset) to the nearest grid line, then shift back
+  // Offset -22px seems to align the text baseline better with the grid lines
+  const offset = -22;
   return Math.round((y - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
 }
 
@@ -189,23 +189,28 @@ export function SingleSlide({
   );
 
   const handleAddBlockFromMenu = useCallback(
-    (type: SlideBlockData['type']) => {
+    (type: SlideBlockData['type'], _x?: number, _y?: number, content?: string) => {
        // Global cleanup when adding from menu too
        blocks.forEach(b => {
         if (b.type === 'text' && !b.content?.trim()) {
            onDeleteBlock(b.blockId);
         }
       });
-      onAddBlock(slideId, type);
+      const blockId = onAddBlock(slideId, type);
+      if (blockId && content) {
+          onUpdateBlock(blockId, { content });
+      }
     },
-    [slideId, onAddBlock, blocks, onDeleteBlock]
+    [slideId, onAddBlock, blocks, onDeleteBlock, onUpdateBlock]
   );
 
   // ---- Single click spawns inline cursor (snapped to guide) ----
   const handleSingleClick = useCallback(
     (e: React.MouseEvent) => {
       // Only create on direct click on canvas background (not on blocks)
-      if (e.target !== containerRef.current) return;
+      // Also allow clicking on the "empty state" placeholder (which overlays the background)
+      const isPlaceholder = (e.target as HTMLElement).closest('.empty-slide-placeholder');
+      if (e.target !== containerRef.current && !isPlaceholder) return;
 
       // 1. GLOBAL CLEANUP: Remove any empty text blocks before creating new one
       blocks.forEach(b => {
@@ -523,7 +528,7 @@ export function SingleSlide({
         {/* Empty state — click hint */}
         {blocks.length === 0 && !cursorPos && (
           <div
-            className="absolute inset-0 flex items-center justify-center cursor-text"
+            className="absolute inset-0 flex items-center justify-center cursor-text empty-slide-placeholder"
             onClick={handleSingleClick}
           >
             <p className="text-sm text-[hsl(var(--muted-foreground))]/30 font-medium pointer-events-none">
