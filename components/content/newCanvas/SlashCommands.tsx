@@ -143,17 +143,6 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(({ items, comma
     setSelectedIndex(0);
   }, [items]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    const item = container?.children[selectedIndex + 1] as HTMLElement; // +1 for title
-    if (item && container) {
-      const needsScroll = item.offsetTop < container.scrollTop || item.offsetTop + item.offsetHeight > container.scrollTop + container.offsetHeight;
-      if (needsScroll) {
-          item.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [selectedIndex]);
-
   const selectItem = useCallback((index: number) => {
     const item = items[index];
     if (item) {
@@ -180,47 +169,28 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(({ items, comma
   }), [items.length, selectItem, selectedIndex]);
 
   if (items.length === 0) {
-    return null;
+    return (
+      <div className="slash-command-menu">
+        <div className="px-3 py-2 text-sm text-gray-400">No results</div>
+      </div>
+    );
   }
 
   return (
-    <div 
-        ref={containerRef} 
-        className="z-50 bg-[hsl(var(--popover))] rounded-lg border border-[hsl(var(--border))] shadow-lg overflow-y-auto overflow-x-hidden p-1 min-w-[240px] max-h-[300px] animate-in fade-in zoom-in-95 duration-100"
-    >
-      <div className="text-[10px] uppercase font-semibold text-[hsl(var(--muted-foreground))] px-2 py-1.5 mb-1">
-        Blocks
-      </div>
-      {items.map((item, index) => {
-        const isCalloutSection = item.title === 'Info' && (index === 0 || items[index - 1]?.title !== 'Danger');
-        return (
-          <React.Fragment key={item.title}>
-            {isCalloutSection && (
-              <div className="text-[10px] uppercase font-semibold text-[hsl(var(--muted-foreground))] px-2 py-1.5 mt-2 mb-1 border-t border-[hsl(var(--border))]/50">
-                Callouts
-              </div>
-            )}
-            <button
-              onClick={() => selectItem(index)}
-              onMouseDown={(e) => e.preventDefault()}
-              className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors text-left
-                ${index === selectedIndex 
-                    ? 'bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]' 
-                    : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
-                }
-              `}
-            >
-              <div className="flex items-center justify-center h-8 w-8 rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] shrink-0 text-[hsl(var(--foreground))]">
-                {item.icon}
-              </div>
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <span className="font-medium truncate">{item.title}</span>
-                <span className="text-xs text-[hsl(var(--muted-foreground))] truncate">{item.description}</span>
-              </div>
-            </button>
-          </React.Fragment>
-        );
-      })}
+    <div ref={containerRef} className="slash-command-menu">
+      {items.map((item, index) => (
+        <button
+          key={item.title}
+          onClick={() => selectItem(index)}
+          className={`slash-command-item ${index === selectedIndex ? 'is-selected' : ''}`}
+        >
+          <div className="slash-command-icon">{item.icon}</div>
+          <div className="slash-command-text">
+            <span className="slash-command-title">{item.title}</span>
+            <span className="slash-command-description">{item.description}</span>
+          </div>
+        </button>
+      ))}
     </div>
   );
 });

@@ -187,6 +187,9 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none">
+      <style jsx global>{`
+       
+      `}</style>
       <EditorStyles />
       <div 
         ref={viewportRef}

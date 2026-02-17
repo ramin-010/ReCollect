@@ -516,9 +516,9 @@ export function SingleSlide({
             x={cursorPos.x}
             y={cursorPos.y}
             initialContent={editingBlockContent}
-            fontSize={editingBlockFontSize}
             color={editingBlockData?.color}
-            // maxWidth removed to allow auto-expansion during edit
+            // If editing specific block, force width to match block width
+            fixedWidth={editingBlockId ? editingBlockData?.width : undefined}
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}
             zoom={zoom}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -9,8 +9,11 @@ import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
 import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
 import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
+import { FloatingToolbar } from '@/components/docs/doc_editor/FloatingToolbar';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,6 +24,7 @@ import { cn } from '@/lib/utils';
  * - Positioned absolutely at (x, y) on the slide canvas.
  * - On blur with empty content → self-destructs (calls onDiscard).
  * - On blur with content → commits (calls onCommit with HTML).
+ * - Includes FloatingToolbar for text formatting (same as docs editor).
  */
 
 interface InlineCursorProps {
@@ -39,12 +43,24 @@ interface InlineCursorProps {
   fontSize?: number;
   /** Background color class */
   color?: string;
-  /** Constrain width to match block width */
+  /** Constrain width to match block width (auto-grow/shrink if not set) */
   maxWidth?: number;
+  /** Force a fixed width (for editing existing blocks that were resized) */
+  fixedWidth?: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth, color }: InlineCursorProps) {
+interface ToolbarPosition {
+  top: number;
+  left: number;
+}
+
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth, fixedWidth, color, fontSize }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const isToolbarClickRef = useRef(false);
+
+  // Floating toolbar state
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
+  const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -63,9 +79,11 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
       Underline,
+      TextStyle,
+      Color,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: 'text-blue-500 underline cursor-pointer hover:text-blue-600' },
+        HTMLAttributes: { class: 'text-blue-400 underline cursor-pointer hover:text-blue-300' },
       }),
       SlashCommands,
       CalloutExtension,
@@ -75,7 +93,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     editorProps: {
       attributes: {
         class: 'outline-none max-w-none',
-        style: `caret-color: hsl(var(--foreground)); color: hsl(var(--foreground)); line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0; padding: 0 4px;`,
+        style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0;`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -84,6 +102,11 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     onBlur: () => {
       // Defer so the editor state is finalized
       setTimeout(() => {
+        // Don't commit if user is clicking on the floating toolbar
+        if (isToolbarClickRef.current) {
+          isToolbarClickRef.current = false;
+          return;
+        }
         const html = editor?.getHTML() ?? '';
         const text = editor?.getText() ?? '';
         if (text.trim().length === 0) {
@@ -94,14 +117,13 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
             height: wrapperRef.current?.offsetHeight || 0
           });
         }
-      }, 0);
+      }, 100);
     },
   });
 
   // Auto-focus on mount
   useEffect(() => {
     if (editor && !editor.isDestroyed) {
-      // Small delay to ensure DOM is ready
       requestAnimationFrame(() => {
         editor.commands.focus('end');
       });
@@ -120,6 +142,46 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     return () => window.removeEventListener('keydown', handleKey);
   }, [onDiscard]);
 
+  // Floating toolbar — track text selection (same pattern as docs editor)
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateToolbar = () => {
+      const { from, to } = editor.state.selection;
+      const hasSelection = from !== to;
+
+      if (hasSelection) {
+        const { view } = editor;
+        const start = view.coordsAtPos(from);
+        const end = view.coordsAtPos(to);
+
+        const toolbarWidth = 400;
+        const left = Math.max(10, (start.left + end.left) / 2 - toolbarWidth / 2);
+        const top = Math.max(10, start.top - 50);
+
+        setToolbarPosition({ top, left });
+        setShowFloatingToolbar(true);
+      } else {
+        setShowFloatingToolbar(false);
+      }
+    };
+
+    const hideToolbar = () => {
+      setShowFloatingToolbar(false);
+    };
+
+    editor.on('selectionUpdate', updateToolbar);
+    editor.on('blur', () => {
+      setTimeout(() => {
+        setShowFloatingToolbar(false);
+      }, 200);
+    });
+
+    return () => {
+      editor.off('selectionUpdate', updateToolbar);
+    };
+  }, [editor]);
+
   if (!editor) return null;
 
   return (
@@ -129,10 +191,9 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       style={{
         left: x,
         top: y,
-        // No width constraint — grows with content
-        minWidth: '2px',
-        maxWidth: maxWidth ? `${maxWidth}px` : '80%',
-        // No box styling at all
+        width: fixedWidth ? `${fixedWidth}px` : undefined,
+        minWidth: fixedWidth ? undefined : '2px',
+        maxWidth: fixedWidth ? undefined : (maxWidth ? `${maxWidth}px` : '80%'),
         background: 'transparent',
         border: 'none',
         padding: 0,
@@ -140,32 +201,50 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
         zIndex: 100,
         pointerEvents: 'auto',
       }}
-      // Prevent click from bubbling to canvas (which would create another cursor)
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Strip all TipTap/ProseMirror default spacing */}
+      {/* ProseMirror overrides for slide context — let EditorStyles handle typography */}
       <style>{`
         .inline-cursor-editor .ProseMirror {
-          padding: 0 !important;
-          margin: 0 !important;
           min-height: 0 !important;
           border: none !important;
           outline: none !important;
-        }
-        .inline-cursor-editor .ProseMirror p {
+          padding: 0 4px !important;
+          font-size: inherit !important;
+          max-width: none !important;
           margin: 0 !important;
-          padding: 0 !important;
         }
       `}</style>
-      <div className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}>
+      <div
+        className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}
+        onMouseDown={() => {
+          // Guard: if clicking within the editor area, don't treat as toolbar
+        }}
+      >
         <EditorContent
           editor={editor}
           style={{
             minHeight: '1.6em',
+            fontSize: fontSize ? `${fontSize}px` : undefined,
           }}
         />
       </div>
+
+      {/* Floating Toolbar — appears on text selection */}
+      {editor && (
+        <div
+          onMouseDown={() => {
+            isToolbarClickRef.current = true;
+          }}
+        >
+          <FloatingToolbar
+            editor={editor}
+            show={showFloatingToolbar}
+            position={toolbarPosition}
+          />
+        </div>
+      )}
     </div>
   );
 }

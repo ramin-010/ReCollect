@@ -226,7 +226,15 @@ export const BlockContent: React.FC<BlockContentProps> = ({
       <div className="notion-editor h-full w-full">
         <div 
           className="ProseMirror select-none pointer-events-none h-full w-full"
-          style={{ maxWidth: '100%', margin: 0, paddingLeft: '4px', paddingRight: '4px' }}
+          style={{ 
+            maxWidth: '100%', 
+            margin: 0, 
+            paddingLeft: '4px', 
+            paddingRight: '4px',
+            lineHeight: '1.7',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
+          }}
           dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
         />
       </div>
