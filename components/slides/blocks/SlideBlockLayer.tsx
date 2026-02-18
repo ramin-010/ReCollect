@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback, useState, useRef } from 'react';
+import React, { memo, useCallback, useState, useRef , useEffect} from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/content/newCanvas/smartBlock/index';
 import { DragController } from '@/components/content/newCanvas/DragController';
@@ -95,7 +95,9 @@ const BlockWrapperComponent = ({
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     const isText = block.type === 'text';
     const newWidth = ref.offsetWidth;
-    const newHeight = isText ? 'auto' : ref.offsetHeight;
+    // Always store the numeric height, even for text blocks (so parent can calculate slide height)
+    // Rnd will still render 'auto' for text due to the specific prop logic below, allowing flow.
+    const newHeight = ref.offsetHeight;
 
     const updates: Partial<SlideBlockData> = {
       width: newWidth,
@@ -113,6 +115,49 @@ const BlockWrapperComponent = ({
 
     onUpdateBlock(block.blockId, updates);
   }, [block.blockId, block.type, block.width, block.fontSize, onUpdateBlock]);
+
+  // Auto-measure content height (important for text blocks flow)
+  useEffect(() => {
+    if (!smartBlockRef.current || !onDimensionsChange) return;
+    
+    // Only auto-update if:
+    // 1. It's a text block (dynamic height)
+    // 2. OR explicit 'auto' height
+    // 3. OR stored height is missing
+    const shouldObserve = block.type === 'text' || block.height === 'auto' || !block.height;
+    if (!shouldObserve) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        // Check if cached height is significantly different to avoid loop/thrashing
+        // (Use a small threshold like 2px)
+        const currentHeight = typeof block.height === 'number' ? block.height : 0;
+        
+        // If stored is 'auto', we definitely update.
+        // If stored is number, update if diff > 5px (to allow small sub-pixel diffs without thrashing)
+        const diff = Math.abs(height - currentHeight);
+        
+        if (block.height === 'auto' || diff > 5) {
+          // Use onDimensionsChange if available, or direct update
+          // Note: using contentRect.height. offsetHeight includes border/padding? 
+          // Rnd uses offsetHeight usually. entry.contentRect is inner.
+          // Let's use smartBlockRef.current.offsetHeight for consistency with Rnd.
+          const offsetH = smartBlockRef.current?.offsetHeight || height;
+          
+          // Debounce? Maybe not needed if we have the threshold check.
+          // But 'block' prop changes will re-trigger effect.
+          // We need to be careful.
+          // If we update, 'block' changes. Effect runs.
+          // If 'block.height' matches now, we stop.
+          onDimensionsChange(block.blockId, block.width || entry.contentRect.width, offsetH);
+        }
+      }
+    });
+    
+    observer.observe(smartBlockRef.current);
+    return () => observer.disconnect();
+  }, [block.blockId, block.type, block.height, block.width, onDimensionsChange]);
 
   const handleResize = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     const isText = block.type === 'text';

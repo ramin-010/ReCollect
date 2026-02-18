@@ -34,10 +34,11 @@ interface InlineCursorProps {
   initialContent?: string;
   /** Called when the user types content and blurs. Receives HTML string and dimensions. */
   onCommit: (html: string, dims?: { width: number; height: number }) => void;
-  /** Called when the user blurs with no content (discard the cursor). */
   onDiscard: () => void;
   /** Called with live content updates (HTML). */
   onChange?: (html: string) => void;
+  /** Called when the editor dimensions change (for auto-growing slide) */
+  onDimensionsChange?: (width: number, height: number) => void;
   /** Zoom level of the parent container for correct sizing */
   zoom?: number;
   fontSize?: number;
@@ -54,13 +55,27 @@ interface ToolbarPosition {
   left: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, zoom = 1, maxWidth, fixedWidth, color, fontSize }: InlineCursorProps) {
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, fixedWidth, color, fontSize }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isToolbarClickRef = useRef(false);
 
   // Floating toolbar state
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
+
+  // Monitor dimensions for parent auto-resize
+  useEffect(() => {
+    if (!wrapperRef.current || !onDimensionsChange) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        onDimensionsChange(entry.contentRect.width, entry.contentRect.height);
+      }
+    });
+
+    resizeObserver.observe(wrapperRef.current);
+    return () => resizeObserver.disconnect();
+  }, [onDimensionsChange]);
 
   const editor = useEditor({
     immediatelyRender: false,

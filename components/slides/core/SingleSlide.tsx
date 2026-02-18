@@ -78,6 +78,7 @@ export function SingleSlide({
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // If editing an existing block, this ID is set. If null, we are creating a new block.
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editingDims, setEditingDims] = useState<{ width: number; height: number } | null>(null);
   
   // Computed: Get data for likely editing block
   const editingBlockData = useMemo(() => {
@@ -87,17 +88,6 @@ export function SingleSlide({
 
   const editingBlockContent = editingBlockData?.content;
   
-  const editingBlockFontSize = useMemo(() => {
-    if (!editingBlockData) return 14;
-    
-    // 1. Use explicit font size if available
-    if (editingBlockData.fontSize) return editingBlockData.fontSize;
-
-    // 2. Legacy fallback: Scale based on width (assuming 300px base)
-    const width = editingBlockData.width;
-    return 14 * Math.max(0.5, (width || 300) / 300);
-  }, [editingBlockData]);
-
   // Slide connections state (local setter that also calls parent)
   const setConnections = useCallback(
     (updater: Connection[] | ((prev: Connection[]) => Connection[])) => {
@@ -111,17 +101,33 @@ export function SingleSlide({
     [connections, onConnectionsChange]
   );
 
-  // Calculate min height based on blocks
+  // Calculate min height based on blocks AND current editing session
   const computedHeight = useMemo(() => {
-    if (blocks.length === 0) return SLIDE_MIN_HEIGHT;
     let maxBottom = SLIDE_MIN_HEIGHT;
-    for (const block of blocks) {
-      const blockHeight = typeof block.height === 'number' ? block.height : 200;
-      const bottom = block.y + blockHeight + 40;
+    
+    // 1. Existing blocks
+    if (blocks.length > 0) {
+      for (const block of blocks) {
+        // If we are editing this block, use the live dimensions instead of stored state
+        let blockHeight = typeof block.height === 'number' ? block.height : 200;
+        
+        if (block.blockId === editingBlockId && editingDims) {
+           blockHeight = editingDims.height;
+        }
+
+        const bottom = block.y + blockHeight + 40;
+        if (bottom > maxBottom) maxBottom = bottom;
+      }
+    }
+    
+    // 2. New block being created (InlineCursor active but no editingBlockId)
+    if (!editingBlockId && cursorPos && editingDims) {
+      const bottom = cursorPos.y + editingDims.height + 40;
       if (bottom > maxBottom) maxBottom = bottom;
     }
+
     return maxBottom;
-  }, [blocks]);
+  }, [blocks, editingBlockId, editingDims, cursorPos]);
 
   // Guide line count for background rendering
   const guideLineCount = useMemo(() => {
@@ -248,20 +254,14 @@ export function SingleSlide({
     (html: string, dims?: { width: number; height: number }) => {
       // Case A: Editing existing block
       if (editingBlockId) {
-        // Only update content. Preserve existing width/fontSize unless we want to "shrink wrap"?
-        // If the user typed more text, we generally want the block to grow?
-        // Excalidraw: Text block width grows with text (if not manually resized to wrap?)
-        // Our InlineCursor grows. If we don't update block width, the block will be too small/large?
-        // YES, we MUST update width to match the text width on commit!
-        // But what about fontSize? Keep existing.
-        
         onUpdateBlock(editingBlockId, { 
           content: html,
-          width: dims ? dims.width + 10 : undefined, // Add small buffer
+          width: dims ? dims.width + 10 : undefined, 
           height: dims ? dims.height : undefined,
         });
         setEditingBlockId(null);
         setCursorPos(null);
+        setEditingDims(null);
         return;
       }
 
@@ -271,12 +271,13 @@ export function SingleSlide({
       if (blockId) {
         onUpdateBlock(blockId, { 
           content: html,
-          width: dims ? dims.width + 10 : 300, // Start with auto-width
+          width: dims ? dims.width + 10 : 300, 
           height: dims ? dims.height : 'auto',
           fontSize: 14,
         });
       }
       setCursorPos(null);
+      setEditingDims(null);
     },
     [cursorPos, slideId, onAddBlock, onUpdateBlock, editingBlockId]
   );
@@ -298,6 +299,7 @@ export function SingleSlide({
     
     setCursorPos(null);
     setEditingBlockId(null);
+    setEditingDims(null);
   }, [editingBlockId, onDeleteBlock]);
 
   // ---- Handle request to edit existing block (double click) ----
@@ -512,7 +514,7 @@ export function SingleSlide({
         {/* Inline Cursor (naked text input) */}
         {cursorPos && (
           <InlineCursor
-            key={editingBlockId || 'new-cursor'} // Force remount when switching modes
+            key={editingBlockId || 'new-cursor'} 
             x={cursorPos.x}
             y={cursorPos.y}
             initialContent={editingBlockContent}
@@ -521,6 +523,7 @@ export function SingleSlide({
             fixedWidth={editingBlockId ? editingBlockData?.width : undefined}
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}
+            onDimensionsChange={(w, h) => setEditingDims({ width: w, height: h })}
             zoom={zoom}
           />
         )}
