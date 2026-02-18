@@ -39,28 +39,42 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
   const [zoom, setZoom] = React.useState(1);
 
   // ---- Paste support (reuse SmartCanvas paste handler) ----
-  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
+  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 300, y: 300 });
+  const pasteTargetSlideIdRef = useRef<string | null>(null);
   const activeSlideIdRef = useRef(activeSlideId);
   activeSlideIdRef.current = activeSlideId;
 
-  // Wrap setBlocks so pasted BlockData objects get the active slideId injected
+  // Wrap setBlocks so pasted BlockData objects get the active/hovered slideId injected with correct coords
   const pasteSetBlocks = useCallback<React.Dispatch<React.SetStateAction<BlockData[]>>>(
     (action) => {
       setBlocks((prev: SlideBlockData[]) => {
-        const currentSlideId = activeSlideIdRef.current;
-        if (!currentSlideId) return prev;
+        // Prefer hovered slide, fallback to active slide
+        const targetSlideId = pasteTargetSlideIdRef.current || activeSlideIdRef.current;
+        if (!targetSlideId) return prev;
 
-        // Resolve the next value from the action (it could be a function or a value)
+        const isHovering = !!pasteTargetSlideIdRef.current;
+
+        // Resolve the next value from the action
         const nextBlocks = typeof action === 'function'
           ? (action as (prev: BlockData[]) => BlockData[])(prev)
           : action;
 
-        // Find newly added blocks (not in prev) and inject slideId
+        // Find newly added blocks
         const prevIds = new Set(prev.map(b => b.blockId));
         return nextBlocks.map(b => {
           if (!prevIds.has(b.blockId)) {
-            // New block from paste — inject slideId
-            return { ...b, slideId: currentSlideId } as SlideBlockData;
+            // New block from paste
+            let finalX = b.x;
+            let finalY = b.y;
+
+            // If we weren't hovering a specific slide, force safe coordinates
+            // independent of where the mouse was globally (which could be huge Y value)
+            if (!isHovering) {
+               finalX = 300;
+               finalY = 300;
+            }
+
+            return { ...b, slideId: targetSlideId, x: finalX, y: finalY } as SlideBlockData;
           }
           return b as SlideBlockData;
         });
@@ -71,14 +85,23 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
 
   usePasteHandler(pasteSetBlocks, mousePositionRef);
 
-  // Track mouse for paste-at-cursor
+  // Track mouse relative to hovered slide for paste-at-cursor
   const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
-    if (viewportRef.current) {
-      const rect = viewportRef.current.getBoundingClientRect();
-      mousePositionRef.current = {
-        x: (e.clientX - rect.left) / zoom,
-        y: (e.clientY - rect.top) / zoom,
-      };
+    // Find closest slide container
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const slideContainer = target?.closest('[data-slide-id]');
+    
+    if (slideContainer) {
+      const slideId = slideContainer.getAttribute('data-slide-id');
+      const rect = slideContainer.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+      
+      mousePositionRef.current = { x, y };
+      pasteTargetSlideIdRef.current = slideId;
+    } else {
+      // Mouse outside slides: reset target
+      pasteTargetSlideIdRef.current = null;
     }
   }, [zoom]);
 
