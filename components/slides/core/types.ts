@@ -43,9 +43,9 @@ export interface SlideCanvasProps {
 }
 
 // Constants
-export const SLIDE_WIDTH = 1200;
-export const SLIDE_MIN_HEIGHT = 700;
+export const SLIDE_WIDTH = 1230;
+export const SLIDE_MIN_HEIGHT = 800;
 export const SLIDE_GAP = 24;
 export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 1.5;
-export const GUIDE_LINE_SPACING = 30;
+export const GUIDE_LINE_SPACING = 20;

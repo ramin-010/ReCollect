@@ -147,7 +147,7 @@ function SmartBlockComponent({
         onFocus?.(id);
       }}
       onDoubleClick={(e) => {
-        if (type === 'text') {
+        if (type === 'text' || type === 'embed') {
           e.stopPropagation();
           if (onEditRequest) {
             onEditRequest(id);

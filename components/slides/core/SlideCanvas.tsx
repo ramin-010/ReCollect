@@ -213,7 +213,7 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
           const isPhantom = index === sortedSlides.length - 1 && slideBlocks.length === 0;
 
           return (
-            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }}>
+            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }} data-slide-id={slide.slideId}>
               <SingleSlide
                 slideId={slide.slideId}
                 slideOrder={slide.order}

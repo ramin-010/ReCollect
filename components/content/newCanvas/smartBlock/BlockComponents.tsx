@@ -133,9 +133,9 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
   if (readOnly) return null;
 
   const anchorClassName = cn(
-    "rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
+    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
     // Standard size: w-3 h-3. Dragging size: w-4 h-4 with ring.
-    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/30 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
+    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
     isVisible ? "opacity-100" : "opacity-0 hover:opacity-100"
   );
 
@@ -257,8 +257,13 @@ export const BlockContent: React.FC<BlockContentProps> = ({
 
   if (type === 'embed') {
     return (
-      <div className="w-full h-full pointer-events-auto">
-        <EmbedBlock url={content} />
+      <div className="w-full h-full relative group/embed">
+        <div className={cn("w-full h-full", isEditing ? "pointer-events-auto" : "pointer-events-none")}>
+          <EmbedBlock url={content} />
+        </div>
+        {!isEditing && (
+            <div className="absolute inset-0 z-10 bg-transparent cursor-grab active:cursor-grabbing" />
+        )}
       </div>
     );
   }

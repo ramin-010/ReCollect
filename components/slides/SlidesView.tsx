@@ -43,16 +43,26 @@ function saveDecks(decks: SlideDeck[]) {
 // SlidesView — Top-level page
 // ---------------------------------------------------------------------------
 
+import { useViewStore } from '@/lib/store/viewStore';
+
+// ... (existing imports)
+
 export function SlidesView() {
   const [decks, setDecks] = useState<SlideDeck[]>([]);
   const [activeDeck, setActiveDeck] = useState<SlideDeck | null>(null);
   const [loaded, setLoaded] = useState(false);
+  
+  // Access global view store to toggle fullscreen
+  const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
 
   // Load decks from localStorage on mount
   useEffect(() => {
     setDecks(loadDecks());
     setLoaded(true);
-  }, []);
+    // Ensure we start not fullscreen (in case we navigated back)
+    setSlideFullscreen(false);
+    return () => setSlideFullscreen(false);
+  }, [setSlideFullscreen]);
 
   // Persist whenever decks change (after initial load)
   useEffect(() => {
@@ -71,12 +81,16 @@ export function SlidesView() {
     };
     setDecks(prev => [newDeck, ...prev]);
     setActiveDeck(newDeck);
-  }, []);
+    setSlideFullscreen(true); // Enter fullscreen
+  }, [setSlideFullscreen]);
 
   const deleteDeck = useCallback((deckId: string) => {
     setDecks(prev => prev.filter(d => d.id !== deckId));
-    if (activeDeck?.id === deckId) setActiveDeck(null);
-  }, [activeDeck]);
+    if (activeDeck?.id === deckId) {
+       setActiveDeck(null);
+       setSlideFullscreen(false);
+    }
+  }, [activeDeck, setSlideFullscreen]);
 
   const handleCanvasChange = useCallback((content: string) => {
     if (!activeDeck) return;
@@ -99,6 +113,11 @@ export function SlidesView() {
       setActiveDeck(prev => prev ? { ...prev, name } : null);
     }
   }, [activeDeck]);
+  
+  const handleCloseDeck = useCallback(() => {
+    setActiveDeck(null);
+    setSlideFullscreen(false);
+  }, [setSlideFullscreen]);
 
   // ---- If a deck is open, show the canvas ----
   if (activeDeck) {
@@ -109,7 +128,7 @@ export function SlidesView() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setActiveDeck(null)}
+            onClick={handleCloseDeck}
             leftIcon={<ArrowLeft className="h-4 w-4" />}
           >
             Back
@@ -142,6 +161,7 @@ export function SlidesView() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
+// ... (rest of generic list view)
           className="flex items-center justify-between mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -197,7 +217,10 @@ export function SlidesView() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className="group relative bg-[hsl(var(--card-bg))] border border-[hsl(var(--border))] rounded-xl p-5 cursor-pointer hover:border-orange-500/40 hover:shadow-lg transition-all duration-200"
-                  onClick={() => setActiveDeck(deck)}
+                  onClick={() => {
+                    setActiveDeck(deck);
+                    setSlideFullscreen(true);
+                  }}
                 >
                   {/* Deck Icon */}
                   <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-4">

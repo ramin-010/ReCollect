@@ -17,8 +17,8 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 // Snap visual baseline to nearest grid line
 function snapToGuide(y: number): number {
-  // Offset -22px seems to align the text baseline better with the grid lines
-  const offset = -22;
+  // Offset -26px aligns text baseline to the 30px grid lines (experimentally adjusted)
+  const offset = -30;
   return Math.round((y - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
 }
 
@@ -160,9 +160,13 @@ export function SingleSlide({
     [zoom]
   );
 
+  // State to track if a block is being dragged (for showing guide lines)
+  const [isDraggingBlock, setIsDraggingBlock] = useState(false);
+
   // ---- Drag handlers with text-block guide snapping ----
   const handleDragStop = useCallback(
     (id: string, x: number, y: number) => {
+      setIsDraggingBlock(false);
       // Find the block to check its type
       const block = blocks.find(b => b.blockId === id);
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
@@ -173,6 +177,7 @@ export function SingleSlide({
 
   const handleDragStart = useCallback(
     (id: string) => {
+      setIsDraggingBlock(true);
       onSelectBlock(id);
       dragControllerInstance.startDrag(id);
     },
@@ -225,19 +230,28 @@ export function SingleSlide({
         }
       });
 
-      onSlideClick(slideId);
+      // 2. CHECK ACTIVATION: If slide is not active, first click JUST selects it.
+      if (!isActive) {
+        onSlideClick(slideId);
+        // Also clear any previous selection state just in case
+        onSelectBlock('');
+        onSelectConnection(null);
+        return;
+      }
+
+      onSlideClick(slideId); // Reinforce selection
 
       const hadSelection = !!selectedBlockId || !!selectedConnectionId;
 
-      // 2. Deselect everything
+      // 3. Deselect everything
       onSelectBlock('');
       onSelectConnection(null);
 
-      // 3. Dismiss existing cursor
+      // 4. Dismiss existing cursor
       setCursorPos(null);
       setEditingBlockId(null);
 
-      // 4. Spawn inline cursor ONLY if we didn't just deselect something
+      // 5. Spawn inline cursor ONLY if we didn't just deselect something
       if (!hadSelection) {
         const rect = containerRef.current!.getBoundingClientRect();
         const x = (e.clientX - rect.left) / zoom;
@@ -246,7 +260,7 @@ export function SingleSlide({
         setCursorPos({ x, y });
       }
     },
-    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId]
+    [slideId, isActive, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId]
   );
 
   // ---- Inline cursor handlers ----
@@ -376,6 +390,8 @@ export function SingleSlide({
     []
   );
 
+
+
   const handleConnectionDragComplete = useCallback(() => {
     setActiveDragStart(null);
   }, []);
@@ -391,8 +407,8 @@ export function SingleSlide({
     <div
       className={`relative group transition-all duration-200 ${
         isActive
-          ? 'ring-2 ring-[hsl(var(--brand-primary))]/40 shadow-lg'
-          : 'ring-1 ring-[hsl(var(--border))] hover:ring-[hsl(var(--border))]/80'
+          ? 'border-2 border-[hsl(var(--foreground))]/30 shadow-sm rounded-lg'
+          : ''
       }`}
       style={{ width: SLIDE_WIDTH }}
     >
@@ -415,17 +431,12 @@ export function SingleSlide({
           overflow: 'hidden',
         }}
       >
-        {/* Dot grid background */}
-        <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-
-        {/* Invisible horizontal guide lines — visible on hover */}
-        <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Guide lines — visible ONLY when dragging a block */}
+        <div 
+          className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${
+            isDraggingBlock ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
           {Array.from({ length: guideLineCount }, (_, i) => {
             const y = (i + 1) * GUIDE_LINE_SPACING;
             return (
@@ -436,7 +447,7 @@ export function SingleSlide({
                   top: y,
                   height: '1px',
                   background: 'hsl(var(--muted-foreground))',
-                  opacity: 0.04,
+                  opacity: 0.05, // Slightly increased opacity for better visibility when dragging
                 }}
               />
             );

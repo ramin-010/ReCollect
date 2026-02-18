@@ -7,13 +7,17 @@ export type TodoFilterType = 'inbox' | 'today' | 'upcoming' | 'completed' | 'wor
 interface ViewState {
   currentView: ViewType;
   todoFilter: TodoFilterType;
+  isSlideFullscreen: boolean;
   setCurrentView: (view: ViewType) => void;
   setTodoFilter: (filter: TodoFilterType) => void;
+  setSlideFullscreen: (value: boolean) => void;
 }
 
 export const useViewStore = create<ViewState>((set) => ({
   currentView: 'dashboard',
   todoFilter: 'inbox',
+  isSlideFullscreen: false,
   setCurrentView: (view) => set({ currentView: view }), 
   setTodoFilter: (filter) => set({ todoFilter: filter, currentView: 'todo' }),
+  setSlideFullscreen: (value) => set({ isSlideFullscreen: value }),
 }));

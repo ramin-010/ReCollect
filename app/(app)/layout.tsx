@@ -23,15 +23,17 @@ export default function AppLayout({
   const { isAuthenticated, isLoading, setUser, setIsLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
   const currentView = useViewStore((state) => state.currentView);
+  const isSlideFullscreen = useViewStore((state) => state.isSlideFullscreen);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
   // Quick Task Add modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   
   // Hide navbar when editing a document (docs view with editor open) or viewing tasks
+  // For slides: only hide if in fullscreen mode (editing a slide)
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || currentView === 'todo' || currentView === 'slides';
-  const hideSidebar = currentView === 'slides';
+  const hideNavbar = isDocEditorOpen || currentView === 'todo' || (currentView === 'slides' && isSlideFullscreen);
+  const hideSidebar = (currentView === 'slides' && isSlideFullscreen);
   
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)
