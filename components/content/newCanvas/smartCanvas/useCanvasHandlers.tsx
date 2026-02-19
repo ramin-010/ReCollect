@@ -221,15 +221,26 @@ export const useCanvasHandlers = (
     setBlocks(prev => prev.filter(b => b.blockId !== stackBlock.blockId).concat(unstackedItems));
   }, [setBlocks, setConnections]);
 
-  const handleAddBlock = useCallback((x?: number, y?: number) => {
+  const handleAddBlock = useCallback((x?: number, y?: number, blockType?: 'text' | 'code' | 'image' | 'embed') => {
+    const type = blockType || 'text';
+    
+    const defaults: Record<string, Partial<BlockData>> = {
+      text: { width: 300, height: 'auto', content: '' },
+      code: { width: 450, height: 300, content: '// Start typing your code here...\n' },
+      image: { width: 300, height: 'auto', content: '' },
+      embed: { width: 350, height: 220, content: '' },
+    };
+    
+    const typeDefaults = defaults[type] || defaults.text;
+    
     const newBlock: BlockData = {
       blockId: uuidv4(),
-      type: 'text',
-      content: '',
+      type: type as BlockData['type'],
+      content: typeDefaults.content || '',
       x: x ?? 100, 
       y: y ?? 100,
-      width: 300,
-      height: 'auto'
+      width: typeDefaults.width || 300,
+      height: typeDefaults.height || 'auto'
     };
     setBlocks(prev => [...prev, newBlock]);
     setSelectedId(newBlock.blockId);

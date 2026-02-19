@@ -13,6 +13,7 @@ export interface BlockData {
   width: number;
   height: number | 'auto';
   color?: string;
+  language?: string;
   // Legacy/Compatibility fields
   url?: string;
   imageId?: string;

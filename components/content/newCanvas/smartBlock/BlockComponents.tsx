@@ -7,6 +7,7 @@ import { CodeBlock } from '../CodeBlock';
 import { BlockEditor } from '../BlockEditor';
 import { cn } from '@/lib/utils';
 import { TaskStats } from './types';
+import { CALLOUT_READ_STYLES } from '../CalloutExtension';
 
 interface DragHandleProps {
   isVisible: boolean;
@@ -55,7 +56,7 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
     const [showPalette, setShowPalette] = useState(false);
   
     const COLORS = [
-      { name: 'Default', value: 'bg-[hsl(var(--card-bg))]' }, // Default
+      { name: 'Default', value: '' }, // Default (Transparent)
       { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
       { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
       { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
@@ -65,7 +66,7 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
   
     return (
       <div className={cn(
-        "absolute top-1 left-1 flex flex-col items-end gap-1 transition-opacity z-[100] pointer-events-auto",
+        "absolute top-0 left-0 flex items-start gap-1 transition-opacity z-[100] pointer-events-auto",
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <div className="flex items-center gap-1">
@@ -83,9 +84,9 @@ export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateC
             </button>
         </div>
   
-        {/* Expanded Color Swatches - Slide Left */}
+        {/* Expanded Color Swatches - Slide Right */}
         {showPalette && (
-            <div className="absolute top-0 right-8 flex items-center gap-1 p-1 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-right-1 w-max">
+            <div className="absolute top-0 left-8 flex items-center gap-1 p-1.5 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-left-2 w-max ml-1 z-50">
                 {COLORS.map((c) => (
                    <button
                      key={c.name}
@@ -132,9 +133,9 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
   if (readOnly) return null;
 
   const anchorClassName = cn(
-    "rounded-full border border-[hsl(var(--brand-primary))] bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
+    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
     // Standard size: w-3 h-3. Dragging size: w-4 h-4 with ring.
-    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/30 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
+    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
     isVisible ? "opacity-100" : "opacity-0 hover:opacity-100"
   );
 
@@ -189,20 +190,24 @@ interface BlockContentProps {
   type: 'text' | 'image' | 'embed' | 'code' | 'stack';
   content: string;
   url?: string;
+  language?: string;
   isEditing: boolean;
   onUpdate: (content: string) => void;
   onBlur: () => void;
   onDelete?: () => void;
+  onLanguageChange?: (language: string) => void;
 }
 
 export const BlockContent: React.FC<BlockContentProps> = ({ 
   type, 
   content, 
   url, 
+  language,
   isEditing, 
   onUpdate, 
   onBlur,
-  onDelete
+  onDelete,
+  onLanguageChange
 }) => {
   if (type === 'text') {
     if (isEditing) {
@@ -217,65 +222,25 @@ export const BlockContent: React.FC<BlockContentProps> = ({
       );
     }
     return (
-      <div 
-        className={`
-          prose prose-sm  border-none dark:prose-invert max-w-none leading-normal 
-          text-[hsl(var(--foreground))] select-none pointer-events-none
-          
-          /* Headings */
-          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-2 [&>h1]:mt-0
-          [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-0
-          [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-1.5 [&>h3]:mt-0
-          
-          /* Lists */
-          [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:my-1
-          [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:my-1
-          [&_li]:my-0.5
-          
-          /* Blockquote - Left border line */
-          [&>blockquote]:border-l-4 [&>blockquote]:border-l-[hsl(var(--brand-primary))]
-          [&>blockquote]:border-t-0 [&>blockquote]:border-r-0 [&>blockquote]:border-b-0
-          [&>blockquote]:shadow-none [&>blockquote]:outline-none
-          [&>blockquote]:pl-4 [&>blockquote]:py-1 [&>blockquote]:my-2
-          [&>blockquote]:bg-transparent
-          [&>blockquote]:italic [&>blockquote]:text-[hsl(var(--muted-foreground))]
-          
-          /* Inline Code */
-          [&_code:not(pre_code)]:bg-[hsl(var(--muted))] [&_code:not(pre_code)]:px-1.5 
-          [&_code:not(pre_code)]:py-0.5 [&_code:not(pre_code)]:rounded 
-          [&_code:not(pre_code)]:text-[0.85em] [&_code:not(pre_code)]:font-mono
-          [&_code:not(pre_code)]:text-[hsl(var(--brand-primary))]
-          
-          /* Code Block */
-          [&>pre]:bg-[hsl(var(--muted))]/50 [&>pre]:p-3 [&>pre]:rounded-lg
-          [&>pre]:overflow-x-auto [&>pre]:my-2 [&>pre]:text-sm [&>pre]:font-mono
-          [&>pre_code]:bg-transparent [&>pre_code]:p-0
-          
-          /* Task List */
-          [&_ul[data-type="taskList"]]:list-none [&_ul[data-type="taskList"]]:pl-0
-          [&_li[data-type="taskItem"]]:flex [&_li[data-type="taskItem"]]:items-start [&_li[data-type="taskItem"]]:gap-2
-          [&_li[data-type="taskItem"]_input]:mt-1 [&_li[data-type="taskItem"]_input]:accent-[hsl(var(--brand-primary))]
-          [&_li[data-checked="true"]]:line-through [&_li[data-checked="true"]]:opacity-60
-          
-          /* Highlight */
-          [&_mark]:bg-yellow-200/80 [&_mark]:dark:bg-yellow-500/40 [&_mark]:px-0.5 [&_mark]:rounded-sm
-          
-          /* Links */
-          [&_a]:text-blue-500 [&_a]:underline [&_a]:cursor-pointer
-          
-          /* Horizontal Rule */
-          [&>hr]:border-[hsl(var(--border))] [&>hr]:my-3
-          
-          /* Strong/Bold and Emphasis/Italic */
-          [&_strong]:font-bold
-          [&_em]:italic
-          [&_u]:underline
-          
-          /* Paragraph spacing */
-          [&>p]:my-1
-        `}
-        dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
-      />
+      <>
+      <div className="notion-editor h-full w-full">
+        <div 
+          className="ProseMirror select-none pointer-events-none h-full w-full"
+          style={{ 
+            maxWidth: '100%', 
+            margin: 0, 
+            paddingLeft: '4px', 
+            paddingRight: '4px',
+            lineHeight: '1.7',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
+          }}
+          dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
+        />
+      </div>
+      {/* Callout styles for read-only rendering */}
+      <style>{CALLOUT_READ_STYLES}</style>
+      </>
     );
   }
 
@@ -292,8 +257,13 @@ export const BlockContent: React.FC<BlockContentProps> = ({
 
   if (type === 'embed') {
     return (
-      <div className="w-full h-full pointer-events-auto">
-        <EmbedBlock url={content} />
+      <div className="w-full h-full relative group/embed">
+        <div className={cn("w-full h-full", isEditing ? "pointer-events-auto" : "pointer-events-none")}>
+          <EmbedBlock url={content} />
+        </div>
+        {!isEditing && (
+            <div className="absolute inset-0 z-10 bg-transparent cursor-grab active:cursor-grabbing" />
+        )}
       </div>
     );
   }
@@ -301,7 +271,13 @@ export const BlockContent: React.FC<BlockContentProps> = ({
   if (type === 'code') {
     return (
       <div className="w-full h-full">
-        <CodeBlock code={content} />
+        <CodeBlock 
+          code={content} 
+          language={language}
+          editable={true}
+          onUpdate={onUpdate}
+          onLanguageChange={onLanguageChange}
+        />
       </div>
     );
   }

@@ -35,6 +35,7 @@ import {
   CheckSquare,
   Wallet,
   FileText,
+  Presentation,
 } from 'lucide-react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
 import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
@@ -185,6 +186,10 @@ export function Sidebar() {
                   setCurrentView('drawing');
                   setIsMobileOpen(false);
                 }}
+                onSlidesClick={() => {
+                  setCurrentView('slides');
+                  setIsMobileOpen(false);
+                }}
                 onTodoClick={() => {
                   setCurrentView('todo');
                   setIsMobileOpen(false);
@@ -237,6 +242,10 @@ export function Sidebar() {
           onDrawingBoardClick={() => {
             setCurrentDashboard(null);
             setCurrentView('drawing');
+          }}
+          onSlidesClick={() => {
+            setCurrentDashboard(null);
+            setCurrentView('slides');
           }}
           onTodoClick={() => {
              setCurrentDashboard(null);
@@ -312,12 +321,13 @@ interface SidebarContentProps {
   user: any;
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
-  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs';
+  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs' | 'slides';
   todoFilter?: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
   onDashboardClick: (dashboard: Dashboard) => void;
   onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
   onAllDashboardsClick: () => void;
   onDrawingBoardClick: () => void;
+  onSlidesClick: () => void;
   onTodoClick: () => void;
   onTodoFilterChange?: (filter: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes') => void;
   onExpensesClick: () => void;
@@ -343,6 +353,7 @@ function SidebarContent({
   onDashboardAction,
   onAllDashboardsClick,
   onDrawingBoardClick,
+  onSlidesClick,
   onTodoClick,
   onTodoFilterChange,
   onExpensesClick,
@@ -484,6 +495,20 @@ function SidebarContent({
               leftIcon={<PenTool className="h-4 w-4 text-blue-500" />}
             >
               {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Whiteboard</span>}
+            </MotionButton>
+
+            {/* Slides */}
+            <MotionButton
+              variant={currentView === 'slides' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
+                currentView === 'slides' && "bg-orange-500/15 border-l-4 border-orange-500 pl-2"
+              )}
+              onClick={onSlidesClick}
+              whileTap={{ scale: 0.98 }}
+              leftIcon={<Presentation className="h-4 w-4 text-orange-500" />}
+            >
+              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Slides</span>}
             </MotionButton>
 
             {/* Expenses */}

@@ -88,12 +88,8 @@ export function useExcalidrawYjs(
     handleCollabEnd  // Save to IndexedDB when collab ends
   );
 
-  useEffect(() => {
-    // Update scene when collaborators change (including when they leave)
-    if (collaborationEnabled && excalidrawAPI) {
-      excalidrawAPI.updateScene({ collaborators });
-    }
-  }, [collaborationEnabled, excalidrawAPI, collaborators]);
+  // NOTE: Collaborator cursor updates are now handled directly in Collaboration.ts
+  // via excalidrawAPIRef (bypassing React state) for zero-latency cursor rendering
 
   useEffect(() => {
     onSyncStatusChange?.(syncStatus);
@@ -114,7 +110,10 @@ export function useExcalidrawYjs(
       appState
     );
     
-    if (addedCount > 0 || updatedCount > 0 || deletedCount > 0) {
+    // Only trigger state change when actual data was synced
+    const hasChanges = addedCount > 0 || updatedCount > 0 || deletedCount > 0;
+    
+    if (hasChanges) {
       // Skip IndexedDB during active collab - Hocuspocus handles persistence
       // Only save to IndexedDB when in personal mode (not collaborating)
       if (isOwner && !isCollabMode) {
@@ -130,9 +129,8 @@ export function useExcalidrawYjs(
           );
         }
       }
+      onStateChange?.(true);
     }
-    
-    onStateChange?.(true);
   }, [drawingId, isOwner, isCollabMode, onStateChange, setSyncStatus]);
 
   const handleChange = useCallback((elements: readonly any[], appState: any) => {

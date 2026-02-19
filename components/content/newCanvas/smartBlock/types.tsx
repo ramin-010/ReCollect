@@ -2,7 +2,11 @@ export interface SmartBlockProps {
   id: string;
   type?: 'text' | 'image' | 'embed' | 'code' | 'stack';
   content: string;
-  url?: string;   stackItems?: any[];   width: number;
+  language?: string;
+  url?: string;
+  stackItems?: any[];
+  fontSize?: number;
+  width: number;
   height: number | 'auto';
   x: number;
   y: number;
@@ -16,7 +20,12 @@ export interface SmartBlockProps {
   onDimensionsChange?: (id: string, width: number, height: number) => void;
   isConnectionDragging?: boolean;
   readOnly?: boolean;
-  color?: string; }
+  color?: string;
+  /** If provided, double-click on text blocks calls this instead of opening inline editor */
+  onEditRequest?: (id: string) => void;
+  contentRef?: React.RefObject<HTMLDivElement | null>;
+  isConnected?: boolean;
+}
 
 export interface TaskStats {
   total: number;

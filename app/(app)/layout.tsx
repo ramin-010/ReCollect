@@ -23,14 +23,18 @@ export default function AppLayout({
   const { isAuthenticated, isLoading, setUser, setIsLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
   const currentView = useViewStore((state) => state.currentView);
+  const isSlideFullscreen = useViewStore((state) => state.isSlideFullscreen);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
   // Quick Task Add modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   
   // Hide navbar when editing a document (docs view with editor open) or viewing tasks
+  // For slides: only hide if in fullscreen mode (editing a slide)
   const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || currentView === 'todo';
+  const hideNavbar = isDocEditorOpen || currentView === 'todo' || (currentView === 'slides' && isSlideFullscreen);
+  const hideSidebar = (currentView === 'slides' && isSlideFullscreen);
+  
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function AppLayout({
   return (
     <CreateNoteProvider>
       <div className="min-h-screen flex bg-pattern">
-        <Sidebar />
+        {!hideSidebar && <Sidebar />}
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
           {!hideNavbar && <Navbar />}
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">

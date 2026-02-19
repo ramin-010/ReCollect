@@ -12,6 +12,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import { Bold, Italic, Underline as UnderlineIcon, CheckSquare, Highlighter, Link as LinkIcon, Trash2, Code } from 'lucide-react';
 import { SlashCommands } from './SlashCommands';
+import { CalloutExtension } from './CalloutExtension';
 import { debounce } from 'lodash';
 
 interface BlockEditorProps {
@@ -90,6 +91,7 @@ export function BlockEditor({
       }),
       Underline,
       SlashCommands,
+      CalloutExtension,
     ],
     content: content,
     editable: !readOnly,

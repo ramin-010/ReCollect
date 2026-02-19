@@ -31,6 +31,7 @@ export function FloatingToolbar({ editor, show, position }: FloatingToolbarProps
   // Prevent toolbar from losing focus when clicking buttons
   const preventBlur = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
   };
 
   if (!show) return null;

@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui-base/Button';
 import { ConnectionLayer } from '../ConnectionLayer';
 import { BlocksLayer } from '../BlocksLayer';
+import { BlockCreationMenu } from '../BlockCreationMenu';
 import { Connection } from '@/types/canvas';
 import { DragController } from '../DragController';
 import { NativeConnectionLayer } from '../NativeConnectionLayer';
@@ -449,15 +450,10 @@ export function SmartCanvas({ initialContent, onChange, readOnly }: SmartCanvasP
 
       </div>
 
-      {/* FAB to add Note */}
-      <div className="fixed bottom-6 right-6 z-50">
-          <Button 
-            onClick={(e) => { e.stopPropagation(); handleAddBlock(); }}
-            className="rounded-full h-14 w-14 shadow-xl bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90 text-white p-0 flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
-      </div>
+      {/* Block Creation Menu (FAB) */}
+      <BlockCreationMenu 
+        onAddBlock={(type, x, y) => handleAddBlock(x, y, type)}
+      />
 
       {/* ZOOM CONTROLS (Floating UI) */}
       <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">

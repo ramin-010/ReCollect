@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -13,9 +13,17 @@ import {
   Eye,
   Users,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  MoreVertical
 } from 'lucide-react';
 import { drawingApi } from '@/lib/api/drawingApi';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '@/components/ui-base/DropdownMenu';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { toast } from 'sonner';
@@ -69,19 +77,33 @@ export default function SharedDrawingPage() {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
   const excalidrawAPIRef = useRef<any>(null);
   const [initialFiles, setInitialFiles] = useState<Record<string, ExcalidrawFile>>({});
-  const [collaborators, setCollaborators] = useState<Map<string, any>>(new Map());
+
   
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const isRemoteUpdateRef = useRef(false); // Prevent echo when receiving remote updates
   const lastElementCountRef = useRef(0); // Track element count to detect real changes
   const collaboratorsRef = useRef<Map<string, any>>(new Map());
+  const pendingRafRef = useRef<number | null>(null);
   
 
-  useEffect(() => {
-    excalidrawAPIRef.current = excalidrawAPI;
+  // Fix infinite loop: Excalidraw calls this callback on EVERY render with a new
+  // object reference. Using setState here would trigger re-render → infinite loop.
+  // Since excalidrawAPI state is not used in JSX, we just set the ref directly.
+  const handleExcalidrawAPI = useCallback((api: any) => {
+    excalidrawAPIRef.current = api;
+  }, []);
 
-  }, [excalidrawAPI]);
+  const handlePointerUpdate = useCallback((payload: any) => {
+    if (providerRef.current) {
+        providerRef.current.awareness?.setLocalStateField('pointer', payload.pointer);
+        providerRef.current.awareness?.setLocalStateField('selectedElementIds', 
+          excalidrawAPIRef.current?.getAppState()?.selectedElementIds || {}
+        );
+    }
+  }, []);
+
+  // Ref is now set directly in handleExcalidrawAPI — no sync needed
 
 
   useEffect(() => {
@@ -129,7 +151,7 @@ export default function SharedDrawingPage() {
     loadDrawing();
     
     return () => {
-
+      if (pendingRafRef.current !== null) cancelAnimationFrame(pendingRafRef.current);
       if (providerRef.current) providerRef.current.destroy();
       if (ydocRef.current) ydocRef.current.destroy();
     };
@@ -190,10 +212,14 @@ export default function SharedDrawingPage() {
           }
         });
         
-        // Only update state if collaborators actually changed
+        // Only update if collaborators actually changed — update Excalidraw directly via ref
+        // to avoid React state → useEffect → updateScene → awareness infinite loop
         if (!areCollaboratorsEqual(newCollaborators, collaboratorsRef.current)) {
           collaboratorsRef.current = newCollaborators;
-          setCollaborators(newCollaborators);
+          const api = excalidrawAPIRef.current;
+          if (api) {
+            api.updateScene({ collaborators: newCollaborators });
+          }
         }
       },
     });
@@ -212,20 +238,30 @@ export default function SharedDrawingPage() {
     const yElements = ydoc.getArray('elements');
     const yAppState = ydoc.getMap('appState');
 
-    yElements.observeDeep((events) => {
+    // rAF batching: coalesce multiple Yjs updates into one scene update per frame
+    yElements.observeDeep((events: any[]) => {
       const api = excalidrawAPIRef.current;
-      const isLocal = events.some(e => e.transaction.local);
+      const isLocal = events.some((e: any) => e.transaction.local);
       
       if (!api) return;
       if (isLocal) return;
       
-      isRemoteUpdateRef.current = true;
-      
-      const elements = yElements.toArray().map((yMap: any) => yMap.toJSON());
-      lastElementCountRef.current = elements.length;
-      api.updateScene({ elements });
-      
-      setTimeout(() => { isRemoteUpdateRef.current = false; }, 200);
+      // Schedule ONE scene update per animation frame
+      // Multiple Yjs updates arriving within the same frame get coalesced
+      if (pendingRafRef.current === null) {
+        pendingRafRef.current = requestAnimationFrame(() => {
+          pendingRafRef.current = null;
+          const currentApi = excalidrawAPIRef.current;
+          if (!currentApi) return;
+          
+          isRemoteUpdateRef.current = true;
+          const elements = yElements.toArray().map((yMap: any) => yMap.toJSON());
+          lastElementCountRef.current = elements.length;
+          currentApi.updateScene({ elements });
+          // Clear flag on NEXT frame — ensures React's async onChange is covered
+          requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
+        });
+      }
     });
 
     yAppState.observe((event) => {
@@ -243,27 +279,18 @@ export default function SharedDrawingPage() {
     });
   }, [shareToken]);
 
-  // Update collaborators in Excalidraw when they change
-  useEffect(() => {
-    if (excalidrawAPI && collaborators.size >= 0) {
-      excalidrawAPI.updateScene({ collaborators });
-    }
-  }, [excalidrawAPI, collaborators]);
+
 
   const handleChange = useCallback((elements: readonly any[], appState: any) => {
-    if (isRemoteUpdateRef.current) {
-      return;
-    }
-    
+    if (isRemoteUpdateRef.current) return;
     if (!ydocRef.current || !isConnected) return;
     
     const activeElements = elements.filter(el => !el.isDeleted);
     const yElements = ydocRef.current.getArray<Y.Map<any>>('elements');
+    const ydoc = ydocRef.current;
+    const yAppState = ydoc.getMap<any>('appState');
     
-    const yElementCount = yElements.length;
-    const localCount = activeElements.length;
-    
-    // Build map once for O(1) lookups - the real perf win was removing O(n²) nested loops    
+    // SINGLE-PASS: Build yElementMap once, used for both change detection AND transact
     const yElementMap = new Map<string, { index: number; yMap: Y.Map<any>; version: number }>();
     yElements.forEach((yMap, index) => {
       const id = yMap.get('id');
@@ -273,72 +300,61 @@ export default function SharedDrawingPage() {
       }
     });
     
-    // Check for new elements or edits using O(1) Map lookup
-    let hasLocalNewElements = false;
-    let hasLocalEdits = false;
+    // Single-pass: detect changes AND collect work items simultaneously
+    const newElements: any[] = [];
+    const updatedElements: { element: any; yMap: Y.Map<any> }[] = [];
+    const processedIds = new Set<string>();
     
     for (const el of activeElements) {
+      processedIds.add(el.id);
       const existing = yElementMap.get(el.id);
       if (!existing) {
-        hasLocalNewElements = true;
-        break;
+        newElements.push(el);
       } else if (el.version > existing.version) {
-        hasLocalEdits = true;
-        break;
+        updatedElements.push({ element: el, yMap: existing.yMap });
       }
     }
     
-    // Check for deletions
-    const hasDeletions = yElementCount > localCount;
-
-    // Only sync if user is actively creating, editing, OR deleting
-    if (!hasLocalNewElements && !hasLocalEdits && !hasDeletions) {
-      return; // Skip - this is just an echo of remote update
+    // Collect deletions
+    const indicesToDelete: number[] = [];
+    yElementMap.forEach(({ index }, id) => {
+      if (!processedIds.has(id)) {
+        indicesToDelete.push(index);
+      }
+    });
+    
+    // Skip if nothing changed
+    if (newElements.length === 0 && updatedElements.length === 0 && indicesToDelete.length === 0) {
+      return;
     }
     
     lastElementCountRef.current = activeElements.length;
-
     
-    const ydoc = ydocRef.current;
-    const yAppState = ydoc.getMap<any>('appState');
-    
-    const processedIds = new Set<string>();
-    
+    // Single transact with pre-computed work — no redundant iteration
     ydoc.transact(() => {
-      // Add new or update existing elements
-      activeElements.forEach(element => {
-        processedIds.add(element.id);
-        const existing = yElementMap.get(element.id);
-        
-        if (!existing) {
-          // New element
-          const yMap = new Y.Map();
-          for (const [key, value] of Object.entries(element)) {
+      // Add new elements
+      for (const element of newElements) {
+        const yMap = new Y.Map();
+        for (const [key, value] of Object.entries(element)) {
+          yMap.set(key, value);
+        }
+        yElements.push([yMap]);
+      }
+      
+      // Update changed elements
+      for (const { element, yMap } of updatedElements) {
+        for (const [key, value] of Object.entries(element)) {
+          if (yMap.get(key) !== value) {
             yMap.set(key, value);
           }
-          yElements.push([yMap]);
-        } else if (existing.version !== element.version) {
-          // Updated element
-          for (const [key, value] of Object.entries(element)) {
-            if (existing.yMap.get(key) !== value) {
-              existing.yMap.set(key, value);
-            }
-          }
         }
-      });
+      }
       
-      // Delete removed elements
-      const indicesToDelete: number[] = [];
-      yElementMap.forEach(({ index }, id) => {
-        if (!processedIds.has(id)) {
-          indicesToDelete.push(index);
-        }
-      });
-      
+      // Delete removed elements (reverse order to preserve indices)
       indicesToDelete.sort((a, b) => b - a);
-      indicesToDelete.forEach(index => {
+      for (const index of indicesToDelete) {
         yElements.delete(index, 1);
-      });
+      }
       
       // Sync appState
       const persistableState = {
@@ -354,8 +370,8 @@ export default function SharedDrawingPage() {
     });
   }, [isConnected]);
 
-  // Build initial data from Y.Doc once synced
-  const getInitialData = useCallback(() => {
+  // Memoize initialData to avoid re-creating object on every render
+  const initialData = useMemo(() => {
     if (!ydocRef.current || !isYjsSynced) return undefined;
     
     const ydoc = ydocRef.current;
@@ -365,19 +381,18 @@ export default function SharedDrawingPage() {
     const elements = yElements.toArray().map((yMap: any) => yMap.toJSON());
     const appState = yAppState.size > 0 ? yAppState.toJSON() : {};
     
-    const theme = (resolvedTheme === 'dark' || resolvedTheme === 'theme-dark-gray' ? 'dark' : 'light') as 'dark' | 'light';
+    // Don't depend on resolvedTheme here to keep initialData stable
+    // Theme is handled via the separate theme prop
     
     return {
       elements,
       appState: {
         ...appState,
-        theme,
-        viewModeEnabled: false,
-        zenModeEnabled: false,
+        // theme is managed by prop
       },
       files: initialFiles,
     };
-  }, [isYjsSynced, resolvedTheme, initialFiles]);
+  }, [isYjsSynced, initialFiles]); // Removed resolvedTheme dependency
 
   if (isLoading) {
     return (
@@ -409,64 +424,93 @@ export default function SharedDrawingPage() {
     );
   }
 
-  const initialData = getInitialData();
+//   const initialData = getInitialData(); // Removed function call since we use useMemo now
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[hsl(var(--background))] flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-[hsl(var(--background))]">
       {/* Header removed to avoid duplication with custom overlay */}
 
       {/* Editor Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Custom Header Overlay */}
-        <div className="absolute top-4 left-4 md:top-[16px] md:left-[71px] z-[5] flex items-center gap-4 pointer-events-auto font-sans">
-          <Link href="/">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-3 gap-2 rounded-lg bg-[#1e1e1e] hover:bg-muted border border-border/40 hover:border-border/60 text-muted-foreground hover:text-foreground transition-all font-medium backdrop-blur-sm shadow-sm"
-              title="Return Home"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </Button>
-          </Link>
-          <div className="h-5 w-px bg-border/40" />
-          <span className="text-sm font-medium opacity-90 select-none text-foreground tracking-wide py-1.5 rounded-lg">
-            {drawing.name}
-          </span>
-        </div>
+      <div className="flex-1 relative h-full w-full">
+        {/* Responsive Header Container */}
+        <div className="z-[5] pointer-events-none lg:absolute lg:inset-x-0 lg:top-[16px] flex items-center justify-between gap-4 p-4 lg:p-0">
+          
+          {/* Left Controls */}
+          <div className="flex items-center gap-3 pointer-events-auto lg:ml-[71px]">
+            <Link href="/">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 px-2 lg:px-3 gap-2 rounded-lg bg-[#232329] hover:bg-muted border border-border/40 hover:border-border/60 text-muted-foreground hover:text-foreground transition-all font-medium backdrop-blur-sm shadow-sm"
+                title="Back to Home"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden lg:inline">Back</span>
+              </Button>
+            </Link>
+            <div className="h-5 w-px bg-border/40 hidden lg:block" />
+            <span className="text-sm font-medium opacity-90 select-none text-foreground tracking-wide py-1.5 rounded-lg truncate max-w-[150px] lg:max-w-none">
+              {drawing.name}
+            </span>
+          </div>
 
-        {/* Custom Top-Right Toolbar - Aligned with Left Toolbar */}
-        <div className="absolute top-4 right-4 md:top-[16px] md:right-[155px] z-[5] flex items-center gap-3 pointer-events-auto">
-          <div className="flex items-center gap-2 rounded-lg p-1 transition-all">
-            {isConnected && (
-               <div className="flex items-center pl-3 rounded-md">
-                 {/* Custom "Broadcasting" Animation */}
-                 <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Connected">
-                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
-                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+          {/* Right Controls - Desktop (Visible on LG+) */}
+          <div className="hidden lg:flex items-center gap-3 pointer-events-auto lg:mr-[155px]">
+            <div className="flex items-center gap-2 rounded-lg p-1 transition-all">
+              {isConnected && (
+                 <div className="flex items-center pl-3 rounded-md">
+                   <div className="relative flex items-center justify-center h-3 w-3 mr-1" title="Broadcasting">
+                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                   </div>
+                   <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                     {connectedUsers > 1 ? `${connectedUsers} online` : ''}
+                   </span>
                  </div>
-                 
-                 <span className="text-xs font-semibold text-green-600 dark:text-green-400">
-                   {connectedUsers > 1 ? `${connectedUsers} online` : ''}
-                 </span>
-               </div>
-             )}
+               )}
+            </div>
+          </div>
+
+          {/* Right Controls - Mobile (Dropdown) */}
+          <div className="lg:hidden pointer-events-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-9 w-9 bg-[#232329] border border-border/40">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {isConnected && (
+                  <div className="px-2 py-2 text-xs flex items-center justify-between text-muted-foreground border-b border-border/50 mb-1">
+                    <span>Collaboration</span>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex items-center justify-center h-2 w-2">
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                      </div>
+                      <span className="text-green-500 font-medium">{connectedUsers} Online</span>
+                    </div>
+                  </div>
+                )}
+                
+                <DropdownMenuSeparator />
+                <Link href="/">
+                  <DropdownMenuItem>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Home
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         {isYjsSynced && initialData && (
           <Excalidraw
-            excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
-            theme={resolvedTheme === 'dark' || resolvedTheme === 'theme-dark-gray' ? 'dark' : 'light'}
+            excalidrawAPI={handleExcalidrawAPI}
             initialData={initialData as any}
             onChange={handleChange}
             langCode="en"
-            onPointerUpdate={providerRef.current ? (payload: any) => {
-              providerRef.current?.awareness?.setLocalStateField('pointer', payload.pointer);
-              providerRef.current?.awareness?.setLocalStateField('selectedElementIds', 
-                excalidrawAPI?.getAppState()?.selectedElementIds || {}
-              );
-            } : undefined}
+            onPointerUpdate={handlePointerUpdate}
+            // theme={resolvedTheme === 'dark' || resolvedTheme === 'theme-dark-gray' ? 'dark' : 'light'}
             UIOptions={{
               canvasActions: {
                 saveToActiveFile: false,

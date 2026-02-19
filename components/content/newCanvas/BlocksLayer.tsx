@@ -123,6 +123,7 @@ const BlockWrapperComponent = ({
                 id={block.blockId}
                 type={block.type}
                 content={block.content}
+                language={block.language}
                 url={block.url}
                 stackItems={block.stackItems}
                 width={block.width}

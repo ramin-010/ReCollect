@@ -193,6 +193,9 @@
     --task-input-placeholder: 0 0% 40%;
     --task-key-bg: 0 0% 16%;
     --task-key-text: 0 0% 60%;
+
+    --welcome-bg: 0 0% 12%;
+    --border-light: 0 0% 30%;
   }
 
   /* Base styles */

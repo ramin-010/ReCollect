@@ -15,7 +15,10 @@ interface ConnectionLayerProps {
     getCanvasPoint: (e: { clientX: number, clientY: number }) => { x: number, y: number };
     selectedConnectionId: string | null;
     onSelectConnection: (id: string) => void;
-    variant?: 'default' | 'controls'; }
+    variant?: 'default' | 'controls'; 
+    zoom?: number;
+    renderConnections?: boolean;
+}
 
 export function ConnectionLayer({ 
     connections, 
@@ -29,7 +32,9 @@ export function ConnectionLayer({
     getCanvasPoint,
     selectedConnectionId,
     onSelectConnection,
-    variant = 'default'
+    variant = 'default',
+    zoom = 1,
+    renderConnections = true
 }: ConnectionLayerProps) {
     const containerRef = React.useRef<SVGSVGElement>(null); 
     const [draggingHandle, setDraggingHandle] = useState<{ connId: string, handle: 'cp1' | 'cp2' } | null>(null);
@@ -92,11 +97,12 @@ export function ConnectionLayer({
 
         const elRect = el.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
+        const currentZoom = zoom || 1;
 
-                const relX = elRect.left - containerRect.left;
-        const relY = elRect.top - containerRect.top;
-        const w = elRect.width;
-        const h = elRect.height;
+        const relX = (elRect.left - containerRect.left) / currentZoom;
+        const relY = (elRect.top - containerRect.top) / currentZoom;
+        const w = elRect.width / currentZoom;
+        const h = elRect.height / currentZoom;
 
         switch (side) {
             case 'top': return { x: relX + w / 2, y: relY };
@@ -104,7 +110,7 @@ export function ConnectionLayer({
             case 'bottom': return { x: relX + w / 2, y: relY + h };
             case 'left': return { x: relX, y: relY + h / 2 };
         }
-    }, [blocks]); 
+    }, [blocks, zoom]); 
 
         const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
         const u = 1 - t;
@@ -218,6 +224,7 @@ export function ConnectionLayer({
                 const isSelected = selectedConnectionId === conn.id;
 
                 if (variant === 'default') {
+                    if (!renderConnections) return null;
                                         const fromBlock = blocks.find(b => b.id === conn.fromBlock);
                     const toBlock = blocks.find(b => b.id === conn.toBlock);
                     

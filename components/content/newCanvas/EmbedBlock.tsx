@@ -1,99 +1,176 @@
 'use client';
 
 import React from 'react';
-import { ExternalLink, Youtube, Twitter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ExternalLink, Globe } from 'lucide-react';
 
 interface EmbedBlockProps {
   url: string;
-  type?: 'youtube' | 'twitter' | 'link';
-  title?: string;
-  description?: string;
-  image?: string;
+  className?: string;
 }
 
-export function EmbedBlock({ url }: { url: string }) {
-  const getEmbedType = (url: string) => {
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-    if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-    return 'link';
-  };
+/** Parse domain & path from URL */
+function parseUrl(url: string) {
+  try {
+    const u = new URL(url);
+    return {
+      domain: u.hostname.replace(/^www\./, ''),
+      path: u.pathname === '/' ? '' : u.pathname,
+      protocol: u.protocol,
+    };
+  } catch {
+    return { domain: url, path: '', protocol: 'https:' };
+  }
+}
 
+/** Detect embed type */
+function getEmbedType(url: string): 'youtube' | 'twitter' | 'generic' {
+  if (/youtube\.com\/watch|youtu\.be\/|youtube\.com\/embed/i.test(url)) return 'youtube';
+  if (/twitter\.com|x\.com/i.test(url)) return 'twitter';
+  return 'generic';
+}
+
+/** Extract YouTube video ID */
+function getYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/);
+  return match ? match[1] : null;
+}
+
+/** Favicon URL via Google's service */
+function getFaviconUrl(domain: string) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+}
+
+/** Get a color accent based on domain name (deterministic) */
+function getDomainColor(domain: string): string {
+  const colors = [
+    'from-blue-500/20 to-blue-600/5 border-blue-500/30',
+    'from-purple-500/20 to-purple-600/5 border-purple-500/30',
+    'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30',
+    'from-amber-500/20 to-amber-600/5 border-amber-500/30',
+    'from-rose-500/20 to-rose-600/5 border-rose-500/30',
+    'from-cyan-500/20 to-cyan-600/5 border-cyan-500/30',
+    'from-indigo-500/20 to-indigo-600/5 border-indigo-500/30',
+  ];
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+export function EmbedBlock({ url, className }: EmbedBlockProps) {
   const type = getEmbedType(url);
+  const { domain, path } = parseUrl(url);
 
+  // YouTube Embed
   if (type === 'youtube') {
-    // Extract video ID
-    let videoId = '';
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    if (match && match[2].length === 11) {
-        videoId = match[2];
-    }
-
-    return (
-      <div className="w-full h-full min-h-[200px] bg-black/5 rounded-lg overflow-hidden flex flex-col">
-        <div className="flex items-center gap-2 p-2 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))]/50">
-           <Youtube className="w-4 h-4 text-red-500" />
-           <span className="text-xs truncate text-[hsl(var(--muted-foreground))]">{url}</span>
+    const videoId = getYouTubeId(url);
+    if (videoId) {
+      return (
+        <div className={cn("w-full h-full flex flex-col rounded-lg overflow-hidden relative", className)}>
+          {/* Overlay to prevent iframe from capturing mouse events during drag */}
+          <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }}  
+            onMouseDown={(e) => e.stopPropagation()} 
+          />
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}`}
+            className="w-full flex-1 min-h-[200px] pointer-events-auto relative z-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title="YouTube video"
+            draggable={false}
+          />
         </div>
-        <div className="flex-1 relative">
-           <iframe
-             width="100%"
-             height="100%"
-             src={`https://www.youtube.com/embed/${videoId}`}
-             title="YouTube video player"
-             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-             className="absolute inset-0"
-           />
+      );
+    }
+  }
+
+  // Twitter/X Embed
+  if (type === 'twitter') {
+    return (
+      <div
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          window.open(url, '_blank');
+        }}
+        className={cn(
+          "block w-full h-full rounded-lg border border-[hsl(var(--border))] overflow-hidden transition-all hover:shadow-lg group cursor-pointer",
+          className
+        )}
+      >
+        <div className="bg-gradient-to-br from-sky-500/15 to-transparent p-4 h-full flex flex-col justify-between pointer-events-none">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-[hsl(var(--foreground))] truncate">{domain}</div>
+              <div className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 line-clamp-2">{url}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-sky-400 group-hover:text-sky-300 transition-colors">
+            <ExternalLink className="w-3 h-3" />
+            <span>Double-click to view</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (type === 'twitter') {
-    return (
-       <div className="w-full h-full md:min-h-[100px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden group hover:border-[hsl(var(--brand-primary))]/30 transition-colors">
-          <div className="flex items-center gap-2 mb-1">
-             <Twitter className="w-4 h-4 text-sky-500" />
-             <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">Twitter / X</span>
-          </div>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-[hsl(var(--foreground))] hover:underline line-clamp-3">
-             {url}
-          </a>
-          <div className="mt-auto text-xs text-[hsl(var(--muted-foreground))] opacity-70">
-             (Twitter embeds require API key for rich preview, click to view)
-          </div>
-       </div>
-    );
-  }
+  // Generic Link Card (Premium Design)
+  const domainColor = getDomainColor(domain);
 
-  // Generic Link Card
   return (
-    <a 
-      href={url} 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="block w-full h-full bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg overflow-hidden hover:shadow-md transition-all group hover:border-[hsl(var(--brand-primary))]/50"
+    <div
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        window.open(url, '_blank');
+      }}
+      className={cn(
+        "block w-full h-full rounded-lg border overflow-hidden transition-all duration-200",
+        "hover:shadow-lg hover:scale-[1.01] group cursor-pointer",
+        className
+      )}
     >
-        <div className="h-full flex flex-col p-4">
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-md bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))]">
-                       <ExternalLink className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Bookmark</span>
-                </div>
-            </div>
-            
-            <div className="mt-3 flex-1">
-                 <div className="text-sm font-semibold text-[hsl(var(--foreground))] break-words line-clamp-2">
-                    {url}
-                 </div>
-                 <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1 truncate opacity-70">
-                    Click to visit website
-                 </div>
-            </div>
+      <div className={cn(
+        "h-full flex flex-col bg-gradient-to-br p-4 pointer-events-none",
+        domainColor
+      )}>
+        {/* Top: Favicon + Domain */}
+        <div className="flex items-center gap-2.5 mb-3">
+          <img 
+            src={getFaviconUrl(domain)} 
+            alt="" 
+            className="w-5 h-5 rounded-sm flex-shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <span className="text-xs font-semibold text-[hsl(var(--foreground))]/80 uppercase tracking-wider truncate">
+            {domain}
+          </span>
         </div>
-    </a>
+
+        {/* Middle: URL path as title-like display */}
+        <div className="flex-1 min-h-0">
+          {path && (
+            <div className="text-sm font-medium text-[hsl(var(--foreground))] leading-snug line-clamp-2 mb-1.5">
+              {decodeURIComponent(path.replace(/\//g, ' / ').replace(/-/g, ' ')).trim()}
+            </div>
+          )}
+          <div className="text-[11px] text-[hsl(var(--muted-foreground))] line-clamp-1 font-mono">
+            {url.length > 60 ? url.slice(0, 60) + '…' : url}
+          </div>
+        </div>
+
+        {/* Bottom: CTA */}
+        <div className="flex items-center gap-1.5 mt-3 text-xs text-[hsl(var(--foreground))]/60 group-hover:text-[hsl(var(--foreground))]/80 transition-colors">
+          <Globe className="w-3 h-3" />
+          <span>Double-click to open</span>
+          <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </div>
+    </div>
   );
 }
