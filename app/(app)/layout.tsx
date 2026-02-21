@@ -1,7 +1,7 @@
 // app/(app)/layout.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
@@ -20,7 +20,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, setUser, setIsLoading } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
   const currentView = useViewStore((state) => state.currentView);
   const isSlideFullscreen = useViewStore((state) => state.isSlideFullscreen);
@@ -49,35 +49,34 @@ export default function AppLayout({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
   
+  // React to auth state from AuthProvider (no duplicate getMe() call)
   useEffect(() => {
-    const checkAuth = async () => {
+    if (isLoading) return; // Wait for AuthProvider to finish
+
+    if (!isAuthenticated) {
+      router.replace('/welcome');
+      return;
+    }
+
+    // Fetch dashboards now that we're authenticated
+    const fetchDashboards = async () => {
       try {
         const response = await authApi.getMe();
-        if (response.success && response.data) {
-          const { user, dashboards } = response.data;
-          
-          // Set user in auth store
-          setUser(user);
-          
-          // Set dashboards in dashboard store
+        if (response.success && response.data?.dashboards) {
+          const { dashboards } = response.data;
           if (Array.isArray(dashboards)) {
             setDashboards(dashboards);
             setCurrentDashboard(null);
           }
-        } else {
-          // Not authenticated
-          router.replace('/welcome');
         }
       } catch (error) {
-        // On error assume unauthenticated and send to welcome signup path
-        router.replace('/welcome');
-      } finally {
-        setIsLoading(false);
+        // Dashboard fetch failed, but auth is still valid
+        console.error('Failed to fetch dashboards:', error);
       }
     };
 
-    checkAuth();
-  }, [router, setUser, setDashboards, setCurrentDashboard, setIsLoading]);
+    fetchDashboards();
+  }, [isLoading, isAuthenticated, router, setDashboards, setCurrentDashboard]);
 
   if (isLoading) {
     return (
