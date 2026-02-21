@@ -39,42 +39,28 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
   const [zoom, setZoom] = React.useState(1);
 
   // ---- Paste support (reuse SmartCanvas paste handler) ----
-  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 300, y: 300 });
-  const pasteTargetSlideIdRef = useRef<string | null>(null);
+  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
   const activeSlideIdRef = useRef(activeSlideId);
   activeSlideIdRef.current = activeSlideId;
 
-  // Wrap setBlocks so pasted BlockData objects get the active/hovered slideId injected with correct coords
+  // Wrap setBlocks so pasted BlockData objects get the active slideId injected
   const pasteSetBlocks = useCallback<React.Dispatch<React.SetStateAction<BlockData[]>>>(
     (action) => {
       setBlocks((prev: SlideBlockData[]) => {
-        // Prefer hovered slide, fallback to active slide
-        const targetSlideId = pasteTargetSlideIdRef.current || activeSlideIdRef.current;
-        if (!targetSlideId) return prev;
+        const currentSlideId = activeSlideIdRef.current;
+        if (!currentSlideId) return prev;
 
-        const isHovering = !!pasteTargetSlideIdRef.current;
-
-        // Resolve the next value from the action
+        // Resolve the next value from the action (it could be a function or a value)
         const nextBlocks = typeof action === 'function'
           ? (action as (prev: BlockData[]) => BlockData[])(prev)
           : action;
 
-        // Find newly added blocks
+        // Find newly added blocks (not in prev) and inject slideId
         const prevIds = new Set(prev.map(b => b.blockId));
         return nextBlocks.map(b => {
           if (!prevIds.has(b.blockId)) {
-            // New block from paste
-            let finalX = b.x;
-            let finalY = b.y;
-
-            // If we weren't hovering a specific slide, force safe coordinates
-            // independent of where the mouse was globally (which could be huge Y value)
-            if (!isHovering) {
-               finalX = 300;
-               finalY = 300;
-            }
-
-            return { ...b, slideId: targetSlideId, x: finalX, y: finalY } as SlideBlockData;
+            // New block from paste — inject slideId
+            return { ...b, slideId: currentSlideId } as SlideBlockData;
           }
           return b as SlideBlockData;
         });
@@ -85,23 +71,14 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
 
   usePasteHandler(pasteSetBlocks, mousePositionRef);
 
-  // Track mouse relative to hovered slide for paste-at-cursor
+  // Track mouse for paste-at-cursor
   const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
-    // Find closest slide container
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    const slideContainer = target?.closest('[data-slide-id]');
-    
-    if (slideContainer) {
-      const slideId = slideContainer.getAttribute('data-slide-id');
-      const rect = slideContainer.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / zoom;
-      const y = (e.clientY - rect.top) / zoom;
-      
-      mousePositionRef.current = { x, y };
-      pasteTargetSlideIdRef.current = slideId;
-    } else {
-      // Mouse outside slides: reset target
-      pasteTargetSlideIdRef.current = null;
+    if (viewportRef.current) {
+      const rect = viewportRef.current.getBoundingClientRect();
+      mousePositionRef.current = {
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
+      };
     }
   }, [zoom]);
 
@@ -236,7 +213,7 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
           const isPhantom = index === sortedSlides.length - 1 && slideBlocks.length === 0;
 
           return (
-            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }} data-slide-id={slide.slideId}>
+            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }}>
               <SingleSlide
                 slideId={slide.slideId}
                 slideOrder={slide.order}

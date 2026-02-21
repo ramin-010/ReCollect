@@ -68,11 +68,32 @@ export function EmbedBlock({ url, className }: EmbedBlockProps) {
     const videoId = getYouTubeId(url);
     if (videoId) {
       return (
-        <div className={cn("w-full h-full flex flex-col rounded-lg overflow-hidden relative", className)}>
-          {/* Overlay to prevent iframe from capturing mouse events during drag */}
-          <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }}  
-            onMouseDown={(e) => e.stopPropagation()} 
-          />
+        <div className={cn("w-full h-full flex flex-col rounded-lg overflow-hidden relative group/embed", className)}>
+          {/* Overlay: visible by default to allow drag. Hidden on double-click to enable playback. */}
+          {/* The parent SmartBlock uses the outer div as drag handle, so we need this overlay */}
+          {/* to prevent iframe from stealing mouse events during drag. */}
+          <div 
+            className="absolute inset-0 z-10 group-[.embed-interactive]/embed:hidden"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              // Toggle the overlay off so user can interact with the iframe
+              const parent = (e.currentTarget as HTMLElement).parentElement;
+              if (parent) {
+                parent.classList.add('embed-interactive');
+                // Also hide this overlay div directly
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }
+            }}
+          >
+            {/* Play hint */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+              <div className="w-14 h-14 rounded-full bg-red-600/90 flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
           <iframe
             src={`https://www.youtube.com/embed/${videoId}`}
             className="w-full flex-1 min-h-[200px] pointer-events-auto relative z-0"

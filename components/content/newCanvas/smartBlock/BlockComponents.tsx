@@ -257,13 +257,8 @@ export const BlockContent: React.FC<BlockContentProps> = ({
 
   if (type === 'embed') {
     return (
-      <div className="w-full h-full relative group/embed">
-        <div className={cn("w-full h-full", isEditing ? "pointer-events-auto" : "pointer-events-none")}>
-          <EmbedBlock url={content} />
-        </div>
-        {!isEditing && (
-            <div className="absolute inset-0 z-10 bg-transparent cursor-grab active:cursor-grabbing" />
-        )}
+      <div className="w-full h-full pointer-events-auto">
+        <EmbedBlock url={content} />
       </div>
     );
   }

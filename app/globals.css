@@ -1,14 +1,17 @@
 /* ReCollect - Professional Design System */
 @import 'tailwindcss';
 
+/* Override Tailwind v4 default dark mode (media query) with class-based selectors */
+@custom-variant dark (&:is(.dark, .theme-dark-gray, .theme-gray) *);
+
 @layer base {
 
   :root {
-    /* Option 3 Revised: Soft Daylight (Neutral Gray) */
-    --background: 0 0% 92%;        /* User preference approx */
-    --foreground: 0 0% 15%;        /* Neutral Black */
+    /* Premium Light Theme (Vercel/Linear feel) */
+    --background: 0 0% 98%;        /* Very subtle off-white */
+    --foreground: 220 20% 12%;     /* Rich Charcoal for high contrast text */
     
-    --card: 0 0% 100%;             /* Pure White - Pops clearly */
+    --card: 0 0% 100%;             /* Pure White for depth */
     --card-bg: 0 0% 100%;
     --card-foreground: 0 0% 15%;
     
@@ -21,8 +24,8 @@
     --secondary: 0 0% 88%;         /* Slightly darker than bg */
     --secondary-foreground: 0 0% 15%;
     
-    --muted: 0 0% 88%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 220 15% 45%;
     
     --accent: 0 0% 88%;
     --accent-foreground: 0 0% 15%;
@@ -30,7 +33,7 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 0 0% 85%;            /* Compatible border */
+    --border: 220 15% 90%;            /* Cooler, sharper border */
     --input: 0 0% 88%;
     --ring: 217 91% 50%;
     
@@ -61,9 +64,12 @@
     --task-input-placeholder: 0 0% 60%;
     --task-key-bg: 0 0% 95%;         /* Light key bg */
     --task-key-text: 0 0% 50%;
+    
+    --welcome-bg: 0 0% 98%;
+    --border-light: 0 0% 88%;
   }
-
-  /* Dark Mode */
+/* 
+  
   html.dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -97,16 +103,16 @@
     --sidebar-active: 240 10% 13%;
     --divider: 240 3.7% 18%;
 
-    /* Task Input - Dark Mode (Zinc-like) */
-    --task-input-bg: 240 5% 10%;     /* #18181b approx */
-    --task-input-border: 240 5% 16%; /* #27272a approx */
-    --task-input-text: 240 5% 96%;   /* #f4f4f5 */
-    --task-input-placeholder: 240 5% 48%; /* #71717a */ 
+  
+    --task-input-bg: 240 5% 10%;    
+    --task-input-border: 240 5% 16%;
+    --task-input-text: 240 5% 96%;  
+    --task-input-placeholder: 240 5% 48%;
     --task-key-bg: 240 5% 16%;
     --task-key-text: 240 5% 65%;
   }
 
-  /* Gray Mode */
+  
   html.theme-gray {
     --background: 220 3% 14%;
     --foreground: 30 3% 93%;
@@ -140,14 +146,13 @@
     --sidebar-active: 220 3% 20%;
     --divider: 220 3% 22%;
 
-    /* Task Input - Gray Theme */
     --task-input-bg: 220 3% 14%; 
     --task-input-border: 220 3% 20%;
     --task-input-text: 30 3% 90%;
     --task-input-placeholder: 220 3% 50%;
     --task-key-bg: 220 3% 20%;
     --task-key-text: 220 3% 55%;
-  }
+  } */
 
   /* Dark Gray Mode - Notion's exact colors */
   html.theme-dark-gray {
@@ -172,7 +177,7 @@
     --border: 0 0% 15%;              /* #262626 - Subtle borders */
     --input: 0 0% 14%;               /* Input field background */
     --ring: 0 0% 56%;                /* Focus ring color */
-    --brand-primary: 217 91% 60%;;     /* Subtle brand color */
+    --brand-primary: 217 91% 60%;      /* Subtle brand color */
     --brand-secondary: 0 0% 70%;
     --surface-light: 0 0% 12%;       /* #1F1F1F - Lighter surface */
     --surface-medium: 0 0% 14%;      /* #242424 - Medium surface */
