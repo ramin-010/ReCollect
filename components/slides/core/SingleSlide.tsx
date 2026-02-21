@@ -230,37 +230,41 @@ export function SingleSlide({
         }
       });
 
-      // 2. CHECK ACTIVATION: If slide is not active, first click JUST selects it.
-      if (!isActive) {
-        onSlideClick(slideId);
-        // Also clear any previous selection state just in case
-        onSelectBlock('');
-        onSelectConnection(null);
-        return;
-      }
-
-      onSlideClick(slideId); // Reinforce selection
+      onSlideClick(slideId);
 
       const hadSelection = !!selectedBlockId || !!selectedConnectionId;
 
-      // 3. Deselect everything
+      // 2. Deselect everything
       onSelectBlock('');
       onSelectConnection(null);
 
-      // 4. Dismiss existing cursor
-      setCursorPos(null);
-      setEditingBlockId(null);
+      // 3. Calculate new cursor position
+      const rect = containerRef.current!.getBoundingClientRect();
+      const newX = (e.clientX - rect.left) / zoom;
+      const rawY = (e.clientY - rect.top) / zoom;
+      const newY = snapToGuide(rawY);
 
-      // 5. Spawn inline cursor ONLY if we didn't just deselect something
-      if (!hadSelection) {
-        const rect = containerRef.current!.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / zoom;
-        const rawY = (e.clientY - rect.top) / zoom;
-        const y = snapToGuide(rawY);
-        setCursorPos({ x, y });
+      // 4. Handle cursor relocation vs fresh spawn
+      if (cursorPos) {
+        // Cursor is already active — user is clicking elsewhere to reposition.
+        // The InlineCursor's blur handler will fire and commit/discard the old content.
+        // We set the new position immediately so the new cursor spawns after blur processes.
+        setEditingBlockId(null);
+        // Use a microtask to set the new position AFTER React processes the null
+        // This prevents the blur handler from discarding the new cursor
+        setTimeout(() => {
+          setCursorPos({ x: newX, y: newY });
+        }, 120); // Slightly after the blur's 100ms setTimeout
+      } else if (!hadSelection) {
+        // No cursor active, no selection — fresh cursor spawn
+        setCursorPos({ x: newX, y: newY });
+      } else {
+        // Had a block/connection selected — just deselect, don't spawn cursor
+        setCursorPos(null);
+        setEditingBlockId(null);
       }
     },
-    [slideId, isActive, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId]
+    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos]
   );
 
   // ---- Inline cursor handlers ----
@@ -407,8 +411,8 @@ export function SingleSlide({
     <div
       className={`relative group transition-all duration-200 ${
         isActive
-          ? 'border-2 border-[hsl(var(--foreground))]/30 shadow-sm rounded-lg'
-          : ''
+          ? 'ring-2 ring-[hsl(var(--brand-primary))]/40 shadow-lg'
+          : 'ring-1 ring-[hsl(var(--border))] hover:ring-[hsl(var(--border))]/80'
       }`}
       style={{ width: SLIDE_WIDTH }}
     >

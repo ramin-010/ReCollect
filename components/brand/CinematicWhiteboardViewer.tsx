@@ -8,16 +8,19 @@ export function CinematicWhiteboardViewer() {
   return (
     <div className="w-full relative group perspective-1000">
       {/* Container - Full Width */}
-      <div className="relative w-full rounded-xl overflow-hidden border border-white/10 bg-[#0A0A0A] shadow-2xl transition-transform duration-700 ease-out ">
+      <div className="relative w-full rounded-xl overflow-hidden bg-[#0A0A0A] shadow-[0_0_10px_-0px_rgba(0,0,0,0.25)] dark:shadow-[0_0_60px_-10px_rgba(0,0,0,0.6)] transition-transform duration-700 ease-out">
         
         {/* Glow - Subtle Underscore */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-[5]" />
+        {/* <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none z-[5]" /> */}
 
         {/* Video Element - Pure Preview, No Controls */}
         <video
           ref={videoRef}
           className="w-full h-auto block"
-          src="https://res.cloudinary.com/dsfb3jjqx/video/upload/v1770887573/Untitled_video_-_Made_with_Clipchamp_2_ulvucy.mp4"
+          // src="https://res.cloudinary.com/dsfb3jjqx/video/upload/v1770887573/Untitled_video_-_Made_with_Clipchamp_2_ulvucy.mp4"
+          // src="https://res.cloudinary.com/dsfb3jjqx/video/upload/v1771578568/Untitled_video_-_Made_with_Clipchamp_5_lw9kls.mp4"
+          // src="https://res.cloudinary.com/dsfb3jjqx/video/upload/v1771602492/Untitled_video_-_Made_with_Clipchamp_8_vd1o4f.mp4"
+          src="https://res.cloudinary.com/dsfb3jjqx/video/upload/v1771646794/Untitled_video_-_Made_with_Clipchamp_9_dofpmk.mp4"
           autoPlay
           loop
           muted

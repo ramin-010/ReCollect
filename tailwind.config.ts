@@ -58,7 +58,9 @@ const config: Config = {
         // Sidebar specific colors
         'sidebar-bg': 'hsl(var(--sidebar-bg))',
         'sidebar-hover': 'hsl(var(--sidebar-hover))',
-        'sidebar-active': 'hsl(var(--sidebar-active))'
+        'sidebar-active': 'hsl(var(--sidebar-active))',
+        'welcome-bg': 'hsl(var(--welcome-bg))',
+        'border-light': 'hsl(var(--border-light))'
       },
       borderRadius: {
         lg: 'var(--radius)',

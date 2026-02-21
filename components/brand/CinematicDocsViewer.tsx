@@ -72,10 +72,10 @@ export function CinematicDocsViewer() {
   ];
 
   return (
-    <div className="w-full max-w-7xl  mx-auto px-4">
+    <div className="w-full max-w-[1380px]  mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
-        className="relative aspect-video max-h-[89vh] w-full rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl overflow-hidden group"
+        className="relative aspect-video max-h-[99vh] w-full rounded-2xl border border-border/40 bg-[#111111] shadow-xl shadow-black/10 overflow-hidden group"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
@@ -95,7 +95,7 @@ export function CinematicDocsViewer() {
                 transition={{ duration: 0.8 }} 
                 className="absolute inset-0 w-full h-full"
             >
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent z-10 opacity-60" />
+                {/* <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent z-10 opacity-60" /> */}
                 <img 
                     src={slides[activeTab].image} 
                     alt={slides[activeTab].title} 
@@ -106,7 +106,7 @@ export function CinematicDocsViewer() {
         </AnimatePresence>
 
         {/* Text Overlay (Bottom Left) */}
-        <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black via-black/80 to-transparent pt-32">
+        <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black via-black/50 to-transparent pt-32">
              <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 20 }}
@@ -116,7 +116,7 @@ export function CinematicDocsViewer() {
              >
              
                 {/* Title with Large Integrated Avatar */}
-                <h3 className="text-3xl md:text-5xl font-bold text-white mb-4 flex items-center gap-4">
+                <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 flex items-center gap-4 font-[family-name:var(--font-inter)]">
                     <div className="relative group/avatar cursor-pointer">
                         <div className={cn("absolute inset-0 rounded-full blur-md opacity-50 group-hover/avatar:opacity-100 transition-opacity", slides[activeTab].bg.replace('bg-', 'bg-'))} />
                         <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-white/20 bg-white shadow-2xl relative z-10 overflow-hidden">
@@ -131,7 +131,7 @@ export function CinematicDocsViewer() {
                     
                     <span>{slides[activeTab].title}</span>
                 </h3>
-                <p className="text-gray-300 max-w-xl text-lg leading-relaxed">{slides[activeTab].desc}</p>
+                <p className="text-gray-300 max-w-xl text-lg leading-relaxed font-[family-name:var(--font-inter)]">{slides[activeTab].desc}</p>
              </motion.div>
         </div>
         
@@ -141,7 +141,7 @@ export function CinematicDocsViewer() {
                 <div 
                     key={i} 
                     className={cn(
-                        "w-2 h-2 rounded-full transition-all duration-300", 
+                        "w-2 h-2 rounded-full transition-all  duration-300", 
                         activeTab === i ? "bg-white w-6" : "bg-white/30"
                     )} 
                 />

@@ -115,6 +115,12 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       onChange?.(editor.getHTML());
     },
     onBlur: () => {
+      // CRITICAL: Capture dimensions synchronously BEFORE setTimeout.
+      // External mice fire blur so fast that by the time setTimeout runs,
+      // the DOM has already reflowed and offsetWidth/Height are stale/reduced.
+      const capturedWidth = wrapperRef.current?.offsetWidth || 0;
+      const capturedHeight = wrapperRef.current?.offsetHeight || 0;
+
       // Defer so the editor state is finalized
       setTimeout(() => {
         // Don't commit if user is clicking on the floating toolbar
@@ -128,8 +134,8 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           onDiscard();
         } else {
           onCommit(html, {
-            width: wrapperRef.current?.offsetWidth || 0,
-            height: wrapperRef.current?.offsetHeight || 0
+            width: capturedWidth,
+            height: capturedHeight
           });
         }
       }, 100);

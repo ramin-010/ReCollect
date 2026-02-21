@@ -193,7 +193,7 @@ const BlockWrapperComponent = ({
       }}
       onResize={handleResize}
       onResizeStop={handleResizeStop}
-      className="z-10"
+      className="z-100"
       style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto' }}
     >
       <SmartBlock
