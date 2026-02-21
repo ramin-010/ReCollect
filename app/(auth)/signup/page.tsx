@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -11,10 +11,11 @@ import { dashboardApi } from '@/lib/api/dashboard';
 import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
-import { Card } from '@/components/ui-base/Card';
-import { Logo } from '@/components/brand/Logo';
-import { toast } from 'sonner';
 import { User, Mail, Lock, ArrowRight, ArrowLeft, KeyRound } from 'lucide-react';
+import { toast } from 'sonner';
+import { GoogleLogin } from '@react-oauth/google';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -29,10 +30,12 @@ const otpSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 type OtpFormData = z.infer<typeof otpSchema>;
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'select' | 'email'>('select');
   const [step, setStep] = useState<'signup' | 'otp'>('signup');
   const [signupData, setSignupData] = useState<SignupFormData | null>(null);
 
@@ -77,6 +80,7 @@ export default function SignupPage() {
       if (response.success && response.data) {
         setUser(response.data);
 
+        // Create default dashboard
         try {
           await dashboardApi.create({
             name: `${signupData.name}'s Dashboard`,
@@ -121,142 +125,228 @@ export default function SignupPage() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+    try {
+      const response = await authApi.googleAuth(credentialResponse.credential);
+      if (response.success && response.data) {
+        setUser(response.data);
+
+        // Create default dashboard for new Google users
+        try {
+          await dashboardApi.create({
+            name: `${response.data.name}'s Dashboard`,
+            description: 'My personal space for notes and ideas',
+          });
+        } catch (dashError) {
+          console.error('Dashboard creation (may already exist):', dashError);
+        }
+
+        toast.success('Welcome!', {
+          description: 'Signed in with Google successfully.',
+        });
+        router.push('/');
+      }
+    } catch (error: any) {
+      toast.error('Google Sign-In failed', {
+        description: error.response?.data?.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const heading = authMethod === 'select'
+    ? "Let's get started"
+    : step === 'signup'
+    ? "Create your account"
+    : "Verify your email";
+
+  const subheading = authMethod === 'select'
+    ? "Sign up to get things done - your tasks, notes, and meetings all in one place."
+    : step === 'signup'
+    ? "Start organizing your knowledge today."
+    : `We sent a code to ${signupData?.email}`;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-pattern p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Logo size="lg" className="justify-center mb-6" />
-          <h1 className="text-2xl font-bold mb-2">
-            {step === 'signup' ? 'Create your account' : 'Verify your email'}
-          </h1>
-          <p className="text-[hsl(var(--muted-foreground))]">
-            {step === 'signup'
-              ? 'Start organizing your knowledge today'
-              : `We sent a code to ${signupData?.email}`}
-          </p>
-        </div>
-
-        <Card variant="elevated" padding="lg">
-          {step === 'signup' ? (
-            <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-6">
-              <div>
-                <Input
-                  type="text"
-                  label="Full Name"
-                  placeholder="John Doe"
-                  leftIcon={<User className="w-5 h-5" />}
-                  {...signupForm.register('name')}
-                  disabled={isLoading}
-                  error={signupForm.formState.errors.name?.message}
-                  inputSize="lg"
+    <AuthSplitLayout heading={heading} subheading={subheading}>
+      <div className="w-full relative min-h-[350px] h-[350px]">
+        <AnimatePresence mode="wait">
+          {authMethod === 'select' ? (
+            <motion.div
+              key="select"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4 w-full"
+            >
+              <div className="w-full flex justify-center [&>div]:w-full [&>div>div]:!w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => toast.error('Google Sign-Up failed')}
+                  shape="pill"
+                  size="large"
+                  text="signup_with"
                 />
               </div>
-
-              <div>
-                <Input
-                  type="email"
-                  label="Email Address"
-                  placeholder="you@example.com"
-                  leftIcon={<Mail className="w-5 h-5" />}
-                  {...signupForm.register('email')}
-                  disabled={isLoading}
-                  error={signupForm.formState.errors.email?.message}
-                  inputSize="lg"
-                />
-              </div>
-
-              <div>
-                <Input
-                  type="password"
-                  label="Password"
-                  placeholder="Create a password (min. 8 characters)"
-                  leftIcon={<Lock className="w-5 h-5" />}
-                  {...signupForm.register('password')}
-                  disabled={isLoading}
-                  error={signupForm.formState.errors.password?.message}
-                  inputSize="lg"
-                />
-              </div>
-
+              
               <Button
-                type="submit"
-                variant="primary"
-                size="lg"
+                type="button"
+                variant="outline"
+                size="md"
                 fullWidth
-                isLoading={isLoading}
-                rightIcon={!isLoading && <ArrowRight className="w-5 h-5" />}
+                onClick={() => setAuthMethod('email')}
+                className="rounded-full bg-background border-border hover:bg-muted"
               >
-                {isLoading ? 'Sending OTP...' : 'Continue'}
+                <Mail className="w-5 h-5 mr-3 text-muted-foreground" />
+                Continue with email
               </Button>
-            </form>
+
+              <div className="text-center mt-6 text-sm">
+                <span className="text-muted-foreground">Already have an account?</span>{' '}
+                <Link href="/login" className="font-semibold hover:underline">
+                  Sign in
+                </Link>
+              </div>
+
+              <p className="text-center text-xs text-muted-foreground mt-8">
+                By creating an account, you agree to our{' '}
+                <Link href="/terms" className="underline hover:text-foreground">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="underline hover:text-foreground">
+                  Privacy Policy
+                </Link>
+              </p>
+            </motion.div>
           ) : (
-            <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-6">
-              <div>
-                <Input
-                  type="text"
-                  label="Enter OTP"
-                  placeholder="Enter 4-digit code"
-                  leftIcon={<KeyRound className="w-5 h-5" />}
-                  {...otpForm.register('otp')}
-                  disabled={isLoading}
-                  error={otpForm.formState.errors.otp?.message}
-                  inputSize="lg"
-                  maxLength={4}
-                  autoComplete="off"
-                />
-              </div>
+            <motion.div
+              key="email-form"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full"
+            >
+              {step === 'signup' && (
+                <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-5">
+                  <Input
+                    type="text"
+                    label="Full Name"
+                    placeholder="John Doe"
+                    leftIcon={<User className="w-5 h-5" />}
+                    {...signupForm.register('name')}
+                    disabled={isLoading}
+                    error={signupForm.formState.errors.name?.message}
+                    inputSize="md"
+                  />
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                isLoading={isLoading}
-                rightIcon={!isLoading && <ArrowRight className="w-5 h-5" />}
-              >
-                {isLoading ? 'Verifying...' : 'Verify & Create Account'}
-              </Button>
+                  <Input
+                    type="email"
+                    label="Email Address"
+                    placeholder="you@example.com"
+                    leftIcon={<Mail className="w-5 h-5" />}
+                    {...signupForm.register('email')}
+                    disabled={isLoading}
+                    error={signupForm.formState.errors.email?.message}
+                    inputSize="md"
+                  />
 
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  onClick={() => setStep('signup')}
-                  className="flex items-center gap-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={resendOtp}
-                  disabled={isLoading}
-                  className="text-brand-primary hover:underline disabled:opacity-50"
-                >
-                  Resend OTP
-                </button>
-              </div>
-            </form>
+                  <Input
+                    type="password"
+                    label="Password"
+                    placeholder="Create a password (min. 8 characters)"
+                    leftIcon={<Lock className="w-5 h-5" />}
+                    {...signupForm.register('password')}
+                    disabled={isLoading}
+                    error={signupForm.formState.errors.password?.message}
+                    inputSize="md"
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    isLoading={isLoading}
+                    rightIcon={!isLoading && <ArrowRight className="w-5 h-5" />}
+                  >
+                    Continue
+                  </Button>
+
+                  <div className="flex justify-center mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMethod('select')}
+                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Other options
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {step === 'otp' && (
+                <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-5">
+                  <Input
+                    type="text"
+                    label="Enter OTP"
+                    placeholder="Enter 4-digit code"
+                    leftIcon={<KeyRound className="w-5 h-5" />}
+                    {...otpForm.register('otp')}
+                    disabled={isLoading}
+                    error={otpForm.formState.errors.otp?.message}
+                    inputSize="md"
+                    maxLength={4}
+                    autoComplete="off"
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    isLoading={isLoading}
+                    rightIcon={!isLoading && <ArrowRight className="w-5 h-5" />}
+                  >
+                    Verify & Create Account
+                  </Button>
+
+                  <div className="flex items-center justify-between text-sm mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setStep('signup')}
+                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resendOtp}
+                      disabled={isLoading}
+                      className="font-medium hover:underline disabled:opacity-50"
+                    >
+                      Resend OTP
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
           )}
-
-          <div className="text-center text-sm pt-6 border-t border-[hsl(var(--border))] mt-6">
-            <span className="text-[hsl(var(--muted-foreground))]">Already have an account? </span>
-            <Link href="/login" className="font-medium text-brand-primary hover:underline">
-              Sign in
-            </Link>
-          </div>
-        </Card>
-
-        <p className="text-center text-xs text-[hsl(var(--muted-foreground))] mt-8">
-          By creating an account, you agree to our{' '}
-          <Link href="/terms" className="underline hover:text-[hsl(var(--foreground))]">
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="underline hover:text-[hsl(var(--foreground))]">
-            Privacy Policy
-          </Link>
-        </p>
+        </AnimatePresence>
       </div>
-    </div>
+    </AuthSplitLayout>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+      <SignupForm />
+    </Suspense>
   );
 }

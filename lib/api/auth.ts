@@ -41,4 +41,9 @@ export const authApi = {
     const response = await axiosInstance.post('/api/reset-password', data);
     return response.data;
   },
+
+  googleAuth: async (credential: string): Promise<ApiResponse<User>> => {
+    const response = await axiosInstance.post('/api/auth/google', { credential });
+    return response.data;
+  },
 };

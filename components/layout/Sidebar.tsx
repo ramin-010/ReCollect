@@ -76,6 +76,8 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     try {
+      // Clear auth_hint cookie immediately for instant routing on next visit
+      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
       await authApi.logout();
       logout();
       toast.success('Logged out successfully!');

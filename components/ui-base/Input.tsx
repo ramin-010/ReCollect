@@ -25,9 +25,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }, ref) => {
     
     const sizes = {
-      sm: 'text-sm px-3 py-1.5',
-      md: 'text-base px-4 py-2',
-      lg: 'text-lg px-5 py-3'
+      sm: 'text-sm px-3 h-9',
+      md: 'text-base px-4 h-[44px]',
+      lg: 'text-lg px-5 h-[52px]'
     }
 
     const iconSizes = {
@@ -47,7 +47,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {leftIcon && (
             <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] pointer-events-none",
+              "absolute left-3.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] pointer-events-none flex items-center justify-center",
               iconSizes[inputSize]
             )}>
               {leftIcon}
@@ -64,8 +64,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               "disabled:cursor-not-allowed disabled:opacity-50",
               error ? "border-[hsl(var(--destructive))]" : "border-[hsl(var(--border))]",
               sizes[inputSize],
-              leftIcon && "pl-10",
-              rightIcon && "pr-10",
+              leftIcon && "pl-[44px]",
+              rightIcon && "pr-[44px]",
               className
             )}
             {...props}
