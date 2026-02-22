@@ -11,9 +11,9 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
 import { Card } from '@/components/ui-base/Card';
-import { Mail, Lock, ArrowRight, ArrowLeft, KeyRound, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ArrowLeft, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 
@@ -70,6 +70,8 @@ function LoginForm() {
           description: 'You have successfully logged in.',
         });
         router.push(redirectUrl);
+      } else {
+        setIsLoading(false);
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || '';
@@ -79,7 +81,6 @@ function LoginForm() {
       toast.error('Login failed', {
         description: errorMessage || 'Something went wrong. Please try again.',
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -146,25 +147,29 @@ function LoginForm() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    setIsLoading(true);
-    try {
-      const response = await authApi.googleAuth(credentialResponse.credential);
-      if (response.success && response.data) {
-        setUser(response.data);
-        toast.success('Welcome!', {
-          description: 'Signed in with Google successfully.',
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      try {
+        const response = await authApi.googleAuth({ accessToken: tokenResponse.access_token });
+        if (response.success && response.data) {
+          setUser(response.data);
+          toast.success('Welcome!', {
+            description: 'Signed in with Google successfully.',
+          });
+          router.push(redirectUrl);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error: any) {
+        toast.error('Google Sign-In failed', {
+          description: error.response?.data?.message || 'Something went wrong. Please try again.',
         });
-        router.push(redirectUrl);
+        setIsLoading(false);
       }
-    } catch (error: any) {
-      toast.error('Google Sign-In failed', {
-        description: error.response?.data?.message || 'Something went wrong. Please try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    onError: () => toast.error('Google Sign-In failed'),
+  });
 
   // Compute Layout Headings
   const heading = authMethod === 'select'
@@ -186,6 +191,13 @@ function LoginForm() {
   return (
     <AuthSplitLayout heading={heading} subheading={subheading}>
       <div className="w-full relative min-h-[300px]">
+        {/* Loader Overlay for Google Sign-In */}
+        {isLoading && authMethod === 'select' && (
+          <div className="absolute inset-[-10] z-10 flex flex-col items-center justify-center bg-black/10 backdrop-blur-[3px] rounded-xl border border-border pb-8">
+            <Loader2 className="w-8 h-8 animate-spin text-brand-primary mb-5" />
+            <p className="text-md font-medium animate-pulse text-muted-foreground">Authenticating...</p>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {authMethod === 'select' ? (
             <motion.div
@@ -196,14 +208,24 @@ function LoginForm() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4 w-full"
             >
-              <div className="w-full flex justify-center [&>div]:w-full [&>div>div]:!w-full">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => toast.error('Google Sign-In failed')}
-                  shape="pill"
-                  size="large"
-                  text="signin_with"
-                />
+              <div className="w-full flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  fullWidth
+                  onClick={() => googleLogin()}
+                  className="rounded-full bg-background border-border hover:bg-muted"
+                  disabled={isLoading}
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 mr-3" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Continue with Google
+                </Button>
               </div>
               
               <Button
