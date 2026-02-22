@@ -42,8 +42,8 @@ export const authApi = {
     return response.data;
   },
 
-  googleAuth: async (credential: string): Promise<ApiResponse<User>> => {
-    const response = await axiosInstance.post('/api/auth/google', { credential });
+  googleAuth: async (data: { credential?: string, accessToken?: string }): Promise<ApiResponse<User>> => {
+    const response = await axiosInstance.post('/api/auth/google', data);
     return response.data;
   },
 };
