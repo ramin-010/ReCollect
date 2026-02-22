@@ -11,6 +11,7 @@ function hasAuthHintCookie(): boolean {
 
 function clearAuthHintCookie() {
   if (typeof document !== 'undefined') {
+    document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
     document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
   }
 }

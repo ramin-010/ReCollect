@@ -11,7 +11,7 @@ import { dashboardApi } from '@/lib/api/dashboard';
 import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
-import { User, Mail, Lock, ArrowRight, ArrowLeft, KeyRound } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -95,12 +95,13 @@ function SignupForm() {
         });
 
         router.push('/');
+      } else {
+        setIsLoading(false);
       }
     } catch (error: any) {
       toast.error('Verification failed', {
         description: error.response?.data?.message || 'Invalid OTP. Please try again.',
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -146,12 +147,13 @@ function SignupForm() {
           description: 'Signed in with Google successfully.',
         });
         router.push('/');
+      } else {
+        setIsLoading(false);
       }
     } catch (error: any) {
       toast.error('Google Sign-In failed', {
         description: error.response?.data?.message || 'Something went wrong. Please try again.',
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -171,6 +173,13 @@ function SignupForm() {
   return (
     <AuthSplitLayout heading={heading} subheading={subheading}>
       <div className="w-full relative min-h-[350px] h-[350px]">
+        {/* Loader Overlay for Google Sign-Up */}
+        {isLoading && authMethod === 'select' && (
+          <div className="absolute inset-[-10] z-10 flex flex-col items-center justify-center bg-black/10 backdrop-blur-[3px] rounded-xl border border-border pb-8">
+            <Loader2 className="w-8 h-8 animate-spin text-brand-primary mb-5" />
+            <p className="text-md font-medium animate-pulse text-muted-foreground">Creating account...</p>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {authMethod === 'select' ? (
             <motion.div
@@ -181,13 +190,14 @@ function SignupForm() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4 w-full"
             >
-              <div className="w-full flex justify-center [&>div]:w-full [&>div>div]:!w-full">
+              <div className="w-full flex justify-center">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={() => toast.error('Google Sign-Up failed')}
                   shape="pill"
                   size="large"
                   text="signup_with"
+                  width="340"
                 />
               </div>
               

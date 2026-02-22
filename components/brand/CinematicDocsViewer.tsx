@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Zap, CheckSquare, Command } from 'lucide-react';
+import { Users, Zap, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AVATAR_COLLECTION } from './CommunityDoodles';
 
@@ -61,8 +61,6 @@ export function CinematicDocsViewer() {
     return () => clearInterval(interval);
   }, [isHovering]);
 
-  // Pick 4 specific collaborators for the Docs Demo
-
 
   // Contextual Comments for each slide - Lorelei avatars (#2, #3, #5)
   const slideComments = [
@@ -72,19 +70,13 @@ export function CinematicDocsViewer() {
   ];
 
   return (
-    <div className="w-full max-w-[1380px]  mx-auto px-4">
+    <div className="w-full max-w-[1380px] mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
         className="relative aspect-video max-h-[99vh] w-full rounded-2xl border border-border/40 bg-[#111111] shadow-xl shadow-black/10 overflow-hidden group"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
-        {/* macOS Window Controls */}
-       
-
-        {/* Live Collaborators Cluster (Subtle, Static) */}
-       
-
         {/* Content Transition */}
         <AnimatePresence mode="wait">
             <motion.div
@@ -95,7 +87,6 @@ export function CinematicDocsViewer() {
                 transition={{ duration: 0.8 }} 
                 className="absolute inset-0 w-full h-full"
             >
-                {/* <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent z-10 opacity-60" /> */}
                 <img 
                     src={slides[activeTab].image} 
                     alt={slides[activeTab].title} 
@@ -126,7 +117,6 @@ export function CinematicDocsViewer() {
                                 className="w-full h-full object-cover scale-150 translate-y-1"
                             />
                         </div>
-                        {/* Status Indicator Dot */}
                     </div>
                     
                     <span>{slides[activeTab].title}</span>
@@ -141,7 +131,7 @@ export function CinematicDocsViewer() {
                 <div 
                     key={i} 
                     className={cn(
-                        "w-2 h-2 rounded-full transition-all  duration-300", 
+                        "w-2 h-2 rounded-full transition-all duration-300", 
                         activeTab === i ? "bg-white w-6" : "bg-white/30"
                     )} 
                 />

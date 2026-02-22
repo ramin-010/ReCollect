@@ -1,38 +1,34 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from "framer-motion";
 import { 
-  ArrowRight, 
   Sparkles, 
-  Layers, 
-  Zap, 
-  Brain, 
-  Share2, 
-  MousePointer2,
-  CheckCircle2,
-  Play,
-  Lock,
   Keyboard,
-  Globe,
-  ShieldCheck,
   Github,
   FileText,
   CheckSquare,
   LayoutList,
-  ArrowDown
+  Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Logo } from '@/components/brand/Logo';
 import { cn } from '@/lib/utils';
 import { CinematicDocsViewer } from '@/components/brand/CinematicDocsViewer';
-import { Doodle } from '@/components/brand/Doodle';
-import { CommunityDoodles } from '@/components/brand/CommunityDoodles';
-import { CinematicWhiteboardViewer } from '@/components/brand/CinematicWhiteboardViewer';
 import { LandingTaskDemo } from '@/components/brand/LandingTaskDemo';
-import { CinematicSecurity } from '@/components/brand/CinematicSecurity';
+
+// Lazy-load heavy below-the-fold components
+const CinematicWhiteboardViewer = dynamic(
+  () => import('@/components/brand/CinematicWhiteboardViewer').then(m => ({ default: m.CinematicWhiteboardViewer })),
+  { ssr: false }
+);
+const CinematicSecurity = dynamic(
+  () => import('@/components/brand/CinematicSecurity').then(m => ({ default: m.CinematicSecurity })),
+  { ssr: false }
+);
 
 
 // --- Media Placeholder Component ---
@@ -73,6 +69,7 @@ function FeatureBadge({ icon: Icon, text, color = "blue" }: { icon: any, text: s
 export default function WelcomePage() {
   const router = useRouter();
   const { scrollYProgress } = useScroll();
+
   
   // Parallax for blobs (from original design)
   const y1 = useTransform(scrollYProgress, [0, 1], [0, -200]);
@@ -199,21 +196,10 @@ export default function WelcomePage() {
       <section className="py-14 pt-0 px-6 relative overflow-hidden bg-welcome-bg">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="max-w-8xl mx-auto space-y-8 relative z-10">
-             {/* <div className="text-center max-w-2xl mx-auto space-y-3 relative flex flex-col items-center">
-                 <h2 className="text-3xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)]">Docs that feel like magic.</h2>
-                <p className="text-base text-[hsl(var(--muted-foreground))]">
-                    Real-time collaboration, slash commands, and integrated tasks—all in one place.
-                </p>
-             </div> */}
-             
-             {/* Wide Cinematic Viewer with Stage Container */}
-             <div className="relative w-full pb-10 ">
-                 {/* Intense Backdrop Glow for embedding dark component */}
-                 {/* <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.1)_0%,transparent_60%)] -z-10 pointer-events-none" /> */}
-                 
+             <div className="relative w-full pb-10">
                  <CinematicDocsViewer />
                  
-                 <p className="text-center mt-8 text-lg font-lg text-muted-foreground  max-w-3xl mx-auto">
+                 <p className="text-center mt-8 text-lg font-lg text-muted-foreground max-w-3xl mx-auto">
                     Real-time collaboration, slash commands, and integrated tasks—all in one place.
                  </p>
              </div>
@@ -320,20 +306,15 @@ export default function WelcomePage() {
         </div>
       </section>
       
-      {/* --- 4. WHITEBOARD (Infinite Canvas) --- */}
-      <section className="py-20 px-6 relative overflow-hidden  bg-background">
+      {/* --- WHITEBOARD (Infinite Canvas) --- */}
+      <section className="py-20 px-6 relative overflow-hidden bg-background">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
-        {/* Very Subtle Background Glow - Muted down from loud purple */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
         <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
             
-             {/* Top Text Section - Left Aligned */}
              <div className="w-full max-w-[1280px] text-left mb-8 space-y-4 px-4 xl:px-0">
-                 {/* Simplified Badge */}
-                 
-                 {/* Clean Notion-style Typography */}
                  <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
                     Think bigger. Move faster.
                  </h2>
@@ -344,9 +325,7 @@ export default function WelcomePage() {
                 </p>
              </div>
 
-             {/* Wide Cinematic Viewer - Full Width */}
              <div className="relative w-full max-w-[1280px] mb-12">
-                 {/* Glowing stage for the dark video frame */}
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08)_0%,transparent_60%)] -z-10 pointer-events-none" />
                  <CinematicWhiteboardViewer />
              </div>
@@ -354,18 +333,13 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- 5. SMART NOTES (Visual Focus) --- */}
-      <section className="py-20 px-6 relative overflow-hidden ">
+      {/* --- SMART NOTES (Visual Focus) --- */}
+      <section className="py-20 px-6 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
         <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
             
-             {/* Top Text Section - Left Aligned */}
              <div className="w-full max-w-[1300px] text-left mb-12 space-y-4 px-4 xl:px-0">
-                 {/* Simplified Badge */}
-
-                
-                 {/* Clean Notion-style Typography */}
                  <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
                     Your knowledge, visualized.
                  </h2>
@@ -376,7 +350,6 @@ export default function WelcomePage() {
              </div>
 
             <div className="w-full relative flex justify-center max-w-[1300px]">
-                 {/* Very Subtle Glow */}
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03)_0%,transparent_60%)] -z-10 pointer-events-none rounded-full blur-3xl" />
                  
                  <div className="w-full rounded-2xl overflow-hidden border border-border/80 shadow-2xl shadow-black/5 dark:shadow-black/20 bg-background/50 backdrop-blur-sm">
@@ -387,7 +360,7 @@ export default function WelcomePage() {
                     />
                  </div>
                  
-                 {/* Floating Context Card - Simplified */}
+                 {/* Floating Context Card */}
                  <div className="absolute bottom-8 left-8 text-left bg-background/95 backdrop-blur-xl p-5 rounded-xl border border-border max-w-xs hidden md:block shadow-lg">
                     <div className="flex items-center gap-2 mb-2 text-amber-500">
                         <Share2 className="w-4 h-4" />
@@ -399,13 +372,12 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- 5. SMART NOTES (Visual Focus) --- (formerly 6 was here) */}      {/* --- 7. PRIVACY & SECURITY (New Cinematic Component) --- */}
+      {/* --- PRIVACY & SECURITY --- */}
       <CinematicSecurity />
 
-      {/* --- 8. CONSOLIDATION & SAVINGS (Honest Free Tier) --- */}
+      {/* --- CONSOLIDATION & SAVINGS --- */}
       <section className="py-24 px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
         <div className="max-w-5xl mx-auto">
-            {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-12">
                 <div className="space-y-4 max-w-2xl">
                     <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)]">
@@ -417,9 +389,7 @@ export default function WelcomePage() {
                 </div>
             </div>
 
-            {/* Savings Calculator Card */}
             <div className="w-full bg-[#FBFBFA] dark:bg-black/40 border border-border/80 rounded-3xl p-8 shadow-sm">
-                 {/* Top: Actual ReCollect Capabilities */}
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 mb-10 pb-10 border-b border-border/60">
                       {/* Col 1 */}
                       <div className="space-y-4 text-sm font-medium">
@@ -488,9 +458,8 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- 9. FOOTER CTA --- */}
-      <section className="relative py-40  pb-10 px-6 border-t border-border overflow-hidden bg-background">
-         {/* Deep Space Background Placeholder */}
+      {/* --- FOOTER CTA --- */}
+      <section className="relative py-40 pb-10 px-6 border-t border-border overflow-hidden bg-background">
          <div className="absolute inset-0 -z-10 bg-background">
              <div className="absolute inset-0 opacity-40 mix-blend-overlay">
                 <MediaPlaceholder type="Background" prompt="Deep space stars, subtle constellations, dark purple nebula. Atmospheric." height="h-full" />
