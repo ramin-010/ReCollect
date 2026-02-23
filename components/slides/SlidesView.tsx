@@ -1,31 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { v4 as uuidv4 } from 'uuid';
-import { Plus, Presentation, Trash2, ArrowLeft, Clock } from 'lucide-react';
+import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { SlideCanvas } from './core/SlideCanvas';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { slideImageStorage } from '@/lib/storage/slideImageStorage';
+import { slideApi, ServerSlideDeck } from '@/lib/api/slideApi';
+import { useViewStore } from '@/lib/store/viewStore';
+import { toast } from 'sonner';
 
 interface SlideDeck {
   id: string;
+  serverId?: string;   // MongoDB _id
   name: string;
   createdAt: string;
   updatedAt: string;
-  content: string; // JSON string of SlideCanvasData
+  content: string;
+  cloudImages?: Array<{ imageId: string; cloudUrl: string; cloudPublicId: string }>;
 }
 
 const STORAGE_KEY = 'recollect_slide_decks';
 
-// ---------------------------------------------------------------------------
-// localStorage helpers
-// ---------------------------------------------------------------------------
-
-function loadDecks(): SlideDeck[] {
+function loadDecksLocal(): SlideDeck[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -35,91 +32,272 @@ function loadDecks(): SlideDeck[] {
   }
 }
 
-function saveDecks(decks: SlideDeck[]) {
+function saveDecksLocal(decks: SlideDeck[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(decks));
 }
 
-// ---------------------------------------------------------------------------
-// SlidesView — Top-level page
-// ---------------------------------------------------------------------------
-
-import { useViewStore } from '@/lib/store/viewStore';
-
-// ... (existing imports)
+function serverToLocal(s: ServerSlideDeck): SlideDeck {
+  return {
+    id: s._id,
+    serverId: s._id,
+    name: s.name,
+    content: s.content || '',
+    cloudImages: s.cloudImages,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+  };
+}
 
 export function SlidesView() {
   const [decks, setDecks] = useState<SlideDeck[]>([]);
   const [activeDeck, setActiveDeck] = useState<SlideDeck | null>(null);
   const [loaded, setLoaded] = useState(false);
-  
-  // Access global view store to toggle fullscreen
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const latestContentRef = useRef<string>('');
+  const latestNameRef = useRef<string>('');
+  const activeDeckRef = useRef<SlideDeck | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => { activeDeckRef.current = activeDeck; }, [activeDeck]);
+
   const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
 
-  // Load decks from localStorage on mount
+  // Load decks from API (fallback to localStorage)
   useEffect(() => {
-    setDecks(loadDecks());
-    setLoaded(true);
-    // Ensure we start not fullscreen (in case we navigated back)
+    const loadDecks = async () => {
+      try {
+        const serverDecks = await slideApi.fetchAllDecks();
+        if (serverDecks.length > 0) {
+          const mapped = serverDecks.map(serverToLocal);
+          setDecks(mapped);
+          saveDecksLocal(mapped);
+        } else {
+          // Fallback: check localStorage for decks not yet synced
+          const localDecks = loadDecksLocal();
+          setDecks(localDecks);
+        }
+      } catch (err) {
+        console.warn('[SlidesView] Failed to fetch from API, using localStorage:', err);
+        setDecks(loadDecksLocal());
+      }
+      setLoaded(true);
+    };
+
+    loadDecks();
     setSlideFullscreen(false);
     return () => setSlideFullscreen(false);
   }, [setSlideFullscreen]);
 
-  // Persist whenever decks change (after initial load)
+  // Persist to localStorage whenever decks change
   useEffect(() => {
     if (!loaded) return;
-    saveDecks(decks);
+    console.log('[SlidesView] Persisting', decks.length, 'decks to localStorage');
+    saveDecksLocal(decks);
   }, [decks, loaded]);
 
-  // ---- Deck Operations ----
-  const createDeck = useCallback(() => {
-    const newDeck: SlideDeck = {
-      id: uuidv4(),
-      name: `Untitled Deck`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      content: '',
-    };
-    setDecks(prev => [newDeck, ...prev]);
-    setActiveDeck(newDeck);
-    setSlideFullscreen(true); // Enter fullscreen
+  // Create deck (API-backed)
+  const createDeck = useCallback(async () => {
+    const tempName = 'Untitled Deck';
+    try {
+      const result = await slideApi.createDeck(tempName);
+      if (result.success && result.data) {
+        const newDeck = serverToLocal(result.data);
+        setDecks(prev => [newDeck, ...prev]);
+        setActiveDeck(newDeck);
+        setSlideFullscreen(true);
+        latestContentRef.current = '';
+        latestNameRef.current = tempName;
+      }
+    } catch (err) {
+      console.error('[SlidesView] Failed to create deck on server:', err);
+      toast.error('Failed to create deck');
+    }
   }, [setSlideFullscreen]);
 
-  const deleteDeck = useCallback((deckId: string) => {
+  // Delete deck (API + local + IndexedDB + cloud cleanup via API)
+  const deleteDeck = useCallback(async (deckId: string) => {
+    const deck = decks.find(d => d.id === deckId);
+
+    // Cleanup local IndexedDB images
+    if (deck?.content) {
+      try {
+        const parsed = JSON.parse(deck.content);
+        const imageIds = (parsed.blocks || [])
+          .filter((b: any) => b.type === 'image' && b.imageId)
+          .map((b: any) => b.imageId);
+        if (imageIds.length > 0) {
+          slideImageStorage.deleteImages(imageIds).catch(() => {});
+        }
+      } catch {}
+    }
+
+    // Delete from server (handles cloud cleanup)
+    const serverId = deck?.serverId || deckId;
+    try {
+      await slideApi.deleteDeck(serverId);
+    } catch (err) {
+      console.error('[SlidesView] Server delete failed:', err);
+    }
+
     setDecks(prev => prev.filter(d => d.id !== deckId));
     if (activeDeck?.id === deckId) {
-       setActiveDeck(null);
-       setSlideFullscreen(false);
+      setActiveDeck(null);
+      setSlideFullscreen(false);
     }
-  }, [activeDeck, setSlideFullscreen]);
+  }, [activeDeck, setSlideFullscreen, decks]);
 
+  // Canvas content change — debounced local update (matches docs pattern)
+  const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const handleCanvasChange = useCallback((content: string) => {
-    if (!activeDeck) return;
-    setDecks(prev =>
-      prev.map(d =>
-        d.id === activeDeck.id
-          ? { ...d, content, updatedAt: new Date().toISOString() }
-          : d
-      )
-    );
-  }, [activeDeck]);
+    const deckId = activeDeckRef.current?.id;
+    if (!deckId) return;
+    // Always update ref immediately (for save handler)
+    latestContentRef.current = content;
+    // Debounce the state update to prevent per-keystroke re-renders
+    if (canvasDebounceRef.current) clearTimeout(canvasDebounceRef.current);
+    canvasDebounceRef.current = setTimeout(() => {
+      setDecks(prev =>
+        prev.map(d =>
+          d.id === deckId
+            ? { ...d, content, updatedAt: new Date().toISOString() }
+            : d
+        )
+      );
+    }, 2000);
+  }, []);
 
+  // Rename deck (local immediate, server on save)
   const handleRenameDeck = useCallback((deckId: string, name: string) => {
+    latestNameRef.current = name;
     setDecks(prev =>
       prev.map(d =>
         d.id === deckId ? { ...d, name, updatedAt: new Date().toISOString() } : d
       )
     );
-    if (activeDeck?.id === deckId) {
-      setActiveDeck(prev => prev ? { ...prev, name } : null);
+    setActiveDeck(prev => prev ? { ...prev, name } : null);
+  }, []);
+
+  // Save to server (Ctrl+S or button)
+  const handleSave = useCallback(async () => {
+    if (!activeDeck || saving) return;
+    const serverId = activeDeck.serverId || activeDeck.id;
+    const content = latestContentRef.current || activeDeck.content;
+    const name = latestNameRef.current || activeDeck.name;
+
+    setSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      // Parse content to find image blocks
+      let allImageIds: string[] = [];
+      let pendingImageIds: string[] = [];
+      let parsed: any = null;
+
+      if (content) {
+        try {
+          parsed = JSON.parse(content);
+          const imageBlocks = (parsed.blocks || []).filter((b: any) => b.type === 'image' && b.imageId);
+          allImageIds = imageBlocks.map((b: any) => b.imageId);
+
+          // Pending = images not yet uploaded to cloud (isUploaded !== true)
+          pendingImageIds = imageBlocks
+            .filter((b: any) => !b.isUploaded)
+            .map((b: any) => b.imageId);
+        } catch {}
+      }
+
+      // Sanitize content for server: strip blob URLs, replace with PENDING_UPLOAD
+      let contentForServer = content;
+      if (parsed) {
+        const serverBlocks = (parsed.blocks || []).map((b: any) => {
+          if (b.type === 'image') {
+            const cleaned = { ...b };
+            if (cleaned.url?.startsWith('blob:')) {
+              cleaned.url = 'PENDING_UPLOAD';
+            }
+            return cleaned;
+          }
+          return b;
+        });
+        contentForServer = JSON.stringify({ ...parsed, blocks: serverBlocks });
+      }
+
+      const result = await slideApi.saveDeck(
+        serverId,
+        { content: contentForServer, name },
+        pendingImageIds,
+        allImageIds
+      );
+
+      if (result.success) {
+        // Update cloud images in local deck after successful save
+        if (result.data?.cloudImages) {
+          setDecks(prev => prev.map(d =>
+            d.id === activeDeck.id
+              ? { ...d, cloudImages: result.data!.cloudImages, updatedAt: result.data!.updatedAt }
+              : d
+          ));
+          setActiveDeck(prev => prev ? {
+            ...prev,
+            cloudImages: result.data!.cloudImages,
+            updatedAt: result.data!.updatedAt,
+          } : null);
+        }
+
+        // If images were uploaded, update blocks with cloud URLs
+        if (result.imageUrlMap && Object.keys(result.imageUrlMap).length > 0 && parsed) {
+          let updated = false;
+          for (const block of (parsed.blocks || [])) {
+            if (block.type === 'image' && block.imageId && result.imageUrlMap[block.imageId]) {
+              block.url = result.imageUrlMap[block.imageId].url;
+              block.isUploaded = true;
+              updated = true;
+              // Clean local IndexedDB since image is now in cloud
+              slideImageStorage.deleteImage(block.imageId).catch(() => {});
+            }
+          }
+          if (updated) {
+            const newContent = JSON.stringify(parsed);
+            latestContentRef.current = newContent;
+            setDecks(prev => prev.map(d =>
+              d.id === activeDeck.id ? { ...d, content: newContent } : d
+            ));
+          }
+        }
+
+        setSaveStatus('saved');
+        toast.success('Deck saved!');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
+    } catch (err) {
+      console.error('[SlidesView] Save failed:', err);
+      toast.error('Failed to save deck');
+      setSaveStatus('idle');
+    } finally {
+      setSaving(false);
     }
-  }, [activeDeck]);
-  
+  }, [activeDeck, saving]);
+
+  // Ctrl+S handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
   const handleCloseDeck = useCallback(() => {
     setActiveDeck(null);
     setSlideFullscreen(false);
+    setSaveStatus('idle');
   }, [setSlideFullscreen]);
 
-  // ---- If a deck is open, show the canvas ----
+  // ---- Active deck view ----
   if (activeDeck) {
     return (
       <div className="flex flex-col h-full w-full">
@@ -142,6 +320,32 @@ export function SlidesView() {
               placeholder="Deck name..."
             />
           </div>
+
+          {/* Save Status + Button */}
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+              <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-500">
+                <Check className="h-3.5 w-3.5" />
+                Saved
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              leftIcon={<Save className="h-4 w-4" />}
+              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+            >
+              Save
+            </Button>
+          </div>
         </div>
 
         {/* Canvas */}
@@ -161,7 +365,6 @@ export function SlidesView() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
-// ... (rest of generic list view)
           className="flex items-center justify-between mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -217,8 +420,38 @@ export function SlidesView() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className="group relative bg-[hsl(var(--card-bg))] border border-[hsl(var(--border))] rounded-xl p-5 cursor-pointer hover:border-orange-500/40 hover:shadow-lg transition-all duration-200"
-                  onClick={() => {
-                    setActiveDeck(deck);
+                  onClick={async () => {
+                    // Use local deck data first (has autosaved content)
+                    // Only fetch from server if local content is empty
+                    if (deck.content && deck.content.length > 10) {
+                      console.log('[SlidesView] Opening deck from LOCAL state | content length:', deck.content.length);
+                      setActiveDeck(deck);
+                      latestContentRef.current = deck.content;
+                      latestNameRef.current = deck.name;
+                    } else {
+                      // Local content empty — try fetching from server
+                      const serverId = deck.serverId || deck.id;
+                      try {
+                        const fullDeck = await slideApi.fetchDeck(serverId);
+                        if (fullDeck && fullDeck.content) {
+                          console.log('[SlidesView] Opening deck from SERVER | content length:', fullDeck.content.length);
+                          const localDeck = serverToLocal(fullDeck);
+                          setActiveDeck(localDeck);
+                          latestContentRef.current = localDeck.content;
+                          latestNameRef.current = localDeck.name;
+                        } else {
+                          console.log('[SlidesView] Opening deck | no server content, using local');
+                          setActiveDeck(deck);
+                          latestContentRef.current = deck.content;
+                          latestNameRef.current = deck.name;
+                        }
+                      } catch {
+                        // Fallback to local
+                        setActiveDeck(deck);
+                        latestContentRef.current = deck.content;
+                        latestNameRef.current = deck.name;
+                      }
+                    }
                     setSlideFullscreen(true);
                   }}
                 >

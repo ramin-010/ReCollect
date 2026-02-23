@@ -77,6 +77,11 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     return () => resizeObserver.disconnect();
   }, [onDimensionsChange]);
 
+  // Ref pattern: TipTap's useEditor captures onUpdate at init time
+  // Using a ref ensures the handler always calls the latest onChange prop
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -112,7 +117,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       },
     },
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML());
+      onChangeRef.current?.(editor.getHTML());
     },
     onBlur: () => {
       // CRITICAL: Capture dimensions synchronously BEFORE setTimeout.

@@ -4,10 +4,11 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { SlideData, SlideBlockData, SlideCanvasData, GUIDE_LINE_SPACING } from './types';
 import { Connection } from '@/types/canvas';
+import { slideImageStorage } from '@/lib/storage/slideImageStorage';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+
+
+
 
 function createSlide(order: number): SlideData {
   return { slideId: uuidv4(), order, connections: [] };
@@ -20,9 +21,9 @@ function parseContent(raw: string | undefined): SlideCanvasData {
   try {
     const parsed = JSON.parse(raw);
 
-    // New format: { slides, blocks }
+
     if (parsed.slides && Array.isArray(parsed.slides)) {
-      // Ensure each slide has a connections array
+
       const slides = parsed.slides.map((s: any) => ({
         ...s,
         connections: s.connections || [],
@@ -33,7 +34,7 @@ function parseContent(raw: string | undefined): SlideCanvasData {
       };
     }
 
-    // Old SmartCanvas format: { blocks, connections } (no slides)
+
     if (parsed.blocks && Array.isArray(parsed.blocks)) {
       const slide = createSlide(0);
       slide.connections = parsed.connections || [];
@@ -47,7 +48,7 @@ function parseContent(raw: string | undefined): SlideCanvasData {
       };
     }
 
-    // Array of blocks (legacy flat format)
+
     if (Array.isArray(parsed)) {
       const slide = createSlide(0);
       const migratedBlocks = parsed.map((b: any) => ({
@@ -60,15 +61,15 @@ function parseContent(raw: string | undefined): SlideCanvasData {
       };
     }
   } catch {
-    // Parse error — start fresh
+
   }
 
   return { slides: [createSlide(0)], blocks: [] };
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+
+
+
 
 export function useSlideState(
   initialContent: string | undefined,
@@ -83,21 +84,52 @@ export function useSlideState(
   const initializedRef = useRef(false);
   const lastContentRef = useRef<string | undefined>(undefined);
 
-  // ---- Initialization ----
+
+  // Initialize ONCE from initialContent — hydrate images BEFORE first render
+  // (Matches SmartCanvas pattern: Promise.all hydration → setBlocks)
   useEffect(() => {
-    const contentStr = typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent);
-    if (initializedRef.current && contentStr === lastContentRef.current) return;
+    if (initializedRef.current) return;
 
-    const data = parseContent(contentStr);
-    setSlides(data.slides);
-    setBlocks(data.blocks);
-    setActiveSlideId(data.slides[0]?.slideId || null);
+    const loadContent = async () => {
+      const contentStr = typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent);
+      const data = parseContent(contentStr);
 
-    initializedRef.current = true;
-    lastContentRef.current = contentStr;
+      // Hydrate images from IndexedDB BEFORE setting blocks
+      // This prevents the "Loading image..." flash
+      const hydratedBlocks = await Promise.all(
+        data.blocks.map(async (block) => {
+          if (block.type === 'image' && block.imageId && !block.isUploaded && !block.url?.startsWith('blob:')) {
+            try {
+              const blob = await slideImageStorage.getImage(block.imageId);
+              if (blob) {
+                console.log('[useSlideState] Hydrated image', block.imageId, 'from IndexedDB');
+                return { ...block, url: slideImageStorage.createObjectURL(blob) };
+              } else {
+                console.warn('[useSlideState] Image', block.imageId, 'NOT found in IndexedDB');
+              }
+            } catch (err) {
+              console.error('[useSlideState] Failed to hydrate image:', block.imageId, err);
+            }
+          }
+          return block;
+        })
+      );
+
+      console.log('[useSlideState] INIT | slides:', data.slides.length, '| blocks:', hydratedBlocks.length,
+        '| images hydrated:', hydratedBlocks.filter(b => b.type === 'image' && b.url).length);
+
+      setSlides(data.slides);
+      setBlocks(hydratedBlocks);
+      setActiveSlideId(data.slides[0]?.slideId || null);
+
+      initializedRef.current = true;
+      lastContentRef.current = contentStr;
+    };
+
+    loadContent();
   }, [initialContent]);
 
-  // ---- Autosave (interval-based, ref-driven) ----
+
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
@@ -108,6 +140,8 @@ export function useSlideState(
   slidesRef.current = slides;
   blocksRef.current = blocks;
 
+  // Autosave — serialize blocks as-is (blob URLs are temporary display URLs;
+  // IndexedDB holds the actual data for restoration on next load)
   useEffect(() => {
     const interval = setInterval(() => {
       const data: SlideCanvasData = {
@@ -123,7 +157,9 @@ export function useSlideState(
     return () => clearInterval(interval);
   }, []);
 
-  // ---- Auto-slide creation (phantom slide) ----
+
+
+
   useEffect(() => {
     if (slides.length === 0) return;
     const lastSlide = slides[slides.length - 1];
@@ -135,7 +171,7 @@ export function useSlideState(
     }
   }, [blocks, slides]);
 
-  // ---- Slide Operations ----
+
   const addSlide = useCallback((afterOrder?: number) => {
     setSlides(prev => {
       const insertAt = afterOrder !== undefined ? afterOrder + 1 : prev.length;
@@ -163,7 +199,7 @@ export function useSlideState(
     });
   }, []);
 
-  // ---- Block Operations ----
+
   const addBlock = useCallback((slideId: string, type: SlideBlockData['type'], x?: number, y?: number) => {
     const defaults: Record<string, Partial<SlideBlockData>> = {
       text: { width: 300, height: 'auto', content: '' },
@@ -173,8 +209,8 @@ export function useSlideState(
     };
     const d = defaults[type] || defaults.text;
 
-    // If y is provided, use it directly (assume caller handled snapping/offset).
-    // If not, use default 40 and apply snap+offset for text.
+
+
     let finalY = y;
     if (finalY === undefined) {
       finalY = 40;
@@ -205,16 +241,29 @@ export function useSlideState(
   }, []);
 
   const deleteBlock = useCallback((blockId: string) => {
-    setBlocks(prev => prev.filter(b => b.blockId !== blockId));
+
+    setBlocks(prev => {
+      const block = prev.find(b => b.blockId === blockId);
+      if (block?.type === 'image' && block.imageId) {
+        slideImageStorage.deleteImage(block.imageId).catch(err =>
+          console.error(`[useSlideState] Failed to delete image ${block.imageId}:`, err)
+        );
+        // Revoke blob URL if it exists
+        if (block.url?.startsWith('blob:')) {
+          URL.revokeObjectURL(block.url);
+        }
+      }
+      return prev.filter(b => b.blockId !== blockId);
+    });
     setSelectedBlockId(prev => prev === blockId ? null : prev);
-    // Also remove connections referencing this block
+
     setSlides(prev => prev.map(s => ({
       ...s,
       connections: s.connections.filter(c => c.fromBlock !== blockId && c.toBlock !== blockId),
     })));
   }, []);
 
-  // ---- Connection Operations (per-slide) ----
+
   const getConnectionsForSlide = useCallback((slideId: string): Connection[] => {
     const slide = slides.find(s => s.slideId === slideId);
     return slide?.connections || [];
@@ -226,7 +275,7 @@ export function useSlideState(
     ));
   }, []);
 
-  // ---- Getters ----
+
   const getBlocksForSlide = useCallback((slideId: string) => {
     return blocks.filter(b => b.slideId === slideId);
   }, [blocks]);
@@ -241,17 +290,45 @@ export function useSlideState(
     setSelectedBlockId,
     setSelectedConnectionId,
     setBlocks,
-    // Slide ops
+
     addSlide,
     deleteSlide,
     reorderSlides,
-    // Block ops
+
     addBlock,
     updateBlock,
     deleteBlock,
     getBlocksForSlide,
-    // Connection ops
+
     getConnectionsForSlide,
     setConnectionsForSlide,
+
+    addImageBlock: useCallback(async (slideId: string, file: File) => {
+      const imageId = uuidv4();
+      try {
+        await slideImageStorage.storeImage(imageId, file);
+      } catch (err) {
+        console.error('[useSlideState] Failed to store image:', err);
+        return null;
+      }
+      const blobUrl = URL.createObjectURL(file);
+      const blockId = uuidv4();
+      const newBlock: SlideBlockData = {
+        blockId,
+        slideId,
+        type: 'image',
+        content: '',
+        url: blobUrl,
+        imageId,
+        isUploaded: false,
+        x: 40,
+        y: 40,
+        width: 400,
+        height: 'auto',
+      };
+      setBlocks(prev => [...prev, newBlock]);
+      setSelectedBlockId(blockId);
+      return blockId;
+    }, []),
   };
 }

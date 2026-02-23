@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo, useEffect } from 'react';
 import { SlideCanvasProps, SlideBlockData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
 import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide } from './SingleSlide';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
-import { usePasteHandler } from '@/components/content/newCanvas/smartCanvas/usePasteHandler';
-import { BlockData } from '@/components/content/newCanvas/smartCanvas/types';
+import { v4 as uuidv4 } from 'uuid';
 
 // ---------------------------------------------------------------------------
 // SlideCanvas — Main Entry Point
@@ -33,43 +32,61 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     getConnectionsForSlide,
     setConnectionsForSlide,
     setBlocks,
+    addImageBlock,
   } = useSlideState(initialContent, onChange);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
 
-  // ---- Paste support (reuse SmartCanvas paste handler) ----
+  // ---- Paste support — slide-specific (uses slideImageStorage via addImageBlock) ----
   const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
   const activeSlideIdRef = useRef(activeSlideId);
   activeSlideIdRef.current = activeSlideId;
 
-  // Wrap setBlocks so pasted BlockData objects get the active slideId injected
-  const pasteSetBlocks = useCallback<React.Dispatch<React.SetStateAction<BlockData[]>>>(
-    (action) => {
-      setBlocks((prev: SlideBlockData[]) => {
-        const currentSlideId = activeSlideIdRef.current;
-        if (!currentSlideId) return prev;
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Don't intercept paste inside editable elements
+      const target = e.target as HTMLElement;
+      if (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
-        // Resolve the next value from the action (it could be a function or a value)
-        const nextBlocks = typeof action === 'function'
-          ? (action as (prev: BlockData[]) => BlockData[])(prev)
-          : action;
+      const slideId = activeSlideIdRef.current;
+      if (!slideId) return;
 
-        // Find newly added blocks (not in prev) and inject slideId
-        const prevIds = new Set(prev.map(b => b.blockId));
-        return nextBlocks.map(b => {
-          if (!prevIds.has(b.blockId)) {
-            // New block from paste — inject slideId
-            return { ...b, slideId: currentSlideId } as SlideBlockData;
+      // Handle image paste
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (const item of Array.from(items)) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+              // Routes through addImageBlock → slideImageStorage (correct DB!)
+              await addImageBlock(slideId, file);
+              console.log('[SlideCanvas] Pasted image via addImageBlock (slideImageStorage)');
+            }
+            return;
           }
-          return b as SlideBlockData;
-        });
-      });
-    },
-    [setBlocks]
-  );
+        }
 
-  usePasteHandler(pasteSetBlocks, mousePositionRef);
+        // Handle text paste — add as text block  
+        const textItem = Array.from(items).find(item => item.type === 'text/plain');
+        if (textItem) {
+          e.preventDefault();
+          textItem.getAsString((text) => {
+            if (text.trim()) {
+              const blockId = addBlock(slideId, 'text', mousePositionRef.current.x, mousePositionRef.current.y);
+              if (blockId) {
+                updateBlock(blockId, { content: text });
+              }
+            }
+          });
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [addImageBlock, addBlock, updateBlock]);
 
   // Track mouse for paste-at-cursor
   const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
@@ -129,6 +146,10 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     setSelectedConnectionId(id);
     if (id) setSelectedBlockId(null);
   }, [setSelectedConnectionId, setSelectedBlockId]);
+
+  const handleAddImage = useCallback(async (slideId: string, file: File) => {
+    await addImageBlock(slideId, file);
+  }, [addImageBlock]);
 
   // ---- Keyboard Shortcuts ----
   React.useEffect(() => {
@@ -231,6 +252,7 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
                 onSlideClick={handleSlideClick}
                 onConnectionsChange={(conns) => handleConnectionsChange(slide.slideId, conns)}
                 onSelectConnection={handleSelectConnection}
+                onAddImage={handleAddImage}
                 zoom={zoom}
               />
 

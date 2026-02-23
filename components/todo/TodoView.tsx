@@ -198,7 +198,7 @@ export function TodoView() {
 
       <div className={cn(
         "max-w-[1000px] mx-auto px-6 md:px-8 relative z-20 transition-all duration-500",
-        isInputExpanded ? "pt-12" : "mt-4"
+        isInputExpanded ? "pt-27" : "mt-4"
       )}>
         
         {/* VIEW SWITCHER: List vs Detail */}

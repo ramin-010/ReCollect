@@ -8,7 +8,7 @@ import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { ContentCard } from '@/components/content/ContentCard';
 import { Button } from '@/components/ui-base/Button';
 import { Card } from '@/components/ui-base/Card';
-import { Plus, FileText, Sparkles, PenTool } from 'lucide-react';
+import { Plus, FileText, Sparkles, PenTool, CalendarDays, Inbox as InboxIcon, Library as LibraryIcon, Users as UsersIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
 import { CreateContentDialog } from '@/components/content/CreateContentDialog';
@@ -21,6 +21,7 @@ import { TodoView } from '@/components/todo/TodoView';
 import { ExpenseView } from '@/components/expenses/ExpenseView';
 import { DocsView } from '@/components/docs/doc_view';
 import { SlidesView } from '@/components/slides/SlidesView';
+import { HomeView } from '@/components/home/HomeView';
 import { useViewStore } from '@/lib/store/viewStore';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
@@ -169,6 +170,63 @@ export default function HomePage() {
   // Render Settings View
   if (currentView === 'settings') {
     return <UserSettings />;
+  }
+
+  // Render Home View
+  if (currentView === 'home') {
+    return <HomeView />;
+  }
+
+  // Placeholder: Meetings
+  if (currentView === 'meetings') {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <CalendarDays className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+          <h2 className="text-2xl font-bold mb-2">Meetings</h2>
+          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — schedule and manage your meetings here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Placeholder: Inbox
+  if (currentView === 'inbox') {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <InboxIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+          <h2 className="text-2xl font-bold mb-2">Inbox</h2>
+          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — all your notifications in one place.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Placeholder: Library
+  if (currentView === 'library') {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <LibraryIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+          <h2 className="text-2xl font-bold mb-2">Library</h2>
+          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — your knowledge base and templates.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Placeholder: Collaboration
+  if (currentView === 'collaboration') {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <UsersIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+          <h2 className="text-2xl font-bold mb-2">Collaboration</h2>
+          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — work together in real-time.</p>
+        </div>
+      </div>
+    );
   }
 
   // Render Drawing View

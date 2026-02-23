@@ -1,7 +1,7 @@
 // lib/store/viewStore.ts
 import { create } from 'zustand';
 
-export type ViewType = 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs' | 'slides';
+export type ViewType = 'dashboard' | 'home' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs' | 'slides' | 'meetings' | 'inbox' | 'presentations' | 'library' | 'collaboration';
 export type TodoFilterType = 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
 
 interface ViewState {
@@ -14,7 +14,7 @@ interface ViewState {
 }
 
 export const useViewStore = create<ViewState>((set) => ({
-  currentView: 'dashboard',
+  currentView: 'home',
   todoFilter: 'inbox',
   isSlideFullscreen: false,
   setCurrentView: (view) => set({ currentView: view }), 

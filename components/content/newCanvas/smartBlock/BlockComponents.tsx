@@ -133,9 +133,8 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
   if (readOnly) return null;
 
   const anchorClassName = cn(
-    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
-    // Standard size: w-3 h-3. Dragging size: w-4 h-4 with ring.
-    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
+    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[999] cursor-crosshair transition-all duration-200 pointer-events-auto",
+    isDragging ? "w-5 h-5 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-4 h-4",
     isVisible ? "opacity-100" : "opacity-0 hover:opacity-100"
   );
 
@@ -245,9 +244,18 @@ export const BlockContent: React.FC<BlockContentProps> = ({
   }
 
   if (type === 'image') {
+    const imgSrc = url || content;
+    if (!imgSrc) {
+      // Image not yet restored from IndexedDB or cloud — show placeholder
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-[hsl(var(--muted))]/20 rounded-lg">
+          <span className="text-xs text-[hsl(var(--muted-foreground))]/50">Loading image...</span>
+        </div>
+      );
+    }
     return (
       <img 
-        src={url || content} 
+        src={imgSrc} 
         alt="Note attachment"
         className="w-full h-full object-cover pointer-events-none select-none"
         draggable="false"

@@ -11,20 +11,20 @@ import { ConnectionLayer } from '@/components/content/newCanvas/ConnectionLayer'
 import { DragController } from '@/components/content/newCanvas/DragController';
 import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/types';
 
-// ---------------------------------------------------------------------------
-// Snap helper — snaps Y to nearest guide line
-// ---------------------------------------------------------------------------
 
-// Snap visual baseline to nearest grid line
+
+
+
+
 function snapToGuide(y: number): number {
-  // Offset -26px aligns text baseline to the 30px grid lines (experimentally adjusted)
+
   const offset = -30;
   return Math.round((y - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
+
+
+
 
 interface SingleSlideProps {
   slideId: string;
@@ -37,7 +37,7 @@ interface SingleSlideProps {
   readOnly?: boolean;
   backgroundColor?: string;
   zoom: number; // Passed from parent for correct coordinate calculations
-  // Handlers
+
   onSelectBlock: (id: string) => void;
   onUpdateBlock: (blockId: string, updates: Partial<SlideBlockData>) => void;
   onDeleteBlock: (blockId: string) => void;
@@ -45,11 +45,12 @@ interface SingleSlideProps {
   onSlideClick: (slideId: string) => void;
   onConnectionsChange: (connections: Connection[]) => void;
   onSelectConnection: (id: string | null) => void;
+  onAddImage?: (slideId: string, file: File) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+
+
+
 
 export function SingleSlide({
   slideId,
@@ -69,18 +70,19 @@ export function SingleSlide({
   onSlideClick,
   onConnectionsChange,
   onSelectConnection,
+  onAddImage,
 }: SingleSlideProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragControllerInstance] = useState(() => new DragController());
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
 
-  // ---- Inline cursor state (naked cursor on click) ----
+
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-  // If editing an existing block, this ID is set. If null, we are creating a new block.
+
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editingDims, setEditingDims] = useState<{ width: number; height: number } | null>(null);
   
-  // Computed: Get data for likely editing block
+
   const editingBlockData = useMemo(() => {
     if (!editingBlockId) return null;
     return blocks.find(b => b.blockId === editingBlockId);
@@ -88,7 +90,7 @@ export function SingleSlide({
 
   const editingBlockContent = editingBlockData?.content;
   
-  // Slide connections state (local setter that also calls parent)
+
   const setConnections = useCallback(
     (updater: Connection[] | ((prev: Connection[]) => Connection[])) => {
       if (typeof updater === 'function') {
@@ -101,14 +103,14 @@ export function SingleSlide({
     [connections, onConnectionsChange]
   );
 
-  // Calculate min height based on blocks AND current editing session
+
   const computedHeight = useMemo(() => {
     let maxBottom = SLIDE_MIN_HEIGHT;
     
-    // 1. Existing blocks
+
     if (blocks.length > 0) {
       for (const block of blocks) {
-        // If we are editing this block, use the live dimensions instead of stored state
+
         let blockHeight = typeof block.height === 'number' ? block.height : 200;
         
         if (block.blockId === editingBlockId && editingDims) {
@@ -120,7 +122,7 @@ export function SingleSlide({
       }
     }
     
-    // 2. New block being created (InlineCursor active but no editingBlockId)
+
     if (!editingBlockId && cursorPos && editingDims) {
       const bottom = cursorPos.y + editingDims.height + 40;
       if (bottom > maxBottom) maxBottom = bottom;
@@ -129,29 +131,39 @@ export function SingleSlide({
     return maxBottom;
   }, [blocks, editingBlockId, editingDims, cursorPos]);
 
-  // Guide line count for background rendering
+
   const guideLineCount = useMemo(() => {
     return Math.floor(computedHeight / GUIDE_LINE_SPACING);
   }, [computedHeight]);
 
-  // Block dims for connection rendering
-  const blockDims: BlockDims[] = useMemo(() => {
-    return blocks.map(b => ({
-      id: b.blockId,
-      x: b.x,
-      y: b.y,
-      width: b.width,
-      height: typeof b.height === 'number' ? b.height : 200,
-    }));
-  }, [blocks]);
 
-  // Canvas point helper for connection layer
+  const blockDims: BlockDims[] = useMemo(() => {
+    return blocks.map(b => {
+      let h: number;
+      if (typeof b.height === 'number') {
+        h = b.height;
+      } else {
+        // For 'auto' blocks (images, embeds), measure from DOM
+        const el = document.getElementById(b.blockId);
+        h = el ? el.getBoundingClientRect().height / (zoom || 1) : 200;
+      }
+      return {
+        id: b.blockId,
+        x: b.x,
+        y: b.y,
+        width: b.width,
+        height: h,
+      };
+    });
+  }, [blocks, zoom]);
+
+
   const getCanvasPoint = useCallback(
     (e: { clientX: number; clientY: number }) => {
       const container = containerRef.current;
       if (!container) return { x: e.clientX, y: e.clientY };
       const rect = container.getBoundingClientRect();
-      // Important: Divide by zoom to get internal coordinates!
+
       return {
         x: (e.clientX - rect.left + container.scrollLeft) / zoom,
         y: (e.clientY - rect.top + container.scrollTop) / zoom,
@@ -160,14 +172,14 @@ export function SingleSlide({
     [zoom]
   );
 
-  // State to track if a block is being dragged (for showing guide lines)
+
   const [isDraggingBlock, setIsDraggingBlock] = useState(false);
 
-  // ---- Drag handlers with text-block guide snapping ----
+
   const handleDragStop = useCallback(
     (id: string, x: number, y: number) => {
       setIsDraggingBlock(false);
-      // Find the block to check its type
+
       const block = blocks.find(b => b.blockId === id);
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
       onUpdateBlock(id, { x, y: snappedY });
@@ -201,7 +213,7 @@ export function SingleSlide({
 
   const handleAddBlockFromMenu = useCallback(
     (type: SlideBlockData['type'], _x?: number, _y?: number, content?: string) => {
-       // Global cleanup when adding from menu too
+
        blocks.forEach(b => {
         if (b.type === 'text' && !b.content?.trim()) {
            onDeleteBlock(b.blockId);
@@ -215,15 +227,15 @@ export function SingleSlide({
     [slideId, onAddBlock, blocks, onDeleteBlock, onUpdateBlock]
   );
 
-  // ---- Single click spawns inline cursor (snapped to guide) ----
+
   const handleSingleClick = useCallback(
     (e: React.MouseEvent) => {
-      // Only create on direct click on canvas background (not on blocks)
-      // Also allow clicking on the "empty state" placeholder (which overlays the background)
+
+
       const isPlaceholder = (e.target as HTMLElement).closest('.empty-slide-placeholder');
       if (e.target !== containerRef.current && !isPlaceholder) return;
 
-      // 1. GLOBAL CLEANUP: Remove any empty text blocks before creating new one
+
       blocks.forEach(b => {
         if (b.type === 'text' && !b.content?.trim()) {
            onDeleteBlock(b.blockId);
@@ -234,32 +246,41 @@ export function SingleSlide({
 
       const hadSelection = !!selectedBlockId || !!selectedConnectionId;
 
-      // 2. Deselect everything
+
       onSelectBlock('');
       onSelectConnection(null);
 
-      // 3. Calculate new cursor position
+
       const rect = containerRef.current!.getBoundingClientRect();
       const newX = (e.clientX - rect.left) / zoom;
       const rawY = (e.clientY - rect.top) / zoom;
       const newY = snapToGuide(rawY);
 
-      // 4. Handle cursor relocation vs fresh spawn
+
       if (cursorPos) {
-        // Cursor is already active — user is clicking elsewhere to reposition.
-        // The InlineCursor's blur handler will fire and commit/discard the old content.
-        // We set the new position immediately so the new cursor spawns after blur processes.
+
+
+
         setEditingBlockId(null);
-        // Use a microtask to set the new position AFTER React processes the null
-        // This prevents the blur handler from discarding the new cursor
+
+
         setTimeout(() => {
+          // Create the text block immediately so onChange syncs per keystroke
+          const newBlockId = onAddBlock(slideId, 'text', newX, newY);
+          if (newBlockId) {
+            setEditingBlockId(newBlockId);
+          }
           setCursorPos({ x: newX, y: newY });
         }, 120); // Slightly after the blur's 100ms setTimeout
       } else if (!hadSelection) {
-        // No cursor active, no selection — fresh cursor spawn
+        // Create the text block immediately so onChange syncs per keystroke
+        const newBlockId = onAddBlock(slideId, 'text', newX, newY);
+        if (newBlockId) {
+          setEditingBlockId(newBlockId);
+        }
         setCursorPos({ x: newX, y: newY });
       } else {
-        // Had a block/connection selected — just deselect, don't spawn cursor
+
         setCursorPos(null);
         setEditingBlockId(null);
       }
@@ -267,11 +288,12 @@ export function SingleSlide({
     [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos]
   );
 
-  // ---- Inline cursor handlers ----
+
   const handleCursorCommit = useCallback(
     (html: string, dims?: { width: number; height: number }) => {
-      // Case A: Editing existing block
+
       if (editingBlockId) {
+        // Block already exists (both new and existing blocks) — just update content
         onUpdateBlock(editingBlockId, { 
           content: html,
           width: dims ? dims.width + 10 : undefined, 
@@ -283,7 +305,7 @@ export function SingleSlide({
         return;
       }
 
-      // Case B: Creating new block
+      // Fallback: block not created yet (shouldn't happen with new flow)
       if (!cursorPos) return;
       const blockId = onAddBlock(slideId, 'text', cursorPos.x, cursorPos.y);
       if (blockId) {
@@ -301,17 +323,17 @@ export function SingleSlide({
   );
 
   const handleCursorDiscard = useCallback(() => {
-    // If we were creating a NEW block, just discard.
-    // If we were editing an EXISTING block, we might want to keep it if it wasn't empty?
-    // The InlineCursor only calls onDiscard if content is empty.
-    // So if existing block became empty, we should arguably delete it or leave it empty?
-    // Excalidraw deletes empty text blocks on blur.
+
+
+
+
+
     
     if (editingBlockId) {
-       // Optional: Delete existing block if it became empty?
-       // For now, let's just exit edit mode. The InlineCursor logic calls onDiscard when *empty*.
-       // If user cleared the text, maybe we should delete the block?
-       // Let's delete it to match behavior.
+
+
+
+
        onDeleteBlock(editingBlockId);
     }
     
@@ -320,7 +342,7 @@ export function SingleSlide({
     setEditingDims(null);
   }, [editingBlockId, onDeleteBlock]);
 
-  // ---- Handle request to edit existing block (double click) ----
+
   const handleEditRequest = useCallback((blockId: string) => {
     const block = blocks.find(b => b.blockId === blockId);
     if (block && block.type === 'text') {
@@ -329,12 +351,12 @@ export function SingleSlide({
     }
   }, [blocks]);
 
-  // Global keyboard shortcuts (Delete/Backspace)
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete selected block
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId && !editingBlockId) {
-        // Prevent backspace from navigating back or other default actions
+
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) {
            return;
         }
@@ -347,10 +369,10 @@ export function SingleSlide({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedBlockId, editingBlockId, onDeleteBlock]);
 
-  // ---- Double click on background (no-op, just prevent default) ----
+
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      // Only block if clicking directly on canvas background
+
       if (e.target === containerRef.current) {
         e.preventDefault();
         e.stopPropagation();
@@ -366,14 +388,14 @@ export function SingleSlide({
         onSelectBlock('');
         onSelectConnection(null);
       }
-      // Single click handler is attached to the div via onClick={handleSingleClick} 
-      // but we also keep this generic click for selection clearing if needed?
-      // Actually handleSingleClick does both. Let's redirect onClick to handleSingleClick directly in the JSX.
+
+
+
     },
     [slideId, onSlideClick, onSelectBlock, onSelectConnection]
   );
 
-  // Anchor mouse handlers for connections
+
   const handleAnchorMouseDown = useCallback(
     (blockId: string, side: 'top' | 'right' | 'bottom' | 'left', e: React.MouseEvent) => {
       const point = getCanvasPoint(e);
@@ -389,7 +411,7 @@ export function SingleSlide({
 
   const handleAnchorMouseUp = useCallback(
     (_blockId: string, _side: any, _e: any) => {
-      // Handled by ConnectionLayer's useConnectionDrag
+
     },
     []
   );
@@ -523,7 +545,10 @@ export function SingleSlide({
 
         {/* Block Creation FAB */}
         {!readOnly && (
-          <SlideBlockMenu onAddBlock={handleAddBlockFromMenu} />
+          <SlideBlockMenu
+            onAddBlock={handleAddBlockFromMenu}
+            onAddImage={onAddImage ? (file) => onAddImage(slideId, file) : undefined}
+          />
         )}
 
         {/* Inline Cursor (naked text input) */}
@@ -534,17 +559,23 @@ export function SingleSlide({
             y={cursorPos.y}
             initialContent={editingBlockContent}
             color={editingBlockData?.color}
-            // If editing specific block, force width to match block width
+
             fixedWidth={editingBlockId ? editingBlockData?.width : undefined}
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}
+            onChange={(html) => {
+              // Live update block content per keystroke so autosave captures it
+              if (editingBlockId) {
+                onUpdateBlock(editingBlockId, { content: html });
+              }
+            }}
             onDimensionsChange={(w, h) => setEditingDims({ width: w, height: h })}
             zoom={zoom}
           />
         )}
 
         {/* Empty state — click hint */}
-        {blocks.length === 0 && !cursorPos && (
+        {blocks.length === 0 && !cursorPos && !editingBlockId && (
           <div
             className="absolute inset-0 flex items-center justify-center cursor-text empty-slide-placeholder"
             onClick={handleSingleClick}
