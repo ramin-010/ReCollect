@@ -304,7 +304,6 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         {sortedSlides.map((slide, index) => {
           const slideBlocks = getBlocksForSlide(slide.slideId);
           const slideConnections = getConnectionsForSlide(slide.slideId);
-          const isPhantom = index === sortedSlides.length - 1 && slideBlocks.length === 0;
 
           return (
             <div key={slide.slideId} id={`slide-${slide.slideId}`} className="relative" style={{ marginBottom: SLIDE_GAP }}>
@@ -350,14 +349,6 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 zoom={zoom}
               />
 
-              {/* Phantom slide indicator */}
-              {isPhantom && (
-                <div className="absolute inset-0 rounded-lg border-2 border-dashed border-[hsl(var(--border))]/30 pointer-events-none flex items-center justify-center">
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]/20 font-medium">
-                    New slide — start typing here
-                  </p>
-                </div>
-              )}
             </div>
           );
         })}

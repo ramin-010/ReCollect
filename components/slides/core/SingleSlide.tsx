@@ -736,7 +736,10 @@ export function SingleSlide({
         {blocks.length === 0 && !cursorPos && !editingBlockId && (
           <div
             className="absolute inset-0 flex items-center justify-center cursor-text empty-slide-placeholder"
-            onClick={handleSingleClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSingleClick(e);
+            }}
           >
             <p className="text-sm text-[hsl(var(--muted-foreground))]/30 font-medium pointer-events-none">
               Click anywhere to start typing, or use the + button
