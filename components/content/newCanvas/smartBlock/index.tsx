@@ -153,9 +153,9 @@ function SmartBlockComponent({
       
 
 
-      {/* Anchor Points (Visible on Hover or dragging) */}
+      {/* Anchor Points (Visible on selection or connection dragging) */}
       <AnchorPoints 
-        isVisible={isHovered || !!isConnectionDragging}
+        isVisible={isSelected || !!isConnectionDragging}
         isDragging={!!isConnectionDragging}
         readOnly={readOnly}
         onAnchorMouseDown={(side, e) => onAnchorMouseDown?.(id, side, e)}

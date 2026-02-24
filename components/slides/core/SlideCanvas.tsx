@@ -319,8 +319,10 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 backgroundColor={slide.backgroundColor}
                 title={slide.title}
                 showTitle={slide.showTitle}
+                coverImage={slide.coverImage}
                 onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
                 onToggleTitle={(show) => handleUpdateSlide(slide.slideId, { showTitle: show })}
+                onCoverChange={(url) => handleUpdateSlide(slide.slideId, { coverImage: url })}
                 onSelectBlock={handleSelectBlock}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}

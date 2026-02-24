@@ -2,8 +2,10 @@
 
 import React, { useCallback, useRef, useMemo, useState, useEffect } from 'react';
 import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING, DEFAULT_FONT_SIZE } from './types';
-import { Type, Plus } from 'lucide-react';
+import { Type, Plus, ImagePlus, X } from 'lucide-react';
 import { Connection, BlockDims } from '@/types/canvas';
+import { Button } from '@/components/ui-base/Button';
+import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
 import { InlineCursor } from '../blocks/InlineCursor';
 import { SlideBlockMenu } from '../blocks/SlideBlockMenu';
@@ -16,7 +18,8 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 
 
-const TITLE_HEIGHT = 105; // px reserved for heading area when title is visible
+const TITLE_HEIGHT = 115; // px reserved for heading area when title is visible
+const COVER_HEIGHT = 192; // px reserved for cover image when present
 const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
 
 function snapToGuide(y: number): number {
@@ -41,8 +44,10 @@ interface SingleSlideProps {
   backgroundColor?: string;
   title?: string;
   showTitle?: boolean;
+  coverImage?: string | null;
   onTitleChange?: (title: string) => void;
   onToggleTitle?: (show: boolean) => void;
+  onCoverChange?: (url: string | null) => void;
   zoom: number; // Passed from parent for correct coordinate calculations
 
   onSelectBlock: (id: string) => void;
@@ -71,8 +76,10 @@ export function SingleSlide({
   backgroundColor,
   title,
   showTitle,
+  coverImage,
   onTitleChange,
   onToggleTitle,
+  onCoverChange,
   zoom,
   onSelectBlock,
   onUpdateBlock,
@@ -86,6 +93,7 @@ export function SingleSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragControllerInstance] = useState(() => new DragController());
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
 
 
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -194,8 +202,12 @@ export function SingleSlide({
 
       const block = blocks.find(b => b.blockId === id);
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
-      // Enforce title boundary: blocks cannot overlap the heading area
-      const minY = (showTitle !== false) ? TITLE_HEIGHT : 0;
+      
+      // Enforce top boundary: blocks cannot overlap the heading area or cover image
+      let minY = 0;
+      if (coverImage) minY += COVER_HEIGHT;
+      if (showTitle !== false) minY += TITLE_HEIGHT;
+      
       const clampedY = Math.max(minY, snappedY);
       
       // Enforce side boundaries so blocks don't go off the edge
@@ -275,7 +287,11 @@ export function SingleSlide({
       const rawX = (e.clientX - rect.left) / zoom;
       const newX = Math.max(SIDE_PADDING, Math.min(rawX, SLIDE_WIDTH - SIDE_PADDING - 50));
       const rawY = (e.clientY - rect.top) / zoom;
-      const minY = (showTitle !== false) ? TITLE_HEIGHT : 0;
+      
+      let minY = 0;
+      if (coverImage) minY += COVER_HEIGHT;
+      if (showTitle !== false) minY += TITLE_HEIGHT;
+      
       const newY = Math.max(minY, snapToGuide(rawY));
 
 
@@ -488,6 +504,47 @@ export function SingleSlide({
           overflow: 'hidden',
         }}
       >
+        {/* Slide Cover Image */}
+        {coverImage ? (
+          <div className="w-full h-48 relative group">
+            <img 
+              src={coverImage} 
+              alt="Slide cover" 
+              className="w-full h-full object-cover object-[0_50%]"
+            />
+            
+            <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCoverPicker(true); }}
+                className="bg-black/50 hover:bg-black/70 text-white text-xs backdrop-blur-sm"
+              >
+                Change cover
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onCoverChange?.(null); }}
+                className="bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Cover Picker Modal */}
+        <CoverPicker
+          show={showCoverPicker}
+          onClose={() => setShowCoverPicker(false)}
+          currentCover={coverImage || null}
+          onSelect={(url) => {
+            onCoverChange?.(url);
+            setShowCoverPicker(false);
+          }}
+        />
+
         {/* Slide Title Heading — only when showTitle is not false */}
         {showTitle !== false && (
           <div
@@ -507,30 +564,50 @@ export function SingleSlide({
           </div>
         )}
 
-        {/* Toggle title button — top-right corner */}
+        {/* Slide Actions (Top Right OR Below Cover) */}
         {!readOnly && (
-          <button
-            className={`absolute top-2 right-2 z-20 p-1.5 rounded-md transition-all duration-200
-              ${showTitle !== false
-                ? 'text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30'
-                : 'text-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/10'
-              }
+          <div 
+            className={`absolute right-3 z-20 flex items-center gap-1 transition-all duration-200
+              ${coverImage ? 'top-[204px] opacity-100' : 'top-3 opacity-0 group-hover:opacity-100'}
             `}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleTitle?.(showTitle === false);
-            }}
-            title={showTitle !== false ? 'Remove title' : 'Add title'}
           >
-            {showTitle !== false ? (
-              <Type className="w-4 h-4" />
-            ) : (
-              <div className="flex items-center gap-0.5">
-                <Plus className="w-3 h-3" />
-                <Type className="w-4 h-4" />
-              </div>
+            {/* Add Cover Button (only if no cover) */}
+            {!coverImage && (
+              <button
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-200 text-sm font-medium
+                  text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30
+                `}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCoverPicker(true); }}
+              >
+                <ImagePlus className="w-4 h-4" />
+                Add cover
+              </button>
             )}
-          </button>
+
+            {/* Toggle title button */}
+            <button
+              className={`p-1.5 rounded-md transition-all duration-200 flex items-center justify-center
+                ${showTitle !== false
+                  ? 'text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30'
+                  : 'text-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/10'
+                }
+              `}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onToggleTitle?.(showTitle === false);
+              }}
+              title={showTitle !== false ? 'Remove title' : 'Add title'}
+            >
+              {showTitle !== false ? (
+                <Type className="w-4 h-4" />
+              ) : (
+                <div className="flex items-center gap-0.5">
+                  <Plus className="w-3 h-3" />
+                  <Type className="w-4 h-4" />
+                </div>
+              )}
+            </button>
+          </div>
         )}
 
         {/* Guide lines — visible ONLY when dragging a block */}

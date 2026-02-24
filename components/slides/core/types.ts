@@ -11,6 +11,7 @@ export interface SlideData {
   order: number;
   title?: string;
   showTitle?: boolean; // defaults to true; false hides the heading area
+  coverImage?: string | null;
   backgroundColor?: string;
   connections: Connection[];
 }

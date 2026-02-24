@@ -133,9 +133,9 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
   if (readOnly) return null;
 
   const anchorClassName = cn(
-    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[999] cursor-crosshair transition-all duration-200 pointer-events-auto",
+    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[999] cursor-crosshair transition-all duration-200",
     isDragging ? "w-5 h-5 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-4 h-4",
-    isVisible ? "opacity-100" : "opacity-0 hover:opacity-100"
+    isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
   );
 
   return (
