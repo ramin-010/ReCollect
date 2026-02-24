@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type } from 'lucide-react';
+import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
+import { cn } from '@/lib/utils';
 import { SlideCanvas, SlideCanvasHandle } from './core/SlideCanvas';
 import { SelectedBlockInfo } from './core/types';
 import { slideImageStorage } from '@/lib/storage/slideImageStorage';
@@ -54,10 +55,12 @@ export function SlidesView() {
   const [activeDeck, setActiveDeck] = useState<SlideDeck | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isLocalSaving, setIsLocalSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const latestContentRef = useRef<string>('');
   const latestNameRef = useRef<string>('');
   const activeDeckRef = useRef<SlideDeck | null>(null);
+  const [showColorPalette, setShowColorPalette] = useState(false);
 
   // Keep ref in sync with state
   useEffect(() => { activeDeckRef.current = activeDeck; }, [activeDeck]);
@@ -153,8 +156,11 @@ export function SlidesView() {
   const handleCanvasChange = useCallback((content: string) => {
     const deckId = activeDeckRef.current?.id;
     if (!deckId) return;
+    
     // Always update ref immediately (for save handler)
     latestContentRef.current = content;
+    setIsLocalSaving(true);
+
     // Debounce the state update to prevent per-keystroke re-renders
     if (canvasDebounceRef.current) clearTimeout(canvasDebounceRef.current);
     canvasDebounceRef.current = setTimeout(() => {
@@ -165,6 +171,7 @@ export function SlidesView() {
             : d
         )
       );
+      setTimeout(() => setIsLocalSaving(false), 500); // Keep pulsing briefly after save
     }, 2000);
   }, []);
 
@@ -303,6 +310,21 @@ export function SlidesView() {
   const canvasRef = useRef<SlideCanvasHandle>(null);
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
 
+  const handleUpdateColor = useCallback((color: string) => {
+    if (!selectedBlock || !canvasRef.current) return;
+    canvasRef.current.updateSelectedBlock({ color });
+    setShowColorPalette(false);
+  }, [selectedBlock]);
+
+  const COLORS = [
+    { name: 'Default', value: '' }, // Default (Transparent)
+    { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
+    { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
+    { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
+    { name: 'Red', value: 'bg-red-500/10 border-red-500/20' },
+    { name: 'Violet', value: 'bg-violet-500/10 border-violet-500/20' },
+  ];
+
   // Theme-specific text color presets moved to floating toolbar
   const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
     setSelectedBlock(block);
@@ -341,7 +363,7 @@ export function SlidesView() {
     return (
       <div className="flex flex-col h-full w-full">
         {/* Header Bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
+        <div className="relative z-50 flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -350,7 +372,7 @@ export function SlidesView() {
           >
             Back
           </Button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center pr-4">
             <input
               type="text"
               value={activeDeck.name}
@@ -363,7 +385,7 @@ export function SlidesView() {
           {/* ---- Block Controls (Font Size + Text Color) ---- */}
           {/* onMouseDown preventDefault keeps focus in TipTap editor when clicking these controls */}
           <div
-            className={`flex items-center gap-1 border-l border-r border-[hsl(var(--divider))] px-3 transition-opacity duration-200 ${isBlockSelected ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}
+            className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[hsl(var(--card-bg))]/50 px-3 py-1 rounded-md transition-opacity duration-200 z-[100] ${isBlockSelected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
             onMouseDown={(e) => e.preventDefault()}
           >
             {/* Font Size */}
@@ -391,11 +413,59 @@ export function SlidesView() {
               <span className="text-[9px] text-[hsl(var(--muted-foreground))]/50 ml-0.5 hidden sm:inline">Ctrl ±</span>
             </div>
 
+            {/* Background Color Picker */}
+            <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-[hsl(var(--divider))] relative">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]",
+                  showColorPalette && "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
+                )}
+                onClick={() => setShowColorPalette(!showColorPalette)}
+                title="Change Background Color"
+              >
+                <PaintBucket className="h-3.5 w-3.5" />
+              </Button>
+              
+              {showColorPalette && (
+                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-[hsl(var(--popover))] backdrop-blur-md rounded-full border border-[hsl(var(--border))] shadow-md animate-in fade-in zoom-in-95 z-[999] pointer-events-auto">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.name}
+                      className={cn(
+                        "w-4 h-4 rounded-full border border-transparent transition-all hover:scale-110 z-999",
+                        "focus:outline-none focus:ring-1 focus:ring-[hsl(var(--foreground))]",
+                        c.name === 'Default' ? 'bg-[hsl(var(--muted-foreground))]/20' : '',
+                        c.name === 'Blue' ? 'bg-blue-400' : '',
+                        c.name === 'Green' ? 'bg-green-400' : '',
+                        c.name === 'Amber' ? 'bg-amber-400' : '',
+                        c.name === 'Red' ? 'bg-red-400' : '',
+                        c.name === 'Violet' ? 'bg-violet-400' : '',
+                        selectedBlock?.color === c.value && "ring-2 ring-[hsl(var(--foreground))] ring-offset-1 ring-offset-[hsl(var(--popover))]"
+                      )}
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUpdateColor(c.value);
+                      }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
           </div>
 
           {/* Save Status + Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center justify-end gap-2">
+            {isLocalSaving && saveStatus !== 'saving' && (
+              <span   
+                className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
+                title="Saving to local storage"
+              />
+            )}
+            
             {saveStatus === 'saving' && (
               <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

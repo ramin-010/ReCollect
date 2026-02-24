@@ -46,74 +46,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({ isVisible, onD
   </div>
 );
 
-interface ColorControlProps {
-    isVisible: boolean;
-    onUpdateColor?: (color: string) => void;
-    currentColor?: string;
-}
 
-export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateColor, currentColor }) => {
-    const [showPalette, setShowPalette] = useState(false);
-  
-    const COLORS = [
-      { name: 'Default', value: '' }, // Default (Transparent)
-      { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
-      { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
-      { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
-      { name: 'Red', value: 'bg-red-500/10 border-red-500/20' },
-      { name: 'Violet', value: 'bg-violet-500/10 border-violet-500/20' },
-    ];
-  
-    return (
-      <div className={cn(
-        "absolute top-0 left-0 flex items-start gap-1 transition-opacity z-[100] pointer-events-auto",
-        isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}>
-        <div className="flex items-center gap-1">
-            {/* Color Palette Toggle - Inside Top Right */}
-            <button 
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={(e) => { e.stopPropagation(); setShowPalette(!showPalette); }}
-              className={cn(
-                  "p-1 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors border border-transparent backdrop-blur-sm bg-background/30",
-                  showPalette && "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
-              )}
-              title="Change Background Color"
-            >
-              <Palette className="w-3 h-3" />
-            </button>
-        </div>
-  
-        {/* Expanded Color Swatches - Slide Right */}
-        {showPalette && (
-            <div className="absolute top-0 left-8 flex items-center gap-1 p-1.5 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-left-2 w-max ml-1 z-50">
-                {COLORS.map((c) => (
-                   <button
-                     key={c.name}
-                     className={cn(
-                        "w-3 h-3 rounded-full border border-transparent transition-all hover:scale-110",
-                        "focus:outline-none focus:ring-1 focus:ring-[hsl(var(--foreground))]",
-                        c.name === 'Default' ? 'bg-[hsl(var(--muted-foreground))]/20' : '',
-                        c.name === 'Blue' ? 'bg-blue-400' : '',
-                        c.name === 'Green' ? 'bg-green-400' : '',
-                        c.name === 'Amber' ? 'bg-amber-400' : '',
-                        c.name === 'Red' ? 'bg-red-400' : '',
-                        c.name === 'Violet' ? 'bg-violet-400' : '',
-                        currentColor === c.value && "ring-2 ring-[hsl(var(--foreground))] ring-offset-1"
-                     )}
-                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                     onClick={(e) => { 
-                         e.stopPropagation(); 
-                         onUpdateColor?.(c.value); 
-                     }}
-                     title={c.name}
-                   />
-                ))}
-            </div>
-        )}
-      </div>
-    );
-};
 
 interface AnchorPointsProps {
   isVisible: boolean;
@@ -134,7 +67,7 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
 
   const anchorClassName = cn(
     "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[999] cursor-crosshair transition-all duration-200",
-    isDragging ? "w-5 h-5 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-4 h-4",
+    isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
     isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
   );
 

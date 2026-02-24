@@ -9,7 +9,6 @@ import { calculateTaskStats, handleStackDrop, handleStackItemDrop } from './util
 import {
   DragHandle,
   ControlsOverlay,
-  ColorControl,
   AnchorPoints,
   TaskProgressBar,
   BlockContent,
@@ -162,14 +161,7 @@ function SmartBlockComponent({
         onAnchorMouseUp={(side, e) => onAnchorMouseUp?.(id, side, e)}
       />
 
-      {/* Color Control - Visible on Selection or Editing */}
-      {(isSelected || isEditing) && type !== 'stack' && (
-            <ColorControl 
-            isVisible={true} 
-            currentColor={color}
-            onUpdateColor={(c) => onUpdateBlock?.(id, { color: c })}
-        />
-      )}
+
       {/* Content Area */}
       <div 
         className={cn(

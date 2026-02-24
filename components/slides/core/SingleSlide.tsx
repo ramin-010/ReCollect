@@ -18,9 +18,10 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 
 
-const TITLE_HEIGHT = 115; // px reserved for heading area when title is visible
-const COVER_HEIGHT = 192; // px reserved for cover image when present
-const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
+export const TITLE_HEIGHT = 103; // px reserved for heading area when title is visible
+export const COVER_HEIGHT = 192; // px reserved for cover image when present
+export const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
+export const VERTICAL_PADDING = 17; // min top/bottom padding when no cover/title is present
 
 function snapToGuide(y: number): number {
 
@@ -203,10 +204,11 @@ export function SingleSlide({
       const block = blocks.find(b => b.blockId === id);
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
       
-      // Enforce top boundary: blocks cannot overlap the heading area or cover image
+      // Enforce top boundary: blocks cannot overlap the heading area, cover image, or top padding
       let minY = 0;
       if (coverImage) minY += COVER_HEIGHT;
       if (showTitle !== false) minY += TITLE_HEIGHT;
+      if (!coverImage && showTitle === false) minY += VERTICAL_PADDING;
       
       const clampedY = Math.max(minY, snappedY);
       
@@ -291,6 +293,7 @@ export function SingleSlide({
       let minY = 0;
       if (coverImage) minY += COVER_HEIGHT;
       if (showTitle !== false) minY += TITLE_HEIGHT;
+      if (!coverImage && showTitle === false) minY += VERTICAL_PADDING;
       
       const newY = Math.max(minY, snapToGuide(rawY));
 
@@ -548,7 +551,7 @@ export function SingleSlide({
         {/* Slide Title Heading — only when showTitle is not false */}
         {showTitle !== false && (
           <div
-            className="relative z-10 w-full px-10 pt-6 pb-2"
+            className={`relative z-10 w-full px-10  pb-2 ${coverImage ? 'mt-0' : 'mt-6'}`}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >

@@ -4,7 +4,7 @@ import React, { useCallback, useRef, useMemo, useEffect, forwardRef, useImperati
 import { SlideCanvasProps, SlideBlockData, SlideData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
 import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
-import { SingleSlide } from './SingleSlide';
+import { SingleSlide, TITLE_HEIGHT, COVER_HEIGHT } from './SingleSlide';
 import { SlideNavPanel } from './SlideNavPanel';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
@@ -43,6 +43,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     getConnectionsForSlide,
     setConnectionsForSlide,
     setBlocks,
+    shiftBlocksY,
     addImageBlock,
     updateSlide,
   } = useSlideState(initialContent, onChange);
@@ -321,8 +322,23 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 showTitle={slide.showTitle}
                 coverImage={slide.coverImage}
                 onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
-                onToggleTitle={(show) => handleUpdateSlide(slide.slideId, { showTitle: show })}
-                onCoverChange={(url) => handleUpdateSlide(slide.slideId, { coverImage: url })}
+                onToggleTitle={(show) => {
+                  const isCurrentlyShown = slide.showTitle !== false;
+                  if (show && !isCurrentlyShown) {
+                    shiftBlocksY(slide.slideId, TITLE_HEIGHT);
+                  } else if (!show && isCurrentlyShown) {
+                    shiftBlocksY(slide.slideId, -TITLE_HEIGHT);
+                  }
+                  handleUpdateSlide(slide.slideId, { showTitle: show });
+                }}
+                onCoverChange={(url) => {
+                  if (!slide.coverImage && url) {
+                    shiftBlocksY(slide.slideId, COVER_HEIGHT);
+                  } else if (slide.coverImage && !url) {
+                    shiftBlocksY(slide.slideId, -COVER_HEIGHT);
+                  }
+                  handleUpdateSlide(slide.slideId, { coverImage: url });
+                }}
                 onSelectBlock={handleSelectBlock}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}

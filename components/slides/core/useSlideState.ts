@@ -216,7 +216,7 @@ export function useSlideState(
 
     let finalY = y;
     if (finalY === undefined) {
-      finalY = 40;
+      finalY = 40; // Default slightly below the true padding edge
       if (type === 'text') {
         const offset = -19;
         finalY = Math.round((finalY - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
@@ -241,6 +241,13 @@ export function useSlideState(
 
   const updateBlock = useCallback((blockId: string, updates: Partial<SlideBlockData>) => {
     setBlocks(prev => prev.map(b => b.blockId === blockId ? { ...b, ...updates } : b));
+  }, []);
+
+  const shiftBlocksY = useCallback((slideId: string, deltaY: number) => {
+    if (deltaY === 0) return;
+    setBlocks(prev => prev.map(b => 
+      b.slideId === slideId ? { ...b, y: Math.max(0, b.y + deltaY) } : b
+    ));
   }, []);
 
   const deleteBlock = useCallback((blockId: string) => {
@@ -302,6 +309,7 @@ export function useSlideState(
     addBlock,
     updateBlock,
     deleteBlock,
+    shiftBlocksY,
     getBlocksForSlide,
 
     getConnectionsForSlide,
