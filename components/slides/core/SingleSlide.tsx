@@ -2,6 +2,7 @@
 
 import React, { useCallback, useRef, useMemo, useState, useEffect } from 'react';
 import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING, DEFAULT_FONT_SIZE } from './types';
+import { Type, Plus } from 'lucide-react';
 import { Connection, BlockDims } from '@/types/canvas';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
 import { InlineCursor } from '../blocks/InlineCursor';
@@ -15,6 +16,8 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 
 
+const TITLE_HEIGHT = 105; // px reserved for heading area when title is visible
+const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
 
 function snapToGuide(y: number): number {
 
@@ -36,6 +39,10 @@ interface SingleSlideProps {
   isActive: boolean;
   readOnly?: boolean;
   backgroundColor?: string;
+  title?: string;
+  showTitle?: boolean;
+  onTitleChange?: (title: string) => void;
+  onToggleTitle?: (show: boolean) => void;
   zoom: number; // Passed from parent for correct coordinate calculations
 
   onSelectBlock: (id: string) => void;
@@ -62,6 +69,10 @@ export function SingleSlide({
   isActive,
   readOnly,
   backgroundColor,
+  title,
+  showTitle,
+  onTitleChange,
+  onToggleTitle,
   zoom,
   onSelectBlock,
   onUpdateBlock,
@@ -183,9 +194,17 @@ export function SingleSlide({
 
       const block = blocks.find(b => b.blockId === id);
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
-      onUpdateBlock(id, { x, y: snappedY });
+      // Enforce title boundary: blocks cannot overlap the heading area
+      const minY = (showTitle !== false) ? TITLE_HEIGHT : 0;
+      const clampedY = Math.max(minY, snappedY);
+      
+      // Enforce side boundaries so blocks don't go off the edge
+      const maxX = SLIDE_WIDTH - SIDE_PADDING - (block?.width || 100);
+      const clampedX = Math.max(SIDE_PADDING, Math.min(x, Math.max(SIDE_PADDING, maxX)));
+      
+      onUpdateBlock(id, { x: clampedX, y: clampedY });
     },
-    [onUpdateBlock, blocks]
+    [onUpdateBlock, blocks, showTitle]
   );
 
   const handleDragStart = useCallback(
@@ -253,9 +272,11 @@ export function SingleSlide({
 
 
       const rect = containerRef.current!.getBoundingClientRect();
-      const newX = (e.clientX - rect.left) / zoom;
+      const rawX = (e.clientX - rect.left) / zoom;
+      const newX = Math.max(SIDE_PADDING, Math.min(rawX, SLIDE_WIDTH - SIDE_PADDING - 50));
       const rawY = (e.clientY - rect.top) / zoom;
-      const newY = snapToGuide(rawY);
+      const minY = (showTitle !== false) ? TITLE_HEIGHT : 0;
+      const newY = Math.max(minY, snapToGuide(rawY));
 
 
       if (cursorPos) {
@@ -290,7 +311,7 @@ export function SingleSlide({
         setEditingBlockId(null);
       }
     },
-    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos]
+    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos, showTitle]
   );
 
 
@@ -467,6 +488,51 @@ export function SingleSlide({
           overflow: 'hidden',
         }}
       >
+        {/* Slide Title Heading — only when showTitle is not false */}
+        {showTitle !== false && (
+          <div
+            className="relative z-10 w-full px-10 pt-6 pb-2"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <input
+              type="text"
+              value={title || ''}
+              onChange={(e) => onTitleChange?.(e.target.value)}
+              placeholder="Untitled card"
+              className="w-full bg-transparent text-[62px] font-semibold text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/30 focus:outline-none border-none p-0 leading-tight"
+              style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+              readOnly={readOnly}
+            />
+          </div>
+        )}
+
+        {/* Toggle title button — top-right corner */}
+        {!readOnly && (
+          <button
+            className={`absolute top-2 right-2 z-20 p-1.5 rounded-md transition-all duration-200
+              ${showTitle !== false
+                ? 'text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30'
+                : 'text-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/10'
+              }
+            `}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleTitle?.(showTitle === false);
+            }}
+            title={showTitle !== false ? 'Remove title' : 'Add title'}
+          >
+            {showTitle !== false ? (
+              <Type className="w-4 h-4" />
+            ) : (
+              <div className="flex items-center gap-0.5">
+                <Plus className="w-3 h-3" />
+                <Type className="w-4 h-4" />
+              </div>
+            )}
+          </button>
+        )}
+
         {/* Guide lines — visible ONLY when dragging a block */}
         <div 
           className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${

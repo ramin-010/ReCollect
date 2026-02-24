@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useCallback, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { SlideCanvasProps, SlideBlockData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
+import { SlideCanvasProps, SlideBlockData, SlideData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
 import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide } from './SingleSlide';
+import { SlideNavPanel } from './SlideNavPanel';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,6 +44,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     setConnectionsForSlide,
     setBlocks,
     addImageBlock,
+    updateSlide,
   } = useSlideState(initialContent, onChange);
 
   // Report selection changes to parent (for navbar controls)
@@ -195,6 +197,10 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     if (id) setSelectedBlockId(null);
   }, [setSelectedConnectionId, setSelectedBlockId]);
 
+  const handleUpdateSlide = useCallback((slideId: string, updates: Partial<SlideData>) => {
+    updateSlide(slideId, updates);
+  }, [updateSlide]);
+
   const handleAddImage = useCallback(async (slideId: string, file: File) => {
     await addImageBlock(slideId, file);
   }, [addImageBlock]);
@@ -255,11 +261,29 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
   }, [slides]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none">
+    <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none flex flex-row">
       <style jsx global>{`
-       
+        #slide-canvas-viewport,
+        #slide-canvas-viewport input,
+        #slide-canvas-viewport button,
+        #slide-canvas-viewport textarea,
+        #slide-canvas-viewport .ProseMirror {
+          font-family: var(--font-inter), system-ui, sans-serif !important;
+        }
       `}</style>
       <EditorStyles />
+      
+      {/* Left Navigation Panel */}
+      <SlideNavPanel
+        slides={sortedSlides}
+        blocks={blocks}
+        activeSlideId={activeSlideId}
+        onSlideClick={(slideId) => {
+          setActiveSlideId(slideId);
+        }}
+      />
+      
+      <div className="flex-1 overflow-hidden relative">
       <div 
         ref={viewportRef}
         className="flex flex-col items-center py-8 min-h-full transition-transform duration-75 ease-out origin-top overflow-auto bg-[hsl(var(--background))]/50"
@@ -282,7 +306,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
           const isPhantom = index === sortedSlides.length - 1 && slideBlocks.length === 0;
 
           return (
-            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }}>
+            <div key={slide.slideId} id={`slide-${slide.slideId}`} className="relative" style={{ marginBottom: SLIDE_GAP }}>
               <SingleSlide
                 slideId={slide.slideId}
                 slideOrder={slide.order}
@@ -293,6 +317,10 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 isActive={activeSlideId === slide.slideId}
                 readOnly={readOnly}
                 backgroundColor={slide.backgroundColor}
+                title={slide.title}
+                showTitle={slide.showTitle}
+                onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
+                onToggleTitle={(show) => handleUpdateSlide(slide.slideId, { showTitle: show })}
                 onSelectBlock={handleSelectBlock}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}
@@ -318,7 +346,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
       </div>
 
       {/* Zoom Controls */}
-      <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">
+      <div className="fixed bottom-6 left-[164px] z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">
         <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleZoom(-0.05)}>
           <span className="text-xl pb-1">−</span>
         </Button>
@@ -328,6 +356,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleZoom(0.05)}>
           <span className="text-xl pb-1">+</span>
         </Button>
+      </div>
       </div>
     </div>
   );

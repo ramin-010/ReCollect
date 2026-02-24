@@ -9,6 +9,8 @@ export type { BlockDims } from '@/types/canvas';
 export interface SlideData {
   slideId: string;
   order: number;
+  title?: string;
+  showTitle?: boolean; // defaults to true; false hides the heading area
   backgroundColor?: string;
   connections: Connection[];
 }

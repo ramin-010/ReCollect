@@ -199,6 +199,9 @@ export function useSlideState(
     });
   }, []);
 
+  const updateSlide = useCallback((slideId: string, updates: Partial<SlideData>) => {
+    setSlides(prev => prev.map(s => s.slideId === slideId ? { ...s, ...updates } : s));
+  }, []);
 
   const addBlock = useCallback((slideId: string, type: SlideBlockData['type'], x?: number, y?: number) => {
     const defaults: Record<string, Partial<SlideBlockData>> = {
@@ -294,6 +297,7 @@ export function useSlideState(
     addSlide,
     deleteSlide,
     reorderSlides,
+    updateSlide,
 
     addBlock,
     updateBlock,
