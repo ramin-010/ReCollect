@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type, Palette } from 'lucide-react';
+import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { SlideCanvas, SlideCanvasHandle } from './core/SlideCanvas';
 import { SelectedBlockInfo } from './core/types';
@@ -303,35 +303,18 @@ export function SlidesView() {
   const canvasRef = useRef<SlideCanvasHandle>(null);
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
 
-  // Theme-specific text color presets
-  // Light colors for dark backgrounds, dark colors for light backgrounds
-  const TEXT_COLOR_PRESETS = [
-    { color: undefined, label: 'Default', preview: 'hsl(var(--foreground))' },
-    { color: '#f8fafc', label: 'White' },
-    { color: '#94a3b8', label: 'Slate' },
-    { color: '#60a5fa', label: 'Blue' },
-    { color: '#4ade80', label: 'Green' },
-    { color: '#fb923c', label: 'Orange' },
-    { color: '#f472b6', label: 'Pink' },
-    { color: '#a78bfa', label: 'Purple' },
-    { color: '#fbbf24', label: 'Amber' },
-  ];
-
+  // Theme-specific text color presets moved to floating toolbar
   const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
     setSelectedBlock(block);
   }, []);
 
   const handleFontSizeChange = useCallback((delta: number) => {
     if (!selectedBlock || !canvasRef.current) return;
-    const current = selectedBlock.fontSize || 14;
+    const current = selectedBlock.fontSize || 18;
     const next = Math.max(8, Math.min(72, current + delta));
     canvasRef.current.updateSelectedBlock({ fontSize: next });
   }, [selectedBlock]);
 
-  const handleTextColorChange = useCallback((color: string | undefined) => {
-    if (!canvasRef.current) return;
-    canvasRef.current.updateSelectedBlock({ textColor: color || '' });
-  }, []);
 
   const isBlockSelected = !!selectedBlock;
 
@@ -408,26 +391,7 @@ export function SlidesView() {
               <span className="text-[9px] text-[hsl(var(--muted-foreground))]/50 ml-0.5 hidden sm:inline">Ctrl ±</span>
             </div>
 
-            {/* Separator */}
-            <div className="w-px h-5 bg-[hsl(var(--divider))] mx-1" />
 
-            {/* Text Color Presets */}
-            <div className="flex items-center gap-1">
-              <Palette className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))] mr-0.5" />
-              {TEXT_COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  className={`h-5 w-5 rounded-full border-2 transition-all duration-150 hover:scale-110 ${
-                    (selectedBlock?.textColor || '') === (preset.color || '')
-                      ? 'border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/30 scale-110'
-                      : 'border-[hsl(var(--divider))]/50 hover:border-[hsl(var(--muted-foreground))]'
-                  }`}
-                  style={{ backgroundColor: preset.color || preset.preview }}
-                  onClick={() => handleTextColorChange(preset.color)}
-                  title={preset.label}
-                />
-              ))}
-            </div>
           </div>
 
           {/* Save Status + Button */}

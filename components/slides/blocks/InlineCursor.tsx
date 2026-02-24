@@ -15,6 +15,7 @@ import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
 import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
 import { FloatingToolbar } from '@/components/docs/doc_editor/FloatingToolbar';
 import { cn } from '@/lib/utils';
+import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
 
 /**
  * InlineCursor — a "naked" TipTap editor that appears as just a blinking cursor.
@@ -244,9 +245,8 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           margin: 0 !important;
         }
         .inline-cursor-editor .ProseMirror p,
-        .inline-cursor-editor .ProseMirror span,
         .inline-cursor-editor .ProseMirror li {
-          color: inherit !important;
+          color: inherit;
         }
       `}</style>
       <div
@@ -262,7 +262,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           editor={editor}
           style={{
             minHeight: '1.6em',
-            fontSize: `${fontSize || 16}px`,
+            fontSize: `${fontSize || DEFAULT_FONT_SIZE}px`,
           }}
         />
       </div>

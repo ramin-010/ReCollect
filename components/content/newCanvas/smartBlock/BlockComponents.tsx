@@ -239,10 +239,10 @@ export const BlockContent: React.FC<BlockContentProps> = ({
           dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
         />
       </div>
-      {/* Force color inheritance on TipTap HTML elements so globals.css body color doesn't override */}
+      {/* Force color inheritance only on elements without inline styles (so TipTap color spans are preserved) */}
       <style>{`
-        .notion-editor .preview-prosemirror * {
-          color: inherit !important;
+        .notion-editor .preview-prosemirror *:not([style]) {
+          color: inherit;
         }
       `}</style>
       {/* Callout styles for read-only rendering */}

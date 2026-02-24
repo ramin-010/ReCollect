@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SmartBlockProps } from './types';
+import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
 import { calculateTaskStats, handleStackDrop, handleStackItemDrop } from './utils';
 import {
   DragHandle,
@@ -97,8 +98,8 @@ function SmartBlockComponent({
   };
 
   // ---- Font sizing ----
-  // Use explicit fontSize prop, or default to 16px.
-  const currentFontSize = (type === 'text' && fontSize) ? fontSize : 16;
+  // Use explicit fontSize prop, or default.
+  const currentFontSize = (type === 'text' && fontSize) ? fontSize : DEFAULT_FONT_SIZE;
 
   // ---- Minimal text preview (no box when not editing AND not connected AND no color) ----
   // If color is set, we treat it as a "card" regardless of connection or edit state

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useRef, useMemo, useState, useEffect } from 'react';
-import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING } from './types';
+import { SlideBlockData, SLIDE_WIDTH, SLIDE_MIN_HEIGHT, GUIDE_LINE_SPACING, DEFAULT_FONT_SIZE } from './types';
 import { Connection, BlockDims } from '@/types/canvas';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
 import { InlineCursor } from '../blocks/InlineCursor';
@@ -318,7 +318,7 @@ export function SingleSlide({
           content: html,
           width: dims ? dims.width + 10 : 300, 
           height: dims ? dims.height : 'auto',
-          fontSize: 16,
+          fontSize: DEFAULT_FONT_SIZE,
         });
       }
       setCursorPos(null);

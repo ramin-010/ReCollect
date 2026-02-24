@@ -25,7 +25,7 @@ export interface SlideBlockData {
   language?: string;
   color?: string;
   textColor?: string; // Custom text color (CSS color value)
-  fontSize?: number; // Custom font size (default 16)
+  fontSize?: number; // Custom font size (default DEFAULT_FONT_SIZE)
   // Legacy/Compatibility fields
   url?: string;
   imageId?: string;
@@ -53,6 +53,7 @@ export interface SlideCanvasProps {
 }
 
 // Constants
+export const DEFAULT_FONT_SIZE = 18;
 export const SLIDE_WIDTH = 1230;
 export const SLIDE_MIN_HEIGHT = 800;
 export const SLIDE_GAP = 24;
