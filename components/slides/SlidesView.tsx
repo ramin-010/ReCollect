@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2 } from 'lucide-react';
+import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type, Palette } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
-import { SlideCanvas } from './core/SlideCanvas';
+import { SlideCanvas, SlideCanvasHandle } from './core/SlideCanvas';
+import { SelectedBlockInfo } from './core/types';
 import { slideImageStorage } from '@/lib/storage/slideImageStorage';
 import { slideApi, ServerSlideDeck } from '@/lib/api/slideApi';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -295,7 +296,62 @@ export function SlidesView() {
     setActiveDeck(null);
     setSlideFullscreen(false);
     setSaveStatus('idle');
+    setSelectedBlock(null);
   }, [setSlideFullscreen]);
+
+  // Block selection tracking (for navbar controls)
+  const canvasRef = useRef<SlideCanvasHandle>(null);
+  const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
+
+  // Theme-specific text color presets
+  // Light colors for dark backgrounds, dark colors for light backgrounds
+  const TEXT_COLOR_PRESETS = [
+    { color: undefined, label: 'Default', preview: 'hsl(var(--foreground))' },
+    { color: '#f8fafc', label: 'White' },
+    { color: '#94a3b8', label: 'Slate' },
+    { color: '#60a5fa', label: 'Blue' },
+    { color: '#4ade80', label: 'Green' },
+    { color: '#fb923c', label: 'Orange' },
+    { color: '#f472b6', label: 'Pink' },
+    { color: '#a78bfa', label: 'Purple' },
+    { color: '#fbbf24', label: 'Amber' },
+  ];
+
+  const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
+    setSelectedBlock(block);
+  }, []);
+
+  const handleFontSizeChange = useCallback((delta: number) => {
+    if (!selectedBlock || !canvasRef.current) return;
+    const current = selectedBlock.fontSize || 14;
+    const next = Math.max(8, Math.min(72, current + delta));
+    canvasRef.current.updateSelectedBlock({ fontSize: next });
+  }, [selectedBlock]);
+
+  const handleTextColorChange = useCallback((color: string | undefined) => {
+    if (!canvasRef.current) return;
+    canvasRef.current.updateSelectedBlock({ textColor: color || '' });
+  }, []);
+
+  const isBlockSelected = !!selectedBlock;
+
+  // Keyboard shortcuts for font size (Ctrl+= to increase, Ctrl+- to decrease)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedBlock || !canvasRef.current) return;
+      
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        handleFontSizeChange(1);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault();
+        handleFontSizeChange(-1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBlock, handleFontSizeChange]);
 
   // ---- Active deck view ----
   if (activeDeck) {
@@ -319,6 +375,59 @@ export function SlidesView() {
               className="bg-transparent text-lg font-semibold text-[hsl(var(--foreground))] focus:outline-none w-full truncate"
               placeholder="Deck name..."
             />
+          </div>
+
+          {/* ---- Block Controls (Font Size + Text Color) ---- */}
+          {/* onMouseDown preventDefault keeps focus in TipTap editor when clicking these controls */}
+          <div
+            className={`flex items-center gap-1 border-l border-r border-[hsl(var(--divider))] px-3 transition-opacity duration-200 ${isBlockSelected ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            {/* Font Size */}
+            <div className="flex items-center gap-0.5">
+              <Type className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))] mr-1" />
+              <Button
+                variant="ghost"
+                className="h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                onClick={() => handleFontSizeChange(-1)}
+                title="Decrease font size (Ctrl −)"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="text-xs font-mono text-[hsl(var(--foreground))] w-6 text-center tabular-nums">
+                {selectedBlock?.fontSize || 14}
+              </span>
+              <Button
+                variant="ghost"
+                className="h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                onClick={() => handleFontSizeChange(1)}
+                title="Increase font size (Ctrl +)"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+              <span className="text-[9px] text-[hsl(var(--muted-foreground))]/50 ml-0.5 hidden sm:inline">Ctrl ±</span>
+            </div>
+
+            {/* Separator */}
+            <div className="w-px h-5 bg-[hsl(var(--divider))] mx-1" />
+
+            {/* Text Color Presets */}
+            <div className="flex items-center gap-1">
+              <Palette className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))] mr-0.5" />
+              {TEXT_COLOR_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  className={`h-5 w-5 rounded-full border-2 transition-all duration-150 hover:scale-110 ${
+                    (selectedBlock?.textColor || '') === (preset.color || '')
+                      ? 'border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/30 scale-110'
+                      : 'border-[hsl(var(--divider))]/50 hover:border-[hsl(var(--muted-foreground))]'
+                  }`}
+                  style={{ backgroundColor: preset.color || preset.preview }}
+                  onClick={() => handleTextColorChange(preset.color)}
+                  title={preset.label}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Save Status + Button */}
@@ -351,8 +460,10 @@ export function SlidesView() {
         {/* Canvas */}
         <div className="flex-1 overflow-hidden">
           <SlideCanvas
+            ref={canvasRef}
             initialContent={activeDeck.content}
             onChange={handleCanvasChange}
+            onSelectionChange={handleSelectionChange}
           />
         </div>
       </div>

@@ -106,15 +106,8 @@ const BlockWrapperComponent = ({
       y: position.y,
     };
 
-    // Scale font size if text block (Excalidraw style)
-    if (isText && block.width) {
-      const scale = newWidth / block.width;
-      const currentFontSize = block.fontSize || 14;
-      updates.fontSize = Math.round(currentFontSize * scale * 10) / 10;
-    }
-
     onUpdateBlock(block.blockId, updates);
-  }, [block.blockId, block.type, block.width, block.fontSize, onUpdateBlock]);
+  }, [block.blockId, block.type, block.width, onUpdateBlock]);
 
   // Auto-measure content height (important for text blocks flow)
   useEffect(() => {
@@ -216,6 +209,7 @@ const BlockWrapperComponent = ({
         onAnchorMouseUp={onAnchorMouseUp}
         isConnectionDragging={isConnectionDragging}
         color={block.color}
+        textColor={block.textColor}
         fontSize={block.fontSize}
         onEditRequest={onEditRequest}
       />

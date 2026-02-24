@@ -222,9 +222,9 @@ export const BlockContent: React.FC<BlockContentProps> = ({
     }
     return (
       <>
-      <div className="notion-editor h-full w-full">
+      <div className="notion-editor h-full w-full" style={{ color: 'inherit', fontSize: 'inherit' }}>
         <div 
-          className="ProseMirror select-none pointer-events-none h-full w-full"
+          className="ProseMirror preview-prosemirror select-none pointer-events-none h-full w-full"
           style={{ 
             maxWidth: '100%', 
             margin: 0, 
@@ -232,11 +232,19 @@ export const BlockContent: React.FC<BlockContentProps> = ({
             paddingRight: '4px',
             lineHeight: '1.7',
             whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            color: 'inherit',
+            fontSize: 'inherit',
           }}
           dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
         />
       </div>
+      {/* Force color inheritance on TipTap HTML elements so globals.css body color doesn't override */}
+      <style>{`
+        .notion-editor .preview-prosemirror * {
+          color: inherit !important;
+        }
+      `}</style>
       {/* Callout styles for read-only rendering */}
       <style>{CALLOUT_READ_STYLES}</style>
       </>

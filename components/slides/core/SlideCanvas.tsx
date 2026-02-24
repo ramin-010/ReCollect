@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useMemo, useEffect } from 'react';
+import React, { useCallback, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { SlideCanvasProps, SlideBlockData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
 import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
@@ -10,10 +10,20 @@ import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 import { v4 as uuidv4 } from 'uuid';
 
 // ---------------------------------------------------------------------------
+// Public ref API exposed to parent
+// ---------------------------------------------------------------------------
+export interface SlideCanvasHandle {
+  updateSelectedBlock: (updates: Partial<SlideBlockData>) => void;
+}
+
+// ---------------------------------------------------------------------------
 // SlideCanvas — Main Entry Point
 // ---------------------------------------------------------------------------
 
-export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasProps) {
+export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
+  { initialContent, onChange, readOnly, onSelectionChange },
+  ref
+) {
   const {
     slides,
     blocks,
@@ -34,6 +44,44 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     setBlocks,
     addImageBlock,
   } = useSlideState(initialContent, onChange);
+
+  // Report selection changes to parent (for navbar controls)
+  // Optimize: only fire when relevant fields change to prevent per-keystroke re-rendering of the entire SlidesView
+  const lastReportedSelectionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (selectedBlockId) {
+      const block = blocks.find(b => b.blockId === selectedBlockId);
+      if (block) {
+        const payload = {
+          blockId: block.blockId,
+          type: block.type,
+          fontSize: block.fontSize,
+          textColor: block.textColor,
+          color: block.color,
+        };
+        const payloadString = JSON.stringify(payload);
+        if (lastReportedSelectionRef.current !== payloadString) {
+          lastReportedSelectionRef.current = payloadString;
+          onSelectionChange?.(payload);
+        }
+      }
+    } else {
+      if (lastReportedSelectionRef.current !== null) {
+        lastReportedSelectionRef.current = null;
+        onSelectionChange?.(null);
+      }
+    }
+  }, [selectedBlockId, blocks, onSelectionChange]);
+
+  // Expose updateSelectedBlock to parent via ref
+  useImperativeHandle(ref, () => ({
+    updateSelectedBlock: (updates: Partial<SlideBlockData>) => {
+      if (selectedBlockId) {
+        updateBlock(selectedBlockId, updates);
+      }
+    },
+  }), [selectedBlockId, updateBlock]);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
@@ -283,4 +331,4 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
       </div>
     </div>
   );
-}
+});

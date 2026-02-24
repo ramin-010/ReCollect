@@ -24,7 +24,8 @@ export interface SlideBlockData {
   height: number | 'auto';
   language?: string;
   color?: string;
-  fontSize?: number; // Custom font size (default 14)
+  textColor?: string; // Custom text color (CSS color value)
+  fontSize?: number; // Custom font size (default 16)
   // Legacy/Compatibility fields
   url?: string;
   imageId?: string;
@@ -36,10 +37,19 @@ export interface SlideCanvasData {
   blocks: SlideBlockData[];
 }
 
+export interface SelectedBlockInfo {
+  blockId: string;
+  type: string;
+  fontSize?: number;
+  textColor?: string;
+  color?: string;
+}
+
 export interface SlideCanvasProps {
   initialContent?: string; // JSON string of SlideCanvasData
   onChange?: (content: string) => void;
   readOnly?: boolean;
+  onSelectionChange?: (block: SelectedBlockInfo | null) => void;
 }
 
 // Constants

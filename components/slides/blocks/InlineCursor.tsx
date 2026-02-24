@@ -44,10 +44,12 @@ interface InlineCursorProps {
   fontSize?: number;
   /** Background color class */
   color?: string;
+  /** Text color (CSS color value) */
+  textColor?: string;
   /** Constrain width to match block width (auto-grow/shrink if not set) */
   maxWidth?: number;
-  /** Force a fixed width (for editing existing blocks that were resized) */
-  fixedWidth?: number;
+  /** Set a minimum width (for editing existing blocks — starts at stored width but can auto-grow) */
+  initialMinWidth?: number;
 }
 
 interface ToolbarPosition {
@@ -55,7 +57,7 @@ interface ToolbarPosition {
   left: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, fixedWidth, color, fontSize }: InlineCursorProps) {
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isToolbarClickRef = useRef(false);
 
@@ -217,9 +219,8 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       style={{
         left: x,
         top: y,
-        width: fixedWidth ? `${fixedWidth}px` : undefined,
-        minWidth: fixedWidth ? undefined : '2px',
-        maxWidth: fixedWidth ? undefined : (maxWidth ? `${maxWidth}px` : '80%'),
+        minWidth: initialMinWidth ? `${initialMinWidth}px` : '2px',
+        maxWidth: maxWidth ? `${maxWidth}px` : '80%',
         background: 'transparent',
         border: 'none',
         padding: 0,
@@ -238,12 +239,21 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           outline: none !important;
           padding: 0 4px !important;
           font-size: inherit !important;
+          color: inherit !important;
           max-width: none !important;
           margin: 0 !important;
+        }
+        .inline-cursor-editor .ProseMirror p,
+        .inline-cursor-editor .ProseMirror span,
+        .inline-cursor-editor .ProseMirror li {
+          color: inherit !important;
         }
       `}</style>
       <div
         className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}
+        style={{
+          color: textColor || undefined,
+        }}
         onMouseDown={() => {
           // Guard: if clicking within the editor area, don't treat as toolbar
         }}
@@ -252,7 +262,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           editor={editor}
           style={{
             minHeight: '1.6em',
-            fontSize: fontSize ? `${fontSize}px` : undefined,
+            fontSize: `${fontSize || 16}px`,
           }}
         />
       </div>

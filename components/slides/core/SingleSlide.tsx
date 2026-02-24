@@ -80,6 +80,7 @@ export function SingleSlide({
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [isNewBlockEditing, setIsNewBlockEditing] = useState(false);
   const [editingDims, setEditingDims] = useState<{ width: number; height: number } | null>(null);
   
 
@@ -269,6 +270,8 @@ export function SingleSlide({
           const newBlockId = onAddBlock(slideId, 'text', newX, newY);
           if (newBlockId) {
             setEditingBlockId(newBlockId);
+            setIsNewBlockEditing(true);
+            onSelectBlock(newBlockId); // Select it so toolbar activates
           }
           setCursorPos({ x: newX, y: newY });
         }, 120); // Slightly after the blur's 100ms setTimeout
@@ -277,6 +280,8 @@ export function SingleSlide({
         const newBlockId = onAddBlock(slideId, 'text', newX, newY);
         if (newBlockId) {
           setEditingBlockId(newBlockId);
+          setIsNewBlockEditing(true);
+          onSelectBlock(newBlockId); // Select it so toolbar activates
         }
         setCursorPos({ x: newX, y: newY });
       } else {
@@ -313,7 +318,7 @@ export function SingleSlide({
           content: html,
           width: dims ? dims.width + 10 : 300, 
           height: dims ? dims.height : 'auto',
-          fontSize: 14,
+          fontSize: 16,
         });
       }
       setCursorPos(null);
@@ -346,10 +351,15 @@ export function SingleSlide({
   const handleEditRequest = useCallback((blockId: string) => {
     const block = blocks.find(b => b.blockId === blockId);
     if (block && block.type === 'text') {
+      setIsNewBlockEditing(false); // We double-clicked an existing block
       setEditingBlockId(blockId);
-      setCursorPos({ x: block.x, y: block.y });
+      // Wait for React layout before measuring
+      setTimeout(() => {
+        setCursorPos({ x: block.x, y: block.y });
+      }, 0);
+      onSelectBlock(blockId); // Select it so toolbar activates
     }
-  }, [blocks]);
+  }, [blocks, onSelectBlock]);
 
 
   useEffect(() => {
@@ -559,8 +569,10 @@ export function SingleSlide({
             y={cursorPos.y}
             initialContent={editingBlockContent}
             color={editingBlockData?.color}
+            textColor={editingBlockData?.textColor}
+            fontSize={editingBlockData?.fontSize}
 
-            fixedWidth={editingBlockId ? editingBlockData?.width : undefined}
+            initialMinWidth={editingBlockId && !isNewBlockEditing ? editingBlockData?.width : undefined}
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}
             onChange={(html) => {
