@@ -2,8 +2,8 @@
 
 import React, { memo, useCallback, useState, useRef , useEffect} from 'react';
 import { Rnd } from 'react-rnd';
-import { SmartBlock } from '@/components/content/newCanvas/smartBlock/index';
-import { DragController } from '@/components/content/newCanvas/DragController';
+import { SmartBlock } from '@/components/slides/blocks/SmartBlock';
+import { DragController } from '@/components/slides/rendering/DragController';
 import { SlideBlockData, Connection } from '../core/types';
 
 // ---------------------------------------------------------------------------

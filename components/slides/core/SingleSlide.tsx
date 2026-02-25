@@ -9,10 +9,10 @@ import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 import { SlideBlockLayer } from '../blocks/SlideBlockLayer';
 import { InlineCursor } from '../blocks/InlineCursor';
 import { SlideBlockMenu } from '../blocks/SlideBlockMenu';
-import { NativeConnectionLayer } from '@/components/content/newCanvas/NativeConnectionLayer';
-import { ConnectionLayer } from '@/components/content/newCanvas/ConnectionLayer';
-import { DragController } from '@/components/content/newCanvas/DragController';
-import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/types';
+import { NativeConnectionLayer } from '@/components/slides/rendering/NativeConnectionLayer';
+import { ConnectionLayer } from '@/components/slides/rendering/ConnectionLayer';
+import { DragController } from '@/components/slides/rendering/DragController';
+import { ActiveDragStart } from '@/components/slides/rendering/canvasTypes';
 
 
 
@@ -21,7 +21,7 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 export const TITLE_HEIGHT = 105; // px reserved for heading area when title is visible
 export const COVER_HEIGHT = 192; // px reserved for cover image when present
 export const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
-export const VERTICAL_PADDING = 17; // min top/bottom padding when no cover/title is present
+export const VERTICAL_PADDING = 25; // min top/bottom padding when no cover/title is present
 
 function snapToGuide(y: number): number {
 

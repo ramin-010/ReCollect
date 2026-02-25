@@ -94,22 +94,35 @@ export function useSlideState(
       const contentStr = typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent);
       const data = parseContent(contentStr);
 
-      // Hydrate images from IndexedDB BEFORE setting blocks
+      // Hydrate images from IndexedDB or cloud BEFORE setting blocks
       // This prevents the "Loading image..." flash
       const hydratedBlocks = await Promise.all(
         data.blocks.map(async (block) => {
-          if (block.type === 'image' && block.imageId && !block.isUploaded && !block.url?.startsWith('blob:')) {
-            try {
-              const blob = await slideImageStorage.getImage(block.imageId);
-              if (blob) {
-                console.log('[useSlideState] Hydrated image', block.imageId, 'from IndexedDB');
-                return { ...block, url: slideImageStorage.createObjectURL(blob) };
-              } else {
-                console.warn('[useSlideState] Image', block.imageId, 'NOT found in IndexedDB');
-              }
-            } catch (err) {
-              console.error('[useSlideState] Failed to hydrate image:', block.imageId, err);
+          if (block.type !== 'image' || !block.imageId) return block;
+
+          // Case 1: Already uploaded to cloud with a valid cloud URL — pass through
+          if (block.isUploaded && block.url && !block.url.startsWith('blob:') 
+              && block.url !== 'PENDING_UPLOAD' && block.url !== 'IDB_IMAGE') {
+            return block;
+          }
+
+          // Case 2: Already has a valid blob URL (current session) — pass through
+          if (block.url?.startsWith('blob:')) {
+            return block;
+          }
+
+          // Case 3: Needs hydration (local image: IDB_IMAGE, PENDING_UPLOAD, or no URL)
+          // Try to restore from slideImageStorage using imageId
+          try {
+            const blob = await slideImageStorage.getImage(block.imageId);
+            if (blob) {
+              console.log('[useSlideState] Hydrated image', block.imageId, 'from IndexedDB');
+              return { ...block, url: slideImageStorage.createObjectURL(blob) };
+            } else {
+              console.warn('[useSlideState] Image', block.imageId, 'NOT found in IndexedDB — may need re-upload');
             }
+          } catch (err) {
+            console.error('[useSlideState] Failed to hydrate image:', block.imageId, err);
           }
           return block;
         })
@@ -155,7 +168,7 @@ export function useSlideState(
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [])
 
 
 
