@@ -267,29 +267,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* ProseMirror overrides for slide context — let EditorStyles handle typography */}
-      <style>{`
-        .inline-cursor-editor .ProseMirror {
-          min-height: 0 !important;
-          border: none !important;
-          outline: none !important;
-          padding: 2px 4px !important;
-          font-size: inherit !important;
-          color: inherit !important;
-          max-width: none !important;
-          margin: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror > *:first-child {
-          margin-top: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror > *:last-child {
-          margin-bottom: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror p,
-        .inline-cursor-editor .ProseMirror li {
-          color: inherit;
-        }
-      `}</style>
+      {/* ProseMirror overrides for slide context — now in globals.css */}
       <div
         className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}
         style={{

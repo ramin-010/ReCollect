@@ -4,6 +4,7 @@ import { ActiveDragStart, BlockData } from './canvasTypes';
 import { v4 as uuidv4 } from 'uuid';
 import { useConnectionDrag } from './useConnectionDrag';
 import { ConnectionLine } from './ConnectionLine';
+import { getAnchorPos as getAnchorPosFromRect, getSplinePath, calculateControlPoints } from './connectionGeometry';
 
 interface ConnectionLayerProps {
     connections: Connection[];
@@ -83,16 +84,9 @@ export function ConnectionLayer({
         
                         
         if (!el || !container) {
-                        const block = blocks.find(b => b.id === blockId);
+                    const block = blocks.find(b => b.id === blockId);
             if (!block) return { x: 0, y: 0 };
-            const w = block.width;
-            const h = block.height; 
-                         switch (side) {
-                case 'top': return { x: block.x + w / 2, y: block.y };
-                case 'right': return { x: block.x + w, y: block.y + h / 2 };
-                case 'bottom': return { x: block.x + w / 2, y: block.y + h };
-                case 'left': return { x: block.x, y: block.y + h / 2 };
-            }
+            return getAnchorPosFromRect(block, side);
         }
 
         const elRect = el.getBoundingClientRect();
@@ -104,78 +98,22 @@ export function ConnectionLayer({
         const w = elRect.width / currentZoom;
         const h = elRect.height / currentZoom;
 
-        switch (side) {
-            case 'top': return { x: relX + w / 2, y: relY };
-            case 'right': return { x: relX + w, y: relY + h / 2 };
-            case 'bottom': return { x: relX + w / 2, y: relY + h };
-            case 'left': return { x: relX, y: relY + h / 2 };
-        }
+        return getAnchorPosFromRect({ x: relX, y: relY, width: w, height: h }, side);
     }, [blocks, zoom]); 
 
-        const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
-        const u = 1 - t;
-        const tt = t * t;
-        const uu = u * u;
-        const uuu = uu * u;
-        const ttt = tt * t;
-        const x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
-        const y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
-        return { x, y };
-    };
-
-        const getSplinePath = (points: {x: number, y: number}[]) => {
-        if (points.length < 2) return "";
-        let path = `M ${points[0].x} ${points[0].y}`;
-        const t = 0.5; 
-        for (let i = 0; i < points.length - 1; i++) {
-            const p0 = i > 0 ? points[i - 1] : points[0];
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            const p3 = i < points.length - 2 ? points[i + 2] : p2;
-            const cp1x = p1.x + (p2.x - p0.x) * t / 3;
-            const cp1y = p1.y + (p2.y - p0.y) * t / 3;
-            const cp2x = p2.x - (p3.x - p1.x) * t / 3;
-            const cp2y = p2.y - (p3.y - p1.y) * t / 3;
-            path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-        }
-        return path;
-    };
-
-        const getControlPoints = (conn: Connection) => {
+    const getControlPointsForConn = useCallback((conn: Connection) => {
         const start = getAnchorPos(conn.fromBlock, conn.fromSide);
         const end = getAnchorPos(conn.toBlock, conn.toSide);
-        
-        let cp1 = conn.controlPoint1;
-        let cp2 = conn.controlPoint2;
-
-        if (!cp1 || !cp2) {
-             const dx = end.x - start.x;
-             const dy = end.y - start.y;
-             const dist = Math.hypot(dx, dy);
-             const offset = Math.min(Math.max(dist * 0.5, 30), 200);
-
-             const h1 = { ...start };
-             if (conn.fromSide === 'top') h1.y -= offset;
-             else if (conn.fromSide === 'bottom') h1.y += offset;
-             else if (conn.fromSide === 'left') h1.x -= offset;
-             else if (conn.fromSide === 'right') h1.x += offset;
-
-             const h2 = { ...end };
-             if (conn.toSide === 'top') h2.y -= offset;
-             else if (conn.toSide === 'bottom') h2.y += offset;
-             else if (conn.toSide === 'left') h2.x -= offset;
-             else if (conn.toSide === 'right') h2.x += offset;
-
-             if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
-             if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
-        }
-        return { cp1, cp2 };
-    };
+        return calculateControlPoints(
+            start, end, conn.fromSide, conn.toSide,
+            conn.controlPoint1, conn.controlPoint2
+        );
+    }, [getAnchorPos]);
 
     const getPath = (conn: Connection) => {
         const start = getAnchorPos(conn.fromBlock, conn.fromSide);
         const end = getAnchorPos(conn.toBlock, conn.toSide);
-        const { cp1, cp2 } = getControlPoints(conn);
+        const { cp1, cp2 } = getControlPointsForConn(conn);
         return getSplinePath([start, cp1, cp2, end]);
     };
 
@@ -190,7 +128,7 @@ export function ConnectionLayer({
                 
                 setConnections(prev => prev.map(c => {
                     if (c.id !== draggingHandle.connId) return c;
-                    const currentCPs = getControlPoints(c);                     return {
+                    const currentCPs = getControlPointsForConn(c);                     return {
                         ...c,
                         controlPoint1: draggingHandle.handle === 'cp1' ? { x, y } : currentCPs.cp1,
                         controlPoint2: draggingHandle.handle === 'cp2' ? { x, y } : currentCPs.cp2
@@ -238,7 +176,7 @@ export function ConnectionLayer({
                         />
                     );
                 } else if (variant === 'controls' && isSelected) {
-                                         const { cp1, cp2 } = getControlPoints(conn);
+                                         const { cp1, cp2 } = getControlPointsForConn(conn);
                      const start = getAnchorPos(conn.fromBlock, conn.fromSide);
                      const end = getAnchorPos(conn.toBlock, conn.toSide);
                      

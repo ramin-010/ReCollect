@@ -540,3 +540,57 @@
   object-fit: cover;
   display: block;
 }
+
+/* ============================================================
+   Slide Canvas — Block Preview & Inline Editor Styles
+   (Moved from per-render inline <style> tags in
+    BlockComponents.tsx and InlineCursor.tsx)
+   ============================================================ */
+
+/* Text block preview — color inheritance */
+.notion-editor .preview-prosemirror *:not([style]) {
+  color: inherit;
+}
+.notion-editor .preview-prosemirror > *:first-child {
+  margin-top: 0;
+}
+.notion-editor .preview-prosemirror > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Callout read-only rendering */
+[data-callout-type] {
+  border-left: 4px solid;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+[data-callout-type="info"]    { border-color: rgb(59 130 246);  background: rgb(59 130 246 / 0.1); }
+[data-callout-type="warning"] { border-color: rgb(245 158 11);  background: rgb(245 158 11 / 0.1); }
+[data-callout-type="tip"]     { border-color: rgb(16 185 129);  background: rgb(16 185 129 / 0.1); }
+[data-callout-type="danger"]  { border-color: rgb(239 68 68);   background: rgb(239 68 68 / 0.1); }
+
+/* InlineCursor — ProseMirror overrides inside slide canvas */
+.inline-cursor-editor .ProseMirror {
+  min-height: 0 !important;
+  border: none !important;
+  outline: none !important;
+  padding: 2px 4px !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+.inline-cursor-editor .ProseMirror > *:first-child {
+  margin-top: 0 !important;
+}
+.inline-cursor-editor .ProseMirror > *:last-child {
+  margin-bottom: 0 !important;
+}
+.inline-cursor-editor .ProseMirror p,
+.inline-cursor-editor .ProseMirror li {
+  color: inherit;
+}

@@ -7,7 +7,6 @@ import { CodeBlock } from '@/components/content/newCanvas/CodeBlock';
 import { BlockEditor } from '@/components/content/newCanvas/BlockEditor';
 import { cn } from '@/lib/utils';
 import { TaskStats } from './smartBlockTypes';
-import { CALLOUT_READ_STYLES } from '@/components/slides/extensions/CalloutExtension';
 
 interface DragHandleProps {
   isVisible: boolean;
@@ -153,7 +152,6 @@ export const BlockContent: React.FC<BlockContentProps> = ({
       );
     }
     return (
-      <>
       <div className="notion-editor h-full w-full" style={{ color: 'inherit', fontSize: 'inherit' }}>
         <div 
           className="ProseMirror preview-prosemirror select-none pointer-events-none h-full w-full"
@@ -173,21 +171,6 @@ export const BlockContent: React.FC<BlockContentProps> = ({
           dangerouslySetInnerHTML={{ __html: content || '' }}
         />
       </div>
-      {/* Force color inheritance only on elements without inline styles */}
-      <style>{`
-        .notion-editor .preview-prosemirror *:not([style]) {
-          color: inherit;
-        }
-        .notion-editor .preview-prosemirror > *:first-child {
-          margin-top: 0;
-        }
-        .notion-editor .preview-prosemirror > *:last-child {
-          margin-bottom: 0;
-        }
-      `}</style>
-      {/* Callout styles for read-only rendering */}
-      <style>{CALLOUT_READ_STYLES}</style>
-      </>
     );
   }
 

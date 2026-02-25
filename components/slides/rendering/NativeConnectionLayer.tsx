@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Connection, BlockDims } from '@/types/canvas';
 import { DragController } from './DragController';
+import { calculateConnectionPath, calculatePathFromRects, BlockRect } from './connectionGeometry';
 
 interface NativeConnectionLayerProps {
     connections: Connection[];
@@ -9,79 +10,6 @@ interface NativeConnectionLayerProps {
     selectedConnectionId: string | null;
     onSelectConnection: (id: string, e: React.MouseEvent) => void;
     containerRef: React.RefObject<HTMLDivElement>;     zoom: number; }
-
-const getAnchorPos = (block: {x: number, y: number, w: number, h: number}, side: 'top' | 'right' | 'bottom' | 'left') => {
-    const { x, y, w, h } = block;
-    switch (side) {
-        case 'top': return { x: x + w / 2, y };
-        case 'right': return { x: x + w, y: y + h / 2 };
-        case 'bottom': return { x: x + w / 2, y: y + h };
-        case 'left': return { x, y: y + h / 2 };
-    }
-};
-
-const getSplinePath = (points: {x: number, y: number}[]) => {
-    if (points.length < 2) return "";
-    let path = `M ${points[0].x} ${points[0].y}`;
-    const t = 0.5; 
-    for (let i = 0; i < points.length - 1; i++) {
-        const p0 = i > 0 ? points[i - 1] : points[0];
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        const p3 = i < points.length - 2 ? points[i + 2] : p2;
-        const cp1x = p1.x + (p2.x - p0.x) * t / 3;
-        const cp1y = p1.y + (p2.y - p0.y) * t / 3;
-        const cp2x = p2.x - (p3.x - p1.x) * t / 3;
-        const cp2y = p2.y - (p3.y - p1.y) * t / 3;
-        path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
-    return path;
-};
-
-const getPointOnBezier = (t: number, p0: {x:number,y:number}, p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}) => {
-    const u = 1 - t;
-    const tt = t * t;
-    const uu = u * u;
-    const uuu = uu * u;
-    const ttt = tt * t;
-    const x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
-    const y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
-    return { x, y };
-};
-
-const calculateInitialPath = (conn: Connection, blocks: BlockDims[]) => {
-    const fromBlock = blocks.find(b => b.id === conn.fromBlock);
-    const toBlock = blocks.find(b => b.id === conn.toBlock);
-    if (!fromBlock || !toBlock) return "";
-
-    const start = getAnchorPos({x: fromBlock.x, y: fromBlock.y, w: fromBlock.width, h: fromBlock.height}, conn.fromSide);
-    const end = getAnchorPos({x: toBlock.x, y: toBlock.y, w: toBlock.width, h: toBlock.height}, conn.toSide);
-
-        let cp1 = conn.controlPoint1;
-    let cp2 = conn.controlPoint2;
-    if (!cp1 || !cp2) {
-         const dx = end.x - start.x;
-         const dy = end.y - start.y;
-         const dist = Math.hypot(dx, dy);
-         const offset = Math.min(Math.max(dist * 0.5, 30), 200);
-
-         const h1 = { ...start };
-         if (conn.fromSide === 'top') h1.y -= offset;
-         else if (conn.fromSide === 'bottom') h1.y += offset;
-         else if (conn.fromSide === 'left') h1.x -= offset;
-         else if (conn.fromSide === 'right') h1.x += offset;
-
-         const h2 = { ...end };
-         if (conn.toSide === 'top') h2.y -= offset;
-         else if (conn.toSide === 'bottom') h2.y += offset;
-         else if (conn.toSide === 'left') h2.x -= offset;
-         else if (conn.toSide === 'right') h2.x += offset;
-
-         if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
-         if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
-    }
-    return getSplinePath([start, cp1, cp2, end]);
-};
 
 export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
     connections,
@@ -104,66 +32,27 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
         const containerEl = containerRef.current;
         if (!containerEl || connections.length === 0) return;
 
-                const updatePaths = () => {
+                const elToRect = (el: Element, contRect: DOMRect): BlockRect => {
+            const r = el.getBoundingClientRect();
+            return {
+                x: (r.left - contRect.left + containerEl.scrollLeft) / zoom,
+                y: (r.top - contRect.top + containerEl.scrollTop) / zoom,
+                width: r.width / zoom,
+                height: r.height / zoom,
+            };
+        };
+
+        const updatePaths = () => {
             const contRect = containerEl.getBoundingClientRect();
             
-                        connections.filter(conn => !conn.hidden).forEach(conn => {
+            connections.filter(conn => !conn.hidden).forEach(conn => {
                 const fromEl = document.getElementById(conn.fromBlock);
                 const toEl = document.getElementById(conn.toBlock);
-                
                 if (!fromEl || !toEl) return;
                 
-                const fromRect = fromEl.getBoundingClientRect();
-                const toRect = toEl.getBoundingClientRect();
-                
-                                const fromGeo = {
-                    x: (fromRect.left - contRect.left + containerEl.scrollLeft) / zoom,
-                    y: (fromRect.top - contRect.top + containerEl.scrollTop) / zoom,
-                    w: fromRect.width / zoom,
-                    h: fromRect.height / zoom
-                };
-                
-                const toGeo = {
-                    x: (toRect.left - contRect.left + containerEl.scrollLeft) / zoom,
-                    y: (toRect.top - contRect.top + containerEl.scrollTop) / zoom,
-                    w: toRect.width / zoom,
-                    h: toRect.height / zoom
-                };
-                
-                const start = getAnchorPos(fromGeo, conn.fromSide);
-                const end = getAnchorPos(toGeo, conn.toSide);
-                
-                let cp1 = conn.controlPoint1;
-                let cp2 = conn.controlPoint2;
-                
-                if (!cp1 || !cp2) {
-                    const dx = end.x - start.x;
-                    const dy = end.y - start.y;
-                    const dist = Math.hypot(dx, dy);
-                    const offset = Math.min(Math.max(dist * 0.5, 30), 200);
-
-                    const h1 = { ...start };
-                    if (conn.fromSide === 'top') h1.y -= offset;
-                    else if (conn.fromSide === 'bottom') h1.y += offset;
-                    else if (conn.fromSide === 'left') h1.x -= offset;
-                    else if (conn.fromSide === 'right') h1.x += offset;
-
-                    const h2 = { ...end };
-                    if (conn.toSide === 'top') h2.y -= offset;
-                    else if (conn.toSide === 'bottom') h2.y += offset;
-                    else if (conn.toSide === 'left') h2.x -= offset;
-                    else if (conn.toSide === 'right') h2.x += offset;
-
-                    if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
-                    if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
-                }
-                
-                const newPath = getSplinePath([start, cp1, cp2, end]);
-                
+                const newPath = calculatePathFromRects(conn, elToRect(fromEl, contRect), elToRect(toEl, contRect));
                 const pathEl = document.getElementById(`conn-path-${conn.id}`);
-                if (pathEl) {
-                    pathEl.setAttribute('d', newPath);
-                }
+                if (pathEl) pathEl.setAttribute('d', newPath);
             });
         };
         
@@ -189,103 +78,65 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             if (blockEl && containerEl) {
                 const contRect = containerEl.getBoundingClientRect();
 
-                let activeBlockGeo;
+                const elToRect = (el: Element): BlockRect => {
+                    const r = el.getBoundingClientRect();
+                    return {
+                        x: (r.left - contRect.left + containerEl.scrollLeft) / currentZoom,
+                        y: (r.top - contRect.top + containerEl.scrollTop) / currentZoom,
+                        width: r.width / currentZoom,
+                        height: r.height / currentZoom,
+                    };
+                };
+
+                let activeBlockGeo: BlockRect | undefined;
                 
                 if (dragController.activeOffset) {
                     const { x, y } = dragController.activeOffset;
-                    const w = blockEl ? (blockEl.offsetWidth) : 200; 
-                    const h = blockEl ? (blockEl.offsetHeight) : 200;
-                    activeBlockGeo = { x, y, w, h };
+                    const width = blockEl ? blockEl.offsetWidth : 200; 
+                    const height = blockEl ? blockEl.offsetHeight : 200;
+                    activeBlockGeo = { x, y, width, height };
                 } else if (blockEl) {
-                    const bRect = blockEl.getBoundingClientRect();
-                    const x = (bRect.left - contRect.left + containerEl.scrollLeft) / currentZoom;
-                    const y = (bRect.top - contRect.top + containerEl.scrollTop) / currentZoom;
-                    const w = bRect.width / currentZoom;
-                    const h = bRect.height / currentZoom;
-                    activeBlockGeo = { x, y, w, h };
+                    activeBlockGeo = elToRect(blockEl);
                 }
 
                 if (!activeBlockGeo) return;
 
                 currentConnections.forEach(conn => {
-                                        if (conn.hidden) return;
+                    if (conn.hidden) return;
                     if (conn.fromBlock !== activeId && conn.toBlock !== activeId) return;
 
                     const isFromMoving = conn.fromBlock === activeId;
                     
-                    let fromGeo;
+                    let fromGeo: BlockRect | undefined;
                     if (isFromMoving) {
                         fromGeo = activeBlockGeo;
                     } else {
                          const el = document.getElementById(conn.fromBlock);
                          if (el) {
-                             const r = el.getBoundingClientRect();
-                             fromGeo = {
-                                 x: (r.left - contRect.left + containerEl.scrollLeft) / currentZoom,
-                                 y: (r.top - contRect.top + containerEl.scrollTop) / currentZoom,
-                                 w: r.width / currentZoom,
-                                 h: r.height / currentZoom
-                             };
+                             fromGeo = elToRect(el);
                          } else {
                              const b = currentBlocks.find(b => b.id === conn.fromBlock);
-                             if (b) fromGeo = { x: b.x, y: b.y, w: b.width, h: b.height };
+                             if (b) fromGeo = { x: b.x, y: b.y, width: b.width, height: b.height };
                          }
                     }
 
-                    let toGeo;
+                    let toGeo: BlockRect | undefined;
                     if (!isFromMoving) {
                         toGeo = activeBlockGeo;
                     } else {
                         const el = document.getElementById(conn.toBlock);
                          if (el) {
-                             const r = el.getBoundingClientRect();
-                             toGeo = {
-                                 x: (r.left - contRect.left + containerEl.scrollLeft) / currentZoom,
-                                 y: (r.top - contRect.top + containerEl.scrollTop) / currentZoom,
-                                 w: r.width / currentZoom,
-                                 h: r.height / currentZoom
-                             };
+                             toGeo = elToRect(el);
                          } else {
                              const b = currentBlocks.find(b => b.id === conn.toBlock);
-                             if (b) toGeo = { x: b.x, y: b.y, w: b.width, h: b.height };
+                             if (b) toGeo = { x: b.x, y: b.y, width: b.width, height: b.height };
                          }
                     }
 
                     if (fromGeo && toGeo) {
-                        const start = getAnchorPos(fromGeo, conn.fromSide);
-                        const end = getAnchorPos(toGeo, conn.toSide);
-                        
-                        let cp1 = conn.controlPoint1;
-                        let cp2 = conn.controlPoint2;
-
-                         if (!cp1 || !cp2) {
-                             const dx = end.x - start.x;
-                             const dy = end.y - start.y;
-                             const dist = Math.hypot(dx, dy);
-                             const offset = Math.min(Math.max(dist * 0.5, 30), 200);
-
-                             const h1 = { ...start };
-                             if (conn.fromSide === 'top') h1.y -= offset;
-                             else if (conn.fromSide === 'bottom') h1.y += offset;
-                             else if (conn.fromSide === 'left') h1.x -= offset;
-                             else if (conn.fromSide === 'right') h1.x += offset;
-
-                             const h2 = { ...end };
-                             if (conn.toSide === 'top') h2.y -= offset;
-                             else if (conn.toSide === 'bottom') h2.y += offset;
-                             else if (conn.toSide === 'left') h2.x -= offset;
-                             else if (conn.toSide === 'right') h2.x += offset;
-
-                             if (!cp1) cp1 = getPointOnBezier(0.33, start, h1, h2, end);
-                             if (!cp2) cp2 = getPointOnBezier(0.66, start, h1, h2, end);
-                        }
-
-                        const newPath = getSplinePath([start, cp1, cp2, end]);
-                        
+                        const newPath = calculatePathFromRects(conn, fromGeo, toGeo);
                         const pathEl = document.getElementById(`conn-path-${conn.id}`);
-                        if (pathEl) {
-                            pathEl.setAttribute('d', newPath);
-                        }
+                        if (pathEl) pathEl.setAttribute('d', newPath);
                     }
                 });
             }
@@ -327,7 +178,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
              </defs>
             {connections.filter(conn => !conn.hidden).map(conn => {
                 const isSelected = selectedConnectionId === conn.id;
-                const path = calculateInitialPath(conn, blocks);                 return (
+                const path = calculateConnectionPath(conn, blocks);                 return (
                     <g 
                         key={conn.id} 
                         className="pointer-events-auto" 
