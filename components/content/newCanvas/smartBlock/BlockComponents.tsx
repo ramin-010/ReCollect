@@ -163,19 +163,27 @@ export const BlockContent: React.FC<BlockContentProps> = ({
             margin: 0, 
             paddingLeft: '4px', 
             paddingRight: '4px',
+            paddingTop: '2px',
+            paddingBottom: '2px',
             lineHeight: '1.7',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             color: 'inherit',
             fontSize: 'inherit',
           }}
-          dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
+          dangerouslySetInnerHTML={{ __html: content || '' }}
         />
       </div>
       {/* Force color inheritance only on elements without inline styles (so TipTap color spans are preserved) */}
       <style>{`
         .notion-editor .preview-prosemirror *:not([style]) {
           color: inherit;
+        }
+        .notion-editor .preview-prosemirror > *:first-child {
+          margin-top: 0;
+        }
+        .notion-editor .preview-prosemirror > *:last-child {
+          margin-bottom: 0;
         }
       `}</style>
       {/* Callout styles for read-only rendering */}

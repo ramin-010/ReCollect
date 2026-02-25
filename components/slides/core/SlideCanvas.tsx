@@ -284,10 +284,10 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         }}
       />
       
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50">
       <div 
         ref={viewportRef}
-        className="flex flex-col items-center py-8 min-h-full transition-transform duration-75 ease-out origin-top overflow-auto bg-[hsl(var(--background))]/50"
+        className="flex flex-col items-center py-8 min-h-max transition-transform duration-75 ease-out origin-top"
         style={{ transform: `scale(${zoom})` }}
         id="slide-canvas-viewport"
         onWheel={handleWheel}
@@ -323,18 +323,25 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
                 onToggleTitle={(show) => {
                   const isCurrentlyShown = slide.showTitle !== false;
+                  const hasCover = !!slide.coverImage;
+                  // When cover is present, title has no mt-6 (24px), so shift is smaller
+                  const titleShift = hasCover ? TITLE_HEIGHT - 24 : TITLE_HEIGHT;
                   if (show && !isCurrentlyShown) {
-                    shiftBlocksY(slide.slideId, TITLE_HEIGHT);
+                    shiftBlocksY(slide.slideId, titleShift);
                   } else if (!show && isCurrentlyShown) {
-                    shiftBlocksY(slide.slideId, -TITLE_HEIGHT);
+                    shiftBlocksY(slide.slideId, -titleShift);
                   }
                   handleUpdateSlide(slide.slideId, { showTitle: show });
                 }}
                 onCoverChange={(url) => {
+                  const hasTitle = slide.showTitle !== false;
+                  // When title is visible, adding cover removes title's mt-6 (24px)
+                  // so the net shift is COVER_HEIGHT - 24, not the full COVER_HEIGHT
+                  const coverShift = hasTitle ? COVER_HEIGHT - 24 : COVER_HEIGHT;
                   if (!slide.coverImage && url) {
-                    shiftBlocksY(slide.slideId, COVER_HEIGHT);
+                    shiftBlocksY(slide.slideId, coverShift);
                   } else if (slide.coverImage && !url) {
-                    shiftBlocksY(slide.slideId, -COVER_HEIGHT);
+                    shiftBlocksY(slide.slideId, -coverShift);
                   }
                   handleUpdateSlide(slide.slideId, { coverImage: url });
                 }}

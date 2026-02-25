@@ -363,7 +363,7 @@ export function SlidesView() {
     return (
       <div className="flex flex-col h-full w-full">
         {/* Header Bar */}
-        <div className="relative z-50 flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
+        <div className="relative z-50 flex items-center gap-3 px-4 py-1.5 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
           <Button
             variant="ghost"
             size="sm"

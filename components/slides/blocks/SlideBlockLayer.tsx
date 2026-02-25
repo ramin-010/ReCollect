@@ -75,6 +75,7 @@ const BlockWrapperComponent = ({
   editingBlockId,
 }: BlockWrapperProps & { editingBlockId?: string | null }) => {
   const smartBlockRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
 
   const handleRndDragStop = useCallback((_e: any, d: any) => {
     onDragStop(block.blockId, d.x, d.y);
@@ -92,7 +93,12 @@ const BlockWrapperComponent = ({
     dragController?.update(block.blockId, d.x, d.y);
   }, [block.blockId, onDrag, dragController]);
 
+  const handleResizeStart = useCallback(() => {
+    isResizingRef.current = true;
+  }, []);
+
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
+    isResizingRef.current = false;
     const isText = block.type === 'text';
     const newWidth = ref.offsetWidth;
     // Always store the numeric height, even for text blocks (so parent can calculate slide height)
@@ -121,6 +127,11 @@ const BlockWrapperComponent = ({
     if (!shouldObserve) return;
 
     const observer = new ResizeObserver((entries) => {
+      // Bail out if the user is manually resizing via react-rnd handles. 
+      // If we don't, this observer will fire continuously, updating parent state,
+      // causing react-rnd's size props to change mid-drag, breaking its internal mouseup listeners.
+      if (isResizingRef.current) return;
+
       for (const entry of entries) {
         const height = entry.contentRect.height;
         // Check if cached height is significantly different to avoid loop/thrashing
@@ -184,6 +195,7 @@ const BlockWrapperComponent = ({
         top: false, right: isText, bottom: !isText, left: false,
         topRight: false, bottomRight: !isText, bottomLeft: false, topLeft: false,
       }}
+      onResizeStart={handleResizeStart}
       onResize={handleResize}
       onResizeStop={handleResizeStop}
       className="z-100"

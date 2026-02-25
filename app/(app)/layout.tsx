@@ -104,9 +104,9 @@ export default function AppLayout({
 
   return (
     <CreateNoteProvider>
-      <div className="min-h-screen flex bg-pattern">
+      <div className="h-screen overflow-hidden flex bg-pattern">
         {!hideSidebar && <Sidebar />}
-        <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
+        <div className="flex-1 flex flex-col bg-[hsl(var(--background))] overflow-hidden">
           {!hideNavbar && <Navbar />}
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
             {children}

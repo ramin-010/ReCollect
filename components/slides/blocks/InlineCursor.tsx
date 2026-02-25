@@ -51,6 +51,8 @@ interface InlineCursorProps {
   maxWidth?: number;
   /** Set a minimum width (for editing existing blocks — starts at stored width but can auto-grow) */
   initialMinWidth?: number;
+  /** Fired when arrow keys are pressed while the editor is empty (to move the cursor across the canvas) */
+  onMoveCursor?: (direction: 'up' | 'down' | 'left' | 'right') => void;
 }
 
 interface ToolbarPosition {
@@ -58,7 +60,7 @@ interface ToolbarPosition {
   left: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize }: InlineCursorProps) {
+export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize, onMoveCursor }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isToolbarClickRef = useRef(false);
 
@@ -79,6 +81,14 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     resizeObserver.observe(wrapperRef.current);
     return () => resizeObserver.disconnect();
   }, [onDimensionsChange]);
+
+  // Keep cursor in view when moving it with arrow keys
+  useEffect(() => {
+    if (wrapperRef.current) {
+      // Use smooth block: nearest so it only scrolls if it's actually out of bounds
+      wrapperRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [x, y]);
 
   // Ref pattern: TipTap's useEditor captures onUpdate at init time
   // Using a ref ensures the handler always calls the latest onChange prop
@@ -118,6 +128,31 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
         class: 'outline-none max-w-none',
         style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0;`,
       },
+      handleKeyDown: (view, event) => {
+        if (!onMoveCursor) return false;
+        
+        // Only handle navigation if the editor is completely empty
+        const text = view.state.doc.textContent;
+        if (text.trim().length === 0) {
+          if (event.key === 'ArrowUp') {
+            onMoveCursor('up');
+            return true;
+          }
+          if (event.key === 'ArrowDown') {
+            onMoveCursor('down');
+            return true;
+          }
+          if (event.key === 'ArrowLeft') {
+            onMoveCursor('left');
+            return true;
+          }
+          if (event.key === 'ArrowRight') {
+            onMoveCursor('right');
+            return true;
+          }
+        }
+        return false;
+      }
     },
     onUpdate: ({ editor }) => {
       onChangeRef.current?.(editor.getHTML());
@@ -238,11 +273,17 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           min-height: 0 !important;
           border: none !important;
           outline: none !important;
-          padding: 0 4px !important;
+          padding: 2px 4px !important;
           font-size: inherit !important;
           color: inherit !important;
           max-width: none !important;
           margin: 0 !important;
+        }
+        .inline-cursor-editor .ProseMirror > *:first-child {
+          margin-top: 0 !important;
+        }
+        .inline-cursor-editor .ProseMirror > *:last-child {
+          margin-bottom: 0 !important;
         }
         .inline-cursor-editor .ProseMirror p,
         .inline-cursor-editor .ProseMirror li {

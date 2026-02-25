@@ -18,7 +18,7 @@ import { ActiveDragStart } from '@/components/content/newCanvas/smartCanvas/type
 
 
 
-export const TITLE_HEIGHT = 103; // px reserved for heading area when title is visible
+export const TITLE_HEIGHT = 105; // px reserved for heading area when title is visible
 export const COVER_HEIGHT = 192; // px reserved for cover image when present
 export const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
 export const VERTICAL_PADDING = 17; // min top/bottom padding when no cover/title is present
@@ -92,6 +92,7 @@ export function SingleSlide({
   onAddImage,
 }: SingleSlideProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [dragControllerInstance] = useState(() => new DragController());
   const [activeDragStart, setActiveDragStart] = useState<ActiveDragStart | null>(null);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
@@ -102,6 +103,12 @@ export function SingleSlide({
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [isNewBlockEditing, setIsNewBlockEditing] = useState(false);
   const [editingDims, setEditingDims] = useState<{ width: number; height: number } | null>(null);
+  
+  // Stable key for InlineCursor — only changes when a NEW cursor session starts,
+  // NOT when editingBlockId transitions from null → blockId during lazy creation.
+  const cursorKeyRef = useRef<string>('new-cursor');
+  const editingBlockIdRef = useRef<string | null>(null);
+  editingBlockIdRef.current = editingBlockId;
   
 
   const editingBlockData = useMemo(() => {
@@ -205,10 +212,8 @@ export function SingleSlide({
       const snappedY = block?.type === 'text' ? snapToGuide(y) : y;
       
       // Enforce top boundary: blocks cannot overlap the heading area, cover image, or top padding
-      let minY = 0;
-      if (coverImage) minY += COVER_HEIGHT;
-      if (showTitle !== false) minY += TITLE_HEIGHT;
-      if (!coverImage && showTitle === false) minY += VERTICAL_PADDING;
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const minY = Math.max(headerHeight, VERTICAL_PADDING);
       
       const clampedY = Math.max(minY, snappedY);
       
@@ -290,39 +295,27 @@ export function SingleSlide({
       const newX = Math.max(SIDE_PADDING, Math.min(rawX, SLIDE_WIDTH - SIDE_PADDING - 50));
       const rawY = (e.clientY - rect.top) / zoom;
       
-      let minY = 0;
-      if (coverImage) minY += COVER_HEIGHT;
-      if (showTitle !== false) minY += TITLE_HEIGHT;
-      if (!coverImage && showTitle === false) minY += VERTICAL_PADDING;
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const minY = Math.max(headerHeight, VERTICAL_PADDING);
       
       const newY = Math.max(minY, snapToGuide(rawY));
 
 
       if (cursorPos) {
-
-
-
+        // Cursor already active — discard current and start fresh
         setEditingBlockId(null);
 
-
         setTimeout(() => {
-          // Create the text block immediately so onChange syncs per keystroke
-          const newBlockId = onAddBlock(slideId, 'text', newX, newY);
-          if (newBlockId) {
-            setEditingBlockId(newBlockId);
-            setIsNewBlockEditing(true);
-            onSelectBlock(newBlockId); // Select it so toolbar activates
-          }
+          // Only set cursor position — block will be created lazily on first keystroke
+          cursorKeyRef.current = `cursor-${Date.now()}`;
+          setIsNewBlockEditing(true);
           setCursorPos({ x: newX, y: newY });
         }, 120); // Slightly after the blur's 100ms setTimeout
       } else if (!hadSelection) {
-        // Create the text block immediately so onChange syncs per keystroke
-        const newBlockId = onAddBlock(slideId, 'text', newX, newY);
-        if (newBlockId) {
-          setEditingBlockId(newBlockId);
-          setIsNewBlockEditing(true);
-          onSelectBlock(newBlockId); // Select it so toolbar activates
-        }
+        // Fresh click on empty canvas — only spawn cursor, NO block yet
+        cursorKeyRef.current = `cursor-${Date.now()}`;
+        setIsNewBlockEditing(true);
+        setEditingBlockId(null);
         setCursorPos({ x: newX, y: newY });
       } else {
 
@@ -392,11 +385,9 @@ export function SingleSlide({
     const block = blocks.find(b => b.blockId === blockId);
     if (block && block.type === 'text') {
       setIsNewBlockEditing(false); // We double-clicked an existing block
+      cursorKeyRef.current = blockId; // Use blockId as the stable key for existing blocks
       setEditingBlockId(blockId);
-      // Wait for React layout before measuring
-      setTimeout(() => {
-        setCursorPos({ x: block.x, y: block.y });
-      }, 0);
+      setCursorPos({ x: block.x, y: block.y });
       onSelectBlock(blockId); // Select it so toolbar activates
     }
   }, [blocks, onSelectBlock]);
@@ -444,6 +435,37 @@ export function SingleSlide({
     },
     [slideId, onSlideClick, onSelectBlock, onSelectConnection]
   );
+
+  const handleMoveCursor = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+    if (!cursorPos) return;
+
+    let newX = cursorPos.x;
+    let newY = cursorPos.y;
+
+    const STEP_X = 20;
+    const STEP_Y = GUIDE_LINE_SPACING;
+
+    if (direction === 'up') newY -= STEP_Y;
+    if (direction === 'down') newY += STEP_Y;
+    if (direction === 'left') newX -= STEP_X;
+    if (direction === 'right') newX += STEP_X;
+
+    // Enforce top boundary
+    const headerHeight = headerRef.current?.offsetHeight || 0;
+    const minY = Math.max(headerHeight, VERTICAL_PADDING);
+    
+    const clampedY = Math.max(minY, snapToGuide(newY));
+
+    // Enforce side boundaries
+    const clampedX = Math.max(SIDE_PADDING, Math.min(newX, SLIDE_WIDTH - SIDE_PADDING - 50));
+    
+    setCursorPos({ x: clampedX, y: clampedY });
+    
+    // Update the underlying block's position to keep it in sync and trigger canvas extension
+    if (editingBlockId) {
+      onUpdateBlock(editingBlockId, { x: clampedX, y: clampedY });
+    }
+  }, [cursorPos, coverImage, showTitle, editingBlockId, onUpdateBlock, snapToGuide]);
 
 
   const handleAnchorMouseDown = useCallback(
@@ -507,35 +529,57 @@ export function SingleSlide({
           overflow: 'hidden',
         }}
       >
-        {/* Slide Cover Image */}
-        {coverImage ? (
-          <div className="w-full h-48 relative group">
-            <img 
-              src={coverImage} 
-              alt="Slide cover" 
-              className="w-full h-full object-cover object-[0_50%]"
-            />
-            
-            <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCoverPicker(true); }}
-                className="bg-black/50 hover:bg-black/70 text-white text-xs backdrop-blur-sm"
-              >
-                Change cover
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onCoverChange?.(null); }}
-                className="bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+        {/* Slide Header Area (Cover + Title) for dynamic height measurement */}
+        <div ref={headerRef} className="w-full flex flex-col shrink-0 z-10 relative">
+          {/* Slide Cover Image */}
+          {coverImage ? (
+            <div className="w-full h-48 relative group">
+              <img 
+                src={coverImage} 
+                alt="Slide cover" 
+                className="w-full h-full object-cover object-[0_50%]"
+              />
+              
+              <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCoverPicker(true); }}
+                  className="bg-black/50 hover:bg-black/70 text-white text-xs backdrop-blur-sm"
+                >
+                  Change cover
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); onCoverChange?.(null); }}
+                  className="bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          {/* Slide Title Heading */}
+          {showTitle !== false && (
+            <div
+              className={`relative z-10 w-full px-10 pb-2 ${coverImage ? 'mt-0' : 'mt-6'}`}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <input
+                type="text"
+                value={title || ''}
+                onChange={(e) => onTitleChange?.(e.target.value)}
+                placeholder="Untitled card"
+                className="w-full bg-transparent text-[62px] font-semibold text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/30 focus:outline-none border-none p-0 leading-tight"
+                style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+                readOnly={readOnly}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Cover Picker Modal */}
         <CoverPicker
@@ -547,25 +591,6 @@ export function SingleSlide({
             setShowCoverPicker(false);
           }}
         />
-
-        {/* Slide Title Heading — only when showTitle is not false */}
-        {showTitle !== false && (
-          <div
-            className={`relative z-10 w-full px-10  pb-2 ${coverImage ? 'mt-0' : 'mt-6'}`}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <input
-              type="text"
-              value={title || ''}
-              onChange={(e) => onTitleChange?.(e.target.value)}
-              placeholder="Untitled card"
-              className="w-full bg-transparent text-[62px] font-semibold text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/30 focus:outline-none border-none p-0 leading-tight"
-              style={{ fontFamily: 'var(--font-inter), sans-serif' }}
-              readOnly={readOnly}
-            />
-          </div>
-        )}
 
         {/* Slide Actions (Top Right OR Below Cover) */}
         {!readOnly && (
@@ -649,7 +674,7 @@ export function SingleSlide({
 
         {/* Blocks */}
         <SlideBlockLayer
-          blocks={blocks}
+          blocks={cursorPos && editingBlockId ? blocks.filter(b => b.blockId !== editingBlockId) : blocks}
           connections={connections}
           selectedBlockId={selectedBlockId}
           readOnly={readOnly}
@@ -710,7 +735,7 @@ export function SingleSlide({
         {/* Inline Cursor (naked text input) */}
         {cursorPos && (
           <InlineCursor
-            key={editingBlockId || 'new-cursor'} 
+            key={cursorKeyRef.current} 
             x={cursorPos.x}
             y={cursorPos.y}
             initialContent={editingBlockContent}
@@ -722,25 +747,30 @@ export function SingleSlide({
             onCommit={handleCursorCommit}
             onDiscard={handleCursorDiscard}
             onChange={(html) => {
+              // Lazy block creation: create the block on first keystroke
+              const currentEditingId = editingBlockIdRef.current;
+              if (!currentEditingId && cursorPos && isNewBlockEditing) {
+                const newBlockId = onAddBlock(slideId, 'text', cursorPos.x, cursorPos.y);
+                if (newBlockId) {
+                  setEditingBlockId(newBlockId);
+                  onUpdateBlock(newBlockId, { content: html });
+                }
+                return;
+              }
               // Live update block content per keystroke so autosave captures it
-              if (editingBlockId) {
-                onUpdateBlock(editingBlockId, { content: html });
+              if (currentEditingId) {
+                onUpdateBlock(currentEditingId, { content: html });
               }
             }}
             onDimensionsChange={(w, h) => setEditingDims({ width: w, height: h })}
             zoom={zoom}
+            onMoveCursor={handleMoveCursor}
           />
         )}
 
         {/* Empty state — click hint */}
         {blocks.length === 0 && !cursorPos && !editingBlockId && (
-          <div
-            className="absolute inset-0 flex items-center justify-center cursor-text empty-slide-placeholder"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSingleClick(e);
-            }}
-          >
+          <div className="absolute inset-0 flex items-center justify-center cursor-text empty-slide-placeholder">
             <p className="text-sm text-[hsl(var(--muted-foreground))]/30 font-medium pointer-events-none">
               Click anywhere to start typing, or use the + button
             </p>
