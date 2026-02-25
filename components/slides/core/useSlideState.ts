@@ -137,9 +137,6 @@ export function useSlideState(
       
       initializedRef.current = true;
       lastContentRef.current = contentStr;
-      
-      const hydratedData = { slides: data.slides, blocks: hydratedBlocks };
-      lastSavedRef.current = JSON.stringify(hydratedData);
     };
 
     loadContent();
@@ -175,47 +172,27 @@ export function useSlideState(
     setActiveSlideId(data.slides[0]?.slideId || null);
     lastContentRef.current = content;
 
-    const hydratedData = { slides: data.slides, blocks: hydratedBlocks };
-    lastSavedRef.current = JSON.stringify(hydratedData);
+    // Prevent the reactive useEffect from firing onChange for this hydration
+    skipNextOnChangeRef.current = true;
   }, []);
 
 
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
-  const slidesRef = useRef(slides);
-  const blocksRef = useRef(blocks);
-  const lastSavedRef = useRef<string>('');
+  // Skip onChange for init and hydration — these load existing state, not user edits
+  const skipNextOnChangeRef = useRef(true);
 
-  slidesRef.current = slides;
-  blocksRef.current = blocks;
-
-  // Synchronous snapshot of the current canvas state
-  // This bypasses the 1-second polling interval so handleSave always gets fresh data
-  const getContent = useCallback((): string => {
-    const data: SlideCanvasData = {
-      slides: slidesRef.current,
-      blocks: blocksRef.current,
-    };
-    return JSON.stringify(data);
-  }, []);
-
-  // Autosave — serialize blocks as-is (blob URLs are temporary display URLs;
-  // IndexedDB holds the actual data for restoration on next load)
+  // Reactive onChange — fires on next render after any slides/blocks mutation
   useEffect(() => {
-    const interval = setInterval(() => {
-      const data: SlideCanvasData = {
-        slides: slidesRef.current,
-        blocks: blocksRef.current,
-      };
-      const json = JSON.stringify(data);
-      if (json !== lastSavedRef.current && slidesRef.current.length > 0) {
-        onChangeRef.current?.(json);
-        lastSavedRef.current = json;
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [])
+    if (skipNextOnChangeRef.current) {
+      skipNextOnChangeRef.current = false;
+      return;
+    }
+    if (slides.length === 0) return;
+    const json = JSON.stringify({ slides, blocks } as SlideCanvasData);
+    onChangeRef.current?.(json);
+  }, [slides, blocks]);
 
 
 
@@ -377,7 +354,6 @@ export function useSlideState(
     getConnectionsForSlide,
     setConnectionsForSlide,
 
-    getContent,
     addImageBlock: useCallback(async (slideId: string, file: File, x: number = 40, y: number = 40) => {
       const imageId = uuidv4();
       try {

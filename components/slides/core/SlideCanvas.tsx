@@ -16,7 +16,6 @@ import { v4 as uuidv4 } from 'uuid';
 export interface SlideCanvasHandle {
   updateSelectedBlock: (updates: Partial<SlideBlockData>) => void;
   hydrate: (content: string) => Promise<void>;
-  getContent: () => string;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +48,6 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     addImageBlock,
     updateSlide,
     hydrate,
-    getContent,
   } = useSlideState(initialContent, onChange);
 
   // Report selection changes to parent (for navbar controls)
@@ -91,8 +89,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     hydrate: async (content: string) => {
       await hydrate(content);
     },
-    getContent: () => getContent(),
-  }), [selectedBlockId, updateBlock, hydrate, getContent]);
+  }), [selectedBlockId, updateBlock, hydrate]);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);

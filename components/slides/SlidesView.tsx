@@ -176,7 +176,6 @@ export function SlidesView() {
         onClose={persistence.handleCloseDeck}
         onRevert={persistence.handleRevert}
         onRenameDeck={handleRenameDeck}
-        onFlushContent={persistence.handleCanvasChange}
       />
     );
   }

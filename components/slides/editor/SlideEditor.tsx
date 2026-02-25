@@ -23,7 +23,6 @@ interface SlideEditorProps {
   onClose: () => void;
   onRevert: () => Promise<string | null> | void | null;
   onRenameDeck: (deckId: string, name: string) => void;
-  onFlushContent?: (content: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +52,6 @@ export function SlideEditor({
   onClose,
   onRevert,
   onRenameDeck,
-  onFlushContent,
 }: SlideEditorProps) {
   const canvasRef = useRef<SlideCanvasHandle>(null);
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
@@ -94,21 +92,17 @@ export function SlideEditor({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedBlock, handleFontSizeChange]);
 
-  // Ctrl+S save handler — flush fresh content first, then save
+  // Ctrl+S save handler
   useEffect(() => {
     const handleSaveShortcut = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        if (canvasRef.current && onFlushContent) {
-          const freshContent = canvasRef.current.getContent();
-          onFlushContent(freshContent);
-        }
         onSave();
       }
     };
     window.addEventListener('keydown', handleSaveShortcut);
     return () => window.removeEventListener('keydown', handleSaveShortcut);
-  }, [onSave, onFlushContent]);
+  }, [onSave]);
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -285,11 +279,6 @@ export function SlideEditor({
             variant="ghost"
             size="sm"
             onClick={async () => {
-              // Flush the live canvas state so handleSave gets the freshest data
-              if (canvasRef.current && onFlushContent) {
-                const freshContent = canvasRef.current.getContent();
-                onFlushContent(freshContent);
-              }
               const resultingContent = await onSave();
               if (resultingContent && typeof resultingContent === 'string' && canvasRef.current) {
                 canvasRef.current.hydrate(resultingContent);
