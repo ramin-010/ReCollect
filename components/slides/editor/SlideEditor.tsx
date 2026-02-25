@@ -19,10 +19,11 @@ interface SlideEditorProps {
   showRevertModal: boolean;
   onSetShowRevertModal: (v: boolean) => void;
   onCanvasChange: (content: string) => void;
-  onSave: () => void;
+  onSave: () => Promise<string | null | void>;
   onClose: () => void;
   onRevert: () => Promise<string | null> | void | null;
   onRenameDeck: (deckId: string, name: string) => void;
+  onFlushContent?: (content: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ export function SlideEditor({
   onClose,
   onRevert,
   onRenameDeck,
+  onFlushContent,
 }: SlideEditorProps) {
   const canvasRef = useRef<SlideCanvasHandle>(null);
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
@@ -91,6 +93,22 @@ export function SlideEditor({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedBlock, handleFontSizeChange]);
+
+  // Ctrl+S save handler — flush fresh content first, then save
+  useEffect(() => {
+    const handleSaveShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (canvasRef.current && onFlushContent) {
+          const freshContent = canvasRef.current.getContent();
+          onFlushContent(freshContent);
+        }
+        onSave();
+      }
+    };
+    window.addEventListener('keydown', handleSaveShortcut);
+    return () => window.removeEventListener('keydown', handleSaveShortcut);
+  }, [onSave, onFlushContent]);
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -266,7 +284,17 @@ export function SlideEditor({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onSave}
+            onClick={async () => {
+              // Flush the live canvas state so handleSave gets the freshest data
+              if (canvasRef.current && onFlushContent) {
+                const freshContent = canvasRef.current.getContent();
+                onFlushContent(freshContent);
+              }
+              const resultingContent = await onSave();
+              if (resultingContent && typeof resultingContent === 'string' && canvasRef.current) {
+                canvasRef.current.hydrate(resultingContent);
+              }
+            }}
             disabled={saving || deck.syncStatus !== 'pending'}
             leftIcon={<Save className="h-4 w-4" />}
             className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"

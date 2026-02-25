@@ -134,7 +134,12 @@ export function useSlideState(
       setSlides(data.slides);
       setBlocks(hydratedBlocks);
       setActiveSlideId(data.slides[0]?.slideId || null);
-
+      
+      initializedRef.current = true;
+      lastContentRef.current = contentStr;
+      
+      const hydratedData = { slides: data.slides, blocks: hydratedBlocks };
+      lastSavedRef.current = JSON.stringify(hydratedData);
     };
 
     loadContent();
@@ -169,6 +174,9 @@ export function useSlideState(
     setBlocks(hydratedBlocks);
     setActiveSlideId(data.slides[0]?.slideId || null);
     lastContentRef.current = content;
+
+    const hydratedData = { slides: data.slides, blocks: hydratedBlocks };
+    lastSavedRef.current = JSON.stringify(hydratedData);
   }, []);
 
 
@@ -181,6 +189,16 @@ export function useSlideState(
 
   slidesRef.current = slides;
   blocksRef.current = blocks;
+
+  // Synchronous snapshot of the current canvas state
+  // This bypasses the 1-second polling interval so handleSave always gets fresh data
+  const getContent = useCallback((): string => {
+    const data: SlideCanvasData = {
+      slides: slidesRef.current,
+      blocks: blocksRef.current,
+    };
+    return JSON.stringify(data);
+  }, []);
 
   // Autosave — serialize blocks as-is (blob URLs are temporary display URLs;
   // IndexedDB holds the actual data for restoration on next load)
@@ -359,6 +377,7 @@ export function useSlideState(
     getConnectionsForSlide,
     setConnectionsForSlide,
 
+    getContent,
     addImageBlock: useCallback(async (slideId: string, file: File, x: number = 40, y: number = 40) => {
       const imageId = uuidv4();
       try {

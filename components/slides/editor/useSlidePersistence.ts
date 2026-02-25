@@ -126,6 +126,10 @@ export function useSlidePersistence({
     const deckId = activeDeckRef.current?.id;
     if (!deckId) return;
 
+    // Immediately update the content ref so handleSave always reads fresh data
+    latestContentRef.current = content;
+    setIsLocalSaving(true);
+
     // Auto-rename if still "Untitled Deck" or synced to first slide title
     try {
       let oldFirstSlideTitle = '';
@@ -203,7 +207,7 @@ export function useSlidePersistence({
 
   // ----- Save to server -----
   const handleSave = useCallback(async () => {
-    if (!activeDeck || saving) return;
+    if (!activeDeck || saving) return null;
     const serverId = activeDeck.serverId || activeDeck.id;
     const content = latestContentRef.current || activeDeck.content;
     const name = latestNameRef.current || activeDeck.name;
@@ -283,6 +287,8 @@ export function useSlidePersistence({
         setSaveStatus('saved');
         toast.success('Deck saved!');
         setTimeout(() => setSaveStatus('idle'), 2000);
+
+        return finalContent;
       }
     } catch (err) {
       console.error('[SlidesView] Save failed:', err);
@@ -291,19 +297,8 @@ export function useSlidePersistence({
     } finally {
       setSaving(false);
     }
+    return null;
   }, [activeDeck, saving, setDecks, setActiveDeck]);
-
-  // Ctrl+S handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
 
   // ----- Close deck -----
   const handleCloseDeck = useCallback(() => {
