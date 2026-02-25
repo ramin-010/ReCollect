@@ -21,7 +21,7 @@ interface SlideEditorProps {
   onCanvasChange: (content: string) => void;
   onSave: () => void;
   onClose: () => void;
-  onRevert: () => void;
+  onRevert: () => Promise<string | null> | void | null;
   onRenameDeck: (deckId: string, name: string) => void;
 }
 
@@ -110,7 +110,13 @@ export function SlideEditor({
               <Button
                 variant="primary"
                 size="sm"
-                onClick={onRevert}
+                onClick={async () => {
+                  const revertedContent = await onRevert();
+                  // Force canvas to immediately hydrate the reverted content
+                  if (revertedContent && typeof revertedContent === 'string' && canvasRef.current) {
+                    canvasRef.current.hydrate(revertedContent);
+                  }
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Discard Changes

@@ -135,12 +135,41 @@ export function useSlideState(
       setBlocks(hydratedBlocks);
       setActiveSlideId(data.slides[0]?.slideId || null);
 
-      initializedRef.current = true;
-      lastContentRef.current = contentStr;
     };
 
     loadContent();
   }, [initialContent]);
+
+  // Allow external forcing of hydration (e.g. reverting to server state)
+  const hydrate = useCallback(async (content: string) => {
+    const data = parseContent(content);
+    
+    const hydratedBlocks = await Promise.all(
+      data.blocks.map(async (block) => {
+        if (block.type !== 'image' || !block.imageId) return block;
+
+        if (block.isUploaded && block.url && !block.url.startsWith('blob:') 
+            && block.url !== 'PENDING_UPLOAD' && block.url !== 'IDB_IMAGE') {
+          return block;
+        }
+
+        if (block.url?.startsWith('blob:')) return block;
+
+        try {
+          const blob = await slideImageStorage.getImage(block.imageId);
+          if (blob) {
+            return { ...block, url: slideImageStorage.createObjectURL(blob) };
+          }
+        } catch (err) {}
+        return block;
+      })
+    );
+
+    setSlides(data.slides);
+    setBlocks(hydratedBlocks);
+    setActiveSlideId(data.slides[0]?.slideId || null);
+    lastContentRef.current = content;
+  }, []);
 
 
   const onChangeRef = useRef(onChange);
@@ -313,6 +342,8 @@ export function useSlideState(
     setSelectedBlockId,
     setSelectedConnectionId,
     setBlocks,
+    
+    hydrate,
 
     addSlide,
     deleteSlide,
@@ -328,7 +359,7 @@ export function useSlideState(
     getConnectionsForSlide,
     setConnectionsForSlide,
 
-    addImageBlock: useCallback(async (slideId: string, file: File) => {
+    addImageBlock: useCallback(async (slideId: string, file: File, x: number = 40, y: number = 40) => {
       const imageId = uuidv4();
       try {
         await slideImageStorage.storeImage(imageId, file);
@@ -346,8 +377,8 @@ export function useSlideState(
         url: blobUrl,
         imageId,
         isUploaded: false,
-        x: 40,
-        y: 40,
+        x,
+        y,
         width: 400,
         height: 'auto',
       };

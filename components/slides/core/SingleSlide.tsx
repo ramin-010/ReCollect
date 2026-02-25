@@ -14,10 +14,6 @@ import { ConnectionLayer } from '@/components/slides/rendering/ConnectionLayer';
 import { DragController } from '@/components/slides/rendering/DragController';
 import { ActiveDragStart } from '@/components/slides/rendering/canvasTypes';
 
-
-
-
-
 export const TITLE_HEIGHT = 105; // px reserved for heading area when title is visible
 export const COVER_HEIGHT = 192; // px reserved for cover image when present
 export const SIDE_PADDING = 40; // matches the px-10 (40px) padding of the title container
@@ -28,10 +24,6 @@ function snapToGuide(y: number): number {
   const offset = -30;
   return Math.round((y - offset) / GUIDE_LINE_SPACING) * GUIDE_LINE_SPACING + offset;
 }
-
-
-
-
 
 interface SingleSlideProps {
   slideId: string;
@@ -60,10 +52,6 @@ interface SingleSlideProps {
   onSelectConnection: (id: string | null) => void;
   onAddImage?: (slideId: string, file: File) => void;
 }
-
-
-
-
 
 export function SingleSlide({
   slideId,
@@ -285,10 +273,15 @@ export function SingleSlide({
 
       const hadSelection = !!selectedBlockId || !!selectedConnectionId;
 
-
       onSelectBlock('');
       onSelectConnection(null);
 
+      // Require two clicks: first click to select slide, second click to place cursor
+      if (!isActive) {
+        setCursorPos(null);
+        setEditingBlockId(null);
+        return;
+      }
 
       const rect = containerRef.current!.getBoundingClientRect();
       const rawX = (e.clientX - rect.left) / zoom;
@@ -323,7 +316,7 @@ export function SingleSlide({
         setEditingBlockId(null);
       }
     },
-    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos, showTitle]
+    [slideId, onSlideClick, blocks, onDeleteBlock, onSelectBlock, onSelectConnection, zoom, selectedBlockId, selectedConnectionId, cursorPos, showTitle, isActive]
   );
 
 
@@ -393,22 +386,6 @@ export function SingleSlide({
   }, [blocks, onSelectBlock]);
 
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId && !editingBlockId) {
-
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) {
-           return;
-        }
-        e.preventDefault();
-        onDeleteBlock(selectedBlockId);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedBlockId, editingBlockId, onDeleteBlock]);
 
 
   const handleDoubleClick = useCallback(
@@ -503,10 +480,10 @@ export function SingleSlide({
 
   return (
     <div
-      className={`relative group transition-all duration-200 ${
+      className={`relative group transition-all duration-200 rounded-lg ${
         isActive
-          ? 'ring-2 ring-[hsl(var(--brand-primary))]/40 shadow-lg'
-          : 'ring-1 ring-[hsl(var(--border))] hover:ring-[hsl(var(--border))]/80'
+          ? 'ring-1 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.05)]'
+          : ''
       }`}
       style={{ width: SLIDE_WIDTH }}
     >

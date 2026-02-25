@@ -1,12 +1,6 @@
-export interface SmartCanvasProps {
-  initialContent?: string;
-  onChange?: (content: string) => void;
-  readOnly?: boolean;
-}
-
 export interface BlockData {
   blockId: string;
-  type: 'text' | 'image' | 'embed' | 'code' | 'stack';
+  type: 'text' | 'image' | 'embed' | 'code';
   content: string;
   x: number;
   y: number;
@@ -17,7 +11,6 @@ export interface BlockData {
   url?: string;
   imageId?: string;
   isUploaded?: boolean;
-  stackItems?: BlockData[];
 }
 
 export interface DraftConnection {

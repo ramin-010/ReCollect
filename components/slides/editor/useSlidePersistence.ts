@@ -146,12 +146,24 @@ export function useSlidePersistence({
       }
     } catch {}
 
-    latestContentRef.current = content;
-    setIsLocalSaving(true);
+    // Instantly set sync status to pending to update the icon immediately
+    if (activeDeckRef.current?.syncStatus === 'synced') {
+      const now = new Date().toISOString();
+      setDecks(prev => prev.map(d => 
+        d.id === deckId ? { ...d, syncStatus: 'pending' as const, updatedAt: now } : d
+      ));
+      if (activeDeckRef.current) {
+        setActiveDeck({ ...activeDeckRef.current, syncStatus: 'pending' as const, updatedAt: now });
+      }
+    }
 
     if (canvasDebounceRef.current) clearTimeout(canvasDebounceRef.current);
+    
+    // Quick debounce for saving to IDB (like Docs 700ms)
     canvasDebounceRef.current = setTimeout(() => {
       const now = new Date().toISOString();
+      const currentDeck = activeDeckRef.current;
+      
       setDecks(prev =>
         prev.map(d =>
           d.id === deckId
@@ -159,8 +171,8 @@ export function useSlidePersistence({
             : d
         )
       );
+
       // Sanitize blob URLs before IDB save
-      const currentDeck = activeDeckRef.current;
       if (currentDeck) {
         let contentForIDB = content;
         try {
@@ -175,6 +187,7 @@ export function useSlidePersistence({
             contentForIDB = JSON.stringify(parsed);
           }
         } catch {}
+
         slideOfflineStorage.saveDeck(
           deckId,
           contentForIDB,
@@ -185,7 +198,7 @@ export function useSlidePersistence({
         ).catch(e => console.error('[SlidesView] IDB save failed:', e));
       }
       setTimeout(() => setIsLocalSaving(false), 500);
-    }, 2000);
+    }, 700);
   }, [handleRenameDeck, setDecks]);
 
   // ----- Save to server -----
@@ -355,7 +368,7 @@ export function useSlidePersistence({
   }, [conflictData, setSlideFullscreen, setActiveDeck, setDecks]);
 
   const handleRevert = useCallback(async () => {
-    if (!activeDeck) return;
+    if (!activeDeck) return null;
     const serverId = activeDeck.serverId || activeDeck.id;
     try {
       const serverData = await slideApi.fetchDeck(serverId);
@@ -368,6 +381,8 @@ export function useSlidePersistence({
         await persistToIDB(finalDeck).catch(() => {});
         setDecks(prev => prev.map(d => d.id === activeDeck.id ? finalDeck : d));
         toast.success('Reverted to server version');
+        setShowRevertModal(false);
+        return finalDeck.content;
       } else {
         toast.error('No server version available');
       }
@@ -375,6 +390,7 @@ export function useSlidePersistence({
       toast.error('Failed to fetch server version');
     }
     setShowRevertModal(false);
+    return null;
   }, [activeDeck, setActiveDeck, setDecks]);
 
   return {

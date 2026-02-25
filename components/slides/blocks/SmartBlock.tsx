@@ -5,14 +5,12 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SmartBlockProps } from './smartBlockTypes';
 import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
-import { calculateTaskStats, handleStackDrop, handleStackItemDrop } from './smartBlockUtils';
+import { calculateTaskStats } from './smartBlockUtils';
 import {
   DragHandle,
-  ControlsOverlay,
   AnchorPoints,
   TaskProgressBar,
-  BlockContent,
-  StackItem
+  BlockContent
 } from './BlockComponents';
 
 function SmartBlockComponent({
@@ -21,7 +19,6 @@ function SmartBlockComponent({
   content,
   language,
   url,
-  stackItems,
   width,
   height,
   x,
@@ -30,7 +27,6 @@ function SmartBlockComponent({
   onUpdateBlock,
   onDeleteBlock,
   onFocus,
-  onUnstack,
   onAnchorMouseDown,
   onAnchorMouseUp,
   onDimensionsChange,
@@ -40,7 +36,6 @@ function SmartBlockComponent({
   textColor,
   onEditRequest,
   fontSize,
-  contentRef,
   isConnected,
 }: SmartBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -48,7 +43,6 @@ function SmartBlockComponent({
   
     const bgColor = color; 
 
-  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
   
     const lastDimUpdate = useRef<number>(0);
@@ -84,17 +78,6 @@ function SmartBlockComponent({
   }, [id, onDimensionsChange]);
 
     const taskStats = useMemo(() => calculateTaskStats(content), [content]);
-
-  const handleStackItemDragStart = (e: React.DragEvent, index: number) => {
-    e.stopPropagation();
-    const data = {
-      stackId: id,
-      itemIndex: index,
-      itemData: stackItems?.[index]
-    };
-    e.dataTransfer.setData('application/recollect-stack-item', JSON.stringify(data));
-    e.dataTransfer.effectAllowed = 'move';
-  };
 
   const currentFontSize = (type === 'text' && fontSize) ? fontSize : DEFAULT_FONT_SIZE;
 
@@ -156,96 +139,25 @@ function SmartBlockComponent({
 
       {/* Content Area */}
       <div 
-        className={cn(
-          "flex-1 overflow-hidden relative z-10 transition-colors duration-200 rounded-lg", 
-          (type === 'text' && !isEditing) ? 'p-0' : (type === 'text' ? 'p-0' : 'p-0')
-        )}
+        className="flex-1 overflow-hidden relative z-10 transition-colors duration-200 rounded-lg"
         style={{
           fontSize: type === 'text' ? `${currentFontSize}px` : undefined,
           color: textColor || undefined,
         }}
       >
-        {type !== 'stack' ? (
-          <>
-            <BlockContent 
-              type={type}
-              content={content}
-              url={url}
-              language={language}
-              isEditing={isEditing}
-              onUpdate={(newContent) => onUpdateBlock?.(id, { content: newContent })}
-              onBlur={() => setIsEditing(false)}
-              onLanguageChange={(lang) => onUpdateBlock?.(id, { language: lang })}
-            />
-            <TaskProgressBar taskStats={type === 'text' ? taskStats : null} />
-          </>
-        ) : (
-          stackItems && stackItems.length > 0 && (
-            <div className="w-full h-full flex flex-col bg-gradient-to-b from-[hsl(var(--card))]/80 to-[hsl(var(--muted))]/30 backdrop-blur-sm rounded-lg overflow-hidden">
-              {/* Stack Header */}
-              <div className="px-4 py-2.5 bg-gradient-to-r from-[hsl(var(--brand-primary))]/15 to-transparent border-b border-[hsl(var(--brand-primary))]/20 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative">
-                    <div className="w-2 h-2 rounded-full bg-[hsl(var(--brand-primary))] animate-pulse" />
-                    <div className="absolute -inset-1 rounded-full bg-[hsl(var(--brand-primary))]/20 animate-ping" style={{ animationDuration: '2s' }} />
-                  </div>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-[hsl(var(--foreground))]/80">
-                    Stack
-                  </span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--brand-primary))]/20 text-[hsl(var(--brand-primary))]">
-                    {stackItems.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Stack Items */}
-              <div 
-                className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-2.5 relative"
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onDrop={(e) => {
-                  handleStackDrop(e, dropTargetIndex, id, stackItems, (items) => onUpdateBlock?.(id, { stackItems: items }));
-                  setDropTargetIndex(null);
-                }}
-              >
-                {stackItems.map((item, index) => (
-                  <React.Fragment key={index}>
-                    {dropTargetIndex === index && (
-                      <div className="h-14 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center transition-all duration-200 animate-pulse">
-                        <span className="text-[10px] text-[hsl(var(--brand-primary))] font-medium">Drop here</span>
-                      </div>
-                    )}
-
-                    <StackItem 
-                      item={item}
-                      index={index}
-                      stackId={id}
-                      totalItems={stackItems.length}
-                      onDragStart={handleStackItemDragStart}
-                      onDragEnter={(idx) => setDropTargetIndex(idx)}
-                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onDrop={(e, idx) => {
-                        handleStackItemDrop(e, idx, id, stackItems, (items) => onUpdateBlock?.(id, { stackItems: items }));
-                        setDropTargetIndex(null);
-                      }}
-                    />
-                  </React.Fragment>
-                ))}
-
-                {/* Bottom Drop Zone */}
-                <div 
-                  className="h-6 w-full transparent transition-all"
-                  onDragEnter={() => setDropTargetIndex(stackItems.length)}
-                >
-                  {dropTargetIndex === stackItems.length && (
-                    <div className="h-14 rounded-lg border-2 border-dashed border-[hsl(var(--brand-primary))]/50 bg-[hsl(var(--brand-primary))]/5 flex items-center justify-center animate-pulse">
-                      <span className="text-[10px] text-[hsl(var(--brand-primary))] font-medium">Drop at end</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        )}
+        <>
+          <BlockContent 
+            type={type}
+            content={content}
+            url={url}
+            language={language}
+            isEditing={isEditing}
+            onUpdate={(newContent) => onUpdateBlock?.(id, { content: newContent })}
+            onBlur={() => setIsEditing(false)}
+            onLanguageChange={(lang) => onUpdateBlock?.(id, { language: lang })}
+          />
+          <TaskProgressBar taskStats={type === 'text' ? taskStats : null} />
+        </>
       </div>
     </motion.div>
   );
@@ -267,7 +179,6 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.color === next.color &&
     prev.textColor === next.textColor &&
     prev.fontSize === next.fontSize &&
-    prev.stackItems === next.stackItems &&
     prev.onEditRequest === next.onEditRequest &&
     prev.isConnected === next.isConnected
   );
