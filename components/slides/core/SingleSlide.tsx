@@ -211,7 +211,7 @@ export function SingleSlide({
       
       onUpdateBlock(id, { x: clampedX, y: clampedY });
     },
-    [onUpdateBlock, blocks, showTitle]
+    [onUpdateBlock, blocks]
   );
 
   const handleDragStart = useCallback(
@@ -442,7 +442,7 @@ export function SingleSlide({
     if (editingBlockId) {
       onUpdateBlock(editingBlockId, { x: clampedX, y: clampedY });
     }
-  }, [cursorPos, coverImage, showTitle, editingBlockId, onUpdateBlock, snapToGuide]);
+  }, [cursorPos, editingBlockId, onUpdateBlock]);
 
 
   const handleAnchorMouseDown = useCallback(
@@ -458,12 +458,7 @@ export function SingleSlide({
     [getCanvasPoint]
   );
 
-  const handleAnchorMouseUp = useCallback(
-    (_blockId: string, _side: any, _e: any) => {
-
-    },
-    []
-  );
+  // handleAnchorMouseUp removed — was an empty no-op callback
 
 
 
@@ -662,7 +657,6 @@ export function SingleSlide({
           onSelectBlock={onSelectBlock}
           onDimensionsChange={handleDimensionsChange}
           onAnchorMouseDown={handleAnchorMouseDown}
-          onAnchorMouseUp={handleAnchorMouseUp}
           isConnectionDragging={!!activeDragStart}
           dragController={dragControllerInstance}
           zoom={zoom}

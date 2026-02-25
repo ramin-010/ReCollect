@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { SlideData, SlideBlockData } from './types';
 
 interface SlideNavPanelProps {
@@ -10,24 +10,34 @@ interface SlideNavPanelProps {
   onSlideClick: (slideId: string) => void;
 }
 
-export function SlideNavPanel({ slides, blocks, activeSlideId, onSlideClick }: SlideNavPanelProps) {
-  const sortedSlides = [...slides].sort((a, b) => a.order - b.order);
+function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }: SlideNavPanelProps) {
+  const sortedSlides = useMemo(() => [...slides].sort((a, b) => a.order - b.order), [slides]);
 
-  const handleClick = (slideId: string) => {
+  // Pre-compute block map: O(N) once instead of O(N×M) per render
+  const blocksBySlide = useMemo(() => {
+    const map = new Map<string, SlideBlockData[]>();
+    for (const b of blocks) {
+      const arr = map.get(b.slideId!) || [];
+      arr.push(b);
+      map.set(b.slideId!, arr);
+    }
+    return map;
+  }, [blocks]);
+
+  const handleClick = useCallback((slideId: string) => {
     onSlideClick(slideId);
-    // Scroll the slide into view in the main viewport
     const el = document.getElementById(`slide-${slideId}`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  };
+  }, [onSlideClick]);
 
   return (
     <div className="sticky top-0 h-screen flex flex-col justify-center w-[140px] min-w-[140px] bg-[hsl(var(--card-bg))]/60 backdrop-blur-md border-r border-[hsl(var(--border))]/50 py-3 px-2 shrink-0 z-20">
       <div className="flex flex-col gap-2 overflow-y-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-[hsl(var(--muted))]/30 pr-1">
         {sortedSlides.map((slide, index) => {
           const isActive = slide.slideId === activeSlideId;
-          const slideBlocks = blocks.filter(b => b.slideId === slide.slideId);
+          const slideBlocks = blocksBySlide.get(slide.slideId) || [];
           const hasContent = slideBlocks.length > 0 || !!slide.title;
           const isPhantom = index === sortedSlides.length - 1 && !hasContent;
 
@@ -93,3 +103,5 @@ export function SlideNavPanel({ slides, blocks, activeSlideId, onSlideClick }: S
     </div>
   );
 }
+
+export const SlideNavPanel = React.memo(SlideNavPanelComponent);

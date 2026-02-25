@@ -230,19 +230,18 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       }
     };
 
-    const hideToolbar = () => {
-      setShowFloatingToolbar(false);
-    };
-
-    editor.on('selectionUpdate', updateToolbar);
-    editor.on('blur', () => {
+    const handleBlur = () => {
       setTimeout(() => {
         setShowFloatingToolbar(false);
       }, 200);
-    });
+    };
+
+    editor.on('selectionUpdate', updateToolbar);
+    editor.on('blur', handleBlur);
 
     return () => {
       editor.off('selectionUpdate', updateToolbar);
+      editor.off('blur', handleBlur);
     };
   }, [editor]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback,useRef} from 'react';
+import React, { memo, useCallback, useMemo, useRef} from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/slides/blocks/SmartBlock';
 import { DragController } from '@/components/slides/rendering/DragController';
@@ -98,10 +98,7 @@ const BlockWrapperComponent = ({
 
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     isResizingRef.current = false;
-    const isText = block.type === 'text';
     const newWidth = ref.offsetWidth;
-    // Always store the numeric height, even for text blocks (so parent can calculate slide height)
-    // Rnd will still render 'auto' for text due to the specific prop logic below, allowing flow.
     const newHeight = ref.offsetHeight;
 
     const updates: Partial<SlideBlockData> = {
@@ -112,7 +109,7 @@ const BlockWrapperComponent = ({
     };
 
     onUpdateBlock(block.blockId, updates);
-  }, [block.blockId, block.type, block.width, onUpdateBlock]);
+  }, [block.blockId, onUpdateBlock]);
 
   const zIndex = isSelected ? 20 : 10;
   const isText = block.type === 'text';
@@ -131,7 +128,6 @@ const BlockWrapperComponent = ({
       onDrag={handleRndDrag}
       onDragStart={handleRndDragStart}
       dragHandleClassName="smart-block-drag-handle"
-      bounds="parent"
       enableResizing={{
         top: false, right: isText, bottom: !isText, left: false,
         topRight: false, bottomRight: !isText, bottomLeft: false, topLeft: false,
@@ -139,7 +135,7 @@ const BlockWrapperComponent = ({
       onResizeStart={handleResizeStart}
       onResizeStop={handleResizeStop}
       className="z-100"
-      style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto' }}
+      style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto', willChange: 'transform' }}
     >
       <SmartBlock
         id={block.blockId}
@@ -207,6 +203,18 @@ function SlideBlockLayerComponent({
   onEditRequest,
   editingBlockId,
 }: SlideBlockLayerProps & { editingBlockId?: string | null }) {
+  // Pre-compute connected block IDs: O(M) once instead of O(N×M) per render
+  const connectedBlockIds = useMemo(() => {
+    const set = new Set<string>();
+    if (connections) {
+      for (const c of connections) {
+        set.add(c.fromBlock);
+        set.add(c.toBlock);
+      }
+    }
+    return set;
+  }, [connections]);
+
   return (
     <>
       {blocks.map(block => (
@@ -214,7 +222,7 @@ function SlideBlockLayerComponent({
           key={block.blockId}
           block={block}
           isSelected={block.blockId === selectedBlockId || selectedBlockId === 'ALL'}
-          isConnected={connections?.some(c => c.fromBlock === block.blockId || c.toBlock === block.blockId)}
+          isConnected={connectedBlockIds.has(block.blockId)}
           readOnly={readOnly}
           onDragStop={onDragStop}
           onDrag={onDrag}
