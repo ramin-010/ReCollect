@@ -53,6 +53,8 @@ export interface SlideCanvasProps {
   onChange?: (content: string) => void;
   readOnly?: boolean;
   onSelectionChange?: (block: SelectedBlockInfo | null) => void;
+  isPresenting?: boolean;
+  onClosePresentation?: () => void;
 }
 
 // Constants

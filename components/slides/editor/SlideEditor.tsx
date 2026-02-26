@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { SlideCanvas, SlideCanvasHandle } from '../core/SlideCanvas';
 import { SelectedBlockInfo } from '../core/types';
 import { SlideDeck } from './useSlidePersistence';
+import { Play } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -56,6 +57,7 @@ export function SlideEditor({
   const canvasRef = useRef<SlideCanvasHandle>(null);
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
   const [showColorPalette, setShowColorPalette] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
 
   const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
     setSelectedBlock(block);
@@ -278,6 +280,16 @@ export function SlideEditor({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setIsPresenting(true)}
+            leftIcon={<Play className="h-4 w-4 fill-current" />}
+            className="text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] bg-[hsl(var(--muted))]/50 font-medium"
+          >
+            Present
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={async () => {
               const resultingContent = await onSave();
               if (resultingContent && typeof resultingContent === 'string' && canvasRef.current) {
@@ -300,6 +312,8 @@ export function SlideEditor({
           initialContent={deck.content}
           onChange={onCanvasChange}
           onSelectionChange={handleSelectionChange}
+          isPresenting={isPresenting}
+          onClosePresentation={() => setIsPresenting(false)}
         />
       </div>
     </div>

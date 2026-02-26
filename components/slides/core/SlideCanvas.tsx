@@ -6,6 +6,7 @@ import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide, TITLE_HEIGHT, COVER_HEIGHT } from './SingleSlide';
 import { SlideNavPanel } from './SlideNavPanel';
+import { PresentationView } from './PresentationView';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +24,7 @@ export interface SlideCanvasHandle {
 // ---------------------------------------------------------------------------
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
-  { initialContent, onChange, readOnly, onSelectionChange },
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation },
   ref
 ) {
   const {
@@ -422,6 +423,15 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         </Button>
       </div>
       </div>
+
+      {isPresenting && onClosePresentation && (
+        <PresentationView
+          slides={slides}
+          getBlocksForSlide={getBlocksForSlide}
+          getConnectionsForSlide={getConnectionsForSlide}
+          onClose={onClosePresentation}
+        />
+      )}
     </div>
   );
 });

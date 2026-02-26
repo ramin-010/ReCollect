@@ -6,7 +6,7 @@ import { calculateConnectionPath, calculatePathFromRects, BlockRect } from './co
 interface NativeConnectionLayerProps {
     connections: Connection[];
     blocks: BlockDims[]; 
-    dragController: DragController;
+    dragController?: DragController | null;
     selectedConnectionId: string | null;
     onSelectConnection: (id: string, e: React.MouseEvent) => void;
     containerRef: React.RefObject<HTMLDivElement>;     zoom: number; }
@@ -61,6 +61,8 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
     }, [connections, blocks, zoom, containerRef]);
 
     useEffect(() => {
+        if (!dragController) return;
+
         let rafId: number;
         let isActive = false;
 
