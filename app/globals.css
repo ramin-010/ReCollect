@@ -110,6 +110,8 @@
     --task-input-placeholder: 240 5% 48%;
     --task-key-bg: 240 5% 16%;
     --task-key-text: 240 5% 65%;
+    
+    --new-bg-color: #212121;
   }
 
   
@@ -201,6 +203,8 @@
 
     --welcome-bg: 0 0% 12%;
     --border-light: 0 0% 30%;
+    
+    --new-bg-color: #212121;
   }
 
   /* Base styles */

@@ -29,7 +29,6 @@ interface SingleSlideProps {
   title?: string;
   showTitle?: boolean;
   coverImage?: string | null;
-  hideCoverImage?: boolean;
   onTitleChange?: (title: string) => void;
   onToggleTitle?: (show: boolean) => void;
   onCoverChange?: (url: string | null) => void;
@@ -58,7 +57,6 @@ export function SingleSlide({
   title,
   showTitle,
   coverImage,
-  hideCoverImage,
   onTitleChange,
   onToggleTitle,
   onCoverChange,
@@ -128,7 +126,6 @@ export function SingleSlide({
         {/* Header (Cover + Title + Actions) */}
         <SlideHeader
           coverImage={coverImage}
-          hideCoverImage={hideCoverImage}
           showTitle={showTitle}
           title={title}
           readOnly={readOnly}

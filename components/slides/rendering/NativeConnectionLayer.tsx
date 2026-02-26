@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Connection, BlockDims } from '@/types/canvas';
 import { DragController } from './DragController';
 import { calculateConnectionPath, calculatePathFromRects, BlockRect } from './connectionGeometry';
@@ -9,7 +9,9 @@ interface NativeConnectionLayerProps {
     dragController?: DragController | null;
     selectedConnectionId: string | null;
     onSelectConnection: (id: string, e: React.MouseEvent) => void;
-    containerRef: React.RefObject<HTMLDivElement>;     zoom: number; }
+    containerRef: React.RefObject<HTMLDivElement>;
+    zoom: number;
+}
 
 export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
     connections,
@@ -46,18 +48,42 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             const contRect = containerEl.getBoundingClientRect();
             
             connections.filter(conn => !conn.hidden).forEach(conn => {
-                const fromEl = document.getElementById(conn.fromBlock);
-                const toEl = document.getElementById(conn.toBlock);
+                const fromEl = containerEl.querySelector(`[id="${conn.fromBlock}"]`);
+                const toEl = containerEl.querySelector(`[id="${conn.toBlock}"]`);
                 if (!fromEl || !toEl) return;
                 
                 const newPath = calculatePathFromRects(conn, elToRect(fromEl, contRect), elToRect(toEl, contRect));
-                const pathEl = document.getElementById(`conn-path-${conn.id}`);
+                const pathEl = containerEl.querySelector(`[id="conn-path-${conn.id}"]`);
                 if (pathEl) pathEl.setAttribute('d', newPath);
             });
         };
         
-                const rafId = requestAnimationFrame(updatePaths);
-        return () => cancelAnimationFrame(rafId);
+        let rafId = requestAnimationFrame(updatePaths);
+
+        const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(updatePaths);
+        });
+
+        // Observe the container itself for generic layout shifts
+        observer.observe(containerEl);
+
+        // Map over unique connected blocks to observe them
+        const blockIdsToObserve = new Set<string>();
+        connections.filter(c => !c.hidden).forEach(c => {
+            blockIdsToObserve.add(c.fromBlock);
+            blockIdsToObserve.add(c.toBlock);
+        });
+
+        blockIdsToObserve.forEach(id => {
+            const el = containerEl.querySelector(`[id="${id}"]`);
+            if (el) observer.observe(el);
+        });
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            observer.disconnect();
+        };
     }, [connections, blocks, zoom, containerRef]);
 
     useEffect(() => {
@@ -71,8 +97,9 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             const activeId = dragController.activeId;
             if (!activeId) return;
 
-                        const blockEl = document.getElementById(activeId);
             const containerEl = containerRef.current;
+            if (!containerEl) return;
+            const blockEl = containerEl.querySelector(`[id="${activeId}"]`) as HTMLElement | null;
             const currentZoom = zoomRef.current;
             const currentConnections = connectionsRef.current;
             const currentBlocks = blocksRef.current;
@@ -113,7 +140,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                     if (isFromMoving) {
                         fromGeo = activeBlockGeo;
                     } else {
-                         const el = document.getElementById(conn.fromBlock);
+                         const el = containerEl.querySelector(`[id="${conn.fromBlock}"]`);
                          if (el) {
                              fromGeo = elToRect(el);
                          } else {
@@ -126,7 +153,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                     if (!isFromMoving) {
                         toGeo = activeBlockGeo;
                     } else {
-                        const el = document.getElementById(conn.toBlock);
+                        const el = containerEl.querySelector(`[id="${conn.toBlock}"]`);
                          if (el) {
                              toGeo = elToRect(el);
                          } else {
@@ -137,7 +164,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
 
                     if (fromGeo && toGeo) {
                         const newPath = calculatePathFromRects(conn, fromGeo, toGeo);
-                        const pathEl = document.getElementById(`conn-path-${conn.id}`);
+                        const pathEl = containerEl.querySelector(`[id="conn-path-${conn.id}"]`);
                         if (pathEl) pathEl.setAttribute('d', newPath);
                     }
                 });
@@ -145,6 +172,8 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
 
             rafId = requestAnimationFrame(updateLoop);
         };
+
+        if (!dragController) return;
 
         const unsubscribe = dragController.subscribe((isDragging) => {
             if (isDragging) {

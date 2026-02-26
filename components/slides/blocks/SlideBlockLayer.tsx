@@ -4,7 +4,8 @@ import React, { memo, useCallback, useMemo, useRef} from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/slides/blocks/SmartBlock';
 import { DragController } from '@/components/slides/rendering/DragController';
-import { SlideBlockData, Connection } from '../core/types';
+import { SlideBlockData, Connection, SLIDE_WIDTH } from '../core/types';
+import { SIDE_PADDING } from '../core/SingleSlide';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -124,6 +125,7 @@ const BlockWrapperComponent = ({
         width: block.width,
         height: isText ? 'auto' : (block.height === 'auto' ? 'auto' : block.height),
       }}
+      maxWidth={SLIDE_WIDTH - block.x - SIDE_PADDING}
       onDragStop={handleRndDragStop}
       onDrag={handleRndDrag}
       onDragStart={handleRndDragStart}

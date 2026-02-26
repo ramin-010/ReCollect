@@ -6,7 +6,7 @@ import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide, TITLE_HEIGHT, COVER_HEIGHT } from './SingleSlide';
 import { SlideNavPanel } from './SlideNavPanel';
-import { PresentationView } from './PresentationView';
+import { PresentationView } from '../presentation';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 import { v4 as uuidv4 } from 'uuid';
@@ -426,7 +426,11 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
 
       {isPresenting && onClosePresentation && (
         <PresentationView
-          slides={slides}
+          slides={slides.filter(slide => {
+            const blocks = getBlocksForSlide(slide.slideId);
+            const hasTitle = slide.title && slide.title.trim() !== '';
+            return blocks.length > 0 || hasTitle || !!slide.coverImage;
+          })}
           getBlocksForSlide={getBlocksForSlide}
           getConnectionsForSlide={getConnectionsForSlide}
           onClose={onClosePresentation}

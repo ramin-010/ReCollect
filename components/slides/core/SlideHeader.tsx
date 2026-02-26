@@ -10,7 +10,6 @@ interface SlideHeaderProps {
   showTitle?: boolean;
   title?: string;
   readOnly?: boolean;
-  hideCoverImage?: boolean;
   showCoverPicker: boolean;
   setShowCoverPicker: (show: boolean) => void;
   onTitleChange?: (title: string) => void;
@@ -24,7 +23,6 @@ export function SlideHeader({
   showTitle,
   title,
   readOnly,
-  hideCoverImage,
   showCoverPicker,
   setShowCoverPicker,
   onTitleChange,
@@ -38,7 +36,7 @@ export function SlideHeader({
       <div ref={headerRef} className="w-full flex flex-col shrink-0 z-10 relative">
         {/* Slide Cover Image */}
         {coverImage ? (
-          <div className={`w-full h-48 relative group ${hideCoverImage ? 'hidden' : ''}`}>
+          <div className="w-full h-48 relative group">
             <img 
               src={coverImage} 
               alt="Slide cover" 
