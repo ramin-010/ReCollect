@@ -245,6 +245,9 @@ export function useSlidePersistence({
         contentForServer = JSON.stringify({ ...parsed, blocks: serverBlocks });
       }
 
+      // 2) Log before sending to backend
+      console.log('[DEBUG 2 - SAVING TO BACKEND] Content being sent to backend:', contentForServer);
+
       const result = await slideApi.saveDeck(serverId, { content: contentForServer, name }, pendingImageIds, allImageIds);
 
       if (result.success) {

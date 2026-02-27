@@ -199,9 +199,12 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
   // ---- Block Operation Wrappers ----
   const handleSelectBlock = useCallback((id: string) => {
     setSelectedBlockId(id || null);
-    // Deselect connection when selecting a block
-    if (id) setSelectedConnectionId(null);
-  }, [setSelectedBlockId, setSelectedConnectionId]);
+    if (id) {
+      setSelectedConnectionId(null);
+      const block = blocks.find(b => b.blockId === id);
+      if (block) setActiveSlideId(block.slideId);
+    }
+  }, [setSelectedBlockId, setSelectedConnectionId, blocks, setActiveSlideId]);
 
   const handleUpdateBlock = useCallback((blockId: string, updates: Partial<SlideBlockData>) => {
     updateBlock(blockId, updates);

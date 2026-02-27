@@ -72,8 +72,8 @@ export function PresentationSlide({
 
   return (
     <div
-      className="w-full relative flex flex-col items-center bg-white dark:bg-[hsl(var(--card))] theme-dark-gray:bg-[#212121]"
-      style={{ backgroundColor: backgroundColor ||  'var(--new-bg-color)' }}
+      className="w-full relative flex flex-col items-center bg-[#212121]"
+      style={{ backgroundColor: backgroundColor || undefined }}
     >
       {/* 1. Full-bleed cover image */}
       {coverImage && (

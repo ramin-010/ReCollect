@@ -155,13 +155,13 @@ export function useSingleSlideHandlers({
         if (block.blockId === editingBlockId && editingDims) {
           blockHeight = editingDims.height;
         }
-        const bottom = block.y + blockHeight + 40;
+        const bottom = block.y + blockHeight + 100; // Increased margin for earlier auto-extend
         if (bottom > maxBottom) maxBottom = bottom;
       }
     }
 
     if (!editingBlockId && cursorPos && editingDims) {
-      const bottom = cursorPos.y + editingDims.height + 40;
+      const bottom = cursorPos.y + editingDims.height + 100; // Increased margin for earlier auto-extend
       if (bottom > maxBottom) maxBottom = bottom;
     }
 

@@ -31,6 +31,12 @@ export function PresentationView({
 }: PresentationViewProps) {
   const [isExporting, setIsExporting] = React.useState(false);
 
+  useEffect(() => {
+    // 1) Log when passing data to presentation view
+    const allPresentationBlocks = slides.flatMap(s => getBlocksForSlide(s.slideId));
+    console.log('[DEBUG 1 - PRESENTATION VIEW] Blocks passed to presentation:', JSON.stringify(allPresentationBlocks, null, 2));
+  }, [slides, getBlocksForSlide]);
+
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -75,7 +81,7 @@ export function PresentationView({
   );
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))] flex flex-col overflow-hidden">
       {/* Top navbar — visible on hover unless in printMode */}
       {!printMode && (
         <div className="absolute top-0 left-0 right-0 pt-0 pb-4 z-[1010] opacity-0 hover:opacity-100 transition-opacity duration-300">
@@ -116,7 +122,7 @@ export function PresentationView({
 
       {/* Scrollable slide list */}
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-[hsl(var(--background))] dark:bg-black"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))]"
         style={{ scrollSnapType: 'y proximity' }}
       >
         <div className="flex flex-col w-full" style={{ gap: SLIDE_GAP }}>
