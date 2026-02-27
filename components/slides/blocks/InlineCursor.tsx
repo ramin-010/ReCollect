@@ -11,8 +11,8 @@ import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
-import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
+import { SlashCommands } from '@/components/slides/extensions/SlashCommands';
+import { CalloutExtension } from '@/components/slides/extensions/CalloutExtension';
 import { FloatingToolbar } from '@/components/docs/doc_editor/FloatingToolbar';
 import { cn } from '@/lib/utils';
 import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
@@ -230,19 +230,18 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       }
     };
 
-    const hideToolbar = () => {
-      setShowFloatingToolbar(false);
-    };
-
-    editor.on('selectionUpdate', updateToolbar);
-    editor.on('blur', () => {
+    const handleBlur = () => {
       setTimeout(() => {
         setShowFloatingToolbar(false);
       }, 200);
-    });
+    };
+
+    editor.on('selectionUpdate', updateToolbar);
+    editor.on('blur', handleBlur);
 
     return () => {
       editor.off('selectionUpdate', updateToolbar);
+      editor.off('blur', handleBlur);
     };
   }, [editor]);
 
@@ -267,29 +266,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* ProseMirror overrides for slide context — let EditorStyles handle typography */}
-      <style>{`
-        .inline-cursor-editor .ProseMirror {
-          min-height: 0 !important;
-          border: none !important;
-          outline: none !important;
-          padding: 2px 4px !important;
-          font-size: inherit !important;
-          color: inherit !important;
-          max-width: none !important;
-          margin: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror > *:first-child {
-          margin-top: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror > *:last-child {
-          margin-bottom: 0 !important;
-        }
-        .inline-cursor-editor .ProseMirror p,
-        .inline-cursor-editor .ProseMirror li {
-          color: inherit;
-        }
-      `}</style>
+      {/* ProseMirror overrides for slide context — now in globals.css */}
       <div
         className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}
         style={{

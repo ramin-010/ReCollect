@@ -6,6 +6,7 @@ import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
 import { SingleSlide, TITLE_HEIGHT, COVER_HEIGHT } from './SingleSlide';
 import { SlideNavPanel } from './SlideNavPanel';
+import { PresentationView } from '../presentation';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 // ---------------------------------------------------------------------------
 export interface SlideCanvasHandle {
   updateSelectedBlock: (updates: Partial<SlideBlockData>) => void;
+  hydrate: (content: string) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -22,7 +24,7 @@ export interface SlideCanvasHandle {
 // ---------------------------------------------------------------------------
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
-  { initialContent, onChange, readOnly, onSelectionChange },
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId },
   ref
 ) {
   const {
@@ -46,6 +48,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     shiftBlocksY,
     addImageBlock,
     updateSlide,
+    hydrate,
   } = useSlideState(initialContent, onChange);
 
   // Report selection changes to parent (for navbar controls)
@@ -77,22 +80,34 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     }
   }, [selectedBlockId, blocks, onSelectionChange]);
 
-  // Expose updateSelectedBlock to parent via ref
+  // Expose updateSelectedBlock and hydrate to parent via ref
   useImperativeHandle(ref, () => ({
     updateSelectedBlock: (updates: Partial<SlideBlockData>) => {
       if (selectedBlockId) {
         updateBlock(selectedBlockId, updates);
       }
     },
-  }), [selectedBlockId, updateBlock]);
+    hydrate: async (content: string) => {
+      await hydrate(content);
+    },
+  }), [selectedBlockId, updateBlock, hydrate]);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
 
   // ---- Paste support — slide-specific (uses slideImageStorage via addImageBlock) ----
-  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
   const activeSlideIdRef = useRef(activeSlideId);
   activeSlideIdRef.current = activeSlideId;
+
+  const absoluteMouseRef = useRef({ clientX: 0, clientY: 0 });
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      absoluteMouseRef.current = { clientX: e.clientX, clientY: e.clientY };
+    };
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
+  }, []);
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -102,6 +117,32 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
 
       const slideId = activeSlideIdRef.current;
       if (!slideId) return;
+      
+      const slideEl = document.getElementById(`slide-${slideId}`);
+      if (!slideEl) return;
+      
+      const rect = slideEl.getBoundingClientRect();
+      const { clientX, clientY } = absoluteMouseRef.current;
+      
+      // Check if mouse is hovering over the currently active slide
+      if (
+        clientX < rect.left || clientX > rect.right ||
+        clientY < rect.top || clientY > rect.bottom
+      ) {
+        console.log('[SlideCanvas] Paste ignored: cursor outside active slide boundaries');
+        return;
+      }
+      
+      // Compute slide-local snapped coordinates (accounting for zoom)
+      // We use the same side paddings (40) as the underlying logic
+      const rawX = (clientX - rect.left) / zoom;
+      const rawY = (clientY - rect.top) / zoom;
+      
+      const SIDE_PADDING = 40;
+      const VERTICAL_PADDING = 25;
+      
+      const x = Math.max(SIDE_PADDING, rawX);
+      const y = Math.max(VERTICAL_PADDING, rawY);
 
       // Handle image paste
       const items = e.clipboardData?.items;
@@ -112,8 +153,8 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
             const file = item.getAsFile();
             if (file) {
               // Routes through addImageBlock → slideImageStorage (correct DB!)
-              await addImageBlock(slideId, file);
-              console.log('[SlideCanvas] Pasted image via addImageBlock (slideImageStorage)');
+              await addImageBlock(slideId, file, x, y);
+              console.log('[SlideCanvas] Pasted image via addImageBlock (slideImageStorage) at', x, y);
             }
             return;
           }
@@ -125,7 +166,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
           e.preventDefault();
           textItem.getAsString((text) => {
             if (text.trim()) {
-              const blockId = addBlock(slideId, 'text', mousePositionRef.current.x, mousePositionRef.current.y);
+              const blockId = addBlock(slideId, 'text', x, y);
               if (blockId) {
                 updateBlock(blockId, { content: text });
               }
@@ -137,18 +178,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [addImageBlock, addBlock, updateBlock]);
-
-  // Track mouse for paste-at-cursor
-  const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
-    if (viewportRef.current) {
-      const rect = viewportRef.current.getBoundingClientRect();
-      mousePositionRef.current = {
-        x: (e.clientX - rect.left) / zoom,
-        y: (e.clientY - rect.top) / zoom,
-      };
-    }
-  }, [zoom]);
+  }, [addImageBlock, addBlock, updateBlock, zoom]);
 
   // ---- Zoom Handlers ----
   const handleZoom = useCallback((delta: number) => {
@@ -209,7 +239,21 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
   // ---- Keyboard Shortcuts ----
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete selected block
+      // Select All blocks
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        const el = document.activeElement;
+        const isTyping = (el instanceof HTMLInputElement) || 
+                         (el instanceof HTMLTextAreaElement) || 
+                         (el as HTMLElement)?.isContentEditable;
+        
+        if (!isTyping && activeSlideIdRef.current) {
+          e.preventDefault();
+          setSelectedBlockId('ALL');
+          return;
+        }
+      }
+
+      // Delete selected block(s)
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId) {
         const el = document.activeElement;
         // More robust check for typing elements
@@ -219,7 +263,13 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         
         if (!isTyping) {
           e.preventDefault();
-          deleteBlock(selectedBlockId);
+          if (selectedBlockId === 'ALL' && activeSlideIdRef.current) {
+            const slideBlocks = getBlocksForSlide(activeSlideIdRef.current);
+            slideBlocks.forEach(b => deleteBlock(b.blockId));
+            setSelectedBlockId(null);
+          } else {
+            deleteBlock(selectedBlockId);
+          }
         }
       }
 
@@ -291,7 +341,6 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         style={{ transform: `scale(${zoom})` }}
         id="slide-canvas-viewport"
         onWheel={handleWheel}
-        onMouseMove={handleViewportMouseMove}
         onClick={(e) => {
           if (e.target === viewportRef.current) {
             setSelectedBlockId(null);
@@ -374,6 +423,20 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         </Button>
       </div>
       </div>
+
+      {isPresenting && onClosePresentation && (
+        <PresentationView
+          slides={slides.filter(slide => {
+            const blocks = getBlocksForSlide(slide.slideId);
+            const hasTitle = slide.title && slide.title.trim() !== '';
+            return blocks.length > 0 || hasTitle || !!slide.coverImage;
+          })}
+          getBlocksForSlide={getBlocksForSlide}
+          getConnectionsForSlide={getConnectionsForSlide}
+          onClose={onClosePresentation}
+          deckId={deckId || ''}
+        />
+      )}
     </div>
   );
 });

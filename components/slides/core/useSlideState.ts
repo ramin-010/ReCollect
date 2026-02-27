@@ -15,7 +15,7 @@ function createSlide(order: number): SlideData {
 }
 
 /** Parse raw JSON into SlideCanvasData */
-function parseContent(raw: string | undefined): SlideCanvasData {
+export function parseContent(raw: string | undefined): SlideCanvasData {
   if (!raw) return { slides: [createSlide(0)], blocks: [] };
 
   try {
@@ -94,22 +94,35 @@ export function useSlideState(
       const contentStr = typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent);
       const data = parseContent(contentStr);
 
-      // Hydrate images from IndexedDB BEFORE setting blocks
+      // Hydrate images from IndexedDB or cloud BEFORE setting blocks
       // This prevents the "Loading image..." flash
       const hydratedBlocks = await Promise.all(
         data.blocks.map(async (block) => {
-          if (block.type === 'image' && block.imageId && !block.isUploaded && !block.url?.startsWith('blob:')) {
-            try {
-              const blob = await slideImageStorage.getImage(block.imageId);
-              if (blob) {
-                console.log('[useSlideState] Hydrated image', block.imageId, 'from IndexedDB');
-                return { ...block, url: slideImageStorage.createObjectURL(blob) };
-              } else {
-                console.warn('[useSlideState] Image', block.imageId, 'NOT found in IndexedDB');
-              }
-            } catch (err) {
-              console.error('[useSlideState] Failed to hydrate image:', block.imageId, err);
+          if (block.type !== 'image' || !block.imageId) return block;
+
+          // Case 1: Already uploaded to cloud with a valid cloud URL — pass through
+          if (block.isUploaded && block.url && !block.url.startsWith('blob:') 
+              && block.url !== 'PENDING_UPLOAD' && block.url !== 'IDB_IMAGE') {
+            return block;
+          }
+
+          // Case 2: Already has a valid blob URL (current session) — pass through
+          if (block.url?.startsWith('blob:')) {
+            return block;
+          }
+
+          // Case 3: Needs hydration (local image: IDB_IMAGE, PENDING_UPLOAD, or no URL)
+          // Try to restore from slideImageStorage using imageId
+          try {
+            const blob = await slideImageStorage.getImage(block.imageId);
+            if (blob) {
+              console.log('[useSlideState] Hydrated image', block.imageId, 'from IndexedDB');
+              return { ...block, url: slideImageStorage.createObjectURL(blob) };
+            } else {
+              console.warn('[useSlideState] Image', block.imageId, 'NOT found in IndexedDB — may need re-upload');
             }
+          } catch (err) {
+            console.error('[useSlideState] Failed to hydrate image:', block.imageId, err);
           }
           return block;
         })
@@ -121,7 +134,7 @@ export function useSlideState(
       setSlides(data.slides);
       setBlocks(hydratedBlocks);
       setActiveSlideId(data.slides[0]?.slideId || null);
-
+      
       initializedRef.current = true;
       lastContentRef.current = contentStr;
     };
@@ -129,33 +142,57 @@ export function useSlideState(
     loadContent();
   }, [initialContent]);
 
+  // Allow external forcing of hydration (e.g. reverting to server state)
+  const hydrate = useCallback(async (content: string) => {
+    const data = parseContent(content);
+    
+    const hydratedBlocks = await Promise.all(
+      data.blocks.map(async (block) => {
+        if (block.type !== 'image' || !block.imageId) return block;
+
+        if (block.isUploaded && block.url && !block.url.startsWith('blob:') 
+            && block.url !== 'PENDING_UPLOAD' && block.url !== 'IDB_IMAGE') {
+          return block;
+        }
+
+        if (block.url?.startsWith('blob:')) return block;
+
+        try {
+          const blob = await slideImageStorage.getImage(block.imageId);
+          if (blob) {
+            return { ...block, url: slideImageStorage.createObjectURL(blob) };
+          }
+        } catch (err) {}
+        return block;
+      })
+    );
+
+    setSlides(data.slides);
+    setBlocks(hydratedBlocks);
+    setActiveSlideId(data.slides[0]?.slideId || null);
+    lastContentRef.current = content;
+
+    // Prevent the reactive useEffect from firing onChange for this hydration
+    skipNextOnChangeRef.current = true;
+  }, []);
+
 
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
-  const slidesRef = useRef(slides);
-  const blocksRef = useRef(blocks);
-  const lastSavedRef = useRef<string>('');
+  // Skip onChange for init and hydration — these load existing state, not user edits
+  const skipNextOnChangeRef = useRef(true);
 
-  slidesRef.current = slides;
-  blocksRef.current = blocks;
-
-  // Autosave — serialize blocks as-is (blob URLs are temporary display URLs;
-  // IndexedDB holds the actual data for restoration on next load)
+  // Reactive onChange — fires on next render after any slides/blocks mutation
   useEffect(() => {
-    const interval = setInterval(() => {
-      const data: SlideCanvasData = {
-        slides: slidesRef.current,
-        blocks: blocksRef.current,
-      };
-      const json = JSON.stringify(data);
-      if (json !== lastSavedRef.current && slidesRef.current.length > 0) {
-        onChangeRef.current?.(json);
-        lastSavedRef.current = json;
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (skipNextOnChangeRef.current) {
+      skipNextOnChangeRef.current = false;
+      return;
+    }
+    if (slides.length === 0) return;
+    const json = JSON.stringify({ slides, blocks } as SlideCanvasData);
+    onChangeRef.current?.(json);
+  }, [slides, blocks]);
 
 
 
@@ -300,6 +337,8 @@ export function useSlideState(
     setSelectedBlockId,
     setSelectedConnectionId,
     setBlocks,
+    
+    hydrate,
 
     addSlide,
     deleteSlide,
@@ -315,7 +354,7 @@ export function useSlideState(
     getConnectionsForSlide,
     setConnectionsForSlide,
 
-    addImageBlock: useCallback(async (slideId: string, file: File) => {
+    addImageBlock: useCallback(async (slideId: string, file: File, x: number = 40, y: number = 40) => {
       const imageId = uuidv4();
       try {
         await slideImageStorage.storeImage(imageId, file);
@@ -333,8 +372,8 @@ export function useSlideState(
         url: blobUrl,
         imageId,
         isUploaded: false,
-        x: 40,
-        y: 40,
+        x,
+        y,
         width: 400,
         height: 'auto',
       };

@@ -1,183 +1,37 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Presentation, Trash2, ArrowLeft, Clock, Save, Check, Loader2, Minus, Type, PaintBucket } from 'lucide-react';
+import { Plus, Presentation, Trash2, Clock, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
-import { cn } from '@/lib/utils';
-import { SlideCanvas, SlideCanvasHandle } from './core/SlideCanvas';
-import { SelectedBlockInfo } from './core/types';
 import { slideImageStorage } from '@/lib/storage/slideImageStorage';
+import { slideOfflineStorage } from '@/lib/storage/slideOfflineStorage';
 import { slideApi, ServerSlideDeck } from '@/lib/api/slideApi';
 import { useViewStore } from '@/lib/store/viewStore';
+import { SlideConflictDialog } from './SlideConflictDialog';
+import { SlideEditor } from './editor/SlideEditor';
+import {
+  SlideDeck,
+  serverToLocal,
+  offlineToLocal,
+  persistToIDB,
+  useSlidePersistence,
+} from './editor/useSlidePersistence';
 import { toast } from 'sonner';
 
-interface SlideDeck {
-  id: string;
-  serverId?: string;   // MongoDB _id
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  content: string;
-  cloudImages?: Array<{ imageId: string; cloudUrl: string; cloudPublicId: string }>;
-}
-
-const STORAGE_KEY = 'recollect_slide_decks';
-
-function loadDecksLocal(): SlideDeck[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as SlideDeck[];
-  } catch {
-    return [];
-  }
-}
-
-function saveDecksLocal(decks: SlideDeck[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(decks));
-}
-
-function serverToLocal(s: ServerSlideDeck): SlideDeck {
-  return {
-    id: s._id,
-    serverId: s._id,
-    name: s.name,
-    content: s.content || '',
-    cloudImages: s.cloudImages,
-    createdAt: s.createdAt,
-    updatedAt: s.updatedAt,
-  };
-}
-
+// =====================================================================
+// SlidesView — Grid + Editor orchestrator
+// =====================================================================
 export function SlidesView() {
   const [decks, setDecks] = useState<SlideDeck[]>([]);
   const [activeDeck, setActiveDeck] = useState<SlideDeck | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [isLocalSaving, setIsLocalSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const latestContentRef = useRef<string>('');
-  const latestNameRef = useRef<string>('');
-  const activeDeckRef = useRef<SlideDeck | null>(null);
-  const [showColorPalette, setShowColorPalette] = useState(false);
-
-  // Keep ref in sync with state
-  useEffect(() => { activeDeckRef.current = activeDeck; }, [activeDeck]);
 
   const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
 
-  // Load decks from API (fallback to localStorage)
-  useEffect(() => {
-    const loadDecks = async () => {
-      try {
-        const serverDecks = await slideApi.fetchAllDecks();
-        if (serverDecks.length > 0) {
-          const mapped = serverDecks.map(serverToLocal);
-          setDecks(mapped);
-          saveDecksLocal(mapped);
-        } else {
-          // Fallback: check localStorage for decks not yet synced
-          const localDecks = loadDecksLocal();
-          setDecks(localDecks);
-        }
-      } catch (err) {
-        console.warn('[SlidesView] Failed to fetch from API, using localStorage:', err);
-        setDecks(loadDecksLocal());
-      }
-      setLoaded(true);
-    };
-
-    loadDecks();
-    setSlideFullscreen(false);
-    return () => setSlideFullscreen(false);
-  }, [setSlideFullscreen]);
-
-  // Persist to localStorage whenever decks change
-  useEffect(() => {
-    if (!loaded) return;
-    console.log('[SlidesView] Persisting', decks.length, 'decks to localStorage');
-    saveDecksLocal(decks);
-  }, [decks, loaded]);
-
-  // Create deck (API-backed)
-  const createDeck = useCallback(async () => {
-    const tempName = 'Untitled Deck';
-    try {
-      const result = await slideApi.createDeck(tempName);
-      if (result.success && result.data) {
-        const newDeck = serverToLocal(result.data);
-        setDecks(prev => [newDeck, ...prev]);
-        setActiveDeck(newDeck);
-        setSlideFullscreen(true);
-        latestContentRef.current = '';
-        latestNameRef.current = tempName;
-      }
-    } catch (err) {
-      console.error('[SlidesView] Failed to create deck on server:', err);
-      toast.error('Failed to create deck');
-    }
-  }, [setSlideFullscreen]);
-
-  // Delete deck (API + local + IndexedDB + cloud cleanup via API)
-  const deleteDeck = useCallback(async (deckId: string) => {
-    const deck = decks.find(d => d.id === deckId);
-
-    // Cleanup local IndexedDB images
-    if (deck?.content) {
-      try {
-        const parsed = JSON.parse(deck.content);
-        const imageIds = (parsed.blocks || [])
-          .filter((b: any) => b.type === 'image' && b.imageId)
-          .map((b: any) => b.imageId);
-        if (imageIds.length > 0) {
-          slideImageStorage.deleteImages(imageIds).catch(() => {});
-        }
-      } catch {}
-    }
-
-    // Delete from server (handles cloud cleanup)
-    const serverId = deck?.serverId || deckId;
-    try {
-      await slideApi.deleteDeck(serverId);
-    } catch (err) {
-      console.error('[SlidesView] Server delete failed:', err);
-    }
-
-    setDecks(prev => prev.filter(d => d.id !== deckId));
-    if (activeDeck?.id === deckId) {
-      setActiveDeck(null);
-      setSlideFullscreen(false);
-    }
-  }, [activeDeck, setSlideFullscreen, decks]);
-
-  // Canvas content change — debounced local update (matches docs pattern)
-  const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const handleCanvasChange = useCallback((content: string) => {
-    const deckId = activeDeckRef.current?.id;
-    if (!deckId) return;
-    
-    // Always update ref immediately (for save handler)
-    latestContentRef.current = content;
-    setIsLocalSaving(true);
-
-    // Debounce the state update to prevent per-keystroke re-renders
-    if (canvasDebounceRef.current) clearTimeout(canvasDebounceRef.current);
-    canvasDebounceRef.current = setTimeout(() => {
-      setDecks(prev =>
-        prev.map(d =>
-          d.id === deckId
-            ? { ...d, content, updatedAt: new Date().toISOString() }
-            : d
-        )
-      );
-      setTimeout(() => setIsLocalSaving(false), 500); // Keep pulsing briefly after save
-    }, 2000);
-  }, []);
-
   // Rename deck (local immediate, server on save)
   const handleRenameDeck = useCallback((deckId: string, name: string) => {
-    latestNameRef.current = name;
+    persistence.latestNameRef.current = name;
     setDecks(prev =>
       prev.map(d =>
         d.id === deckId ? { ...d, name, updatedAt: new Date().toISOString() } : d
@@ -186,321 +40,143 @@ export function SlidesView() {
     setActiveDeck(prev => prev ? { ...prev, name } : null);
   }, []);
 
-  // Save to server (Ctrl+S or button)
-  const handleSave = useCallback(async () => {
-    if (!activeDeck || saving) return;
-    const serverId = activeDeck.serverId || activeDeck.id;
-    const content = latestContentRef.current || activeDeck.content;
-    const name = latestNameRef.current || activeDeck.name;
+  // Persistence hook (save, sync, conflict, revert)
+  const persistence = useSlidePersistence({
+    activeDeck,
+    setActiveDeck,
+    setDecks,
+    handleRenameDeck,
+  });
 
-    setSaving(true);
-    setSaveStatus('saving');
-
-    try {
-      // Parse content to find image blocks
-      let allImageIds: string[] = [];
-      let pendingImageIds: string[] = [];
-      let parsed: any = null;
-
-      if (content) {
-        try {
-          parsed = JSON.parse(content);
-          const imageBlocks = (parsed.blocks || []).filter((b: any) => b.type === 'image' && b.imageId);
-          allImageIds = imageBlocks.map((b: any) => b.imageId);
-
-          // Pending = images not yet uploaded to cloud (isUploaded !== true)
-          pendingImageIds = imageBlocks
-            .filter((b: any) => !b.isUploaded)
-            .map((b: any) => b.imageId);
-        } catch {}
-      }
-
-      // Sanitize content for server: strip blob URLs, replace with PENDING_UPLOAD
-      let contentForServer = content;
-      if (parsed) {
-        const serverBlocks = (parsed.blocks || []).map((b: any) => {
-          if (b.type === 'image') {
-            const cleaned = { ...b };
-            if (cleaned.url?.startsWith('blob:')) {
-              cleaned.url = 'PENDING_UPLOAD';
-            }
-            return cleaned;
-          }
-          return b;
-        });
-        contentForServer = JSON.stringify({ ...parsed, blocks: serverBlocks });
-      }
-
-      const result = await slideApi.saveDeck(
-        serverId,
-        { content: contentForServer, name },
-        pendingImageIds,
-        allImageIds
-      );
-
-      if (result.success) {
-        // Update cloud images in local deck after successful save
-        if (result.data?.cloudImages) {
-          setDecks(prev => prev.map(d =>
-            d.id === activeDeck.id
-              ? { ...d, cloudImages: result.data!.cloudImages, updatedAt: result.data!.updatedAt }
-              : d
-          ));
-          setActiveDeck(prev => prev ? {
-            ...prev,
-            cloudImages: result.data!.cloudImages,
-            updatedAt: result.data!.updatedAt,
-          } : null);
-        }
-
-        // If images were uploaded, update blocks with cloud URLs
-        if (result.imageUrlMap && Object.keys(result.imageUrlMap).length > 0 && parsed) {
-          let updated = false;
-          for (const block of (parsed.blocks || [])) {
-            if (block.type === 'image' && block.imageId && result.imageUrlMap[block.imageId]) {
-              block.url = result.imageUrlMap[block.imageId].url;
-              block.isUploaded = true;
-              updated = true;
-              // Clean local IndexedDB since image is now in cloud
-              slideImageStorage.deleteImage(block.imageId).catch(() => {});
-            }
-          }
-          if (updated) {
-            const newContent = JSON.stringify(parsed);
-            latestContentRef.current = newContent;
-            setDecks(prev => prev.map(d =>
-              d.id === activeDeck.id ? { ...d, content: newContent } : d
-            ));
-          }
-        }
-
-        setSaveStatus('saved');
-        toast.success('Deck saved!');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      }
-    } catch (err) {
-      console.error('[SlidesView] Save failed:', err);
-      toast.error('Failed to save deck');
-      setSaveStatus('idle');
-    } finally {
-      setSaving(false);
-    }
-  }, [activeDeck, saving]);
-
-  // Ctrl+S handler
+  // =====================================================================
+  // LOAD DECKS: IndexedDB first (instant), then merge with server
+  // =====================================================================
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
+    const loadDecks = async () => {
+      let localDecks: SlideDeck[] = [];
+      try {
+        const offlineDecks = await slideOfflineStorage.getAllDecks();
+        localDecks = offlineDecks.map(offlineToLocal);
+        if (localDecks.length > 0) setDecks(localDecks);
+      } catch (e) {
+        console.error('[SlidesView] Failed to load from IndexedDB:', e);
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
 
-  const handleCloseDeck = useCallback(() => {
-    setActiveDeck(null);
+      try {
+        const serverDecks = await slideApi.fetchAllDecks();
+        if (serverDecks.length > 0) {
+          const localMap = new Map(localDecks.map(d => [d.serverId || d.id, d]));
+          const merged = serverDecks.map(sd => {
+            const serverDeck = serverToLocal(sd);
+            const localDeck = localMap.get(serverDeck.serverId || serverDeck.id);
+            if (!localDeck) { persistToIDB(serverDeck); return serverDeck; }
+            const serverTime = new Date(serverDeck.updatedAt).getTime();
+            const localTime = new Date(localDeck.updatedAt).getTime();
+            if (localDeck.syncStatus === 'pending' || localTime > serverTime) return localDeck;
+            return { ...localDeck, name: serverDeck.name, updatedAt: serverDeck.updatedAt, serverUpdatedAt: serverDeck.serverUpdatedAt, syncStatus: 'synced' as const };
+          });
+          const serverIds = new Set(serverDecks.map(sd => sd._id));
+          const localOnly = localDecks.filter(ld => !serverIds.has(ld.serverId || ld.id));
+          setDecks([...localOnly, ...merged]);
+        } else if (localDecks.length === 0) {
+          setDecks([]);
+        }
+      } catch (err) {
+        console.warn('[SlidesView] Server fetch failed, using IndexedDB data:', err);
+      }
+      setLoaded(true);
+    };
+    loadDecks();
     setSlideFullscreen(false);
-    setSaveStatus('idle');
-    setSelectedBlock(null);
+    return () => setSlideFullscreen(false);
   }, [setSlideFullscreen]);
 
-  // Block selection tracking (for navbar controls)
-  const canvasRef = useRef<SlideCanvasHandle>(null);
-  const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
-
-  const handleUpdateColor = useCallback((color: string) => {
-    if (!selectedBlock || !canvasRef.current) return;
-    canvasRef.current.updateSelectedBlock({ color });
-    setShowColorPalette(false);
-  }, [selectedBlock]);
-
-  const COLORS = [
-    { name: 'Default', value: '' }, // Default (Transparent)
-    { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
-    { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
-    { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
-    { name: 'Red', value: 'bg-red-500/10 border-red-500/20' },
-    { name: 'Violet', value: 'bg-violet-500/10 border-violet-500/20' },
-  ];
-
-  // Theme-specific text color presets moved to floating toolbar
-  const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
-    setSelectedBlock(block);
-  }, []);
-
-  const handleFontSizeChange = useCallback((delta: number) => {
-    if (!selectedBlock || !canvasRef.current) return;
-    const current = selectedBlock.fontSize || 18;
-    const next = Math.max(8, Math.min(72, current + delta));
-    canvasRef.current.updateSelectedBlock({ fontSize: next });
-  }, [selectedBlock]);
-
-
-  const isBlockSelected = !!selectedBlock;
-
-  // Keyboard shortcuts for font size (Ctrl+= to increase, Ctrl+- to decrease)
+  // Persist every deck change to IndexedDB
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedBlock || !canvasRef.current) return;
-      
-      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
-        e.preventDefault();
-        handleFontSizeChange(1);
-      } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-        e.preventDefault();
-        handleFontSizeChange(-1);
+    if (!loaded) return;
+    decks.forEach(deck => {
+      persistToIDB(deck).catch(e => console.error('[SlidesView] Failed to persist deck to IDB:', e));
+    });
+  }, [decks, loaded]);
+
+  // Create deck
+  const createDeck = useCallback(async () => {
+    try {
+      const result = await slideApi.createDeck('Untitled Deck');
+      if (result.success && result.data) {
+        const newDeck = serverToLocal(result.data);
+        await persistToIDB(newDeck);
+        setDecks(prev => [newDeck, ...prev]);
+        setActiveDeck(newDeck);
+        setSlideFullscreen(true);
+        persistence.latestContentRef.current = '';
+        persistence.latestNameRef.current = 'Untitled Deck';
       }
-    };
+    } catch {
+      toast.error('Failed to create deck');
+    }
+  }, [setSlideFullscreen, persistence.latestContentRef, persistence.latestNameRef]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedBlock, handleFontSizeChange]);
+  // Delete deck
+  const deleteDeck = useCallback(async (deckId: string) => {
+    const deck = decks.find(d => d.id === deckId);
+    if (deck?.content) {
+      try {
+        const parsed = JSON.parse(deck.content);
+        const imageIds = (parsed.blocks || []).filter((b: any) => b.type === 'image' && b.imageId).map((b: any) => b.imageId);
+        if (imageIds.length > 0) slideImageStorage.deleteImages(imageIds).catch(() => {});
+      } catch {}
+    }
+    try { await slideApi.deleteDeck(deck?.serverId || deckId); } catch {}
+    await slideOfflineStorage.deleteDeck(deckId).catch(() => {});
+    setDecks(prev => prev.filter(d => d.id !== deckId));
+    if (activeDeck?.id === deckId) {
+      setActiveDeck(null);
+      setSlideFullscreen(false);
+    }
+  }, [activeDeck, setSlideFullscreen, decks]);
 
-  // ---- Active deck view ----
+  // Helper for conflict detection
+  const getContentSummary = (content: string, name: string) => {
+    try {
+      const p = JSON.parse(content);
+      return { slideCount: p.slides?.length || 0, blockCount: p.blocks?.length || 0, name };
+    } catch { return { slideCount: 0, blockCount: 0, name }; }
+  };
+
+  // ---- Conflict Dialog (top-level early return) ----
+  if (persistence.showConflict && persistence.conflictData) {
+    return (
+      <SlideConflictDialog
+        open={persistence.showConflict}
+        onClose={() => { persistence.setShowConflict(false); persistence.setConflictData(null); }}
+        localUpdatedAt={new Date(persistence.conflictData.deck.updatedAt).getTime()}
+        serverUpdatedAt={new Date(persistence.conflictData.serverData.updatedAt).getTime()}
+        localSummary={persistence.conflictData.localSummary}
+        serverSummary={persistence.conflictData.serverSummary}
+        onKeepMine={persistence.handleConflictKeepLocal}
+        onAcceptServer={persistence.handleConflictAcceptServer}
+        onSaveAsNew={persistence.handleConflictSaveAsNew}
+      />
+    );
+  }
+
+  // ---- Active deck → Editor view ----
   if (activeDeck) {
     return (
-      <div className="flex flex-col h-full w-full">
-        {/* Header Bar */}
-        <div className="relative z-50 flex items-center gap-3 px-4 py-1.5 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCloseDeck}
-            leftIcon={<ArrowLeft className="h-4 w-4" />}
-          >
-            Back
-          </Button>
-          <div className="flex-1 min-w-0 flex items-center pr-4">
-            <input
-              type="text"
-              value={activeDeck.name}
-              onChange={(e) => handleRenameDeck(activeDeck.id, e.target.value)}
-              className="bg-transparent text-lg font-semibold text-[hsl(var(--foreground))] focus:outline-none w-full truncate"
-              placeholder="Deck name..."
-            />
-          </div>
-
-          {/* ---- Block Controls (Font Size + Text Color) ---- */}
-          {/* onMouseDown preventDefault keeps focus in TipTap editor when clicking these controls */}
-          <div
-            className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[hsl(var(--card-bg))]/50 px-3 py-1 rounded-md transition-opacity duration-200 z-[100] ${isBlockSelected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            {/* Font Size */}
-            <div className="flex items-center gap-0.5">
-              <Type className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))] mr-1" />
-              <Button
-                variant="ghost"
-                className="h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                onClick={() => handleFontSizeChange(-1)}
-                title="Decrease font size (Ctrl −)"
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <span className="text-xs font-mono text-[hsl(var(--foreground))] w-6 text-center tabular-nums">
-                {selectedBlock?.fontSize || 14}
-              </span>
-              <Button
-                variant="ghost"
-                className="h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                onClick={() => handleFontSizeChange(1)}
-                title="Increase font size (Ctrl +)"
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-              <span className="text-[9px] text-[hsl(var(--muted-foreground))]/50 ml-0.5 hidden sm:inline">Ctrl ±</span>
-            </div>
-
-            {/* Background Color Picker */}
-            <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-[hsl(var(--divider))] relative">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]",
-                  showColorPalette && "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
-                )}
-                onClick={() => setShowColorPalette(!showColorPalette)}
-                title="Change Background Color"
-              >
-                <PaintBucket className="h-3.5 w-3.5" />
-              </Button>
-              
-              {showColorPalette && (
-                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-[hsl(var(--popover))] backdrop-blur-md rounded-full border border-[hsl(var(--border))] shadow-md animate-in fade-in zoom-in-95 z-[999] pointer-events-auto">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c.name}
-                      className={cn(
-                        "w-4 h-4 rounded-full border border-transparent transition-all hover:scale-110 z-999",
-                        "focus:outline-none focus:ring-1 focus:ring-[hsl(var(--foreground))]",
-                        c.name === 'Default' ? 'bg-[hsl(var(--muted-foreground))]/20' : '',
-                        c.name === 'Blue' ? 'bg-blue-400' : '',
-                        c.name === 'Green' ? 'bg-green-400' : '',
-                        c.name === 'Amber' ? 'bg-amber-400' : '',
-                        c.name === 'Red' ? 'bg-red-400' : '',
-                        c.name === 'Violet' ? 'bg-violet-400' : '',
-                        selectedBlock?.color === c.value && "ring-2 ring-[hsl(var(--foreground))] ring-offset-1 ring-offset-[hsl(var(--popover))]"
-                      )}
-                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUpdateColor(c.value);
-                      }}
-                      title={c.name}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* Save Status + Button */}
-          <div className="flex-1 flex items-center justify-end gap-2">
-            {isLocalSaving && saveStatus !== 'saving' && (
-              <span   
-                className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" 
-                title="Saving to local storage"
-              />
-            )}
-            
-            {saveStatus === 'saving' && (
-              <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Saving...
-              </span>
-            )}
-            {saveStatus === 'saved' && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-500">
-                <Check className="h-3.5 w-3.5" />
-                Saved
-              </span>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSave}
-              disabled={saving}
-              leftIcon={<Save className="h-4 w-4" />}
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-            >
-              Save
-            </Button>
-          </div>
-        </div>
-
-        {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
-          <SlideCanvas
-            ref={canvasRef}
-            initialContent={activeDeck.content}
-            onChange={handleCanvasChange}
-            onSelectionChange={handleSelectionChange}
-          />
-        </div>
-      </div>
+      <SlideEditor
+        deck={activeDeck}
+        saving={persistence.saving}
+        isLocalSaving={persistence.isLocalSaving}
+        saveStatus={persistence.saveStatus}
+        showRevertModal={persistence.showRevertModal}
+        onSetShowRevertModal={persistence.setShowRevertModal}
+        onCanvasChange={persistence.handleCanvasChange}
+        onSave={persistence.handleSave}
+        onClose={persistence.handleCloseDeck}
+        onRevert={persistence.handleRevert}
+        onRenameDeck={handleRenameDeck}
+      />
     );
   }
 
@@ -566,36 +242,42 @@ export function SlidesView() {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className="group relative bg-[hsl(var(--card-bg))] border border-[hsl(var(--border))] rounded-xl p-5 cursor-pointer hover:border-orange-500/40 hover:shadow-lg transition-all duration-200"
                   onClick={async () => {
-                    // Use local deck data first (has autosaved content)
-                    // Only fetch from server if local content is empty
-                    if (deck.content && deck.content.length > 10) {
-                      console.log('[SlidesView] Opening deck from LOCAL state | content length:', deck.content.length);
-                      setActiveDeck(deck);
-                      latestContentRef.current = deck.content;
-                      latestNameRef.current = deck.name;
-                    } else {
-                      // Local content empty — try fetching from server
-                      const serverId = deck.serverId || deck.id;
-                      try {
-                        const fullDeck = await slideApi.fetchDeck(serverId);
-                        if (fullDeck && fullDeck.content) {
-                          console.log('[SlidesView] Opening deck from SERVER | content length:', fullDeck.content.length);
-                          const localDeck = serverToLocal(fullDeck);
-                          setActiveDeck(localDeck);
-                          latestContentRef.current = localDeck.content;
-                          latestNameRef.current = localDeck.name;
-                        } else {
-                          console.log('[SlidesView] Opening deck | no server content, using local');
-                          setActiveDeck(deck);
-                          latestContentRef.current = deck.content;
-                          latestNameRef.current = deck.name;
-                        }
-                      } catch {
-                        // Fallback to local
+                    const serverId = deck.serverId || deck.id;
+                    const localContent = deck.content;
+                    const localTime = new Date(deck.updatedAt).getTime();
+                    const isLocalDirty = deck.syncStatus === 'pending';
+
+                    let serverData: ServerSlideDeck | null = null;
+                    try { serverData = await slideApi.fetchDeck(serverId); } catch {}
+
+                    if (serverData && serverData.content) {
+                      const serverTime = new Date(serverData.updatedAt).getTime();
+                      if (serverTime > localTime && isLocalDirty) {
+                        persistence.setConflictData({
+                          deck,
+                          serverData,
+                          localSummary: getContentSummary(localContent || '', deck.name),
+                          serverSummary: getContentSummary(serverData.content, serverData.name),
+                        });
+                        persistence.setShowConflict(true);
+                        return;
+                      } else if (!localContent || localContent.length < 10 || (serverTime >= localTime && !isLocalDirty)) {
+                        const merged = serverToLocal(serverData);
+                        const finalDeck = { ...deck, ...merged };
+                        setActiveDeck(finalDeck);
+                        persistence.latestContentRef.current = merged.content;
+                        persistence.latestNameRef.current = merged.name;
+                        await persistToIDB(finalDeck).catch(() => {});
+                        setDecks(prev => prev.map(d => d.id === deck.id ? finalDeck : d));
+                      } else {
                         setActiveDeck(deck);
-                        latestContentRef.current = deck.content;
-                        latestNameRef.current = deck.name;
+                        persistence.latestContentRef.current = localContent;
+                        persistence.latestNameRef.current = deck.name;
                       }
+                    } else {
+                      setActiveDeck(deck);
+                      persistence.latestContentRef.current = localContent;
+                      persistence.latestNameRef.current = deck.name;
                     }
                     setSlideFullscreen(true);
                   }}
@@ -604,7 +286,6 @@ export function SlidesView() {
                   <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-4">
                     <Presentation className="h-5 w-5 text-orange-500" />
                   </div>
-
                   {/* Deck Info */}
                   <h3 className="font-semibold text-[hsl(var(--foreground))] mb-1 truncate">
                     {deck.name || 'Untitled Deck'}
@@ -612,19 +293,17 @@ export function SlidesView() {
                   <p className="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {new Date(deck.updatedAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
+                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                     })}
+                    {deck.syncStatus === 'pending' && (
+                      <span className="pl-1" title="Changes not synced to cloud">
+                        <CloudOff className="w-3 h-3 text-blue-400" />
+                      </span>
+                    )}
                   </p>
-
                   {/* Delete Button */}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteDeck(deck.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); deleteDeck(deck.id); }}
                     className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-all"
                   >
                     <Trash2 className="h-4 w-4" />
