@@ -98,7 +98,7 @@ function SmartBlockComponent({
           : isSelected && isMinimalText
             ? "ring-1 ring-[hsl(var(--brand-primary))]/40 rounded-md"
             : isConnected 
-              ? "border-[hsl(var(--border-light))]" 
+              ? "border-[hsl(var(--border-light))] bg-[#303030]/50" 
               : "border-white/50",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
         !isMinimalText && bgColor

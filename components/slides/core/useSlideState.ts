@@ -15,7 +15,7 @@ function createSlide(order: number): SlideData {
 }
 
 /** Parse raw JSON into SlideCanvasData */
-function parseContent(raw: string | undefined): SlideCanvasData {
+export function parseContent(raw: string | undefined): SlideCanvasData {
   if (!raw) return { slides: [createSlide(0)], blocks: [] };
 
   try {

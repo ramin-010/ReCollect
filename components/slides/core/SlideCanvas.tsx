@@ -24,7 +24,7 @@ export interface SlideCanvasHandle {
 // ---------------------------------------------------------------------------
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
-  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation },
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId },
   ref
 ) {
   const {
@@ -434,6 +434,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
           getBlocksForSlide={getBlocksForSlide}
           getConnectionsForSlide={getConnectionsForSlide}
           onClose={onClosePresentation}
+          deckId={deckId || ''}
         />
       )}
     </div>

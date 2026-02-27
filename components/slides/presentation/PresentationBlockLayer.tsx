@@ -35,7 +35,7 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
             id={block.blockId}
             className={`absolute flex flex-col group transition-all duration-200 ${
               hasConnections 
-                ? 'rounded-md border border-[hsl(var(--border-light))] shadow-sm' 
+                ? 'rounded-md border border-[hsl(var(--border-light))] shadow-sm backdrop-blur-sm bg-[#303030]/50' 
                 : 'rounded-none border-transparent bg-transparent shadow-none'
             }`}
              style={{
@@ -49,8 +49,7 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
             {/* Background color chip (for blocks that have an explicitly chosen color tint) */}
             {block.color && (
               <div
-                className="absolute inset-0 rounded-md border border-white/50 pointer-events-none"
-                style={{ backgroundColor: block.color }}
+                className={`absolute inset-0 rounded-md border pointer-events-none ${block.color}`}
               />
             )}
 
@@ -60,6 +59,7 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
               style={{
                 fontSize: isText ? `${fontSize}px` : undefined,
                 color: block.textColor || undefined,
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
               }}
             >
               <BlockContent

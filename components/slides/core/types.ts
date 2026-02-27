@@ -55,6 +55,7 @@ export interface SlideCanvasProps {
   onSelectionChange?: (block: SelectedBlockInfo | null) => void;
   isPresenting?: boolean;
   onClosePresentation?: () => void;
+  deckId?: string;
 }
 
 // Constants

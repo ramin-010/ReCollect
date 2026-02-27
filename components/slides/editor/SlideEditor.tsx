@@ -314,6 +314,7 @@ export function SlideEditor({
           onSelectionChange={handleSelectionChange}
           isPresenting={isPresenting}
           onClosePresentation={() => setIsPresenting(false)}
+          deckId={deck.serverId || deck.id}
         />
       </div>
     </div>
