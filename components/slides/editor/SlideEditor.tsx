@@ -51,7 +51,7 @@ const COLORS = [
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function SlideEditor({
+export function SlideEditor({ 
   deck,
   saving,
   isLocalSaving,
@@ -245,18 +245,18 @@ export function SlideEditor({
             {/* Cloud Sync Status Icons */}
             <div className="flex items-center shrink-0 ml-2">
               {deck.syncStatus === 'pending' ? (
-                <div className="flex items-center gap-1.5" title="Changes not synced to cloud">
+                <div className="flex items-center gap-2.5" title="Changes not synced to cloud">
                   <span title="Changes not synced to cloud">
-                    <CloudOff className="w-3.5 h-3.5 text-amber-500/80" />
+                    <CloudOff className="w-4 h-3.5 text-blue-500/70" />
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onSetShowRevertModal(true)}
-                    className="h-6 w-6 p-0 text-[hsl(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                    className="h-6 w-6 p-0 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
                     title="Discard local changes"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               ) : (

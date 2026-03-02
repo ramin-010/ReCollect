@@ -2,6 +2,8 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { SlideData, SlideBlockData } from './types';
+import { ChevronLeft, LayoutTemplate } from 'lucide-react';
+import Link from 'next/link';
 
 interface SlideNavPanelProps {
   slides: SlideData[];
@@ -9,6 +11,7 @@ interface SlideNavPanelProps {
   activeSlideId: string | null;
   onSlideClick: (slideId: string) => void;
 }
+import {Logo} from '@/components/brand/Logo'
 
 function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }: SlideNavPanelProps) {
   const sortedSlides = useMemo(() => [...slides].sort((a, b) => a.order - b.order), [slides]);
@@ -33,20 +36,36 @@ function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }:
   }, [onSlideClick]);
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col justify-center w-[140px] min-w-[140px] bg-[hsl(var(--card-bg))]/60 backdrop-blur-md border-r border-[hsl(var(--border))]/50 py-3 px-2 shrink-0 z-20">
-      <div className="flex flex-col gap-2 overflow-y-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-[hsl(var(--muted))]/30 pr-1">
-        {sortedSlides.map((slide, index) => {
-          const isActive = slide.slideId === activeSlideId;
-          const slideBlocks = blocksBySlide.get(slide.slideId) || [];
-          const hasContent = slideBlocks.length > 0 || !!slide.title;
-          const isPhantom = index === sortedSlides.length - 1 && !hasContent;
+    <div className="sticky top-0 h-screen flex flex-col w-[140px] min-w-[140px] bg-[hsl(var(--card-bg))]/60 backdrop-blur-md border-r border-[hsl(var(--border))]/50 shrink-0 z-20">
+      
+      {/* Brand Header & Back Button */}
+      <div className="px-3 h-12 border-b border-[hsl(var(--border))]/30 flex items-center justify-between shrink-0">
+        {/* Back Link */}
+       
+       
+        <div className="flex items-center gap-1.5 opacity-80 cursor-default">
+          <div className="w-4 h-4  flex items-center justify-center ">
+            <Logo size='md' showText={false} />
+          </div>
+          <span className="text-[13px] ml-1.5 font-medium tracking-wide uppercase text-[hsl(var(--foreground))] font-sans antialiased">SLIDES</span>
+        </div>
+      </div>
 
-          return (
-            <button
-              key={slide.slideId}
-              onClick={() => handleClick(slide.slideId)}
+      {/* Slide Thumbnails Scroll Area */}
+      <div className="flex-1 overflow-y-auto flex flex-col p-2 pt-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="m-auto flex flex-col gap-2 w-full max-h-full">
+          {sortedSlides.map((slide, index) => {
+            const isActive = slide.slideId === activeSlideId;
+            const slideBlocks = blocksBySlide.get(slide.slideId) || [];
+            const hasContent = slideBlocks.length > 0 || !!slide.title;
+            const isPhantom = index === sortedSlides.length - 1 && !hasContent;
+
+            return (
+              <button
+                key={slide.slideId}
+                onClick={() => handleClick(slide.slideId)}
               className={`
-                group relative w-full rounded-lg border transition-all duration-200 text-left overflow-hidden
+                group relative w-full shrink-0 rounded-lg border transition-all duration-200 text-left overflow-hidden 
                 ${isActive
                   ? 'border-[hsl(var(--brand-primary))] ring-2 ring-[hsl(var(--brand-primary))]/20 bg-[hsl(var(--brand-primary))]/5'
                   : 'border-[hsl(var(--border))]/40 hover:border-[hsl(var(--muted-foreground))]/40 bg-[hsl(var(--card-bg))]/80 hover:bg-[hsl(var(--card-bg))]'
@@ -99,6 +118,7 @@ function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }:
             </button>
           );
         })}
+        </div>
       </div>
     </div>
   );

@@ -171,7 +171,7 @@ export function PresentationView({
           </div>
 
           {/* Right Section */}
-          <div className="flex-1 flex items-center justify-end gap-2">
+          {/* <div className="flex-1 flex items-center justify-end gap-2">
             <button
               onClick={handleExport}
               disabled={isExporting}
@@ -187,7 +187,7 @@ export function PresentationView({
               <X className="w-4 h-4" />
               <span className="text-xs font-semibold tracking-wide">Exit</span>
             </button>
-          </div>
+          </div> */}
         </div>
       )}
 
