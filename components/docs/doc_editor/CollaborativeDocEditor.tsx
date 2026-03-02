@@ -722,7 +722,7 @@ function CollaborativeEditorContent({
           onSelect={handleCoverSelect}
         />
 
-        <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
+        <div className={`max-w-6xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
           <div className="mb-0 ">
             <input
               type="text"
@@ -730,10 +730,10 @@ function CollaborativeEditorContent({
               onChange={handleTitleChange}
               placeholder="New Page"
               readOnly={readOnly}
-              className={`w-full pl-8 text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
+              className={`w-full  text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
               style={{ fontFamily: '"Noto Sans", "Roboto", sans-serif' }}
             />
-            <div className="w-16 ml-8 h-1 bg-amber-500 rounded-full" />
+            <div className="w-16  h-1 bg-amber-500 rounded-full" />
           </div>
 
           <div className="notion-editor relative">

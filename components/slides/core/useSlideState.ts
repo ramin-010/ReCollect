@@ -128,8 +128,9 @@ export function useSlideState(
         })
       );
 
-      console.log('[useSlideState] INIT | slides:', data.slides.length, '| blocks:', hydratedBlocks.length,
-        '| images hydrated:', hydratedBlocks.filter(b => b.type === 'image' && b.url).length);
+      // Set skip BEFORE the state update — the initial true was already consumed
+      // by the empty-state first render (slides=[], blocks=[])
+      skipNextOnChangeRef.current = true;
 
       setSlides(data.slides);
       setBlocks(hydratedBlocks);
