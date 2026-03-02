@@ -57,6 +57,7 @@ export interface SlideCanvasProps {
   onClosePresentation?: () => void;
   deckId?: string;
   isTasksPanelOpen?: boolean;
+  onFirstSlideTitleChange?: (newTitle: string) => void;
 }
 
 // Constants

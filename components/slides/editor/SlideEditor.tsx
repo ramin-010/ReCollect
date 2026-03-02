@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { ChevronLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw, CheckSquare, ListTodo, ChevronDown, Maximize, Minimize } from 'lucide-react';
+import { ChevronLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw, CheckSquare, ListTodo, ChevronDown, Maximize, Minimize,Share2 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui-base/Popover';
 import { cn } from '@/lib/utils';
+import axiosInstance from '@/lib/utils/axios';
 import { SlideCanvas, SlideCanvasHandle } from '../core/SlideCanvas';
 import { SelectedBlockInfo } from '../core/types';
 import { SlideDeck } from './useSlidePersistence';
@@ -15,6 +16,7 @@ import { Play, Radio, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { SharedTasksPanel, useSharedTasksRefetch } from '@/components/shared/SharedTasksPanel';
 import { TaskInput } from '@/components/todo/task_Input';
+import { SlideSharePopover } from './SlideSharePopover';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -38,6 +40,7 @@ interface SlideEditorProps {
 // ---------------------------------------------------------------------------
 const COLORS = [
   { name: 'Default', value: '' },
+  {name : 'Blue-01', value : '#1a2735'},
   { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
   { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
   { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
@@ -70,6 +73,10 @@ export function SlideEditor({
   const [isTaskInputExpanded, setIsTaskInputExpanded] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { refreshKey: taskRefreshKey, refresh: setTaskRefreshKey } = useSharedTasksRefetch();
+  
+  // Track continuous title sync from the first slide
+  const syncedTitleRef = useRef<string | null>(null);
+  
   // const [isLiveOpen, setIsLiveOpen] = useState(false);
 
   // Track the last content we hydrated the canvas with, so we can detect
@@ -314,6 +321,7 @@ export function SlideEditor({
                       "w-4 h-4 rounded-full border border-transparent transition-all hover:scale-110 z-999",
                       "focus:outline-none focus:ring-1 focus:ring-[hsl(var(--foreground))]",
                       c.name === 'Default' ? 'bg-[hsl(var(--muted-foreground))]/20' : '',
+                      c.name === 'Blue-01' ? '#1a2735' : '',
                       c.name === 'Blue' ? 'bg-blue-400' : '',
                       c.name === 'Green' ? 'bg-green-400' : '',
                       c.name === 'Amber' ? 'bg-amber-400' : '',
@@ -415,6 +423,8 @@ export function SlideEditor({
              
             </Button>
 
+            <SlideSharePopover deck={deck} />
+
             <Button
               variant="ghost"
               size="sm"
@@ -460,6 +470,16 @@ export function SlideEditor({
           onClosePresentation={() => setIsPresenting(false)}
           deckId={deck.serverId || deck.id}
           isTasksPanelOpen={isTasksPanelOpen}
+          onFirstSlideTitleChange={(newTitle) => {
+            const currentName = deck.name?.trim();
+            const newTitleTrimmed = newTitle.trim();
+            
+            // Allow sync if deck has no name, is "Untitled Deck", OR we are already actively syncing it
+            if (newTitleTrimmed && (!currentName || currentName === 'Untitled Deck' || currentName === syncedTitleRef.current)) {
+              syncedTitleRef.current = newTitleTrimmed;
+              onRenameDeck(deck.id, newTitleTrimmed);
+            }
+          }}
         />
         
         {/* LiveKit Floating Video Room Container */}

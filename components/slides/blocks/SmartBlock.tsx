@@ -94,11 +94,11 @@ function SmartBlockComponent({
           ? "rounded-none border-transparent bg-transparent shadow-none"
           : "rounded-md border backdrop-blur-sm " + (isEditing ? "shadow-md" : "shadow-none"),
         isSelected && !isMinimalText
-          ? "border-[hsl(var(--brand-primary))] ring-1 ring-[hsl(var(--brand-primary))]/20"
+          ? "border-[hsl(var(--brand-primary))]/50 ring-1 ring-[#1a2735]/20"
           : isSelected && isMinimalText
             ? "ring-1 ring-[hsl(var(--brand-primary))]/40 rounded-md"
             : isConnected 
-              ? "border-[hsl(var(--border-light))] bg-[#303030]/50" 
+              ? "border-[hsl(var(--border-light))]/50 bg-[#303030]/50" 
               : "border-white/50",
         !isEditing && "smart-block-drag-handle cursor-grab active:cursor-grabbing",
         !isMinimalText && bgColor

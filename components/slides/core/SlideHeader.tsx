@@ -36,7 +36,7 @@ export function SlideHeader({
       <div ref={headerRef} className="w-full flex flex-col shrink-0 z-10 relative">
         {/* Slide Cover Image */}
         {coverImage ? (
-          <div className="w-full h-48 relative group">
+          <div className="w-full h-48  relative group">
             <img 
               src={coverImage} 
               alt="Slide cover" 
@@ -69,7 +69,7 @@ export function SlideHeader({
         {/* Slide Title Heading */}
         {showTitle !== false && (
           <div
-            className={`relative z-10 w-full px-10 pb-2 ${coverImage ? 'mt-0' : 'mt-6'}`}
+            className={`relative z-10 w-full px-10 pb-5 ${coverImage ? 'my-0' : 'mt-6'}`}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >

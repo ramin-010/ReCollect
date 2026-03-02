@@ -25,7 +25,7 @@ export interface SlideCanvasHandle {
 // ---------------------------------------------------------------------------
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
-  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId, isTasksPanelOpen },
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId, isTasksPanelOpen, onFirstSlideTitleChange },
   ref
 ) {
   const {
@@ -51,6 +51,18 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
     updateSlide,
     hydrate,
   } = useSlideState(initialContent, onChange);
+
+  // Watch for first slide title changes
+  const lastFirstSlideTitleRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (slides.length > 0 && onFirstSlideTitleChange) {
+      const firstSlide = slides.find(s => s.order === 0);
+      if (firstSlide && firstSlide.title !== lastFirstSlideTitleRef.current) {
+        lastFirstSlideTitleRef.current = firstSlide.title;
+        onFirstSlideTitleChange(firstSlide.title || '');
+      }
+    }
+  }, [slides, onFirstSlideTitleChange]);
 
   // Report selection changes to parent (for navbar controls)
   // Optimize: only fire when relevant fields change to prevent per-keystroke re-rendering of the entire SlidesView

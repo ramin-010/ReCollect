@@ -102,6 +102,12 @@ export function PresentationView({
   }, [slides, getBlocksForSlide]);
 
   const handleExport = async () => {
+    toast.info('Comming Soon...')
+    return;  //export feature is in progress !
+    if (!deckId) {
+      toast.error('Please save the deck to the cloud first before exporting.');
+      return;
+    }
     try {
       setIsExporting(true);
       toast.info('Generating PDF... This may take a few seconds.');
@@ -144,7 +150,7 @@ export function PresentationView({
       {/* Top navbar — visible on hover unless in printMode */}
       {!printMode && (
         <div className="absolute top-0 left-0 right-0 pt-0 pb-4 z-[1010] opacity-0 hover:opacity-100 transition-opacity duration-300">
-          <div className="h-13 bg-[hsl(var(--card-bg))]/90 backdrop-blur-md border-b border-[hsl(var(--border))]/50 flex items-center justify-between px-6 shadow-sm">
+          <div className="h-12 bg-[hsl(var(--card-bg))]/90 backdrop-blur-md border-b border-[hsl(var(--border))]/50 flex items-center justify-between px-6 shadow-sm">
             {/* Left: Presentation Info */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[hsl(var(--brand-primary))]/10 flex items-center justify-center">
