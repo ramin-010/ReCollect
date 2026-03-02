@@ -31,6 +31,7 @@ import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
 interface InlineCursorProps {
   x: number;
   y: number;
+  id?: string | null;
   /** Pre-fill with existing content (for editing existing blocks) */
   initialContent?: string;
   /** Called when the user types content and blurs. Receives HTML string and dimensions. */
@@ -60,7 +61,7 @@ interface ToolbarPosition {
   left: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize, onMoveCursor }: InlineCursorProps) {
+export function InlineCursor({ x, y, id, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize, onMoveCursor }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isToolbarClickRef = useRef(false);
 
@@ -126,9 +127,23 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     editorProps: {
       attributes: {
         class: 'outline-none max-w-none',
-        style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0;`,
+        style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0; padding-left: 4px; padding-right: 4px; padding-top: 2px; padding-bottom: 2px; line-height: 1.7;`,
       },
       handleKeyDown: (view, event) => {
+        // Pre-emptive auto-expand: if caret is near right edge, grow BEFORE char is inserted
+        if (wrapperRef.current && event.key.length === 1) {
+          try {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const caretRect = sel.getRangeAt(0).getBoundingClientRect();
+              const wrapperRect = wrapperRef.current.getBoundingClientRect();
+              if (wrapperRect.right - caretRect.right < 15) {
+                wrapperRef.current.style.width = `${wrapperRef.current.offsetWidth + 20}px`;
+              }
+            }
+          } catch (_) {}
+        }
+
         if (!onMoveCursor) return false;
         
         // Only handle navigation if the editor is completely empty
@@ -250,10 +265,12 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
   return (
     <div
       ref={wrapperRef}
+      id={id || undefined}
       className="absolute"
       style={{
         left: x,
         top: y,
+        width: initialMinWidth ? `${initialMinWidth}px` : 'max-content',
         minWidth: initialMinWidth ? `${initialMinWidth}px` : '2px',
         maxWidth: maxWidth ? `${maxWidth}px` : '80%',
         background: 'transparent',

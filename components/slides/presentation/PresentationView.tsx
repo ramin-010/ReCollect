@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { SlideData, SlideBlockData, SLIDE_GAP } from '../core/types';
 import { Connection } from '@/types/canvas';
-import { X, Download, Loader2 } from 'lucide-react';
+import { X, Download, Loader2, ChevronLeft } from 'lucide-react';
 import { PresentationSlide } from './PresentationSlide';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
@@ -147,40 +147,46 @@ export function PresentationView({
 
   return (
     <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))] flex flex-col overflow-hidden">
-      {/* Top navbar — visible on hover unless in printMode */}
+      {/* Header Bar - Sleek Simple Style matching SlideEditor */}
       {!printMode && (
-        <div className="absolute top-0 left-0 right-0 pt-0 pb-4 z-[1010] opacity-0 hover:opacity-100 transition-opacity duration-300">
-          <div className="h-12 bg-[hsl(var(--card-bg))]/90 backdrop-blur-md border-b border-[hsl(var(--border))]/50 flex items-center justify-between px-6 shadow-sm">
-            {/* Left: Presentation Info */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[hsl(var(--brand-primary))]/10 flex items-center justify-center">
-                <span className="text-[hsl(var(--brand-primary))] font-semibold text-xs">RM</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-[hsl(var(--foreground))] leading-tight">Presentation Mode</span>
-                <span className="text-[10px] text-[hsl(var(--muted-foreground))] leading-none mt-0.5">{slides.length} slides</span>
-              </div>
+        <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--sidebar-bg))] backdrop-blur-sm pointer-events-auto transition-opacity duration-300 opacity-0 hover:opacity-100">
+          {/* Left Section */}
+          <div className="flex items-center gap-3 w-1/3">
+            <button
+              onClick={onClose}
+              className="group flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/5 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200"
+            >
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              <span className="text-xs font-semibold tracking-wide">Back</span>
+            </button>
+            <div className="w-[1px] h-4 bg-[hsl(var(--divider))]" />
+            <div className="flex items-center gap-2 max-w-[250px] group px-2">
+              <span className="text-md font-medium text-[hsl(var(--foreground))] truncate cursor-default">
+                Presentation Mode
+              </span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))] leading-none">
+                ({slides.length} slides)
+              </span>
             </div>
+          </div>
 
-            {/* Right: Actions */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-md bg-[hsl(var(--brand-primary))]/90 hover:bg-[hsl(var(--brand-primary))] text-white transition-colors border border-transparent disabled:opacity-50"
-              >
-                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                <span className="text-sm font-medium">{isExporting ? 'Exporting...' : 'Export PDF'}</span>
-              </button>
-              <div className="w-px h-6 bg-[hsl(var(--border))]/50 mx-1"></div>
-              <button
-                onClick={onClose}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-md bg-[hsl(var(--muted))]/50 hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] transition-colors border border-[hsl(var(--border))]/50"
-              >
-                <X className="w-4 h-4" />
-                <span className="text-sm font-medium">Exit</span>
-              </button>
-            </div>
+          {/* Right Section */}
+          <div className="flex-1 flex items-center justify-end gap-2">
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/5 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200 disabled:opacity-50"
+            >
+              {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              <span className="text-xs font-semibold tracking-wide">Export PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/5 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200"
+            >
+              <X className="w-4 h-4" />
+              <span className="text-xs font-semibold tracking-wide">Exit</span>
+            </button>
           </div>
         </div>
       )}

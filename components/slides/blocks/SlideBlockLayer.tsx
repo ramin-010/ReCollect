@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback, useMemo, useRef} from 'react';
+import React, { memo, useCallback, useMemo, useRef, useEffect} from 'react';
 import { Rnd } from 'react-rnd';
 import { SmartBlock } from '@/components/slides/blocks/SmartBlock';
 import { DragController } from '@/components/slides/rendering/DragController';
@@ -97,6 +97,17 @@ const BlockWrapperComponent = ({
     isResizingRef.current = true;
   }, []);
 
+  // Safety net: catch mouseup anywhere on the window to fix resize sticking
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
     isResizingRef.current = false;
     const newWidth = ref.offsetWidth;
@@ -138,6 +149,11 @@ const BlockWrapperComponent = ({
       onResizeStop={handleResizeStop}
       className="z-100"
       style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto', willChange: 'transform' }}
+      resizeHandleStyles={{
+        right: { zIndex: 5 },
+        bottom: { zIndex: 5 },
+        bottomRight: { zIndex: 5 },
+      }}
     >
       <SmartBlock
         id={block.blockId}

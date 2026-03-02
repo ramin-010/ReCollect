@@ -245,10 +245,10 @@ export function useSlideState(
 
   const addBlock = useCallback((slideId: string, type: SlideBlockData['type'], x?: number, y?: number) => {
     const defaults: Record<string, Partial<SlideBlockData>> = {
-      text: { width: 300, height: 'auto', content: '' },
+      text: { width: 450, height: 'auto', content: '' },
       code: { width: 450, height: 300, content: '// Start typing your code...\n' },
       image: { width: 300, height: 'auto', content: '' },
-      embed: { width: 300, height: 160, content: '' },
+      embed: { width: 400, height: 160, content: '' },
     };
     const d = defaults[type] || defaults.text;
 

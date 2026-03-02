@@ -234,14 +234,14 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
             <defs>
                  <marker 
                      id="arrowhead" 
-                     markerWidth="16" 
-                     markerHeight="16" 
-                     refX="16" 
+                     markerWidth="14" 
+                     markerHeight="14" 
+                     refX="14" 
                      refY="7" 
                      orient="auto"
                      markerUnits="userSpaceOnUse"
                  >
-                     <polygon points="0 0, 19 7, 0 14" fill="context-stroke" />
+                     <polygon points="0 0, 16 7, 0 14" fill="context-stroke" />
                  </marker>
              </defs>
             {connections.filter(conn => !conn.hidden).map(conn => {
@@ -255,7 +255,7 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
                         <path 
                             id={`conn-path-${conn.id}`}                             d={path} 
                             stroke={conn.color || (isSelected ? "hsl(var(--brand-primary))" : "hsl(var(--muted-foreground))")} 
-                            strokeWidth={isSelected ? 3 : 2}
+                            strokeWidth={isSelected ? 2 : 1.5}
                             fill="none"
                             className="transition-colors duration-200 cursor-pointer hover:stroke-[hsl(var(--foreground))]"
                             markerEnd="url(#arrowhead)"

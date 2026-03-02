@@ -236,6 +236,7 @@ export function SingleSlide({
             key={h.cursorKeyRef.current} 
             x={h.cursorPos.x}
             y={h.cursorPos.y}
+            id={h.editingBlockId}
             initialContent={h.editingBlockContent}
             color={h.editingBlockData?.color}
             textColor={h.editingBlockData?.textColor}

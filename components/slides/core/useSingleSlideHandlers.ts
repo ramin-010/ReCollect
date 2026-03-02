@@ -175,15 +175,21 @@ export function useSingleSlideHandlers({
   const blockDims: BlockDims[] = useMemo(() => {
     return blocks.map(b => {
       let h: number;
-      if (typeof b.height === 'number') {
+      let w: number = b.width;
+      
+      if (b.blockId === editingBlockId && editingDims) {
+        // Use live dimensions from the InlineCursor while actively editing
+        h = editingDims.height;
+        w = editingDims.width;
+      } else if (typeof b.height === 'number') {
         h = b.height;
       } else {
         const el = document.getElementById(b.blockId);
         h = el ? el.getBoundingClientRect().height / (zoom || 1) : 200;
       }
-      return { id: b.blockId, x: b.x, y: b.y, width: b.width, height: h };
+      return { id: b.blockId, x: b.x, y: b.y, width: w, height: h };
     });
-  }, [blocks, zoom]);
+  }, [blocks, zoom, editingBlockId, editingDims]);
 
   const getCanvasPoint = useCallback(
     (e: { clientX: number; clientY: number }) => {

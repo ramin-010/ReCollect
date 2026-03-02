@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SmartBlockProps } from './smartBlockTypes';
 import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
@@ -57,7 +56,7 @@ function SmartBlockComponent({
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
         
         const now = Date.now();
-        if (now - lastDimUpdate.current > 30) {
+        if (now - lastDimUpdate.current > 100) {
            onDimensionsChange(id, width, height);
            lastDimUpdate.current = now;
         } else {
@@ -65,7 +64,7 @@ function SmartBlockComponent({
            dimUpdateTimeout.current = setTimeout(() => {
              onDimensionsChange(id, width, height);
              lastDimUpdate.current = Date.now();
-           }, 30);
+           }, 100);
         }
       }
     });
@@ -84,12 +83,11 @@ function SmartBlockComponent({
   const isMinimalText = type === 'text' && !isEditing && !isConnected && !color;
 
   return (
-    <motion.div
+    <div
       ref={blockRef}
-      id={`smart-block-${id}`}       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      id={`smart-block-${id}`}
       className={cn(
-        "relative transition-all duration-200 group flex flex-col",
+        "relative group flex flex-col animate-in fade-in zoom-in-95 duration-200",
         isMinimalText
           ? "rounded-none border-transparent bg-transparent shadow-none"
           : "rounded-md border backdrop-blur-sm " + (isEditing ? "shadow-md" : "shadow-none"),
@@ -159,7 +157,7 @@ function SmartBlockComponent({
           <TaskProgressBar taskStats={type === 'text' ? taskStats : null} />
         </>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
