@@ -44,7 +44,7 @@ const primaryNav: NavItem[] = [
   { id: 'docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
   { 
     id: 'todo', 
-    label: 'To-Do List', 
+    label: 'Tasks', 
     icon: <CheckSquare className="h-[18px] w-[18px]" />,
     subItems: [
       { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },

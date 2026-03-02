@@ -97,7 +97,7 @@ export function SingleSlide({
     <div
       className={`relative group transition-all duration-200 rounded-lg ${
         isActive
-          ? 'ring-1 ring-blue-500/40 '
+          ? 'ring-1 ring-[hsl(var(--foreground))]/30 '
           : ''
       }`}
       style={{ width: SLIDE_WIDTH }}

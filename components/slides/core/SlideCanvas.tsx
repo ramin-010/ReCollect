@@ -151,9 +151,17 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-      // Don't intercept paste inside editable elements
       const target = e.target as HTMLElement;
-      if (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // Don't intercept paste inside native INPUT/TEXTAREA (e.g. slide title, search bars)
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // Check if the inline cursor editor (TipTap) is currently active anywhere on the canvas
+      // We check the document body because the paste target might misreport if focus was slightly lost
+      const isInsideEditor =
+        target.isContentEditable ||
+        target.closest('[contenteditable="true"]') !== null ||
+        document.querySelector('.inline-cursor-editor') !== null;
 
       const slideId = activeSlideIdRef.current;
       if (!slideId) return;
@@ -169,12 +177,10 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         clientX < rect.left || clientX > rect.right ||
         clientY < rect.top || clientY > rect.bottom
       ) {
-        console.log('[SlideCanvas] Paste ignored: cursor outside active slide boundaries');
         return;
       }
       
       // Compute slide-local snapped coordinates (accounting for zoom)
-      // We use the same side paddings (40) as the underlying logic
       const rawX = (clientX - rect.left) / zoom;
       const rawY = (clientY - rect.top) / zoom;
       
@@ -184,35 +190,46 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
       const x = Math.max(SIDE_PADDING, rawX);
       const y = Math.max(VERTICAL_PADDING, rawY);
 
-      // Handle image paste
       const items = e.clipboardData?.items;
-      if (items) {
-        for (const item of Array.from(items)) {
-          if (item.type.startsWith('image/')) {
-            e.preventDefault();
-            const file = item.getAsFile();
-            if (file) {
-              // Routes through addImageBlock → slideImageStorage (correct DB!)
-              await addImageBlock(slideId, file, x, y);
-              console.log('[SlideCanvas] Pasted image via addImageBlock (slideImageStorage) at', x, y);
-            }
-            return;
-          }
-        }
+      if (!items) return;
 
-        // Handle text paste — add as text block  
-        const textItem = Array.from(items).find(item => item.type === 'text/plain');
-        if (textItem) {
+      // --- 1. Handle image paste (always creates image block, even with inline editor open) ---
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
           e.preventDefault();
-          textItem.getAsString((text) => {
-            if (text.trim()) {
-              const blockId = addBlock(slideId, 'text', x, y);
-              if (blockId) {
-                updateBlock(blockId, { content: text });
-              }
-            }
-          });
+          const file = item.getAsFile();
+          if (file) {
+            await addImageBlock(slideId, file, x, y);
+          }
+          return;
         }
+      }
+
+      // --- 2. If inline editor is active, let TipTap handle text/URL paste natively ---
+      if (isInsideEditor) return;
+
+      // --- 3. No inline editor → text creates text block, URL creates embed block ---
+      const textItem = Array.from(items).find(item => item.type === 'text/plain');
+      if (textItem) {
+        e.preventDefault();
+        textItem.getAsString((text) => {
+          const trimmed = text.trim();
+          if (!trimmed) return;
+
+          // Detect if the pasted text is a URL → create embed block
+          const isUrl = /^https?:\/\/\S+$/i.test(trimmed);
+          if (isUrl) {
+            const blockId = addBlock(slideId, 'embed', x, y);
+            if (blockId) {
+              updateBlock(blockId, { content: trimmed });
+            }
+          } else {
+            const blockId = addBlock(slideId, 'text', x, y);
+            if (blockId) {
+              updateBlock(blockId, { content: trimmed });
+            }
+          }
+        });
       }
     };
 
