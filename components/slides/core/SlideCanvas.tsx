@@ -9,6 +9,7 @@ import { SlideNavPanel } from './SlideNavPanel';
 import { PresentationView } from '../presentation';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
+import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 // ---------------------------------------------------------------------------
@@ -24,7 +25,7 @@ export interface SlideCanvasHandle {
 // ---------------------------------------------------------------------------
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
-  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId },
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId, isTasksPanelOpen },
   ref
 ) {
   const {
@@ -93,7 +94,34 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
   }), [selectedBlockId, updateBlock, hydrate]);
 
   const viewportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
+
+  // Auto-fit zoom when container width changes (e.g. sidebar opens)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width;
+        const requiredWidth = SLIDE_WIDTH + 80; // 40px padding on each side
+        
+        setZoom(currentZoom => {
+          const fitZoom = containerWidth / requiredWidth;
+          
+          if (containerWidth < requiredWidth && currentZoom > fitZoom) {
+            // Container is too small, and we are too zoomed in, scale down
+            return Number(fitZoom.toFixed(2));
+          } else if (containerWidth >= requiredWidth && currentZoom < 1 && Math.abs(currentZoom - fitZoom) > 0.1) {
+             // If we were scaled down because of a small container, but now have space
+             return 1;
+          }
+          return currentZoom;
+        });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // ---- Paste support — slide-specific (uses slideImageStorage via addImageBlock) ----
   const activeSlideIdRef = useRef(activeSlideId);
@@ -337,7 +365,12 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         }}
       />
       
-      <div className="flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50 pt-14">
+      <div 
+        ref={containerRef}
+        className={cn(
+        "flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50 pt-14 transition-[margin] duration-300 ease-in-out",
+        isTasksPanelOpen ? "ml-[168px]" : "ml-0"
+      )}>
       <div 
         ref={viewportRef}
         className="flex flex-col items-center py-8 min-h-max transition-transform duration-75 ease-out origin-top"
@@ -362,6 +395,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
               <SingleSlide
                 slideId={slide.slideId}
                 slideOrder={slide.order}
+                
                 blocks={slideBlocks}
                 connections={slideConnections}
                 selectedBlockId={activeSlideId === slide.slideId ? selectedBlockId : null}

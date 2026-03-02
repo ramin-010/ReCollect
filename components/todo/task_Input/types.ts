@@ -1,5 +1,5 @@
 export interface TaskReference {
-  type: 'doc' | 'content';
+  type: 'doc' | 'content' | 'slide';
   refId: string;
   title?: string;
 }

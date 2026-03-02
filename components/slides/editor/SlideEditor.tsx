@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { ChevronLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw, CheckSquare, ListTodo, ChevronDown, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui-base/Popover';
 import { cn } from '@/lib/utils';
 import { SlideCanvas, SlideCanvasHandle } from '../core/SlideCanvas';
 import { SelectedBlockInfo } from '../core/types';
@@ -12,6 +13,8 @@ import { Play, Radio, Copy } from 'lucide-react';
 // import { useDataChannel } from '@livekit/components-react';
 // import axiosInstance from '@/lib/utils/axios';
 import { toast } from 'sonner';
+import { SharedTasksPanel, useSharedTasksRefetch } from '@/components/shared/SharedTasksPanel';
+import { TaskInput } from '@/components/todo/task_Input';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -62,6 +65,11 @@ export function SlideEditor({
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
+  const [isTasksPanelOpen, setIsTasksPanelOpen] = useState(false);
+  const [isTaskInputPopoverOpen, setIsTaskInputPopoverOpen] = useState(false);
+  const [isTaskInputExpanded, setIsTaskInputExpanded] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { refreshKey: taskRefreshKey, refresh: setTaskRefreshKey } = useSharedTasksRefetch();
   // const [isLiveOpen, setIsLiveOpen] = useState(false);
 
   // Track the last content we hydrated the canvas with, so we can detect
@@ -131,6 +139,30 @@ export function SlideEditor({
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [onSave]);
 
+  // Fullscreen effect & handler
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle fullscreen:', err);
+      toast.error('Could not toggle fullscreen mode');
+    }
+  }, []);
+
   // ---------------------------------------------------------------------------
   // LiveKit Presenter Controls (Admissions & Sync)
   // ---------------------------------------------------------------------------
@@ -186,20 +218,20 @@ export function SlideEditor({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="group flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/40 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200"
+            className="group flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/3 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200"
           >
             <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             <span className="text-xs font-semibold tracking-wide">Back</span>
           </Button>
 
-          <div className="w-[1px] h-4 bg-[hsl(var(--divider))]/60" />
+          <div className="w-[1px] h-4 bg-[hsl(var(--divider))]" />
 
           <div className="flex items-center gap-2 max-w-[250px] group">
             <input
               type="text"
               value={deck.name}
               onChange={(e) => onRenameDeck(deck.id, e.target.value)}
-              className="bg-transparent text-md font-medium text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/30 rounded px-2 py-1 w-full truncate transition-all placeholder:text-[hsl(var(--muted-foreground))]/50"
+              className="bg-transparent text-md font-medium text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--border))]/50 hover:bg-[hsl(var(--foreground))]/3 rounded px-2 py-1 w-full truncate transition-all placeholder:text-[hsl(var(--muted-foreground))]/50"
               placeholder="Untitled Deck"
             />
             
@@ -325,6 +357,52 @@ export function SlideEditor({
           )}
           {/* Action Buttons */}
           <div className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
+            
+            {/* Tasks Button with Dropdown Input */}
+            <Popover open={isTaskInputPopoverOpen} onOpenChange={(open) => {
+              setIsTaskInputPopoverOpen(open);
+              if (open) setIsTasksPanelOpen(true); // Open sidebar when popover opens
+            }}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-white/10 transition-colors"
+                  leftIcon={<ListTodo className="h-3.5 w-3.5 text-amber-500" />}
+                  title="Add task linked to this deck"
+                >
+                  Tasks
+                  <ChevronDown className="w-3 h-3 ml-0.5 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                align="end" 
+                className="w-110 p-3"
+              >
+                <TaskInput
+                  isExpanded={isTaskInputExpanded}
+                  onExpandChange={setIsTaskInputExpanded}
+                  isQuickAdd={true}
+                  initialReferences={[{ type: 'slide', refId: deck.serverId || deck.id, title: deck.name }]}
+                  onSave={() => {
+                    setTaskRefreshKey();
+                    setIsTaskInputPopoverOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleFullscreen}
+              leftIcon={isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+              className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors"
+              title={isFullscreen ? "Exit Fullscreen (F11/Esc)" : "Fullscreen (F11)"}
+            >
+              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            </Button>
+
             <Button
               variant="ghost"
               size="sm"
@@ -361,8 +439,8 @@ export function SlideEditor({
               className={cn(
                 "h-8 text-xs font-medium transition-colors",
                 deck.syncStatus === 'pending'
-                  ? "text-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/10"
-                  : "text-[hsl(var(--muted-foreground))] opacity-50 cursor-not-allowed"
+                  ? "text-[hsl(var(--muted-foreground)))] hover:bg-[hsl(var(--brand-primary))]/10"
+                  : "text-[hsl(var(--muted-foreground))]++ opacity-50 cursor-not-allowed"
               )}
             >
               {saving ? 'Saving...' : 'Save'}
@@ -381,6 +459,7 @@ export function SlideEditor({
           isPresenting={isPresenting}
           onClosePresentation={() => setIsPresenting(false)}
           deckId={deck.serverId || deck.id}
+          isTasksPanelOpen={isTasksPanelOpen}
         />
         
         {/* LiveKit Floating Video Room Container */}
@@ -396,6 +475,16 @@ export function SlideEditor({
         )}
         */}
       </div>
+
+      {/* Task Sidebar */}
+      <SharedTasksPanel
+        key={taskRefreshKey}
+        isOpen={isTasksPanelOpen}
+        onClose={() => setIsTasksPanelOpen(false)}
+        refId={deck.serverId || deck.id}
+        refTitle={deck.name}
+        refType="slide"
+      />
     </div>
   );
 }

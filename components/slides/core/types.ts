@@ -56,6 +56,7 @@ export interface SlideCanvasProps {
   isPresenting?: boolean;
   onClosePresentation?: () => void;
   deckId?: string;
+  isTasksPanelOpen?: boolean;
 }
 
 // Constants

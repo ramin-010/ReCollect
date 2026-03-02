@@ -100,8 +100,8 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
 
         {/* Pinned Indicator - Top Left */}
         {deck.isPinned && (
-          <div className="absolute top-3 left-3 z-20">
-              <div className="bg-amber-500/10 backdrop-blur-md border border-amber-500/20 p-1.5 rounded-full shadow-sm">
+          <div className="absolute top-1 left-1 z-20">
+              <div className="">
                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               </div>
           </div>
@@ -157,7 +157,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
         <div className="flex items-start justify-between gap-3 mb-1">
            {!isEditingTitle ? (
              <h3 
-               className="text-[18px] font-bold text-[hsl(var(--foreground))] line-clamp-1 group-hover:text-[hsl(var(--brand-primary))] transition-colors duration-300 tracking-tight leading-tight cursor-text"
+               className="text-[18px] font-bold group-hover:bg-[hsl(var(--foreground))]/5 py-1 px-2 rounded-sm text-[hsl(var(--foreground))] line-clamp-1 transition-colors duration-300 tracking-tight leading-tight cursor-text"
                onClick={(e) => {
                  e.stopPropagation();
                  handleStartEdit(e);
