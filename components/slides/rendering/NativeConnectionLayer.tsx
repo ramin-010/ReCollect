@@ -86,6 +86,43 @@ export const NativeConnectionLayer: React.FC<NativeConnectionLayerProps> = ({
         };
     }, [connections, blocks, zoom, containerRef]);
 
+    // Delayed recalculation after zoom changes — CSS transform animation causes
+    // getBoundingClientRect() to return stale values during the transition.
+    // We schedule multiple recalculations to catch the post-animation state.
+    useEffect(() => {
+        const containerEl = containerRef.current;
+        if (!containerEl || connections.length === 0) return;
+
+        const elToRect = (el: Element, contRect: DOMRect): BlockRect => {
+            const r = el.getBoundingClientRect();
+            return {
+                x: (r.left - contRect.left + containerEl.scrollLeft) / zoom,
+                y: (r.top - contRect.top + containerEl.scrollTop) / zoom,
+                width: r.width / zoom,
+                height: r.height / zoom,
+            };
+        };
+
+        const updatePaths = () => {
+            const contRect = containerEl.getBoundingClientRect();
+            connections.filter(conn => !conn.hidden).forEach(conn => {
+                const fromEl = containerEl.querySelector(`[id="${conn.fromBlock}"]`);
+                const toEl = containerEl.querySelector(`[id="${conn.toBlock}"]`);
+                if (!fromEl || !toEl) return;
+                const newPath = calculatePathFromRects(conn, elToRect(fromEl, contRect), elToRect(toEl, contRect));
+                const pathEl = containerEl.querySelector(`[id="conn-path-${conn.id}"]`);
+                if (pathEl) pathEl.setAttribute('d', newPath);
+            });
+        };
+
+        // Schedule recalculations at multiple intervals to catch animation end
+        const t1 = setTimeout(() => requestAnimationFrame(updatePaths), 50);
+        const t2 = setTimeout(() => requestAnimationFrame(updatePaths), 150);
+        const t3 = setTimeout(() => requestAnimationFrame(updatePaths), 350);
+
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }, [zoom, connections, containerRef]);
+
     useEffect(() => {
         if (!dragController) return;
 
