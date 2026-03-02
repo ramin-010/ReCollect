@@ -472,10 +472,10 @@ export function SlideEditor({
           isTasksPanelOpen={isTasksPanelOpen}
           onFirstSlideTitleChange={(newTitle) => {
             const currentName = deck.name?.trim();
-            const newTitleTrimmed = newTitle.trim();
+            const newTitleTrimmed = newTitle.trim() || 'Untitled Deck';
             
             // Allow sync if deck has no name, is "Untitled Deck", OR we are already actively syncing it
-            if (newTitleTrimmed && (!currentName || currentName === 'Untitled Deck' || currentName === syncedTitleRef.current)) {
+            if (!currentName || currentName === 'Untitled Deck' || currentName === syncedTitleRef.current) {
               syncedTitleRef.current = newTitleTrimmed;
               onRenameDeck(deck.id, newTitleTrimmed);
             }

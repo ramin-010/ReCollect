@@ -202,10 +202,12 @@ export function SlidesView() {
   }, [decks, updateDeck]);
 
   const handleRenameDeck = useCallback((deckId: string, name: string) => {
+    const finalName = name.trim() || 'Untitled Deck';
+    
     // 1. Optimistic Zustand update + update refs if this is the active deck
-    updateDeck(deckId, { name });
+    updateDeck(deckId, { name: finalName });
     if (activeDeck?.id === deckId) {
-      persistence.latestNameRef.current = name;
+      persistence.latestNameRef.current = finalName;
     }
 
     // 2. Debounced API PATCH + IDB sync
@@ -217,15 +219,15 @@ export function SlidesView() {
 
     renameTimeouts.current[deckId] = setTimeout(async () => {
       try {
-        const response = await slideApi.patchDeck(serverId, { name });
+        const response = await slideApi.patchDeck(serverId, { name: finalName });
         if (response.success && response.data) {
           const serverUpdatedAt = new Date(response.data.updatedAt).getTime();
-          updateDeck(deckId, { name, updatedAt: response.data.updatedAt });
+          updateDeck(deckId, { name: finalName, updatedAt: response.data.updatedAt });
           // Manual IDB sync
           const offlineDoc = await slideOfflineStorage.loadDeck(deckId);
           if (offlineDoc) {
             await slideOfflineStorage.saveDeck(
-              deckId, offlineDoc.content, name, 'synced', serverUpdatedAt,
+              deckId, offlineDoc.content, finalName, 'synced', serverUpdatedAt,
               { serverId: offlineDoc.serverId, cloudImages: offlineDoc.cloudImages, isPinned: offlineDoc.isPinned, deckType: offlineDoc.deckType, createdAt: offlineDoc.createdAt, previewContent: offlineDoc.previewContent }
             );
           }
