@@ -7,6 +7,7 @@ import { X, Download, Loader2 } from 'lucide-react';
 import { PresentationSlide } from './PresentationSlide';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
+import { useDataChannel, useRoomContext } from '@livekit/components-react';
 
 interface PresentationViewProps {
   slides: SlideData[];
@@ -15,6 +16,7 @@ interface PresentationViewProps {
   onClose?: () => void;
   deckId: string;
   printMode?: boolean;
+  isOwner?: boolean;
 }
 
 /**
@@ -28,8 +30,70 @@ export function PresentationView({
   onClose,
   deckId,
   printMode,
+  isOwner,
 }: PresentationViewProps) {
   const [isExporting, setIsExporting] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const sortedSlides = useMemo(
+    () => [...slides].sort((a, b) => a.order - b.order),
+    [slides]
+  );
+
+  // ---------------------------------------------------------------------------
+  // LiveKit DataChannel: Slide Synchronization
+  // ---------------------------------------------------------------------------
+  let sendSyncPayload: any = null;
+  
+  try {
+     const room = useRoomContext();
+     const { send } = useDataChannel('slide_sync', (msg) => {
+        if (isOwner) return; // Owners dictate state, they don't listen to viewers
+        try {
+           const decoder = new TextDecoder();
+           const data = JSON.parse(decoder.decode(msg.payload));
+           if (data.type === 'SYNC' && data.slideId) {
+              const el = document.getElementById(`presentation-slide-${data.slideId}`);
+              if (el) {
+                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+           }
+        } catch(e) {}
+     });
+     sendSyncPayload = send;
+  } catch(e) {
+     // Not inside a LiveRoom context (normal presentation mode)
+  }
+
+  // Set up IntersectionObserver so the Presenter can broadcast which slide they are looking at
+  useEffect(() => {
+     if (!isOwner || printMode) return;
+     
+     const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+           if (entry.isIntersecting) {
+              const slideId = entry.target.getAttribute('data-slide-id');
+              if (slideId) {
+                 try {
+                    const encoder = new TextEncoder();
+                    const payload = encoder.encode(JSON.stringify({ type: 'SYNC', slideId }));
+                    if (sendSyncPayload) {
+                       sendSyncPayload(payload, { reliable: true });
+                    }
+                 } catch(e) {}
+              }
+           }
+        });
+     }, {
+       root: containerRef.current,
+       threshold: 0.5 // Slide must be at least 50% visible to count as "active"
+     });
+
+     const slideElements = document.querySelectorAll('.presentation-slide-container');
+     slideElements.forEach(el => observer.observe(el));
+
+     return () => observer.disconnect();
+  }, [isOwner, printMode, sortedSlides]); // Re-bind if slides array changes
+
 
   useEffect(() => {
     // 1) Log when passing data to presentation view
@@ -75,11 +139,6 @@ export function PresentationView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, printMode]);
 
-  const sortedSlides = useMemo(
-    () => [...slides].sort((a, b) => a.order - b.order),
-    [slides]
-  );
-
   return (
     <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))] flex flex-col overflow-hidden">
       {/* Top navbar — visible on hover unless in printMode */}
@@ -122,6 +181,7 @@ export function PresentationView({
 
       {/* Scrollable slide list */}
       <div
+        ref={containerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))]"
         style={{ scrollSnapType: 'y proximity' }}
       >
@@ -133,7 +193,9 @@ export function PresentationView({
             return (
               <div
                 key={slide.slideId}
-                className="w-full shrink-0"
+                id={`presentation-slide-${slide.slideId}`}
+                data-slide-id={slide.slideId}
+                className="w-full shrink-0 presentation-slide-container"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <PresentationSlide

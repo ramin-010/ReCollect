@@ -10,12 +10,15 @@ export interface ServerSlideDeck {
   _id: string;
   name: string;
   content: string;
+  previewContent?: string;
   cloudImages?: Array<{
     imageId: string;
     cloudUrl: string;
     cloudPublicId: string;
   }>;
   role?: string;
+  isPinned?: boolean;
+  deckType?: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -41,6 +44,11 @@ export const slideApi = {
       if (err.response?.status === 404) return null;
       throw err;
     }
+  },
+
+  async patchDeck(id: string, updates: Partial<ServerSlideDeck>): Promise<{ success: boolean; data?: ServerSlideDeck }> {
+    const response = await axiosInstance.patch(`/api/slides/${id}`, updates);
+    return { success: response.data.success, data: response.data.data };
   },
 
   async createDeck(name: string): Promise<{ success: boolean; data?: ServerSlideDeck }> {

@@ -204,6 +204,8 @@ export function useSlideState(
 
     if (lastSlideHasBlocks) {
       const newSlide = createSlide(slides.length);
+      // Skip onChange for this auto-generated slide — it's not a user edit
+      skipNextOnChangeRef.current = true;
       setSlides(prev => [...prev, newSlide]);
     }
   }, [blocks, slides]);

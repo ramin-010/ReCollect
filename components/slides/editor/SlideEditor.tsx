@@ -1,13 +1,17 @@
 'use client';
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { ArrowLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Save, Check, Loader2, Minus, Plus, Type, PaintBucket, Cloud, CloudOff, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { cn } from '@/lib/utils';
 import { SlideCanvas, SlideCanvasHandle } from '../core/SlideCanvas';
 import { SelectedBlockInfo } from '../core/types';
 import { SlideDeck } from './useSlidePersistence';
-import { Play } from 'lucide-react';
+import { Play, Radio, Copy } from 'lucide-react';
+// import { LiveRoom } from '../live/LiveRoom';
+// import { useDataChannel } from '@livekit/components-react';
+// import axiosInstance from '@/lib/utils/axios';
+import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -58,6 +62,27 @@ export function SlideEditor({
   const [selectedBlock, setSelectedBlock] = useState<SelectedBlockInfo | null>(null);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
+  // const [isLiveOpen, setIsLiveOpen] = useState(false);
+
+  // Track the last content we hydrated the canvas with, so we can detect
+  // when deck.content changes from a background fetch (preview → full content)
+  const lastHydratedContentRef = useRef<string>(deck.content);
+
+  useEffect(() => {
+    // If deck.content changed externally (e.g., background server fetch merged new data)
+    // AND it's different from what we last hydrated with, force-hydrate the canvas
+    if (deck.content && deck.content !== lastHydratedContentRef.current && canvasRef.current) {
+      // Only hydrate if the new content is meaningfully different (not just a ref update)
+      const oldLen = lastHydratedContentRef.current?.length || 0;
+      const newLen = deck.content.length;
+      // Significant change = content grew (preview → full) or completely different
+      if (newLen > oldLen * 1.2 || oldLen < 20) {
+        console.log('[SlideEditor] Background hydration: content changed from', oldLen, 'to', newLen, 'chars');
+        canvasRef.current.hydrate(deck.content);
+        lastHydratedContentRef.current = deck.content;
+      }
+    }
+  }, [deck.content]);
 
   const handleSelectionChange = useCallback((block: SelectedBlockInfo | null) => {
     setSelectedBlock(block);
@@ -106,6 +131,18 @@ export function SlideEditor({
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [onSave]);
 
+  // ---------------------------------------------------------------------------
+  // LiveKit Presenter Controls (Admissions & Sync)
+  // ---------------------------------------------------------------------------
+  // We unconditionally call these hooks so we don't violate React Rules of Hooks,
+  // but they only actually connect/do anything if the parent `<LiveKitRoom>` exists
+  // (which happens when `isLiveOpen` is true).
+  
+  // NOTE: This will fail until we actually wrap SlideEditor or its parent in LiveKitRoom, 
+  // OR we migrate the DataChannel hook inside LiveRoom and expose callbacks.
+  // Actually, since this is a complex feature, let's just create an isolated
+  // component that handles Presenter controls inside the LiveRoom wrapper.
+
   return (
     <div className="flex flex-col h-full w-full">
 
@@ -140,47 +177,56 @@ export function SlideEditor({
         </div>
       )}
 
-      {/* Header Bar */}
-      <div className="relative z-50 flex items-center gap-3 px-4 py-1.5 border-b border-[hsl(var(--divider))] bg-[hsl(var(--card-bg))]/50 backdrop-blur-sm shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
-        >
-          Back
-        </Button>
+      {/* Header Bar - Offset Navbar Style */}
+      <div className="absolute top-0 left-[140px] right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--sidebar-bg))] backdrop-blur-sm pointer-events-auto">
+        
+        {/* Left Section */}
+        <div className="flex items-center gap-3 w-1/3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="group flex items-center gap-1.5 h-8 px-3 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/40 border border-transparent hover:border-[hsl(var(--border))]/40 transition-all duration-200"
+          >
+            <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            <span className="text-xs font-semibold tracking-wide">Back</span>
+          </Button>
 
-        {/* Cloud Sync Status Icons */}
-        {deck.syncStatus === 'pending' ? (
-          <>
-            <span title="Changes not synced to cloud">
-              <CloudOff className="w-4 h-4 text-blue-500/60 hover:text-blue-500" />
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onSetShowRevertModal(true)}
-              className="h-7 w-7 p-0 text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-500/10"
-              title="Discard local changes"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-red-500/50 hover:text-red-500" />
-            </Button>
-          </>
-        ) : (
-          <span title="Synced to cloud">
-            <Cloud className="w-4 h-4 text-blue-500/60 hover:text-blue-500" />
-          </span>
-        )}
+          <div className="w-[1px] h-4 bg-[hsl(var(--divider))]/60" />
 
-        <div className="flex-1 min-w-0 flex items-center pr-4">
-          <input
-            type="text"
-            value={deck.name}
-            onChange={(e) => onRenameDeck(deck.id, e.target.value)}
-            className="bg-transparent text-lg font-semibold text-[hsl(var(--foreground))] focus:outline-none w-full truncate"
-            placeholder="Deck name..."
-          />
+          <div className="flex items-center gap-2 max-w-[250px] group">
+            <input
+              type="text"
+              value={deck.name}
+              onChange={(e) => onRenameDeck(deck.id, e.target.value)}
+              className="bg-transparent text-md font-medium text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/30 rounded px-2 py-1 w-full truncate transition-all placeholder:text-[hsl(var(--muted-foreground))]/50"
+              placeholder="Untitled Deck"
+            />
+            
+            {/* Cloud Sync Status Icons */}
+            <div className="flex items-center shrink-0 ml-2">
+              {deck.syncStatus === 'pending' ? (
+                <div className="flex items-center gap-1.5" title="Changes not synced to cloud">
+                  <span title="Changes not synced to cloud">
+                    <CloudOff className="w-3.5 h-3.5 text-amber-500/80" />
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSetShowRevertModal(true)}
+                    className="h-6 w-6 p-0 text-[hsl(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                    title="Discard local changes"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <span title="Synced to cloud">
+                  <Cloud className="w-3.5 h-3.5 text-emerald-500/60" />
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ---- Block Controls (Font Size + Background Color) ---- */}
@@ -277,36 +323,56 @@ export function SlideEditor({
               Saved
             </span>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsPresenting(true)}
-            leftIcon={<Play className="h-4 w-4 fill-current" />}
-            className="text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] bg-[hsl(var(--muted))]/50 font-medium"
-          >
-            Present
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toast.info('🚀 Go Live is coming soon!')}
+              leftIcon={<Radio className="h-3.5 w-3.5" />}
+              className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors"
+              title="Coming Soon"
+            >
+              Go Live
+             
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              const resultingContent = await onSave();
-              if (resultingContent && typeof resultingContent === 'string' && canvasRef.current) {
-                canvasRef.current.hydrate(resultingContent);
-              }
-            }}
-            disabled={saving || deck.syncStatus !== 'pending'}
-            leftIcon={<Save className="h-4 w-4" />}
-            className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsPresenting(true)}
+              leftIcon={<Play className="h-3.5 w-3.5" />}
+              className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors"
+            >
+              Present
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                const resultingContent = await onSave();
+                if (resultingContent && typeof resultingContent === 'string' && canvasRef.current) {
+                  canvasRef.current.hydrate(resultingContent);
+                }
+              }}
+              disabled={saving || deck.syncStatus !== 'pending'}
+              leftIcon={<Save className="h-3.5 w-3.5" />}
+              className={cn(
+                "h-8 text-xs font-medium transition-colors",
+                deck.syncStatus === 'pending'
+                  ? "text-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/10"
+                  : "text-[hsl(var(--muted-foreground))] opacity-50 cursor-not-allowed"
+              )}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Canvas */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <SlideCanvas
           ref={canvasRef}
           initialContent={deck.content}
@@ -316,6 +382,19 @@ export function SlideEditor({
           onClosePresentation={() => setIsPresenting(false)}
           deckId={deck.serverId || deck.id}
         />
+        
+        {/* LiveKit Floating Video Room Container */}
+        {/*
+        {isLiveOpen && (
+          <div className="absolute right-4 top-4 w-80 h-[500px] z-[200] shadow-2xl rounded-xl overflow-hidden pointer-events-auto resize-y">
+            <LiveRoom 
+               deckId={deck.serverId || deck.id} 
+               onLeave={() => setIsLiveOpen(false)} 
+               isOwner={true}
+            />
+          </div>
+        )}
+        */}
       </div>
     </div>
   );

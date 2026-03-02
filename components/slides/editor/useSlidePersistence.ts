@@ -6,6 +6,7 @@ import { slideImageStorage } from '@/lib/storage/slideImageStorage';
 import { slideApi, ServerSlideDeck } from '@/lib/api/slideApi';
 import { toast } from 'sonner';
 import { useViewStore } from '@/lib/store/viewStore';
+import { useSlideStore } from '@/lib/store/slideStore';
 
 // Re-export so SlidesView doesn't need separate imports for these
 export interface SlideDeck {
@@ -15,9 +16,13 @@ export interface SlideDeck {
   createdAt: string;
   updatedAt: string;
   content: string;
+  previewContent?: string;
   syncStatus: 'synced' | 'pending';
   serverUpdatedAt?: number;
   cloudImages?: Array<{ imageId: string; cloudUrl: string; cloudPublicId: string }>;
+  isPinned?: boolean;
+  deckType?: string;
+  hasUnsyncedChanges?: boolean;
 }
 
 /** Convert server API response to local SlideDeck */
@@ -26,12 +31,16 @@ export function serverToLocal(s: ServerSlideDeck): SlideDeck {
     id: s._id,
     serverId: s._id,
     name: s.name,
-    content: s.content || '',
+    content: s.content || s.previewContent || '',
+    previewContent: s.previewContent || '',
     cloudImages: s.cloudImages,
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
     syncStatus: 'synced',
+    isPinned: s.isPinned,
+    deckType: s.deckType,
     serverUpdatedAt: new Date(s.updatedAt).getTime(),
+    hasUnsyncedChanges: false,
   };
 }
 
@@ -42,11 +51,15 @@ export function offlineToLocal(o: any): SlideDeck {
     serverId: o.serverId,
     name: o.name,
     content: o.content,
+    previewContent: o.previewContent,
     cloudImages: o.cloudImages,
     createdAt: o.createdAt || new Date(o.updatedAt).toISOString(),
     updatedAt: new Date(o.updatedAt).toISOString(),
     syncStatus: o.syncStatus,
+    isPinned: o.isPinned,
+    deckType: o.deckType,
     serverUpdatedAt: o.serverUpdatedAt,
+    hasUnsyncedChanges: o.syncStatus !== 'synced',
   };
 }
 
@@ -74,7 +87,7 @@ export async function persistToIDB(deck: SlideDeck): Promise<void> {
     deck.name,
     deck.syncStatus,
     deck.serverUpdatedAt,
-    { serverId: deck.serverId, cloudImages: deck.cloudImages, createdAt: deck.createdAt }
+    { serverId: deck.serverId, cloudImages: deck.cloudImages, isPinned: deck.isPinned, deckType: deck.deckType, createdAt: deck.createdAt, previewContent: deck.previewContent }
   );
 }
 
@@ -91,19 +104,10 @@ export interface ConflictData {
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
-interface UseSlidePersistenceArgs {
-  activeDeck: SlideDeck | null;
-  setActiveDeck: React.Dispatch<React.SetStateAction<SlideDeck | null>>;
-  setDecks: React.Dispatch<React.SetStateAction<SlideDeck[]>>;
-  handleRenameDeck: (deckId: string, name: string) => void;
-}
+export function useSlidePersistence() {
+  const { activeDeck, setActiveDeck, updateDeck, setDecks, addDeck } = useSlideStore();
+  const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
 
-export function useSlidePersistence({
-  activeDeck,
-  setActiveDeck,
-  setDecks,
-  handleRenameDeck,
-}: UseSlidePersistenceArgs) {
   const [saving, setSaving] = useState(false);
   const [isLocalSaving, setIsLocalSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -116,8 +120,6 @@ export function useSlidePersistence({
   const activeDeckRef = useRef<SlideDeck | null>(null);
   const canvasDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
-
   // Keep ref in sync with state
   useEffect(() => { activeDeckRef.current = activeDeck; }, [activeDeck]);
 
@@ -128,7 +130,6 @@ export function useSlidePersistence({
 
     // Immediately update the content ref so handleSave always reads fresh data
     latestContentRef.current = content;
-    setIsLocalSaving(true);
 
     // Auto-rename if still "Untitled Deck" or synced to first slide title
     try {
@@ -146,35 +147,26 @@ export function useSlidePersistence({
       const isDefaultName = lastName === 'Untitled Deck';
       const isStillAutoSyncing = oldFirstSlideTitle && lastName === oldFirstSlideTitle;
       if ((isDefaultName || isStillAutoSyncing) && newFirstSlideTitle && newFirstSlideTitle.trim() !== '') {
-        handleRenameDeck(deckId, newFirstSlideTitle);
+        latestNameRef.current = newFirstSlideTitle;
+        updateDeck(deckId, { name: newFirstSlideTitle });
       }
     } catch {}
 
     // Instantly set sync status to pending to update the icon immediately
     if (activeDeckRef.current?.syncStatus === 'synced') {
       const now = new Date().toISOString();
-      setDecks(prev => prev.map(d => 
-        d.id === deckId ? { ...d, syncStatus: 'pending' as const, updatedAt: now } : d
-      ));
-      if (activeDeckRef.current) {
-        setActiveDeck({ ...activeDeckRef.current, syncStatus: 'pending' as const, updatedAt: now });
-      }
+      updateDeck(deckId, { syncStatus: 'pending' as const, updatedAt: now, hasUnsyncedChanges: true });
     }
 
     if (canvasDebounceRef.current) clearTimeout(canvasDebounceRef.current);
     
-    // Quick debounce for saving to IDB (like Docs 700ms)
+    // Quick debounce for saving to IDB (700ms like Docs)
+    // isLocalSaving indicator only shows after debounce settles (matches block movement behavior)
     canvasDebounceRef.current = setTimeout(() => {
-      const now = new Date().toISOString();
+      setIsLocalSaving(true);
       const currentDeck = activeDeckRef.current;
-      
-      setDecks(prev =>
-        prev.map(d =>
-          d.id === deckId
-            ? { ...d, content, updatedAt: now, syncStatus: 'pending' as const }
-            : d
-        )
-      );
+
+      updateDeck(deckId, { content, updatedAt: new Date().toISOString(), syncStatus: 'pending' as const, hasUnsyncedChanges: true });
 
       // Sanitize blob URLs before IDB save
       if (currentDeck) {
@@ -203,7 +195,7 @@ export function useSlidePersistence({
       }
       setTimeout(() => setIsLocalSaving(false), 500);
     }, 700);
-  }, [handleRenameDeck, setDecks]);
+  }, [updateDeck]);
 
   // ----- Save to server -----
   const handleSave = useCallback(async () => {
@@ -245,9 +237,6 @@ export function useSlidePersistence({
         contentForServer = JSON.stringify({ ...parsed, blocks: serverBlocks });
       }
 
-      // 2) Log before sending to backend
-      console.log('[DEBUG 2 - SAVING TO BACKEND] Content being sent to backend:', contentForServer);
-
       const result = await slideApi.saveDeck(serverId, { content: contentForServer, name }, pendingImageIds, allImageIds);
 
       if (result.success) {
@@ -258,6 +247,7 @@ export function useSlidePersistence({
           updatedAt: serverUpdatedAtStr,
           syncStatus: 'synced' as const,
           serverUpdatedAt: serverUpdatedAtMs,
+          hasUnsyncedChanges: false,
         };
         if (result.data?.cloudImages) syncUpdates.cloudImages = result.data.cloudImages;
 
@@ -279,8 +269,7 @@ export function useSlidePersistence({
           }
         }
 
-        setDecks(prev => prev.map(d => d.id === activeDeck.id ? { ...d, ...syncUpdates } : d));
-        setActiveDeck(prev => prev ? { ...prev, ...syncUpdates } : null);
+        updateDeck(activeDeck.id, syncUpdates);
 
         await slideOfflineStorage.saveDeck(
           activeDeck.id, finalContent, name, 'synced', serverUpdatedAtMs,
@@ -301,7 +290,7 @@ export function useSlidePersistence({
       setSaving(false);
     }
     return null;
-  }, [activeDeck, saving, setDecks, setActiveDeck]);
+  }, [activeDeck, saving, updateDeck]);
 
   // ----- Close deck -----
   const handleCloseDeck = useCallback(() => {
@@ -332,12 +321,12 @@ export function useSlidePersistence({
     latestContentRef.current = merged.content;
     latestNameRef.current = merged.name;
     await persistToIDB(finalDeck).catch(() => {});
-    setDecks(prev => prev.map(d => d.id === deck.id ? finalDeck : d));
+    updateDeck(deck.id, merged);
     setSlideFullscreen(true);
     setShowConflict(false);
     setConflictData(null);
     toast.success('Server version loaded');
-  }, [conflictData, setSlideFullscreen, setActiveDeck, setDecks]);
+  }, [conflictData, setSlideFullscreen, setActiveDeck, updateDeck]);
 
   const handleConflictSaveAsNew = useCallback(async () => {
     if (!conflictData) return;
@@ -348,8 +337,9 @@ export function useSlidePersistence({
         const newDeck = serverToLocal(result.data);
         newDeck.content = deck.content;
         newDeck.syncStatus = 'pending';
+        newDeck.hasUnsyncedChanges = true;
         await persistToIDB(newDeck);
-        setDecks(prev => [newDeck, ...prev]);
+        addDeck(newDeck);
         toast.success(`Local copy saved as "${newDeck.name}"`);
       }
     } catch { toast.error('Failed to save local copy'); }
@@ -359,11 +349,11 @@ export function useSlidePersistence({
     latestContentRef.current = merged.content;
     latestNameRef.current = merged.name;
     await persistToIDB(finalDeck).catch(() => {});
-    setDecks(prev => prev.map(d => d.id === deck.id ? finalDeck : d));
+    updateDeck(deck.id, merged);
     setSlideFullscreen(true);
     setShowConflict(false);
     setConflictData(null);
-  }, [conflictData, setSlideFullscreen, setActiveDeck, setDecks]);
+  }, [conflictData, setSlideFullscreen, setActiveDeck, updateDeck, addDeck]);
 
   const handleRevert = useCallback(async () => {
     if (!activeDeck) return null;
@@ -377,7 +367,7 @@ export function useSlidePersistence({
         latestContentRef.current = merged.content;
         latestNameRef.current = merged.name;
         await persistToIDB(finalDeck).catch(() => {});
-        setDecks(prev => prev.map(d => d.id === activeDeck.id ? finalDeck : d));
+        updateDeck(activeDeck.id, merged);
         toast.success('Reverted to server version');
         setShowRevertModal(false);
         return finalDeck.content;
@@ -389,7 +379,7 @@ export function useSlidePersistence({
     }
     setShowRevertModal(false);
     return null;
-  }, [activeDeck, setActiveDeck, setDecks]);
+  }, [activeDeck, setActiveDeck, updateDeck]);
 
   return {
     // State

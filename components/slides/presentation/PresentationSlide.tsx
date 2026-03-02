@@ -15,6 +15,8 @@ interface PresentationSlideProps {
   title?: string;
   showTitle?: boolean;
   coverImage?: string | null;
+  previewMode?: boolean;
+  zoom?: number;
 }
 
 /**
@@ -39,6 +41,8 @@ export function PresentationSlide({
   title,
   showTitle,
   coverImage,
+  previewMode,
+  zoom,
 }: PresentationSlideProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [connectionsReady, setConnectionsReady] = useState(false);
@@ -76,7 +80,7 @@ export function PresentationSlide({
       style={{ backgroundColor: backgroundColor || undefined }}
     >
       {/* 1. Full-bleed cover image */}
-      {coverImage && (
+      {coverImage && !previewMode && (
         <div className="w-full h-[30vh] min-h-[220px] max-h-[500px] relative overflow-hidden">
           <img
             src={coverImage}
@@ -118,7 +122,7 @@ export function PresentationSlide({
               selectedConnectionId={null}
               onSelectConnection={() => {}}
               containerRef={containerRef as React.RefObject<HTMLDivElement>}
-              zoom={1}
+              zoom={zoom || 1}
               dragController={null as any}
             />
           )}

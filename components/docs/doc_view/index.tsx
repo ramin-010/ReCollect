@@ -329,7 +329,7 @@ export function DocsView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
+    <div className="h-full flex flex-col bg-[#181818] overflow-hidden">
       {/* Header Section */}
       <div className="shrink-0 px-8 pt-8 pb-4">
         <div className="max-w-[1100px] mx-auto flex items-center gap-3 mb-1">

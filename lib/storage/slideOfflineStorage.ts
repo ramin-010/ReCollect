@@ -18,11 +18,14 @@ export interface OfflineSlideDeck {
   id: string;             // local UUID or server _id
   serverId?: string;      // MongoDB _id (if synced)
   content: string;        // JSON string of SlideCanvasData
+  previewContent?: string; // JSON string of first slide only
   name: string;
   updatedAt: number;      // local timestamp (ms)
   serverUpdatedAt?: number; // last known server timestamp (ms)
   syncStatus: 'synced' | 'pending';
   cloudImages?: Array<{ imageId: string; cloudUrl: string; cloudPublicId: string }>;
+  isPinned?: boolean;
+  deckType?: string;
   createdAt?: string;
 }
 
@@ -65,11 +68,14 @@ export const slideOfflineStorage = {
         id,
         serverId: extra?.serverId,
         content,
+        previewContent: extra?.previewContent,
         name,
         updatedAt: syncStatus === 'synced' && serverUpdatedAt ? serverUpdatedAt : Date.now(),
         serverUpdatedAt,
         syncStatus,
         cloudImages: extra?.cloudImages,
+        isPinned: extra?.isPinned,
+        deckType: extra?.deckType,
         createdAt: extra?.createdAt,
       };
 
@@ -107,7 +113,7 @@ export const slideOfflineStorage = {
       existing.name,
       'synced',
       serverUpdatedAt,
-      { serverId: existing.serverId, cloudImages: existing.cloudImages, createdAt: existing.createdAt }
+      { serverId: existing.serverId, cloudImages: existing.cloudImages, isPinned: existing.isPinned, deckType: existing.deckType, createdAt: existing.createdAt }
     );
   },
 

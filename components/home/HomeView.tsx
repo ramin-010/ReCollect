@@ -161,7 +161,7 @@ export function HomeView() {
   };
 
   return (
-    <div className="p-4 lg:p-8 min-h-screen bg-[hsl(var(--background))] overflow-y-auto custom-scrollbar pb-24">
+    <div className="p-4 lg:p-8 min-h-screen bg-[#1A1A1A] overflow-y-auto custom-scrollbar pb-24">
       <div className="max-w-6xl mx-auto space-y-10">
         
         {/* -- Greeting Header -- */}

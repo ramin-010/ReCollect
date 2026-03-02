@@ -337,7 +337,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
         }}
       />
       
-      <div className="flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50">
+      <div className="flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50 pt-14">
       <div 
         ref={viewportRef}
         className="flex flex-col items-center py-8 min-h-max transition-transform duration-75 ease-out origin-top"
