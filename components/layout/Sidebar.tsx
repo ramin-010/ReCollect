@@ -25,7 +25,8 @@ import {
   Inbox,
   Library,
   Users,
-  ChevronDown
+  ChevronDown,
+  Mail
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -53,6 +54,7 @@ const primaryNav: NavItem[] = [
   },
   { id: 'drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
   { id: 'presentations', label: 'Presentations', icon: <Files className="h-[18px] w-[18px]" /> },
+  { id: 'email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
 ];
 
 const secondaryNav: NavItem[] = [

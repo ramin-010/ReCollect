@@ -22,6 +22,7 @@ import { ExpenseView } from '@/components/expenses/ExpenseView';
 import { DocsView } from '@/components/docs/doc_view';
 import { SlidesView } from '@/components/slides/SlidesView';
 import { HomeView } from '@/components/home/HomeView';
+import { EmailView } from '@/components/email/EmailView';
 import { useViewStore } from '@/lib/store/viewStore';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
@@ -57,6 +58,8 @@ export default function HomePage() {
     const view = searchParams.get('view');
     if (view === 'docs') {
       setCurrentView('docs');
+    } else if (view === 'email') {
+      setCurrentView('email');
     }
   }, [searchParams, setCurrentView]);
 
@@ -252,6 +255,11 @@ export default function HomePage() {
   // Render Slides View
   if (currentView === 'slides') {
     return <SlidesView />;
+  }
+
+  // Render Email View
+  if (currentView === 'email') {
+    return <EmailView />;
   }
 
   // All Dashboards View
