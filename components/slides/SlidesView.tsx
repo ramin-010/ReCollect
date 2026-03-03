@@ -4,8 +4,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Presentation, Trash2, Clock, CloudOff, 
-  LayoutGrid, List, Search, ArrowUpDown, Sparkles, FileText, ChevronDown
+  LayoutGrid, List, Search, ArrowUpDown, Sparkles, FileText, ChevronDown, MonitorPlay,
+  FlaskConical, LayoutTemplate, Layers, GalleryHorizontal, Images, FileStack,
+  GalleryVerticalEnd, Files
 } from 'lucide-react';
+import { AiTestFeeder } from './ai-test/AiTestFeeder';
+
 import { Button } from '@/components/ui-base/Button';
 import { 
   DropdownMenu,
@@ -43,6 +47,9 @@ export function SlidesView() {
   const [viewMode, setViewMode] = useState<'gallery' | 'list'>('gallery');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated');
+  const [showAiTest, setShowAiTest] = useState(false);
+  const isDev = process.env.NODE_ENV === "development"; 
+
 
   const setSlideFullscreen = useViewStore((state) => state.setSlideFullscreen);
 
@@ -340,6 +347,11 @@ export function SlidesView() {
     );
   }
 
+  // ---- AI Test Feeder ----
+  if (showAiTest) {
+    return <AiTestFeeder onClose={() => setShowAiTest(false)} />;
+  }
+
   // ---- Active deck → Editor view ----
   if (activeDeck) {
     return (
@@ -362,22 +374,18 @@ export function SlidesView() {
   // ---- Deck List View ----
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
-      {/* Header Section mirrored from doc_view */}
-      <div className="shrink-0 px-8 pt-8 pb-4">
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between mb-4">
-             <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
-                 <Presentation className="w-5 h-5 text-orange-500" />
-               </div>
-               <div>
-                 <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">Slide Decks</h1>
-                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Create and manage your slide presentations.</p>
-               </div>
-             </div>
+      <div className="flex-1 overflow-y-auto px-6 py-10 lg:px-12">
+        {/* Header Area */}
+        <div className="max-w-[1060px] mx-auto mb-4" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>
+          <h1 className="flex items-center gap-3 text-[1.8rem] font-bold tracking-tight text-[hsl(var(--foreground))]">
+            <Files className="h-7 w-7 text-[hsl(var(--foreground))]" />
+            Slide Decks
+          </h1>
+          <p className="text-[0.9rem] text-[hsl(var(--muted-foreground))] mt-1">Create and manage your slide presentations.</p>
         </div>
 
         {/* View Tabs & Controls */}
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-4 py-2">
+        <div className="max-w-[1060px] mx-auto flex items-center justify-between gap-4 py-2 mb-6">
           <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
              <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <LayoutGrid className="w-4 h-4" /> Gallery
@@ -415,15 +423,21 @@ export function SlidesView() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {isDev &&<Button
+                onClick={() => setShowAiTest(true)}
+                className="bg-violet-600/60 text-white hover:bg-violet-600/70 border-0 gap-1.5"
+                size="sm"
+              >
+                <FlaskConical className="w-3.5 h-3.5" /> AI Test
+              </Button>}
+
               <Button onClick={createDeck} className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5" size="sm">
                 <Plus className="w-3.5 h-3.5" /> New
               </Button>
           </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 pt-4">
-        <div className="max-w-[1100px] mx-auto">
+        <div className="max-w-[1060px] mx-auto">
 
         {/* Deck Cards */}
         {isLoading ? (
@@ -435,7 +449,7 @@ export function SlidesView() {
             transition={{ duration: 0.4, delay: 0.2 }}
             className="text-center py-20 border border-dashed border-[hsl(var(--border))] rounded-xl"
           >
-            <Presentation className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]/30" />
+            <Files className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]/30" />
             <h3 className="text-lg font-semibold mb-2">No slide decks yet</h3>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6 max-w-sm mx-auto">
               Create your first slide deck to start building presentations with blocks, connections, and more.
@@ -512,11 +526,11 @@ export function SlidesView() {
                    />
                  ))}
                </AnimatePresence>
-               <button onClick={createDeck} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))]/30 cursor-pointer text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors">
-                 <Plus className="w-4 h-4" /> <span className="text-sm">New deck</span>
-               </button>
-            </div>
-          )}
+                 <button onClick={createDeck} className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))]/30 cursor-pointer text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors">
+                   <Plus className="w-4 h-4" /> <span className="text-sm">New deck</span>
+                 </button>
+              </div>
+            )}
         </div>
       </div>
     </div>

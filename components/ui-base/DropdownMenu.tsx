@@ -83,11 +83,12 @@ export const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
 
 export interface DropdownMenuContentProps extends React.HTMLAttributes<HTMLDivElement> {
   align?: 'start' | 'center' | 'end'
+  side?: 'top' | 'bottom'
   sideOffset?: number
 }
 
 export const DropdownMenuContent = React.forwardRef<HTMLDivElement, DropdownMenuContentProps>(
-  ({ className, align = 'end', sideOffset = 4, children, ...props }, ref) => {
+  ({ className, align = 'end', side = 'bottom', sideOffset = 4, children, ...props }, ref) => {
     const { isOpen, setIsOpen, triggerRect, triggerRef } = useDropdownMenu()
     const contentRef = useRef<HTMLDivElement>(null)
     const [mounted, setMounted] = useState(false)
@@ -140,8 +141,14 @@ export const DropdownMenuContent = React.forwardRef<HTMLDivElement, DropdownMenu
     
     // Calculate position
     let left = triggerRect.left
-    let top = triggerRect.bottom + sideOffset
+    let top: number | string = triggerRect.bottom + sideOffset
+    let bottom: number | string = 'auto'
     
+    if (side === 'top') {
+      top = 'auto'
+      bottom = window.innerHeight - triggerRect.top + sideOffset
+    }
+
     if (align === 'end') {
       left = triggerRect.right
     } else if (align === 'center') {
@@ -157,7 +164,8 @@ export const DropdownMenuContent = React.forwardRef<HTMLDivElement, DropdownMenu
           className
         )}
         style={{
-          top: `${top}px`,
+          top: side === 'top' ? 'auto' : `${top}px`,
+          bottom: side === 'top' ? `${bottom}px` : 'auto',
           left: align === 'end' ? 'auto' : `${left}px`,
           right: align === 'end' ? `${window.innerWidth - triggerRect.right}px` : 'auto',
           transform: align === 'center' ? 'translateX(-50%)' : 'none',

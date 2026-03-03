@@ -95,7 +95,7 @@ export function SingleSlide({
 
   return (
     <div
-      className={`relative group transition-all duration-200 rounded-lg ${
+      className={`relative group transition-all duration-200  rounded-lg ${
         isActive
           ? 'ring-1 ring-[hsl(var(--foreground))]/30 '
           : ''
@@ -119,7 +119,7 @@ export function SingleSlide({
           width: SLIDE_WIDTH,
           minHeight: SLIDE_MIN_HEIGHT,
           height: h.computedHeight,
-          backgroundColor: backgroundColor || 'hsl(var(--card-bg))',
+          backgroundColor: backgroundColor || '#212121',
           overflow: 'hidden',
         }}
       >

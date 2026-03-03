@@ -19,7 +19,7 @@ import {
   PenTool,
   CheckSquare,
   FileText,
-  Presentation,
+  Files,
   Search,
   CalendarDays,
   Inbox,
@@ -52,7 +52,7 @@ const primaryNav: NavItem[] = [
     ]
   },
   { id: 'drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
-  { id: 'presentations', label: 'Presentations', icon: <Presentation className="h-[18px] w-[18px]" /> },
+  { id: 'presentations', label: 'Presentations', icon: <Files className="h-[18px] w-[18px]" /> },
 ];
 
 const secondaryNav: NavItem[] = [

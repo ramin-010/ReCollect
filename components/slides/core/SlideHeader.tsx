@@ -78,7 +78,7 @@ export function SlideHeader({
               value={title || ''}
               onChange={(e) => onTitleChange?.(e.target.value)}
               placeholder="Untitled card"
-              className={`w-full bg-transparent text-[62px] font-bold tracking-tight text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/30 focus:outline-none border-none p-0 leading-tight ${readOnly ? 'pointer-events-none' : ''}`}
+              className={`w-full bg-transparent text-[62px] font-semibold tracking-tight text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/30 focus:outline-none border-none p-0 leading-tight ${readOnly ? 'pointer-events-none' : ''}`}
               style={{ fontFamily: 'var(--font-inter), sans-serif' }}
               readOnly={readOnly}
             />

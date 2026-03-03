@@ -11,7 +11,7 @@ import { todoApi } from '@/lib/api/todoApi';
 import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock, Plus, FileText, PenTool, CheckSquare, Presentation, CalendarDays, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { Clock, Plus, FileText, PenTool, CheckSquare, Files, CalendarDays, ChevronRight, LayoutTemplate } from 'lucide-react';
 
 interface RecentItem {
   id: string;
@@ -135,7 +135,7 @@ export function HomeView() {
     switch (type) {
       case 'doc': return <FileText className="h-4 w-4 text-emerald-400" />;
       case 'drawing': return <PenTool className="h-4 w-4 text-purple-400" />;
-      case 'slide': return <Presentation className="h-4 w-4 text-orange-400" />;
+      case 'slide': return <Files className="h-4 w-4 text-orange-400" />;
       default: return <FileText className="h-4 w-4" />;
     }
   };
@@ -247,7 +247,7 @@ export function HomeView() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                   { name: 'Meeting Notes', icon: <FileText className="h-5 w-5 text-blue-400" />, color: 'from-blue-500/10 to-transparent' },
-                  { name: 'Project Plan', icon: <Presentation className="h-5 w-5 text-emerald-400" />, color: 'from-emerald-500/10 to-transparent' },
+                  { name: 'Project Plan', icon: <Files className="h-5 w-5 text-emerald-400" />, color: 'from-emerald-500/10 to-transparent' },
                   { name: 'Daily Standup', icon: <CheckSquare className="h-5 w-5 text-orange-400" />, color: 'from-orange-500/10 to-transparent' },
                   { name: 'Brainstorm', icon: <PenTool className="h-5 w-5 text-purple-400" />, color: 'from-purple-500/10 to-transparent' },
                 ].map((tpl, i) => (

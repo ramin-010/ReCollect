@@ -127,4 +127,23 @@ export const slideApi = {
     const response = await axiosInstance.patch(`/api/slides/${id}`, data);
     return { success: response.data.success, data: response.data.data };
   },
+
+  /**
+   * Generate slides using AI (OpenRouter).
+   * Returns the raw SlideCanvasData JSON from the AI model.
+   */
+  async generateWithAi(prompt: string, model?: string): Promise<{
+    success: boolean;
+    data?: any;
+    model?: string;
+    slideCount?: number;
+    blockCount?: number;
+    message?: string;
+  }> {
+    const response = await axiosInstance.post('/api/slides/ai/generate', {
+      prompt,
+      model,
+    });
+    return response.data;
+  },
 };

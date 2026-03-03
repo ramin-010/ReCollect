@@ -1,23 +1,25 @@
 // components/layout/Navbar.tsx
 'use client';
 
-//import { ThemeSwitcher } from './ThemeSwitcher';
 import { useViewStore } from '@/lib/store/viewStore';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
 import { Button } from '@/components/ui-base/Button';
-import { Share2, Plus } from 'lucide-react';
+import { Share2, Plus, Bell, ImagePlus, X } from 'lucide-react';
 import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { Logo } from '@/components/brand/Logo';
-
+import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 
 export function Navbar() {
   const currentDashboard = useDashboardStore((state) => state.currentDashboard);
   const currentView = useViewStore((state) => state.currentView);
   const { triggerCreateNote } = useCreateNote();
+  
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
 
   // Determine title based on view state
   const getTitle = () => {
@@ -27,7 +29,7 @@ export function Navbar() {
       case 'docs': return 'Documents';
       case 'todo': return 'To-Do List';
       case 'drawing': return 'Whiteboard';
-      case 'expenses': return 'Expenses';
+      case 'slides': return 'Slides';
       case 'settings': return 'Settings';
       default: return 'All Dashboards';
     }
@@ -37,47 +39,112 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-30 w-full border-b border-[hsl(var(--divider))] bg-[hsl(var(--sidebar-bg))]/95 backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--sidebar-bg))]/80">
-        <div className="flex h-18 items-center px-4 lg:px-8 gap-4">
-          {/* ReCollect Logo and Brand */}
-          <div className="flex items-center">
-            <Logo size="lg" showText={true} className="text-[hsl(var(--foreground))]" />
+      {/* Navbar Container */}
+      <nav className="sticky top-0 z-30 w-full bg-[hsl(var(--background))]/80 backdrop-blur-md ">
+        <div className="flex h-[52px] items-center px-4 lg:px-6 gap-4">
+          
+          {/* ReCollect Logo and Title */}
+          <div className="flex items-center gap-1">
+            <Logo size="md" showText={false} className="text-[hsl(var(--foreground))]" />
+            
+            <h2 className="text-lg pl-0 font-semibold text-[hsl(var(--foreground))] tracking-tight">
+              {title}
+            </h2>
           </div>
 
-          {/* Title - centered */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
-                {title}
-              </h2>
-            </div>
-          </div>
+          <div className="flex-1" /> {/* Spacer */}
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {!coverImage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCoverPicker(true)}
+                className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                title="Add Cover"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </Button>
+            )}
+
             {currentDashboard && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => currentDashboard && triggerCreateNote(currentDashboard._id)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Add Note</span>
-                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsShareOpen(true)}
+                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>
+                <div className="hidden sm:block mx-1 h-4 w-px bg-[hsl(var(--border))]"></div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => currentDashboard && triggerCreateNote(currentDashboard._id)}
+                  className="mr-1 h-8"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  <span>Note</span>
+                </Button>
               </>
             )}
+
+            <div className="mx-1 h-4 w-px bg-[hsl(var(--border))]"></div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] h-8 w-8 p-0"
+            >
+              <Bell className="h-4 w-4" />
+            </Button>
+            
             <ThemeSwitcher />
           </div>
         </div>
       </nav>
+
+      {/* Cover Image Header */}
+      {coverImage && (
+        <div className="w-full h-[20vh] relative group shrink-0">
+          <img 
+            src={coverImage} 
+            alt="Page cover" 
+            className="w-full h-full object-cover object-[0_50%]"
+          />
+          <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCoverPicker(true)}
+              className="bg-black/50 hover:bg-black/70 text-white text-xs backdrop-blur-sm"
+            >
+              Change cover
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCoverImage(null)}
+              className="bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Cover Picker Modal */}
+      <CoverPicker
+        show={showCoverPicker}
+        onClose={() => setShowCoverPicker(false)}
+        currentCover={coverImage}
+        onSelect={(url) => {
+          setCoverImage(url);
+          setShowCoverPicker(false);
+        }}
+      />
 
       {currentDashboard && (
         <ShareDashboardDialog

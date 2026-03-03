@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Download, MoreVertical, Copy, Trash2, Heart, Play, Presentation, Pin, PinOff, Sparkles, CloudOff, FileText, Layers } from 'lucide-react';
+import { Download, MoreVertical, Copy, Trash2, Heart, Play, Files, Pin, PinOff, Sparkles, CloudOff, FileText, Layers, Share2, Loader2 } from 'lucide-react';
 import { SlideDeck } from './editor/useSlidePersistence';
 import { MiniSlideRenderer } from './rendering/MiniSlideRenderer';
 import { Card } from '@/components/ui-base/Card';
@@ -13,6 +13,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
+import { AlertDialog, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from '@/components/ui-base/Dialog';
+import { toast } from 'sonner';
+import axiosInstance from '@/lib/utils/axios';
 
 interface SlideCardProps {
   deck: SlideDeck & { isPinned?: boolean; deckType?: string };
@@ -62,6 +65,49 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
   const [titleInput, setTitleInput] = useState(deck.name || 'Untitled Presentation');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ---- Share & Delete Modals Logic ----
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+
+  const handleGenerateLink = async () => {
+    try {
+      const serverId = deck.serverId || deck.id;
+      if (!serverId || serverId.startsWith('local-')) {
+        toast.error('Please save the deck to the cloud first before sharing.');
+        return;
+      }
+      setIsGenerating(true);
+      
+      const response = await axiosInstance.post('/api/create-slide-link', {
+        type: 'slide',
+        slideId: serverId,
+        role: 'viewer'
+      });
+      
+      if (response.data.success && response.data.data.url) {
+        setGeneratedUrl(response.data.data.url);
+        await navigator.clipboard.writeText(response.data.data.url);
+        toast.success('Share link generated and copied to clipboard!');
+      } else {
+        toast.error('Failed to generate share link');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      toast.error('Failed to generate link');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (generatedUrl) {
+      await navigator.clipboard.writeText(generatedUrl);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
   useEffect(() => {
     if (!isEditingTitle) {
       setTitleInput(deck.name || 'Untitled Presentation');
@@ -90,7 +136,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
 
   return (
     <Card 
-      className="group h-full p-3 flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50  hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl"
+      className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50  hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl"
     >
       <div 
         className="relative h-[250px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))] border border-white/5 shadow-inner cursor-pointer"
@@ -102,7 +148,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
         {deck.isPinned && (
           <div className="absolute top-1 left-1 z-20">
               <div className="">
-                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                 <Sparkles className="h-3.5 w-3.5 text-blue-400" />
               </div>
           </div>
         )}
@@ -127,19 +173,19 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
                </DropdownMenuTrigger>
                <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl border-[hsl(var(--border))] shadow-xl bg-[hsl(var(--popover))]/95 backdrop-blur-sm">
                  {/* Menu Items */}
-                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPresent(deck); }} className="rounded-lg text-xs font-medium py-2 cursor-pointer text-amber-500">
+                 {/* <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPresent(deck); }} className="rounded-lg text-xs font-medium py-2 cursor-pointer text-amber-500">
                    <Play className="mr-2 h-3.5 w-3.5 opacity-70 fill-current" />Present Slide
+                 </DropdownMenuItem> */}
+                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsShareOpen(true); }} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Share2 className="mr-2 h-3.5 w-3.5 opacity-70" />Share
                  </DropdownMenuItem>
                  <div className="h-px bg-[hsl(var(--border))]/50 my-1" />
-                 <DropdownMenuItem onClick={(e) => e.stopPropagation()} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                   <Copy className="mr-2 h-3.5 w-3.5 opacity-70" />Duplicate
-                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={(e) => e.stopPropagation()} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
-                   <Download className="mr-2 h-3.5 w-3.5 opacity-70" />Export JSON
+                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast('Export functionality coming soon', { icon: '🚧' }); }} className="rounded-lg text-xs font-medium py-2 cursor-pointer">
+                   <Download className="mr-2 h-3.5 w-3.5 opacity-70" />Export
                  </DropdownMenuItem>
                  <div className="h-px bg-[hsl(var(--border))]/50 my-1" />
                  <DropdownMenuItem 
-                   onClick={(e) => { e.stopPropagation(); onDelete(deck.id); }} 
+                   onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} 
                    className="rounded-lg text-xs font-medium py-2 cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-500/10"
                  >
                    <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" />Delete Deck
@@ -212,35 +258,108 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
            <div className="flex items-center gap-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
-                      ${deck.deckType === 'meeting' ? 'bg-violet-500 border-violet-500/20 text-violet-600 dark:text-white' :
-                        deck.deckType === 'project' ? 'bg-emerald-500 border-emerald-500/20 text-emerald-600 dark:text-white' :
-                        deck.deckType === 'personal' ? 'bg-amber-500 border-amber-500/20 text-amber-600 dark:text-white' :
-                        'bg-blue-500 border-blue-500/20 text-blue-600 dark:text-white'
+                  <button className={`text-[10px] font-semibold px-2 py-1 rounded-sm border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
+                      ${deck.deckType === 'meeting' ? 'bg-violet-700/50 border-violet-500/10 dark:text-white' :
+                        deck.deckType === 'project' ? 'bg-emerald-700/50 border-emerald-500/10 dark:text-white' :
+                        deck.deckType === 'personal' ? 'bg-amber-700/50 border-amber-500/10 dark:text-white' :
+                        'bg-blue-700/50 border-blue-500/10 dark:text-white'
                       }`}>
                      {deck.deckType === 'meeting' ? 'Meeting' :
                       deck.deckType === 'project' ? 'Project' :
                       deck.deckType === 'personal' ? 'Personal' : 'Presentation'}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuContent align="end" side="top" className="w-36 mb-1">
                   <DropdownMenuItem onClick={(e) => onChangeDeckType?.(deck.id, 'presentation', e)}>
-                    <Presentation className="w-3.5 h-3.5 mr-2 text-blue-500" /> Presentation
+                    <Files className="w-3.5 h-3.5 mr-2 text-blue-500" /> Presentation
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => onChangeDeckType?.(deck.id, 'meeting', e)}>
-                    <Presentation className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
+                    <Files className="w-3.5 h-3.5 mr-2 text-violet-500" /> Meeting
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => onChangeDeckType?.(deck.id, 'project', e)}>
-                    <Presentation className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
+                    <Files className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Project
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => onChangeDeckType?.(deck.id, 'personal', e)}>
-                    <Presentation className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
+                    <Files className="w-3.5 h-3.5 mr-2 text-amber-500" /> Personal
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
            </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Slide Deck"
+        description={`Are you sure you want to delete "${deck.name || 'Untitled Deck'}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+          onDelete(deck.id);
+          setIsDeleteDialogOpen(false);
+        }}
+      />
+
+      <Dialog open={isShareOpen} onOpenChange={(open) => { setIsShareOpen(open); if (!open) setGeneratedUrl(null); }}>
+        <DialogContent onClose={() => setIsShareOpen(false)} onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+              Share "{deck.name || 'Untitled Deck'}"
+            </DialogTitle>
+            <DialogDescription>
+              Generate a public, read-only link to share your presentation. Unauthenticated users can view this link.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            {!generatedUrl ? (
+              <Button 
+                onClick={handleGenerateLink} 
+                disabled={isGenerating}
+                className="w-full bg-[hsl(var(--brand-primary))] hover:bg-[hsl(var(--brand-primary))]/90 text-white"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Link...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Generate Public Link
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 max-w-full">
+                  <div className="flex-1 px-3 py-2 bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))] rounded-md text-sm truncate font-mono text-[hsl(var(--foreground))]">
+                    {generatedUrl}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCopyLink}
+                    className="shrink-0"
+                    title="Copy Link"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setGeneratedUrl(null)}
+                  className="text-xs text-[hsl(var(--muted-foreground))]"
+                >
+                  Reset & Generate New
+                </Button>
+              </div>
+            )}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

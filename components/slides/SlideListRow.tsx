@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Presentation, Trash2, Pin, PinOff, Play, Layers, MoreVertical
+  Files, Trash2, Pin, PinOff, Play, Layers, MoreVertical
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SlideDeck } from './editor/useSlidePersistence';
@@ -96,7 +96,7 @@ export const SlideListRow = React.memo(({
         className="flex items-center gap-4 shrink-0 cursor-pointer"
         onClick={() => onOpen(deck)}
       >
-        <Presentation className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+        <Files className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
       </div>
       
       <div className="flex-1 min-w-0 pr-4">
