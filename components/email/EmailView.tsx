@@ -152,36 +152,7 @@ export function EmailView() {
 
   // ── Not Connected ──────────────────────────────────────
   if (!isConnected) {
-    return (
-      <div className="flex items-center justify-center h-full p-8">
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-lg w-full text-center">
-          {/* Animated icon */}
-          <motion.div
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-24 h-24 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-[hsl(var(--brand-primary))]/15 to-[hsl(var(--brand-secondary))]/15 border border-[hsl(var(--brand-primary))]/20 flex items-center justify-center relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--brand-primary))]/5 to-transparent" />
-            <Mail className="w-11 h-11 text-[hsl(var(--brand-primary))] relative z-10" />
-          </motion.div>
-
-          <h2 className="text-3xl font-bold mb-3 tracking-tight">AI Email</h2>
-          <p className="text-[hsl(var(--muted-foreground))] mb-8 leading-relaxed max-w-sm mx-auto">
-            Draft emails with AI and send directly from your Gmail. 
-            Your account, your identity — we just make it faster.
-          </p>
-
-          <Button variant="primary" size="lg" onClick={handleConnect} leftIcon={<Link2 className="w-5 h-5" />}>
-            Connect Gmail
-          </Button>
-
-          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Only emails sent from this app are tracked. Your inbox stays private.</span>
-          </div>
-        </motion.div>
-      </div>
-    );
+    return <NotConnectedScreen onConnect={handleConnect} />;
   }
 
   // ── Connected Main Layout ──────────────────────────────
@@ -680,3 +651,398 @@ function ThreadDetailPanel({ thread, onBack, onArchive, onRefresh }: {
     </div>
   );
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// NOT CONNECTED SCREEN — Landing + Feature Modal + Approval Modal
+// ═════════════════════════════════════════════════════════════════════════════
+function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  return (
+    <>
+      {/* ── Step 1: Landing Screen ─────────────────────────── */}
+      <div className="flex items-center justify-center h-full p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-[340px] flex flex-col items-center text-center"
+        >
+          <motion.div
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="mb-6"
+          >
+            <Send className="w-10 h-10 text-[hsl(var(--foreground))] -rotate-12" strokeWidth={1.5} />
+          </motion.div>
+
+          <h2 className="text-[22px] font-semibold mb-2 tracking-tight text-[hsl(var(--foreground))]">
+            AI-Powered Email
+          </h2>
+          <p className="text-[hsl(var(--muted-foreground))] text-[13px] mb-10 leading-relaxed">
+            Draft smarter, send faster — all from your workspace.
+          </p>
+
+          <div className="w-full h-px bg-[hsl(var(--border))] mb-6" />
+
+          <button
+            onClick={() => setShowFeatureModal(true)}
+            className="w-full h-[42px] rounded-lg bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-[13px] font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            Get Started
+          </button>
+
+          <p className="mt-8 text-[10px] text-[hsl(var(--muted-foreground))]/60 leading-relaxed max-w-[280px]">
+            Compose, draft, and send emails powered by AI — directly from your Gmail account.
+          </p>
+        </motion.div>
+      </div>
+
+      {/* ── Step 2: Feature Showcase Modal ─────────────────── */}
+      <AnimatePresence>
+        {showFeatureModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowFeatureModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.25 }}
+              className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl shadow-2xl w-full max-w-[1020px] max-h-[90vh] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex flex-col md:flex-row" style={{ minHeight: '580px' }}>
+                {/* Left: Slides area */}
+                <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-[hsl(var(--border))] flex flex-col">
+                  {/* Compact header with tabs */}
+                  <div className="flex items-center justify-between mb-3 shrink-0">
+                    <div className="flex items-center gap-1.5 bg-[hsl(var(--muted))]/50 p-0.5 rounded-lg">
+                      {['Inbox', 'Compose', 'Threads'].map((label, i) => (
+                        <button
+                          key={label}
+                          onClick={() => setActiveSlide(i)}
+                          className={`text-[11px] px-3 py-1 rounded-md transition-all font-medium ${
+                            i === activeSlide
+                              ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-sm'
+                              : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowFeatureModal(false)}
+                      className="p-1 rounded-md hover:bg-[hsl(var(--muted))] transition-colors"
+                    >
+                      <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                    </button>
+                  </div>
+
+                  {/* Slide content */}
+                  <div className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-hidden shadow-sm">
+                    {activeSlide === 0 && <SlideInbox />}
+                    {activeSlide === 1 && <SlideComposer />}
+                    {activeSlide === 2 && <SlideThread />}
+                  </div>
+                </div>
+
+                {/* Right: CTA panel */}
+                <div className="w-full md:w-[280px] p-8 flex flex-col justify-center shrink-0">
+                  <div className="mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-[hsl(var(--muted))] flex items-center justify-center mb-4">
+                      <Mail className="w-5 h-5 text-[hsl(var(--foreground))]" />
+                    </div>
+                    <h4 className="text-[18px] font-bold text-[hsl(var(--foreground))] mb-2 leading-tight">
+                      AI-powered email,{'\n'}without switching apps.
+                    </h4>
+                    <p className="text-[12px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+                      Connect your Google account to get an intelligent inbox, AI drafting, and contextual thread summaries.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowFeatureModal(false);
+                      setShowApprovalModal(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2.5 h-[42px] rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors text-[13px] font-medium text-[hsl(var(--foreground))] group"
+                  >
+                    <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Connect with Google
+                    <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))] group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+
+                  <p className="mt-4 text-[10px] text-[hsl(var(--muted-foreground))]/50 text-center leading-relaxed">
+                    Your data stays private. We only access emails sent from this app.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Step 3: Approval Warning Modal ─────────────────── */}
+      <AnimatePresence>
+        {showApprovalModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowApprovalModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.25 }}
+              className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl shadow-2xl w-full max-w-[400px] p-6 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
+              </div>
+
+              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-2">
+                Coming Soon
+              </h3>
+              <p className="text-[13px] text-[hsl(var(--muted-foreground))] leading-relaxed mb-6 max-w-[300px] mx-auto">
+                We&apos;re currently in the process of getting verified by Google. This feature will be available as soon as the review is complete.
+              </p>
+
+              <div className="flex items-center justify-center gap-3 text-[12px] text-[hsl(var(--muted-foreground))]/70 mb-6">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>Verification in progress</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowApprovalModal(false)}
+                className="w-full h-[40px] rounded-lg bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-[13px] font-medium hover:opacity-90 transition-opacity"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SLIDE MOCKUPS — clean UI snapshots
+// ═════════════════════════════════════════════════════════════════════════════
+
+function SlideInbox() {
+  const emails = [
+    { from: 'Sarah Chen', email: 'sarah@company.com', subject: 'Q4 Marketing Strategy Review', snippet: 'Hey, I\'ve attached the updated deck with the new campaign metrics. Can you review before our sync tomorrow?', time: '2m ago', unread: true, hasAttachment: true, avatar: 'SC', starred: true },
+    { from: 'Alex Rivera', email: 'alex.r@startup.io', subject: 'Re: Series A Term Sheet', snippet: 'Thanks for the quick turnaround. The investors are aligned on the valuation, just need final sign-off from legal.', time: '14m ago', unread: true, hasAttachment: false, avatar: 'AR', starred: false },
+    { from: 'GitHub', email: 'noreply@github.com', subject: '[recollect] Pull request #142 merged', snippet: 'feat: implement email thread tracking — merged by ramin-010 into main', time: '1h ago', unread: false, hasAttachment: false, avatar: 'GH', starred: false },
+    { from: 'David Park', email: 'david.park@design.co', subject: 'Updated wireframes for dashboard', snippet: 'Attached the v3 wireframes. Main changes: simplified nav, new card layout for the analytics section.', time: '3h ago', unread: false, hasAttachment: true, avatar: 'DP', starred: false },
+    { from: 'Priya Sharma', email: 'priya@analytics.io', subject: 'Weekly metrics report — Dec W1', snippet: 'Here are the highlights: DAU up 12%, retention improved to 68%, conversion rate at 4.2%.', time: '5h ago', unread: false, hasAttachment: false, avatar: 'PS', starred: false },
+    { from: 'LinkedIn', email: 'notifications@linkedin.com', subject: 'You have 3 new connection requests', snippet: 'John Doe (SWE at Google), Jane Smith (PM at Meta), and 1 other want to connect with you.', time: 'Yesterday', unread: false, hasAttachment: false, avatar: 'LI', starred: false },
+  ];
+
+  return (
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+        <div className="flex items-center gap-2">
+          <Inbox className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+          <span className="text-[12px] font-semibold">Inbox</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] font-medium">2 new</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-medium">All</div>
+          <div className="text-[10px] px-2 py-0.5 rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]">Unread</div>
+          <div className="text-[10px] px-2 py-0.5 rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]">Starred</div>
+        </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="px-4 py-2 border-b border-[hsl(var(--border))]">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))]/50 border border-[hsl(var(--border))]/50">
+          <svg className="w-3 h-3 text-[hsl(var(--muted-foreground))]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <span className="text-[11px] text-[hsl(var(--muted-foreground))]">Search emails...</span>
+        </div>
+      </div>
+
+      {/* Email list */}
+      <div className="flex-1 overflow-hidden">
+        {emails.map((email, i) => (
+          <div
+            key={i}
+            className={`flex items-start gap-3 px-4 py-2.5 border-b border-[hsl(var(--border))]/40 hover:bg-[hsl(var(--muted))]/30 cursor-pointer transition-colors ${email.unread ? 'bg-[hsl(var(--muted))]/20' : ''}`}
+          >
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 ${email.unread ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
+              {email.avatar}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`text-[11px] truncate ${email.unread ? 'font-bold' : 'font-medium'}`}>{email.from}</span>
+                  {email.hasAttachment && <Paperclip className="w-2.5 h-2.5 text-[hsl(var(--muted-foreground))] shrink-0" />}
+                </div>
+                <span className="text-[9px] text-[hsl(var(--muted-foreground))] shrink-0 ml-2">{email.time}</span>
+              </div>
+              <p className={`text-[11px] truncate ${email.unread ? 'font-semibold' : 'text-[hsl(var(--muted-foreground))]'}`}>{email.subject}</p>
+              <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70 truncate mt-0.5">{email.snippet}</p>
+            </div>
+            {email.unread && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-2.5" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideComposer() {
+  return (
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+      {/* Compose header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+        <span className="text-[12px] font-semibold">New Message</span>
+        <div className="flex items-center gap-1.5">
+          <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center gap-1 font-medium">
+            <Sparkles className="w-2.5 h-2.5" />
+            AI Assist On
+          </div>
+        </div>
+      </div>
+
+      {/* Form fields */}
+      <div className="border-b border-[hsl(var(--border))]">
+        <div className="flex items-center px-4 py-1.5 border-b border-[hsl(var(--border))]/40">
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">To</span>
+          <span className="text-[11px]">sarah@company.com</span>
+        </div>
+        <div className="flex items-center px-4 py-1.5 border-b border-[hsl(var(--border))]/40">
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">Cc</span>
+          <span className="text-[11px] text-[hsl(var(--muted-foreground))]">alex.r@startup.io</span>
+        </div>
+        <div className="flex items-center px-4 py-1.5">
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">Subj</span>
+          <span className="text-[11px] font-semibold">Re: Q4 Marketing Strategy Review</span>
+        </div>
+      </div>
+
+      {/* Body + AI suggestion */}
+      <div className="flex-1 flex flex-col">
+        <div className="flex-1 px-4 py-3">
+          <p className="text-[11px] leading-relaxed">Hi Sarah,</p>
+          <p className="text-[11px] leading-relaxed mt-2">
+            Thanks for sharing the updated deck. I&apos;ve reviewed the campaign metrics and the numbers look promising — especially the 23% lift in engagement.
+          </p>
+          <p className="text-[11px] leading-relaxed mt-2">
+            A couple of thoughts:
+          </p>
+
+          {/* AI suggestion — flat inline card, no shadow/glow */}
+          <div className="mt-3 px-3 py-2.5 rounded-lg border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+              <span className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">AI Suggestion</span>
+            </div>
+            <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">
+              1. Consider reallocating 15% of the social budget to content marketing based on the ROI data.{'\n'}
+              2. The retention funnel shows a drop-off at step 3 — might be worth A/B testing the CTA copy.{'\n'}
+              3. Let&apos;s schedule a sync this Thursday to align on the final budget before the board meeting.
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button className="text-[9px] px-2 py-0.5 rounded bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-medium">Accept</button>
+              <button className="text-[9px] px-2 py-0.5 rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] font-medium">Regenerate</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-[hsl(var(--border))]">
+          <div className="flex items-center gap-2">
+            <div className="text-[9px] px-2 py-0.5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center gap-1 font-medium">
+              <Paperclip className="w-2.5 h-2.5" />
+              2 files
+            </div>
+          </div>
+          <button className="text-[10px] px-3 py-1 rounded-md bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-semibold flex items-center gap-1">
+            <Send className="w-2.5 h-2.5" />
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlideThread() {
+  const msgs = [
+    { from: 'You', to: 'Alex Rivera', time: 'Dec 2 · 10:24 AM', body: 'Hey Alex, following up on the term sheet. Have the investors confirmed the valuation cap?', sent: true },
+    { from: 'Alex Rivera', to: 'You', time: 'Dec 2 · 10:31 AM', body: 'Yes! They\'re aligned at $12M pre-money. Just waiting on legal to finalize the pro-rata rights clause. Should have docs ready by EOD tomorrow.', sent: false },
+    { from: 'You', to: 'Alex Rivera', time: 'Dec 2 · 10:33 AM', body: 'Perfect. I\'ll loop in our counsel to review once you send them over. Also — are we still on for Thursday\'s sync?', sent: true },
+    { from: 'Alex Rivera', to: 'You', time: 'Dec 2 · 10:40 AM', body: 'Thursday works. Let\'s do 2pm PST. I\'ll send a calendar invite.', sent: false },
+  ];
+
+  return (
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+      {/* Thread header */}
+      <div className="px-4 py-2. border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[12px] font-bold">Re: Series A Term Sheet</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">alex.r@startup.io · 4 messages</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Archive className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Messages — email-style, not chat bubbles */}
+      <div className="flex-1 overflow-hidden">
+        {msgs.map((m, i) => (
+          <div key={i} className={`px-4 py-2.5 border-b border-[hsl(var(--border))]/40 ${i === msgs.length - 1 ? 'bg-[hsl(var(--muted))]/20' : ''}`}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold ${m.sent ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
+                  {m.sent ? 'Y' : 'AR'}
+                </div>
+                <span className="text-[10px] font-semibold">{m.from}</span>
+                <span className="text-[9px] text-[hsl(var(--muted-foreground))]">to {m.to}</span>
+              </div>
+              <span className="text-[9px] text-[hsl(var(--muted-foreground))]">{m.time}</span>
+            </div>
+            <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))] pl-[26px]">{m.body}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Reply bar */}
+      <div className="px-4 py-2 border-t border-[hsl(var(--border))]">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/20">
+          <span className="flex-1 text-[10px] text-[hsl(var(--muted-foreground))]">Write a reply...</span>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+            <Send className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
