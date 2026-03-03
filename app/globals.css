@@ -1,74 +1,73 @@
 /* ReCollect - Professional Design System */
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* Override Tailwind v4 default dark mode (media query) with class-based selectors */
 @custom-variant dark (&:is(.dark, .theme-dark-gray, .theme-gray) *);
 
 @layer base {
-
   :root {
     /* Premium Light Theme (Vercel/Linear feel) */
-    --background: 0 0% 98%;        /* Very subtle off-white */
-    --foreground: 220 20% 12%;     /* Rich Charcoal for high contrast text */
-    
-    --card: 0 0% 100%;             /* Pure White for depth */
+    --background: 0 0% 98%; /* Very subtle off-white */
+    --foreground: 220 20% 12%; /* Rich Charcoal for high contrast text */
+
+    --card: 0 0% 100%; /* Pure White for depth */
     --card-bg: 0 0% 100%;
     --card-foreground: 0 0% 15%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 15%;
-    
+
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 0 0% 88%;         /* Slightly darker than bg */
+
+    --secondary: 0 0% 88%; /* Slightly darker than bg */
     --secondary-foreground: 0 0% 15%;
-    
+
     --muted: 210 20% 94%;
     --muted-foreground: 220 15% 45%;
-    
+
     --accent: 0 0% 88%;
     --accent-foreground: 0 0% 15%;
-    
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    
-    --border: 220 15% 90%;            /* Cooler, sharper border */
+
+    --border: 220 15% 90%; /* Cooler, sharper border */
     --input: 0 0% 88%;
     --ring: 217 91% 50%;
-    
+
     --radius: 0.75rem;
-    
+
     --brand-primary: 217 91% 50%;
     --brand-secondary: 259 84% 55%;
-    
+
     --surface-light: 0 0% 100%;
     --surface-medium: 0 0% 92%;
     --surface-dark: 0 0% 88%;
-    
+
     --text-secondary: 0 0% 45%;
-    
+
     --success: 142 76% 36%;
     --warning: 38 72% 50%;
-    
-    --sidebar-bg: 0 0% 90%;        /* Neutral Grey to match BG family */
+
+    --sidebar-bg: 0 0% 90%; /* Neutral Grey to match BG family */
     --sidebar-hover: 0 0% 87%;
     --sidebar-active: 0 0% 85%;
     --divider: 0 0% 85%;
     --sidebar-foreground: 0 0% 35%;
-    
+
     /* Task Input - Light Mode */
-    --task-input-bg: 0 0% 100%;      /* White input on light bg */
-    --task-input-border: 0 0% 85%;   /* Subtle border */
-    --task-input-text: 0 0% 20%;     /* Dark text */
+    --task-input-bg: 0 0% 100%; /* White input on light bg */
+    --task-input-border: 0 0% 85%; /* Subtle border */
+    --task-input-text: 0 0% 20%; /* Dark text */
     --task-input-placeholder: 0 0% 60%;
-    --task-key-bg: 0 0% 95%;         /* Light key bg */
+    --task-key-bg: 0 0% 95%; /* Light key bg */
     --task-key-text: 0 0% 50%;
-    
+
     --welcome-bg: 0 0% 98%;
     --border-light: 0 0% 88%;
   }
-/* 
+  /* 
   
   html.dark {
     --background: 240 10% 3.9%;
@@ -159,42 +158,42 @@
   /* Dark Gray Mode - Notion's exact colors */
   html.theme-dark-gray {
     /* Notion-like dark monochrome palette  --background: 30 3% 8%;  /* #151413 */
-    --background: 0 0% 9%;           /* #0F0F0F - Base fallback */
-    --foreground: 0 0% 82%;          /* #E0E0E0 - Light text */
-    --card: 0 0% 10%;                /* #191919 - Card background */
-    --card-bg: 0 0% 16%;             /* #212121 - Lifted card background */
+    --background: 0 0% 9%; /* #0F0F0F - Base fallback */
+    --foreground: 0 0% 82%; /* #E0E0E0 - Light text */
+    --card: 0 0% 10%; /* #191919 - Card background */
+    --card-bg: 0 0% 16%; /* #212121 - Lifted card background */
     --card-foreground: 0 0% 88%;
-    --popover: 0 0% 11%;             /* #1C1C1C - Popover background */
+    --popover: 0 0% 11%; /* #1C1C1C - Popover background */
     --popover-foreground: 0 0% 88%;
-    --primary: 0 0% 88%;             /* Light text for primary */
+    --primary: 0 0% 88%; /* Light text for primary */
     --primary-foreground: 0 0% 8%;
-    --secondary: 0 0% 14%;           /* #242424 - Hover/selected state */
+    --secondary: 0 0% 14%; /* #242424 - Hover/selected state */
     --secondary-foreground: 0 0% 88%;
-    --muted: 0 0% 14%;               /* Muted backgrounds */
-    --muted-foreground: 0 0% 56%;    /* #8F8F8F - Muted text */
-    --accent: 0 0% 14%;              /* Accent backgrounds */
+    --muted: 0 0% 14%; /* Muted backgrounds */
+    --muted-foreground: 0 0% 56%; /* #8F8F8F - Muted text */
+    --accent: 0 0% 14%; /* Accent backgrounds */
     --accent-foreground: 0 0% 88%;
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 15%;              /* #262626 - Subtle borders */
-    --input: 0 0% 14%;               /* Input field background */
-    --ring: 0 0% 56%;                /* Focus ring color */
-    --brand-primary: 217 91% 60%;      /* Subtle brand color */
+    --border: 0 0% 15%; /* #262626 - Subtle borders */
+    --input: 0 0% 14%; /* Input field background */
+    --ring: 0 0% 56%; /* Focus ring color */
+    --brand-primary: 217 91% 60%; /* Subtle brand color */
     --brand-secondary: 0 0% 70%;
-    --surface-light: 0 0% 12%;       /* #1F1F1F - Lighter surface */
-    --surface-medium: 0 0% 14%;      /* #242424 - Medium surface */
-    --surface-dark: 0 0% 9%;         /* #171717 - Darker surface */
-    --text-secondary: 0 0% 56%;      /* Secondary text */
+    --surface-light: 0 0% 12%; /* #1F1F1F - Lighter surface */
+    --surface-medium: 0 0% 14%; /* #242424 - Medium surface */
+    --surface-dark: 0 0% 9%; /* #171717 - Darker surface */
+    --text-secondary: 0 0% 56%; /* Secondary text */
     --success: 142 35% 50%;
     --warning: 38 92% 50%;
-   --sidebar-bg: 0 0% 13%;   /* #1D1C1B - Very subtle warm tint */          /* #171717 - Sidebar background */
-    --sidebar-hover: 0 1% 13%;       /* #1F1F1F - Sidebar hover */
-    --sidebar-active: 0 0% 14%;      /* #242424 - Sidebar active */
-    --divider: 0 0% 16%; 
-    --sidebar-foreground : 0 0% 61%;            /* #292929 - Divider lines */
+    --sidebar-bg: 0 0% 13%; /* #1D1C1B - Very subtle warm tint */ /* #171717 - Sidebar background */
+    --sidebar-hover: 0 1% 13%; /* #1F1F1F - Sidebar hover */
+    --sidebar-active: 0 0% 14%; /* #242424 - Sidebar active */
+    --divider: 0 0% 16%;
+    --sidebar-foreground: 0 0% 61%; /* #292929 - Divider lines */
 
     /* Task Input - Dark Gray Mode */
-    --task-input-bg: 0 0% 12%;       /* Darker than card */
+    --task-input-bg: 0 0% 12%; /* Darker than card */
     --task-input-border: 0 0% 16%;
     --task-input-text: 0 0% 80%;
     --task-input-placeholder: 0 0% 40%;
@@ -203,7 +202,7 @@
 
     --welcome-bg: 0 0% 12%;
     --border-light: 0 0% 30%;
-    
+
     --new-bg-color: #212121;
   }
 
@@ -220,8 +219,16 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
+}
+
+/* Restore text selection highlighting (Tailwind v4 Preflight resets it) */
+::selection {
+  background-color: rgba(59, 130, 246, 0.4) !important;
+  color: white !important;
 }
 
 /* Tiptap Editor Styles */
@@ -343,12 +350,16 @@
   background-color: hsl(var(--card));
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pro-card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
   border-color: hsl(var(--primary) / 0.3);
 }
 
@@ -358,19 +369,27 @@
 }
 
 .shadow-sm {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .shadow-md {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .shadow-xl {
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 /* Hover Effects */
@@ -415,18 +434,34 @@
 
 /* Page background patterns */
 .bg-pattern {
-  background-image: 
-    radial-gradient(at 40% 20%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
+  background-image:
+    radial-gradient(
+      at 40% 20%,
+      hsl(var(--primary) / 0.04) 0px,
+      transparent 50%
+    ),
     radial-gradient(at 80% 0%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
     radial-gradient(at 0% 50%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsl(var(--brand-primary) / 0.02) 0px, transparent 50%);
+    radial-gradient(
+      at 100% 100%,
+      hsl(var(--brand-primary) / 0.02) 0px,
+      transparent 50%
+    );
 }
 
 /* Dark gradient background - premium look */
 .bg-gradient-dark {
-  background: 
-    radial-gradient(ellipse 80% 60% at 10% 10%, hsl(220 10% 10% / 0.5) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 90% 90%, hsl(260 8% 9% / 0.4) 0%, transparent 60%),
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 10% 10%,
+      hsl(220 10% 10% / 0.5) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 90% 90%,
+      hsl(260 8% 9% / 0.4) 0%,
+      transparent 60%
+    ),
     hsl(0 0% 7%);
   background-attachment: fixed;
 }
@@ -434,31 +469,30 @@
 /* OKLCH Dark Gray Background Options */
 .bg-oklch {
   /* CURRENT: Notion Dark Gray */
- 
-  
+
   /* ===== DARK GRAY OPTIONS (15-22% Lightness) ===== */
-  
+
   /* 1. Pure Gray (Neutral) - Like VS Code */
   /* background: oklch(17% 0 0); */
-  
+
   /* 2. Warm Gray - Like Notion/Obsidian */
   /* background: oklch(18% 0.005 60); */
-  
+
   /* 3. Cool Gray - Like Figma/Linear */
   /* background: oklch(17% 0.008 250); */
-  
+
   /* 4. Zinc Gray - Like Tailwind's Zinc like it */
-   background: oklch(20% 0.004 285);
-   
+  background: oklch(20% 0.004 285);
+
   /* 5. Stone Gray - Warm & Cozy */
   /* background: oklch(20% 0.006 80); */
-  
+
   /* 6. Slate Gray - Professional */
   /* background: oklch(18% 0.01 240); */
-  
+
   /* 7. Graphite - Apple-style */
   /* background: oklch(16% 0 0); */
-  
+
   /* 8. Charcoal - Rich & Deep */
   /* background: oklch(15% 0.003 50); */
 }
@@ -480,8 +514,8 @@
   -webkit-backdrop-filter: blur(12px);
   background: hsl(var(--background) / 0.95);
   border: 1px solid hsl(var(--border) / 0.5);
-  box-shadow: 
-    0 20px 25px -5px rgb(0 0 0 / 0.1), 
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
     0 8px 10px -6px rgb(0 0 0 / 0.1),
     0 0 0 1px hsl(var(--border) / 0.05);
 }
@@ -496,8 +530,8 @@
 /* Privacy toggle */
 .privacy-toggle-selected {
   background: hsl(var(--background));
-  box-shadow: 
-    0 1px 3px 0 rgb(0 0 0 / 0.1), 
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
     0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
@@ -572,10 +606,22 @@
   gap: 0.75rem;
   align-items: flex-start;
 }
-[data-callout-type="info"]    { border-color: rgb(59 130 246);  background: rgb(59 130 246 / 0.1); }
-[data-callout-type="warning"] { border-color: rgb(245 158 11);  background: rgb(245 158 11 / 0.1); }
-[data-callout-type="tip"]     { border-color: rgb(16 185 129);  background: rgb(16 185 129 / 0.1); }
-[data-callout-type="danger"]  { border-color: rgb(239 68 68);   background: rgb(239 68 68 / 0.1); }
+[data-callout-type="info"] {
+  border-color: rgb(59 130 246);
+  background: rgb(59 130 246 / 0.1);
+}
+[data-callout-type="warning"] {
+  border-color: rgb(245 158 11);
+  background: rgb(245 158 11 / 0.1);
+}
+[data-callout-type="tip"] {
+  border-color: rgb(16 185 129);
+  background: rgb(16 185 129 / 0.1);
+}
+[data-callout-type="danger"] {
+  border-color: rgb(239 68 68);
+  background: rgb(239 68 68 / 0.1);
+}
 
 /* InlineCursor — ProseMirror overrides inside slide canvas */
 .inline-cursor-editor .ProseMirror {

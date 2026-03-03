@@ -376,8 +376,8 @@ export function SlidesView() {
     <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 py-10 lg:px-12">
         {/* Header Area */}
-        <div className="max-w-[1060px] mx-auto mb-4" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>
-          <h1 className="flex items-center gap-3 text-[1.8rem] font-bold tracking-tight text-[hsl(var(--foreground))]">
+        <div className="max-w-[1060px] mx-auto mb-4" >
+          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
             <Files className="h-7 w-7 text-[hsl(var(--foreground))]" />
             Slide Decks
           </h1>

@@ -121,6 +121,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
           
           <div className="relative flex-1">
             {highlightedOverlay}
+            <style>{`.task-title-input::selection { background-color: rgba(59,130,246,0.4) !important; color: white !important; }`}</style>
             <input
               ref={inputRef}
               type="text"
@@ -131,7 +132,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               autoComplete="off"
               suppressHydrationWarning={demoMode}
               className={cn(
-                "w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative",
+                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative",
                 highlightedOverlay ? "text-transparent caret-white" : "text-white"
               )}
             />
