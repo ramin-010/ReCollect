@@ -45,7 +45,8 @@ export interface Todo {
   
   // New Fields
   labels?: { id: string; name: string; color: string }[];
-  assignee?: string;
+  assignee?: string | { _id: string; name: string; email: string; avatar?: string };
+  assignedAt?: string;
 
   // Recurrence
   recurrence?: TaskRecurrence;

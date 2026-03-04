@@ -40,7 +40,7 @@ export function Navbar() {
   return (
     <>
       {/* Navbar Container */}
-      <nav className="sticky top-0 z-30 w-full bg-[hsl(var(--background))]/80 backdrop-blur-md ">
+      <nav className="sticky top-0 z-30 w-full bg-[hsl(var(--sidebar-bg))] backdrop-blur-md ">
         <div className="flex h-[52px] items-center px-4 lg:px-6 gap-4">
           
           {/* ReCollect Logo and Title */}

@@ -132,11 +132,19 @@ export function RichTaskItem({ task, onDelete, onToggleComplete, onSelect, isCom
             )}
 
             {/* Assignee Icon */}
-            {task.assignee ? (
-                 <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30" title={`Assigned to ${task.assignee}`}>
-                     <span className="text-[10px] font-bold">{task.assignee.charAt(0).toUpperCase()}</span>
-                 </div>
-            ) : (
+            {task.assignee ? (() => {
+                const assigneeInfo = typeof task.assignee === 'string'
+                  ? { name: task.assignee, email: task.assignee, avatar: undefined }
+                  : task.assignee;
+                const initials = assigneeInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                return assigneeInfo.avatar ? (
+                  <img src={assigneeInfo.avatar} alt={assigneeInfo.name} className="w-6 h-6 rounded-full object-cover border border-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`} />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`}>
+                    <span className="text-[10px] font-bold">{initials}</span>
+                  </div>
+                );
+            })() : (
                  <div className="w-6 h-6 rounded-full border border-dashed border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
                      <User className="w-3 h-3" />
                  </div>

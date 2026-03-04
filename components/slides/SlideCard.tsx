@@ -136,10 +136,10 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
 
   return (
     <Card 
-      className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50  hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ease-out rounded-2xl"
+      className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-out rounded-2xl cursor-pointer"
     >
       <div 
-        className="relative h-[250px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))] border border-white/5 shadow-inner cursor-pointer"
+        className="relative h-[230px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))]/60 border border-[hsl(var(--border))]/30 cursor-pointer"
         onClick={() => onOpen(deck)}
       >
         <MiniSlideRenderer slide={previewData.slide} blocks={previewData.blocks} connections={previewData.connections} />
@@ -203,7 +203,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
         <div className="flex items-start justify-between gap-3 mb-1">
            {!isEditingTitle ? (
              <h3 
-               className="text-[18px] font-bold group-hover:bg-[hsl(var(--foreground))]/5 py-1 px-2 rounded-sm text-[hsl(var(--foreground))] line-clamp-1 transition-colors duration-300 tracking-tight leading-tight cursor-text"
+               className="text-[16px] font-bold group-hover:bg-[hsl(var(--foreground))]/5 py-1 px-2 rounded-sm text-[hsl(var(--foreground))] line-clamp-1 transition-colors duration-300 tracking-tight leading-tight cursor-text"
                onClick={(e) => {
                  e.stopPropagation();
                  handleStartEdit(e);
@@ -233,7 +233,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
         {/* Footer Row: Meta & Tags & Slide Count */}
         <div className="flex items-center justify-between pt-2 gap-2 border-t border-[hsl(var(--border))]/30 mt-auto">
            {/* Left side: Date + Sync + Slide Count */}
-           <div className="flex items-center gap-3 text-[11px] font-medium text-[hsl(var(--muted-foreground))] opacity-80">
+           <div className="flex items-center gap-3 text-[11px] font-medium text-[hsl(var(--muted-foreground))]/60">
              <span className="flex items-center gap-1.5">
                {deck.updatedAt ? format(new Date(deck.updatedAt), 'MMM d') : 'Just now'}
 
@@ -258,11 +258,11 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
            <div className="flex items-center gap-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={`text-[10px] font-semibold px-2 py-1 rounded-sm border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
-                      ${deck.deckType === 'meeting' ? 'bg-violet-700/50 border-violet-500/10 dark:text-white' :
-                        deck.deckType === 'project' ? 'bg-emerald-700/50 border-emerald-500/10 dark:text-white' :
-                        deck.deckType === 'personal' ? 'bg-amber-700/50 border-amber-500/10 dark:text-white' :
-                        'bg-blue-700/50 border-blue-500/10 dark:text-white'
+                  <button className={`text-[10px] font-medium px-2 py-0.5 rounded-sm border cursor-pointer hover:opacity-80 transition-all
+                      ${deck.deckType === 'meeting' ? 'bg-violet-500/10 border-violet-500/15 text-violet-400' :
+                        deck.deckType === 'project' ? 'bg-emerald-500/10 border-emerald-500/15 text-emerald-400' :
+                        deck.deckType === 'personal' ? 'bg-amber-500/10 border-amber-500/15 text-amber-400' :
+                        'bg-blue-500/10 border-blue-500/15 text-blue-400'
                       }`}>
                      {deck.deckType === 'meeting' ? 'Meeting' :
                       deck.deckType === 'project' ? 'Project' :

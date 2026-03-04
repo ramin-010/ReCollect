@@ -423,15 +423,14 @@ export function SlidesView() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {isDev &&<Button
+              {isDev &&<button
                 onClick={() => setShowAiTest(true)}
-                className="bg-violet-600/60 text-white hover:bg-violet-600/70 border-0 gap-1.5"
-                size="sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))] transition-colors font-medium"
               >
-                <FlaskConical className="w-3.5 h-3.5" /> AI Test
-              </Button>}
+                <Sparkles className="w-3.5 h-3.5" /> AI Assist
+              </button>}
 
-              <Button onClick={createDeck} className="bg-amber-600/70 text-white hover:bg-amber-600/80 border-0 gap-1.5" size="sm">
+              <Button onClick={createDeck} className="bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 border-0 gap-1.5 shadow-sm" size="sm">
                 <Plus className="w-3.5 h-3.5" /> New
               </Button>
           </div>

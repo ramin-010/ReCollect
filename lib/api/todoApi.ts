@@ -45,7 +45,7 @@ export interface TodoResponse {
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: TodoLabel[];
   attachments?: string[];
-  assignee?: string;
+  assignee?: string | { _id: string; name: string; email: string; avatar?: string };
   assignedAt?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
@@ -366,6 +366,61 @@ export const todoApi = {
         success: false,
         message: error.response?.data?.message || 'Failed to update subtask'
       };
+    }
+  },
+
+  /**
+   * Assign a task to a user by email
+   */
+  async assignTask(todoId: string, email: string): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
+    console.log('[todoApi] Assigning task:', todoId, 'to:', email);
+    try {
+      const response = await axiosInstance.post(`/api/todos/${todoId}/assign`, { email });
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Assign failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to assign task'
+      };
+    }
+  },
+
+  /**
+   * Remove assignee from a task
+   */
+  async unassignTask(todoId: string): Promise<{ success: boolean; message?: string }> {
+    console.log('[todoApi] Unassigning task:', todoId);
+    try {
+      const response = await axiosInstance.post(`/api/todos/${todoId}/unassign`);
+      return {
+        success: response.data.success,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Unassign failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to unassign task'
+      };
+    }
+  },
+
+  /**
+   * Search users by name or email (for assignee picker)
+   */
+  async searchUsers(query: string): Promise<{ _id: string; name: string; email: string; avatar?: string }[]> {
+    console.log('[todoApi] Searching users:', query);
+    try {
+      const response = await axiosInstance.get(`/api/user/search`, { params: { q: query } });
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('[todoApi] User search failed:', error);
+      return [];
     }
   },
 };

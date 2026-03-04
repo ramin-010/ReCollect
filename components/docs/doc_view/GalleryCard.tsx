@@ -161,7 +161,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 px-4 pt-1 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[#ffffff0f] to-[#ffffff0f]">
+        <div className="flex-1 px-4 pt-1 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[hsl(var(--sidebar-bg))] to-[hsl(var(--sidebar-bg))]">
            
            <div className="flex flex-col gap-1.5">
              {/* Title */}

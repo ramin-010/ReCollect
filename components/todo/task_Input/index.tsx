@@ -9,6 +9,7 @@ import {
   Bell,
   MoreHorizontal,
   User,
+  UserPlus,
   Tag,
   CornerDownLeft,
   X,
@@ -18,7 +19,9 @@ import {
   CornerDownRight,
   Plus,
   Paperclip,
-  Loader2
+  Loader2,
+  Search,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -43,6 +46,7 @@ import { subMinutes } from 'date-fns';
 import { TaskInputProps, PRIORITIES } from './types';
 import { useTaskInput } from './useTaskInput';
 import { getRelativeDateDisplay, getHighlightedContent } from './utils';
+import { todoApi } from '@/lib/api/todoApi';
 
 export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({ 
   onSave, 
@@ -94,9 +98,42 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     clearConfirmedDate,
     handleSave,
     handleKeyDown,
+    assigneeEmail, setAssigneeEmail,
   } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode);
 
   useImperativeHandle(ref, () => inputRef.current!);
+
+  // Assignee picker state
+  const [isAssigneeOpen, setIsAssigneeOpen] = React.useState(false);
+  const [assigneeQuery, setAssigneeQuery] = React.useState('');
+  const [assigneeResults, setAssigneeResults] = React.useState<{_id: string; name: string; email: string; avatar?: string}[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = React.useState(false);
+
+  // Debounced user search for assignee picker
+  React.useEffect(() => {
+    if (!assigneeQuery || assigneeQuery.trim().length < 2) {
+      setAssigneeResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        const users = await todoApi.searchUsers(assigneeQuery.trim());
+        setAssigneeResults(users);
+      } catch (_) {}
+      setIsSearchingUsers(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [assigneeQuery]);
+
+  const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
+
+  const selectAssignee = (email: string, name?: string) => {
+    setAssigneeEmail(email);
+    setIsAssigneeOpen(false);
+    setAssigneeQuery('');
+    setAssigneeResults([]);
+  };
 
   const currentPriority = PRIORITIES.find(p => p.value === priority);
   const highlightedOverlay = getHighlightedContent(title, parsedResult, confirmedDueDate, selectedLabels);
@@ -391,10 +428,82 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     </div>
                   )}
 
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white/40 hover:text-white/60 hover:bg-white/5 rounded-md border border-dashed border-white/10 transition-colors">
-                    <User className="w-3.5 h-3.5" />
-                    <span>Assignee</span>
-                  </button>
+                  <Popover open={isAssigneeOpen} onOpenChange={setIsAssigneeOpen}>
+                    <PopoverTrigger asChild>
+                      <button className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                        assigneeEmail
+                          ? "border-indigo-500/30 text-indigo-400 bg-indigo-500/10"
+                          : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
+                      )}>
+                        {assigneeEmail ? <User className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                        <span>{assigneeEmail || 'Assignee'}</span>
+                        {assigneeEmail && (
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setAssigneeEmail(null); }}
+                            className="ml-1 p-0.5 hover:text-white/60 rounded cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </span>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
+                      <div className="p-2 border-b border-white/10">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                          <input
+                            type="text"
+                            value={assigneeQuery}
+                            onChange={(e) => setAssigneeQuery(e.target.value)}
+                            placeholder="Search or enter email..."
+                            className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto">
+                        {isSearchingUsers && (
+                          <div className="flex items-center justify-center py-3 text-white/40">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <span className="text-xs">Searching...</span>
+                          </div>
+                        )}
+                        {!isSearchingUsers && assigneeResults.map(user => (
+                          <button
+                            key={user._id}
+                            onClick={() => selectAssignee(user.email, user.name)}
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white/80 truncate">{user.name}</p>
+                              <p className="text-xs text-white/40 truncate">{user.email}</p>
+                            </div>
+                          </button>
+                        ))}
+                        {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
+                          <button
+                            onClick={() => selectAssignee(assigneeQuery.trim())}
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                              <Mail className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
+                              <p className="text-xs text-white/40">Will send invitation</p>
+                            </div>
+                          </button>
+                        )}
+                        {!assigneeQuery.trim() && (
+                          <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
                   <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
                     <PopoverTrigger asChild>

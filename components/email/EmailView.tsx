@@ -82,13 +82,13 @@ function formatFileSize(bytes: number): string {
 export function EmailView() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [activePanel, setActivePanel] = useState<'threads' | 'compose'>('threads');
   const [threads, setThreads] = useState<EmailThreadData[]>([]);
   const [selectedThread, setSelectedThread] = useState<EmailThreadData | null>(null);
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
 
-  useEffect(() => { checkStatus(); }, []);
+  // useEffect(() => { checkStatus(); }, []);
 
   const checkStatus = async () => {
     setIsCheckingStatus(true);
@@ -660,44 +660,82 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
 
+  // Auto-switch slides every 4 seconds
+  useEffect(() => {
+    if (!showFeatureModal) return;
+    const interval = setInterval(() => {
+      setActiveSlide(prev => (prev + 1) % 3);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [showFeatureModal]);
+
   return (
     <>
       {/* ── Step 1: Landing Screen ─────────────────────────── */}
-      <div className="flex items-center justify-center h-full p-8">
+      <div className="flex items-center justify-center h-full p-8 w-full ">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-[340px] flex flex-col items-center text-center"
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-[500px] flex flex-col items-center relative"
         >
-          <motion.div
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            className="mb-6"
-          >
-            <Send className="w-10 h-10 text-[hsl(var(--foreground))] -rotate-12" strokeWidth={1.5} />
-          </motion.div>
+          {/* Subtle background glow effect */}
+          {/* <div className="absolute top-[-5rem] left-1/2 -translate-x-1/2 w-[300px] h-[150px] bg-blue-500/10 blur-[60px] rounded-full pointer-events-none" /> */}
 
-          <h2 className="text-[22px] font-semibold mb-2 tracking-tight text-[hsl(var(--foreground))]">
-            AI-Powered Email
+          {/* <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-sm flex items-center justify-center mb-6 relative z-10">
+            <Sparkles className="w-6 h-6 text-[hsl(var(--foreground))]" />
+          </div> */}
+
+          <h2 className="text-[26px] font-bold mb-2 tracking-tight text-center bg-gradient-to-br from-[hsl(var(--foreground))] to-[hsl(var(--muted-foreground))] bg-clip-text ">
+            An AI-powered inbox
           </h2>
-          <p className="text-[hsl(var(--muted-foreground))] text-[13px] mb-10 leading-relaxed">
-            Draft smarter, send faster — all from your workspace.
+          <p className="text-[hsl(var(--muted-foreground))]/80 text-[13px] text-center mb-6 max-w-[360px] leading-relaxed">
+            Connect Gmail to prioritize conversations, draft replies faster, and understand threads instantly — with AI.
           </p>
 
-          <div className="w-full h-px bg-[hsl(var(--border))] mb-6" />
+          <div className="w-full space-y-2 mb-6">
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
+                <Inbox className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
+              </div>
+              <div>
+                <h4 className="text-[13px] font-bold text-[hsl(var(--foreground))] mb-0.5">Automated Sorting</h4>
+                <p className="text-[12px] text-[hsl(var(--muted-foreground))]/70 leading-relaxed">AI automatically highlights important senders and filters out transactional noise.</p>
+              </div>
+            </div>
 
-          <button
-            onClick={() => setShowFeatureModal(true)}
-            className="w-full h-[42px] rounded-lg bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-[13px] font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            Get Started
-          </button>
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
+              </div>
+              <div>
+                <h4 className="text-[13px] font-bold text-[hsl(var(--foreground))] mb-0.5">Contextual Drafting</h4>
+                <p className="text-[12px] text-[hsl(var(--muted-foreground))]/70 leading-relaxed">Generates context-aware responses instantly based on thread history.</p>
+              </div>
+            </div>
 
-          <p className="mt-8 text-[10px] text-[hsl(var(--muted-foreground))]/60 leading-relaxed max-w-[280px]">
-            Compose, draft, and send emails powered by AI — directly from your Gmail account.
-          </p>
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
+                <Archive className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
+              </div>
+              <div>
+                <h4 className="text-[13px] font-bold text-[hsl(var(--foreground))] mb-0.5">Thread Summaries</h4>
+                <p className="text-[12px] text-[hsl(var(--muted-foreground))]/70 leading-relaxed">Extracts the bottom line from long email chains without reading every message.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full flex flex-col items-center">
+            <button
+              onClick={() => setShowFeatureModal(true)}
+              className="w-full h-[40px] rounded-xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-[13px] font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 relative z-10 shadow-sm"
+            >
+              Enable AI Inbox
+            </button>
+            <p className="mt-3 text-[10px] text-[hsl(var(--muted-foreground))]/50">
+              We only access emails sent through this app.
+            </p>
+          </div>
         </motion.div>
       </div>
 
@@ -716,62 +754,80 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.25 }}
-              className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl shadow-2xl w-full max-w-[1020px] max-h-[90vh] overflow-hidden"
+              className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl shadow-2xl w-full max-w-[1120px] max-h-[90vh] overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex flex-col md:flex-row" style={{ minHeight: '580px' }}>
                 {/* Left: Slides area */}
-                <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-[hsl(var(--border))] flex flex-col">
-                  {/* Compact header with tabs */}
-                  <div className="flex items-center justify-between mb-3 shrink-0">
-                    <div className="flex items-center gap-1.5 bg-[hsl(var(--muted))]/50 p-0.5 rounded-lg">
-                      {['Inbox', 'Compose', 'Threads'].map((label, i) => (
-                        <button
-                          key={label}
-                          onClick={() => setActiveSlide(i)}
-                          className={`text-[11px] px-3 py-1 rounded-md transition-all font-medium ${
-                            i === activeSlide
-                              ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))] shadow-sm'
-                              : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                <div className="md:flex-[7] flex-1 p-6 border-b md:border-b-0 md:border-r border-[hsl(var(--border))] flex flex-col bg-[hsl(var(--muted))]/30">
+                  {/* Top bar — Slide Name + Close */}
+                  {/* <div className="flex items-center justify-between mb-3 shrink-0">
+                    <span className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))]">
+                      {activeSlide === 0 ? 'Smart Inbox' : activeSlide === 1 ? 'AI Composer' : 'Thread View'}
+                    </span>
                     <button
                       onClick={() => setShowFeatureModal(false)}
                       className="p-1 rounded-md hover:bg-[hsl(var(--muted))] transition-colors"
                     >
                       <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                     </button>
+                  </div> */}
+
+                  {/* Slide content with sliding animation */}
+                  <div className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-hidden shadow-sm relative">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeSlide}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+                        className="absolute inset-0"
+                      >
+                        {activeSlide === 0 && <SlideInbox />}
+                        {activeSlide === 1 && <SlideComposer />}
+                        {activeSlide === 2 && <SlideThread />}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
-                  {/* Slide content */}
-                  <div className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-hidden shadow-sm">
-                    {activeSlide === 0 && <SlideInbox />}
-                    {activeSlide === 1 && <SlideComposer />}
-                    {activeSlide === 2 && <SlideThread />}
+                  {/* Simple dot indicators */}
+                  <div className="flex items-center justify-center gap-2 mt-4">
+                    {[0, 1, 2].map(i => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveSlide(i)}
+                        className={`rounded-full transition-all duration-300 ${
+                          i === activeSlide
+                            ? 'w-5 h-1.5 bg-[hsl(var(--brand-primary))]'
+                            : 'w-1.5 h-1.5 bg-[hsl(var(--muted-foreground))]/40 hover:bg-[hsl(var(--muted-foreground))]/60'
+                        }`}
+                        aria-label={`Go to slide ${i + 1}`}
+                      />
+                    ))}
                   </div>
                 </div>
 
-                {/* Right: CTA panel */}
-                <div className="w-full md:w-[280px] p-8 flex flex-col justify-center shrink-0">
+                {/* Right: CTA panel — supportive, narrower */}
+                <div className="w-full md:w-[280px] md:flex-[3] p-7 flex flex-col justify-center shrink-0 bg-[hsl(var(--background))]">
                   <div className="mb-8">
                     <div className="w-10 h-10 rounded-xl bg-[hsl(var(--muted))] flex items-center justify-center mb-4">
                       <Mail className="w-5 h-5 text-[hsl(var(--foreground))]" />
                     </div>
-                    <h4 className="text-[18px] font-bold text-[hsl(var(--foreground))] mb-2 leading-tight">
+                    <h4 className="text-[20px] font-bold text-[hsl(var(--foreground))] mb-3 leading-tight">
                       AI-powered email,{'\n'}without switching apps.
                     </h4>
-                    <p className="text-[12px] text-[hsl(var(--muted-foreground))] leading-relaxed">
-                      Connect your Google account to get an intelligent inbox, AI drafting, and contextual thread summaries.
+                    <p className="text-[13px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+                      {activeSlide === 0
+                        ? 'AI automatically sorts and prioritises your inbox so you focus on what matters.'
+                        : activeSlide === 1
+                        ? 'Draft context-aware replies in seconds \u2014 AI reads the thread so you don\u2019t have to.'
+                        : 'Get instant summaries of long email chains and never lose track of a conversation.'}
                     </p>
                   </div>
 
                   <button
                     onClick={() => {
-                      setShowFeatureModal(false);
                       setShowApprovalModal(true);
                     }}
                     className="w-full flex items-center justify-center gap-2.5 h-[42px] rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors text-[13px] font-medium text-[hsl(var(--foreground))] group"
@@ -789,6 +845,11 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
                   <p className="mt-4 text-[10px] text-[hsl(var(--muted-foreground))]/50 text-center leading-relaxed">
                     Your data stays private. We only access emails sent from this app.
                   </p>
+                  { (
+                    <p className="mt-1.5 text-[10px] text-[hsl(var(--muted-foreground))]/40 text-center">
+                      You can disconnect anytime.
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -803,7 +864,7 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             onClick={() => setShowApprovalModal(false)}
           >
             <motion.div
@@ -852,22 +913,26 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
 
 function SlideInbox() {
   const emails = [
-    { from: 'Sarah Chen', email: 'sarah@company.com', subject: 'Q4 Marketing Strategy Review', snippet: 'Hey, I\'ve attached the updated deck with the new campaign metrics. Can you review before our sync tomorrow?', time: '2m ago', unread: true, hasAttachment: true, avatar: 'SC', starred: true },
-    { from: 'Alex Rivera', email: 'alex.r@startup.io', subject: 'Re: Series A Term Sheet', snippet: 'Thanks for the quick turnaround. The investors are aligned on the valuation, just need final sign-off from legal.', time: '14m ago', unread: true, hasAttachment: false, avatar: 'AR', starred: false },
-    { from: 'GitHub', email: 'noreply@github.com', subject: '[recollect] Pull request #142 merged', snippet: 'feat: implement email thread tracking — merged by ramin-010 into main', time: '1h ago', unread: false, hasAttachment: false, avatar: 'GH', starred: false },
-    { from: 'David Park', email: 'david.park@design.co', subject: 'Updated wireframes for dashboard', snippet: 'Attached the v3 wireframes. Main changes: simplified nav, new card layout for the analytics section.', time: '3h ago', unread: false, hasAttachment: true, avatar: 'DP', starred: false },
-    { from: 'Priya Sharma', email: 'priya@analytics.io', subject: 'Weekly metrics report — Dec W1', snippet: 'Here are the highlights: DAU up 12%, retention improved to 68%, conversion rate at 4.2%.', time: '5h ago', unread: false, hasAttachment: false, avatar: 'PS', starred: false },
-    { from: 'LinkedIn', email: 'notifications@linkedin.com', subject: 'You have 3 new connection requests', snippet: 'John Doe (SWE at Google), Jane Smith (PM at Meta), and 1 other want to connect with you.', time: 'Yesterday', unread: false, hasAttachment: false, avatar: 'LI', starred: false },
+    { from: 'Sarah Chen', email: 'sarah@company.com', subject: 'Q4 Marketing Strategy Review', snippet: 'Hey, I\'ve attached the updated deck with the new campaign metrics. Can you review before our sync tomorrow?', time: '2m ago', unread: true, hasAttachment: true, avatar: 'SC', priority: 'high' as const },
+    { from: 'Alex Rivera', email: 'alex.r@startup.io', subject: 'Re: Series A Term Sheet', snippet: 'Thanks for the quick turnaround. The investors are aligned on the valuation, just need final sign-off from legal.', time: '14m ago', unread: true, hasAttachment: false, avatar: 'AR', priority: 'high' as const },
+    { from: 'GitHub', email: 'noreply@github.com', subject: '[recollect] Pull request #142 merged', snippet: 'feat: implement email thread tracking — merged by ramin-010 into main', time: '1h ago', unread: false, hasAttachment: false, avatar: 'GH', priority: null },
+    { from: 'David Park', email: 'david.park@design.co', subject: 'Updated wireframes for dashboard', snippet: 'Attached the v3 wireframes. Main changes: simplified nav, new card layout for the analytics section.', time: '3h ago', unread: false, hasAttachment: true, avatar: 'DP', priority: null },
+    { from: 'Priya Sharma', email: 'priya@analytics.io', subject: 'Weekly metrics report — Dec W1', snippet: 'Here are the highlights: DAU up 12%, retention improved to 68%, conversion rate at 4.2%.', time: '5h ago', unread: false, hasAttachment: false, avatar: 'PS', priority: null },
+    { from: 'LinkedIn', email: 'notifications@linkedin.com', subject: 'You have 3 new connection requests', snippet: 'John Doe (SWE at Google), Jane Smith (PM at Meta), and 1 other want to connect with you.', time: 'Yesterday', unread: false, hasAttachment: false, avatar: 'LI', priority: null },
   ];
 
   return (
-    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
         <div className="flex items-center gap-2">
           <Inbox className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
           <span className="text-[12px] font-semibold">Inbox</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] font-medium">2 new</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] font-medium flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5" />
+            AI sorted
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-medium">All</div>
@@ -889,7 +954,11 @@ function SlideInbox() {
         {emails.map((email, i) => (
           <div
             key={i}
-            className={`flex items-start gap-3 px-4 py-2.5 border-b border-[hsl(var(--border))]/40 hover:bg-[hsl(var(--muted))]/30 cursor-pointer transition-colors ${email.unread ? 'bg-[hsl(var(--muted))]/20' : ''}`}
+            className={`flex items-start gap-3 px-4 py-3 border-b border-[hsl(var(--border))]/40 hover:bg-[hsl(var(--muted))]/30 cursor-pointer transition-colors ${
+              email.unread
+                ? 'bg-[hsl(var(--muted))]/20 border-l-2 border-l-[hsl(var(--brand-primary))]'
+                : ''
+            }`}
           >
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5 ${email.unread ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
               {email.avatar}
@@ -898,6 +967,9 @@ function SlideInbox() {
               <div className="flex items-center justify-between mb-0.5">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={`text-[11px] truncate ${email.unread ? 'font-bold' : 'font-medium'}`}>{email.from}</span>
+                  {email.priority === 'high' && (
+                    <span className="text-[8px] px-1 py-px rounded bg-amber-500/15 text-amber-500 font-semibold shrink-0">Priority</span>
+                  )}
                   {email.hasAttachment && <Paperclip className="w-2.5 h-2.5 text-[hsl(var(--muted-foreground))] shrink-0" />}
                 </div>
                 <span className="text-[9px] text-[hsl(var(--muted-foreground))] shrink-0 ml-2">{email.time}</span>
@@ -905,7 +977,7 @@ function SlideInbox() {
               <p className={`text-[11px] truncate ${email.unread ? 'font-semibold' : 'text-[hsl(var(--muted-foreground))]'}`}>{email.subject}</p>
               <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70 truncate mt-0.5">{email.snippet}</p>
             </div>
-            {email.unread && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-2.5" />}
+            {email.unread && <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand-primary))] shrink-0 mt-2.5" />}
           </div>
         ))}
       </div>
@@ -915,59 +987,59 @@ function SlideInbox() {
 
 function SlideComposer() {
   return (
-    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Compose header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
         <span className="text-[12px] font-semibold">New Message</span>
         <div className="flex items-center gap-1.5">
-          <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center gap-1 font-medium">
+          {/* <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] flex items-center gap-1 font-medium">
             <Sparkles className="w-2.5 h-2.5" />
             AI Assist On
-          </div>
+          </div> */}
         </div>
       </div>
 
-      {/* Form fields */}
+      {/* Form fields — lower contrast so AI suggestion pops */}
       <div className="border-b border-[hsl(var(--border))]">
         <div className="flex items-center px-4 py-1.5 border-b border-[hsl(var(--border))]/40">
-          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">To</span>
-          <span className="text-[11px]">sarah@company.com</span>
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))]/60 w-8 shrink-0">To</span>
+          <span className="text-[11px] text-[hsl(var(--foreground))]/70">sarah@company.com</span>
         </div>
         <div className="flex items-center px-4 py-1.5 border-b border-[hsl(var(--border))]/40">
-          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">Cc</span>
-          <span className="text-[11px] text-[hsl(var(--muted-foreground))]">alex.r@startup.io</span>
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))]/60 w-8 shrink-0">Cc</span>
+          <span className="text-[11px] text-[hsl(var(--muted-foreground))]/50">alex.r@startup.io</span>
         </div>
         <div className="flex items-center px-4 py-1.5">
-          <span className="text-[10px] text-[hsl(var(--muted-foreground))] w-8 shrink-0">Subj</span>
-          <span className="text-[11px] font-semibold">Re: Q4 Marketing Strategy Review</span>
+          <span className="text-[10px] text-[hsl(var(--muted-foreground))]/60 w-8 shrink-0">Subj</span>
+          <span className="text-[11px] font-medium text-[hsl(var(--foreground))]/70">Re: Q4 Marketing Strategy Review</span>
         </div>
       </div>
 
       {/* Body + AI suggestion */}
       <div className="flex-1 flex flex-col">
         <div className="flex-1 px-4 py-3">
-          <p className="text-[11px] leading-relaxed">Hi Sarah,</p>
-          <p className="text-[11px] leading-relaxed mt-2">
+          <p className="text-[11px] leading-relaxed text-[hsl(var(--foreground))]/60">Hi Sarah,</p>
+          <p className="text-[11px] leading-relaxed mt-2 text-[hsl(var(--foreground))]/60">
             Thanks for sharing the updated deck. I&apos;ve reviewed the campaign metrics and the numbers look promising — especially the 23% lift in engagement.
           </p>
-          <p className="text-[11px] leading-relaxed mt-2">
+          <p className="text-[11px] leading-relaxed mt-2 text-[hsl(var(--foreground))]/60">
             A couple of thoughts:
           </p>
 
-          {/* AI suggestion — flat inline card, no shadow/glow */}
-          <div className="mt-3 px-3 py-2.5 rounded-lg border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
-              <span className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">AI Suggestion</span>
+          {/* AI suggestion — system response with left accent */}
+          <div className="mt-3 px-3 py-2.5 rounded-lg border border-blue-400/35 bg-blue-500/[0.06]  border-l-blue-400">
+            <div className="flex items-center gap-1.5 mb-2">
+            
+              <span className="text-[10px] font-bold text-blue-300">AI recommends</span>
             </div>
             <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">
               1. Consider reallocating 15% of the social budget to content marketing based on the ROI data.{'\n'}
               2. The retention funnel shows a drop-off at step 3 — might be worth A/B testing the CTA copy.{'\n'}
               3. Let&apos;s schedule a sync this Thursday to align on the final budget before the board meeting.
             </p>
-            <div className="flex items-center gap-2 mt-2">
-              <button className="text-[9px] px-2 py-0.5 rounded bg-[hsl(var(--foreground))] text-[hsl(var(--background))] font-medium">Accept</button>
-              <button className="text-[9px] px-2 py-0.5 rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] font-medium">Regenerate</button>
+            <div className="flex items-center gap-2 mt-2.5">
+              <button className="text-[10px] px-2.5 py-1 rounded-md bg-blue-500 text-white font-semibold">Accept</button>
+              <button className="text-[9px] px-2 py-0.5 rounded border border-blue-400/25 text-blue-300 font-medium">Regenerate</button>
             </div>
           </div>
         </div>
@@ -991,52 +1063,101 @@ function SlideComposer() {
 }
 
 function SlideThread() {
-  const msgs = [
-    { from: 'You', to: 'Alex Rivera', time: 'Dec 2 · 10:24 AM', body: 'Hey Alex, following up on the term sheet. Have the investors confirmed the valuation cap?', sent: true },
-    { from: 'Alex Rivera', to: 'You', time: 'Dec 2 · 10:31 AM', body: 'Yes! They\'re aligned at $12M pre-money. Just waiting on legal to finalize the pro-rata rights clause. Should have docs ready by EOD tomorrow.', sent: false },
-    { from: 'You', to: 'Alex Rivera', time: 'Dec 2 · 10:33 AM', body: 'Perfect. I\'ll loop in our counsel to review once you send them over. Also — are we still on for Thursday\'s sync?', sent: true },
-    { from: 'Alex Rivera', to: 'You', time: 'Dec 2 · 10:40 AM', body: 'Thursday works. Let\'s do 2pm PST. I\'ll send a calendar invite.', sent: false },
-  ];
-
   return (
-    <div className="h-full flex flex-col text-[hsl(var(--foreground))]">
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Thread header */}
-      <div className="px-4 py-2. border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-bold">Re: Series A Term Sheet</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5">alex.r@startup.io · 4 messages</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <Archive className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-          </div>
+      <div className="px-4 py-2.5 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+        <p className="text-[12px] font-bold">Re: Series A Term Sheet</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[9px] text-[hsl(var(--muted-foreground))]">Between</span>
+          <span className="text-[9px] font-medium">You</span>
+          <span className="text-[9px] text-[hsl(var(--muted-foreground))]">and</span>
+          <span className="text-[9px] font-medium">Alex Rivera &lt;alex.r@startup.io&gt;</span>
+          <span className="text-[9px] text-[hsl(var(--muted-foreground))] ml-auto">4 messages · Dec 2</span>
         </div>
       </div>
 
-      {/* Messages — email-style, not chat bubbles */}
-      <div className="flex-1 overflow-hidden">
-        {msgs.map((m, i) => (
-          <div key={i} className={`px-4 py-2.5 border-b border-[hsl(var(--border))]/40 ${i === msgs.length - 1 ? 'bg-[hsl(var(--muted))]/20' : ''}`}>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1.5">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold ${m.sent ? 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
-                  {m.sent ? 'Y' : 'AR'}
-                </div>
-                <span className="text-[10px] font-semibold">{m.from}</span>
-                <span className="text-[9px] text-[hsl(var(--muted-foreground))]">to {m.to}</span>
-              </div>
-              <span className="text-[9px] text-[hsl(var(--muted-foreground))]">{m.time}</span>
+      {/* AI Thread Summary */}
+      <div className="mx-4 mt-2.5 mb-1 px-3 py-2 rounded-lg border border-[hsl(var(--brand-primary))]/15 bg-[hsl(var(--brand-primary))]/[0.04]">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Sparkles className="w-3 h-3 text-[hsl(var(--brand-primary))]" />
+          <span className="text-[9px] font-bold text-[hsl(var(--brand-primary))]">Thread Summary</span>
+        </div>
+        <p className="text-[9px] leading-relaxed text-[hsl(var(--muted-foreground))]">
+          Discussing Series A valuation ($12M pre-money). Pro-rata rights pending legal sign-off, docs expected by EOD tomorrow. Sync confirmed Thursday 2pm PST.
+        </p>
+      </div>
+
+      {/* Messages — email thread style */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Message 1 — sent */}
+        <div className="px-4 py-2 border-b border-[hsl(var(--border))]/40">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-[hsl(var(--foreground))] flex items-center justify-center text-[7px] font-bold text-[hsl(var(--background))]">Y</div>
+              <span className="text-[10px] font-semibold">You</span>
+              <span className="text-[8px] text-[hsl(var(--muted-foreground))]">→ alex.r@startup.io</span>
             </div>
-            <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))] pl-[26px]">{m.body}</p>
+            <span className="text-[8px] text-[hsl(var(--muted-foreground))]">10:24 AM</span>
           </div>
-        ))}
+          <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))] pl-[26px]">Hey Alex, following up on the term sheet. Have the investors confirmed the valuation cap?</p>
+        </div>
+
+        {/* Message 2 — received, indented */}
+        <div className="pl-3 px-4 py-2 border-b border-[hsl(var(--border))]/40 bg-[hsl(var(--muted))]/10">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center text-[7px] font-bold text-[hsl(var(--muted-foreground))]">AR</div>
+              <span className="text-[10px] font-semibold">Alex Rivera</span>
+              <span className="text-[8px] text-[hsl(var(--muted-foreground))]">→ You</span>
+            </div>
+            <span className="text-[8px] text-[hsl(var(--muted-foreground))]">10:31 AM</span>
+          </div>
+          <div className="pl-[26px]">
+            <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Yes! They&apos;re aligned at $12M pre-money. Just waiting on legal to finalize the pro-rata rights clause. Should have docs ready by EOD tomorrow.</p>
+          </div>
+        </div>
+
+        {/* Message 3 — sent */}
+        <div className="px-4 py-2 border-b border-[hsl(var(--border))]/40">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-[hsl(var(--foreground))] flex items-center justify-center text-[7px] font-bold text-[hsl(var(--background))]">Y</div>
+              <span className="text-[10px] font-semibold">You</span>
+              <span className="text-[8px] text-[hsl(var(--muted-foreground))]">→ alex.r@startup.io</span>
+            </div>
+            <span className="text-[8px] text-[hsl(var(--muted-foreground))]">10:33 AM</span>
+          </div>
+          <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))] pl-[26px]">Perfect. I&apos;ll loop in our counsel to review once you send them over. Also — are we still on for Thursday&apos;s sync?</p>
+        </div>
+
+        {/* Message 4 — received, indented */}
+        <div className="pl-3 px-4 py-2 border-b border-[hsl(var(--border))]/40 bg-[hsl(var(--muted))]/10">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center text-[7px] font-bold text-[hsl(var(--muted-foreground))]">AR</div>
+              <span className="text-[10px] font-semibold">Alex Rivera</span>
+              <span className="text-[8px] text-[hsl(var(--muted-foreground))]">→ You</span>
+            </div>
+            <span className="text-[8px] text-[hsl(var(--muted-foreground))]">10:40 AM</span>
+          </div>
+          <div className="pl-[26px]">
+            <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Thursday works. Let&apos;s do 2pm PST. I&apos;ll send a calendar invite.</p>
+            <p className="text-[9px] text-[hsl(var(--muted-foreground))]/60 mt-1.5 italic">— Alex Rivera · Partner @ Startup.io</p>
+            {/* Quoted previous */}
+            <div className="mt-1.5 pl-2 border-l-2 border-[hsl(var(--border))]">
+              <p className="text-[9px] text-[hsl(var(--muted-foreground))]/50 truncate">On Dec 2 at 10:33, You wrote: Perfect. I&apos;ll loop in our counsel...</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Reply bar */}
       <div className="px-4 py-2 border-t border-[hsl(var(--border))]">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/20">
-          <span className="flex-1 text-[10px] text-[hsl(var(--muted-foreground))]">Write a reply...</span>
+          <span className="flex-1 text-[10px] text-[hsl(var(--muted-foreground))]">Reply to Alex Rivera...</span>
           <div className="flex items-center gap-1.5">
+            <Paperclip className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
             <Sparkles className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
             <Send className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
           </div>

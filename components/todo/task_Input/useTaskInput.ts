@@ -38,6 +38,7 @@ export const useTaskInput = (
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [assigneeEmail, setAssigneeEmail] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
@@ -178,7 +179,21 @@ export const useTaskInput = (
       
       if (result.success && result.data) {
         toast.success('Task created!');
-        onSave?.(result.data);
+        
+        // If assignee was selected, assign after creation
+        if (assigneeEmail && result.data._id) {
+          todoApi.assignTask(result.data._id, assigneeEmail).then(assignResult => {
+            if (assignResult.success) {
+              toast.success(assignResult.message || `Assigned to ${assigneeEmail}`);
+              // Update the task in store with assignee data
+              if (assignResult.data) {
+                onSave?.(assignResult.data);
+              }
+            }
+          }).catch(() => {});
+        } else {
+          onSave?.(result.data);
+        }
         
         setTitle('');
         setDescription('');
@@ -189,6 +204,7 @@ export const useTaskInput = (
         setConfirmedDueDate(null);
         setCurrentReminder(null);
         setIsRecurring(false);
+        setAssigneeEmail(null);
         onExpandChange(false);
       } else {
         toast.error(result.message || 'Failed to create task');
@@ -327,6 +343,7 @@ export const useTaskInput = (
     previewImage, setPreviewImage,
     confirmedDueDate, setConfirmedDueDate,
     isSaving,
+    assigneeEmail, setAssigneeEmail,
     
     // Refs
     fileInputRef,

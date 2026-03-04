@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Task, Subtask } from '@/lib/store/todoStore';
 import { TaskDescriptionEditor } from './TaskDescriptionEditor';
+import { AssigneePicker } from './AssigneePicker';
 import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date-fns';
 import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
@@ -54,7 +55,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       if (title !== task.title) updates.title = title;
       if (description !== (task.description || '')) updates.description = description;
 
-      const result = await todoApi.updateTodo(task._id, updates);
+      const result = await todoApi.updateTodo(task._id, updates as any);
       if (result.success && result.data) {
         onUpdate(task._id, result.data);
         toast.success('Task updated');
@@ -361,19 +362,24 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           {/* Assignee */}
           <div>
             <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Assignee</label>
-            {task.assignee ? (
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold border border-indigo-500/30">
-                  {task.assignee.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm text-white/70">{task.assignee}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-white/30">
-                <User className="w-3.5 h-3.5" />
-                <span className="text-sm italic">Unassigned</span>
-              </div>
-            )}
+            <AssigneePicker
+              taskId={task._id}
+              currentAssignee={task.assignee}
+              onAssigned={(updatedTask) => {
+                onUpdate(task._id, {
+                  assignee: updatedTask.assignee,
+                  assignedAt: updatedTask.assignedAt,
+                });
+                toast.success(updatedTask.message || 'Task assigned');
+              }}
+              onUnassigned={() => {
+                onUpdate(task._id, {
+                  assignee: undefined,
+                  assignedAt: undefined,
+                });
+                toast.success('Assignee removed');
+              }}
+            />
           </div>
 
           {/* Labels */}
