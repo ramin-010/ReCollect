@@ -48,7 +48,7 @@ const primaryNav: NavItem[] = [
     id: 'todo', 
     route: '/todo',
     label: 'Tasks', 
-    icon: <CheckSquare className="h-[18px] w-[18px]" />,
+    icon: <CheckSquare className="h-[18px] w-[18px] text-green-600/80" />,
     subItems: [
       { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },
       { id: 'assigned', label: 'Assigned', icon: <Users className="h-3.5 w-3.5" /> },
@@ -56,7 +56,7 @@ const primaryNav: NavItem[] = [
     ]
   },
   { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
-  { id: 'presentations', route: '/slides', label: 'Presentations', icon: <Files className="h-[18px] w-[18px]" /> },
+  { id: 'presentations', route: '/slides', label: 'Presentations', icon: <Files className="h-[18px] w-[18px] " /> },
   { id: 'email', route: '/email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
 ];
 

@@ -15,7 +15,9 @@ export const useTaskInput = (
   initialReferences?: TaskInputProps['initialReferences'],
   initialTitle?: TaskInputProps['initialTitle'],
   initialDescription?: TaskInputProps['initialDescription'],
-  demoMode?: boolean
+  demoMode?: boolean,
+  workspaceId?: string,
+  visibility?: 'private' | 'workspace' | 'public'
 ) => {
   const [title, setTitle] = useState(initialTitle || '');
   const [description, setDescription] = useState(initialDescription || '');
@@ -170,6 +172,8 @@ export const useTaskInput = (
       tags: selectedLabels.length > 0 ? selectedLabels.map(l => l.name) : undefined,
       recurrence: recurrenceData,
       references: initialReferences && initialReferences.length > 0 ? initialReferences : undefined,
+      workspace: workspaceId,
+      visibility: visibility,
     };
     
     console.log('[TaskInput] Calling todoApi.createTodo...');

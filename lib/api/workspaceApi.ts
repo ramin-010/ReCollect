@@ -1,5 +1,5 @@
 /**
- * Workspace API — CRUD + member management
+ * Workspace API — CRUD + member management + tasks/stats/activity
  */
 import axiosInstance from '@/lib/utils/axios';
 
@@ -16,6 +16,26 @@ export interface Workspace {
   members: WorkspaceMember[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkspaceStats {
+  totalMembers: number;
+  totalTasks: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  overdue: number;
+}
+
+export interface ActivityLogEntry {
+  _id: string;
+  workspace: string;
+  actor: { _id: string; name: string; email: string; avatar?: string };
+  action: 'task_created' | 'task_completed' | 'task_assigned' | 'task_status_changed' | 'member_joined' | 'member_removed' | 'workspace_created';
+  targetTask?: string;
+  targetUser?: { _id: string; name: string; email: string; avatar?: string };
+  metadata?: string;
+  createdAt: string;
 }
 
 export const workspaceApi = {
@@ -46,6 +66,22 @@ export const workspaceApi = {
 
   async deleteWorkspace(id: string): Promise<{ success: boolean; message?: string }> {
     const res = await axiosInstance.delete(`/api/workspaces/${id}`);
+    return res.data;
+  },
+
+  // Workspace-scoped data
+  async getWorkspaceTasks(workspaceId: string): Promise<{ success: boolean; data: any[]; count: number }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/tasks`);
+    return res.data;
+  },
+
+  async getWorkspaceStats(workspaceId: string): Promise<{ success: boolean; data: WorkspaceStats }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/stats`);
+    return res.data;
+  },
+
+  async getWorkspaceActivity(workspaceId: string): Promise<{ success: boolean; data: ActivityLogEntry[] }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/activity`);
     return res.data;
   },
 };

@@ -15,6 +15,7 @@ import { useTodoStore, Todo } from '@/lib/store/todoStore';
 import { useAuthStore } from '@/lib/store/authStore';
 import { RichTaskItem } from './RichTaskItem';
 import { isToday, isPast, parseISO, formatDistanceToNow } from 'date-fns';
+import { AppNavbar } from '@/components/layout/AppNavbar';
 
 interface AssignedViewProps {
   onSelectTask: (task: Todo) => void;
@@ -53,19 +54,13 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
 
   return (
     <div className="min-h-screen text-white bg-[#1A1A1A] pb-20">
-      <div className="max-w-[1000px] mx-auto px-6 md:px-8 pt-8">
+      <div className=" px-6 md:px-8 w-full mx-auto">
+        <AppNavbar title="Assigned to Me" description="Tasks others have assigned to you" />
+      </div>
+      <div className="max-w-[1000px] mx-auto px-6 md:px-8 pt-4">
 
         {/* ── Header ── */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center">
-              <UserCheck className="w-5 h-5 text-indigo-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Assigned to Me</h1>
-              <p className="text-sm text-white/40">Tasks others have assigned to you</p>
-            </div>
-          </div>
 
           {/* Stats Row */}
           {stats.total > 0 && (

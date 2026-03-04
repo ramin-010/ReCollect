@@ -11,6 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { ResizableImage } from '@/lib/extensions/ResizableImage';
+import { InlineAINode } from '@/lib/extensions/InlineAINode';
 import { EmbedNode } from '@/lib/extensions/EmbedNode';
 import { MediaRow } from '@/lib/extensions/MediaRow';
 import { MediaItem } from '@/lib/extensions/MediaItem';
@@ -21,6 +22,7 @@ const extensions = [
   StarterKit.configure({ heading: { levels: [1, 2, 3] } }) as any,
   Link,
   ResizableImage,
+  InlineAINode,
   EmbedNode,
   MediaRow,
   MediaItem,

@@ -41,7 +41,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const currentImage = backgroundImages.length > 0 ? backgroundImages[currentImageIndex] : null;
 
   return (
-    <div className="relative w-full h-[35vh] min-h-[260px] -mt-16 pt-16">
+    <div className="relative w-full h-[30vh] min-h-[200px] -mt-16 pt-16">
         {/* Background Layer */}
         <div className="absolute inset-0 z-0 overflow-hidden">
             {/* Default Gradient Background */}
@@ -74,20 +74,13 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
         
         {/* LEFT: Greeting (Elegant Serif) */}
         <div className="flex flex-col justify-end space-y-1 mb-2">
-            <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-emerald-500/80 font-medium tracking-widest uppercase text-[9px] mb-2"
-            >
-                <Sparkles className="w-3 h-3" />
-                <span>Productivity Hub</span>
-            </motion.div>
+           
             
             <motion.h1 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-4xl lg:text-5xl font-light tracking-tight text-white/90 font-serif"
+                className="text-3xl lg:text-4xl font-light tracking-tight text-white/90 font-serif"
             >
                 Good {greeting.split(' ')[1] || 'Day'}, <br/>
                 <span className="font-bold font-sans text-white">{name}.</span>
@@ -109,7 +102,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
              <div className="relative opacity-50 mix-blend-overlay scale-125 origin-bottom group">
                 <FlipClock 
                   transparent 
-                  scale={0.40} 
+                  scale={0.33} 
                   showSeconds={false} 
                   mode={clockMode}
                   className="text-white cursor-pointer" 

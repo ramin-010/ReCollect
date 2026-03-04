@@ -195,7 +195,7 @@ export function TodoView() {
 
   // ── Inbox-type view (with header, filters, task list) ──
   return (
-    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[#1A1A1A] font-sans pb-20 selection:bg-emerald-500/30">
+    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] font-sans pb-20 selection:bg-emerald-500/30">
       
       {/* Header Area - Only for inbox filters */}
       <AnimatePresence>
@@ -206,7 +206,7 @@ export function TodoView() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-             <div className="pb-2">
+             <div className="pb-8">
                 <TodoHeader greeting={greeting} stats={stats} />
              </div>
           </motion.div>
@@ -264,7 +264,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('inbox')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'inbox' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'inbox' ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Inbox
@@ -274,7 +274,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('today')}
                                 className={cn(
                                 "hidden sm:block px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'today' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'today' ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Today
@@ -284,7 +284,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('docs')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'docs' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'docs' ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Docs
@@ -294,7 +294,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('notes')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'notes' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'notes' ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Notes
@@ -304,7 +304,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('completed')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'completed' ? "bg-emerald-500/15 text-emerald-400 shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'completed' ? "bg-[hsl(var(--background))] text-emerald-400/60 shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Completed

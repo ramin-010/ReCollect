@@ -16,6 +16,8 @@ export interface TaskData {
   tags?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
+  workspace?: string;
+  visibility?: 'private' | 'workspace' | 'public';
 }
 
 export interface TaskInputProps {
@@ -27,8 +29,9 @@ export interface TaskInputProps {
   initialReferences?: TaskReference[];
   initialTitle?: string;
   initialDescription?: string;
-  /** When true, disables API calls and shows mock success - for landing page demos */
   demoMode?: boolean;
+  workspaceId?: string;
+  visibility?: 'private' | 'workspace' | 'public';
 }
 
 export const PRIORITIES = [

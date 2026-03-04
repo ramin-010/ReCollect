@@ -377,8 +377,8 @@ export function SlidesView() {
       <div className="flex-1 overflow-y-auto px-6 py-10 lg:px-12">
         {/* Header Area */}
         <div className="max-w-[1060px] mx-auto mb-4" >
-          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
-            <Files className="h-7 w-7 text-[hsl(var(--foreground))]" />
+          <h1 className="flex items-center gap-2.5 text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+            <Files className="h-6 w-6 text-blue-400/50 " />
             Slide Decks
           </h1>
           <p className="text-[0.9rem] text-[hsl(var(--muted-foreground))] mt-1">Create and manage your slide presentations.</p>
