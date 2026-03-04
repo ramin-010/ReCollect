@@ -44,11 +44,11 @@ export function RichTaskItem({ task, onDelete, onToggleComplete, onSelect, isCom
       return null;
   };
 
-  // Status & Priority Colors
+  // Status & Priority Colors (Refined for less visual noise)
   const priorityColor = 
-      task.priority === 'high' ? 'text-rose-400' :
-      task.priority === 'medium' ? 'text-amber-400' : 
-      task.priority === 'low' ? 'text-blue-400' : 'text-white/20';
+      task.priority === 'high' ? 'text-rose-400/80' :
+      task.priority === 'medium' ? 'text-amber-400/70' : 
+      task.priority === 'low' ? 'text-blue-400/70' : 'text-white/10';
 
   const overdueLabel = task.dueDate ? getOverdueLabel(task.dueDate) : null;
   const isOverdue = !!overdueLabel;
@@ -161,7 +161,7 @@ export function RichTaskItem({ task, onDelete, onToggleComplete, onSelect, isCom
             )}
 
             {/* Priority */}
-            <div className={cn("font-medium uppercase tracking-wider text-[10px]", priorityColor)}>
+            <div className={cn("font-medium uppercase tracking-wider text-[9px]", priorityColor)}>
                 {task.priority || 'Normal'}
             </div>
 

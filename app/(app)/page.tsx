@@ -8,27 +8,17 @@ import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { ContentCard } from '@/components/content/ContentCard';
 import { Button } from '@/components/ui-base/Button';
 import { Card } from '@/components/ui-base/Card';
-import { Plus, FileText, Sparkles, PenTool, CalendarDays, Inbox as InboxIcon, Library as LibraryIcon, Users as UsersIcon } from 'lucide-react';
+import { Plus, FileText, Sparkles, PenTool } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
 import { CreateContentDialog } from '@/components/content/CreateContentDialog';
 import { UpdateContentDialog } from '@/components/content/UpdateContentDialog';
 import { AlertDialog } from '@/components/ui-base/Dialog';
-import { Content, Tag } from '@/lib/utils/types';
-import { UserSettings } from '@/components/settings/UserSettings';
-import { ExcalidrawDashboard } from '@/components/drawing/ExcalidrawDashboard';
-import { TodoView } from '@/components/todo/TodoView';
-import { ExpenseView } from '@/components/expenses/ExpenseView';
-import { DocsView } from '@/components/docs/doc_view';
-import { SlidesView } from '@/components/slides/SlidesView';
+import { Content } from '@/lib/utils/types';
 import { HomeView } from '@/components/home/HomeView';
-import { EmailView } from '@/components/email/EmailView';
-import { useViewStore } from '@/lib/store/viewStore';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ContentCardSkeleton } from '@/components/content/ContentCardSkeleton';
-import { useSearchParams } from 'next/navigation';
 
 export default function HomePage() {
   const dashboards = useDashboardStore((state) => state.dashboards);
@@ -49,19 +39,6 @@ export default function HomePage() {
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const currentView = useViewStore((state) => state.currentView);
-  const setCurrentView = useViewStore((state) => state.setCurrentView);
-  const searchParams = useSearchParams();
-
-  // Handle URL query params for deep linking (e.g., email links)
-  useEffect(() => {
-    const view = searchParams.get('view');
-    if (view === 'docs') {
-      setCurrentView('docs');
-    } else if (view === 'email') {
-      setCurrentView('email');
-    }
-  }, [searchParams, setCurrentView]);
 
   // Get current inline dialog state based on dashboard
   const showInlineCreate = currentDashboard 
@@ -132,7 +109,6 @@ export default function HomePage() {
     const fetchContents = async () => {
       setLoadingContents(currentDashboard._id, true);
       try {
-       // await new Promise((resolve) => setTimeout(resolve, 30000));
         const response = await dashboardApi.getContents(currentDashboard._id);
         if (response.success && response.data) {
           setDashboardContents(currentDashboard._id, response.data.contents);
@@ -170,167 +146,9 @@ export default function HomePage() {
     setEditingContent(content);
   };
 
-  // Render Settings View
-  if (currentView === 'settings') {
-    return <UserSettings />;
-  }
-
-  // Render Home View
-  if (currentView === 'home') {
-    return <HomeView />;
-  }
-
-  // Placeholder: Meetings
-  if (currentView === 'meetings') {
-    return (
-      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <CalendarDays className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="text-2xl font-bold mb-2">Meetings</h2>
-          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — schedule and manage your meetings here.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Placeholder: Inbox
-  if (currentView === 'inbox') {
-    return (
-      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <InboxIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="text-2xl font-bold mb-2">Inbox</h2>
-          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — all your notifications in one place.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Placeholder: Library
-  if (currentView === 'library') {
-    return (
-      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <LibraryIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="text-2xl font-bold mb-2">Library</h2>
-          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — your knowledge base and templates.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Placeholder: Collaboration
-  if (currentView === 'collaboration') {
-    return (
-      <div className="p-4 lg:p-8 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <UsersIcon className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="text-2xl font-bold mb-2">Collaboration</h2>
-          <p className="text-[hsl(var(--muted-foreground))]">Coming soon — work together in real-time.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Render Drawing View
-  if (currentView === 'drawing') {
-    return <ExcalidrawDashboard />;
-  }
-
-  // Render Todo View
-  if (currentView === 'todo') {
-    return <TodoView />;
-  }
-
-  // Render Expense View
-  if (currentView === 'expenses') {
-    return <ExpenseView />;
-  }
-
-  // Render Docs View
-  if (currentView === 'docs') {
-    return <DocsView />;
-  }
-
-  // Render Slides View
-  if (currentView === 'slides') {
-    return <SlidesView />;
-  }
-
-  // Render Email View
-  if (currentView === 'email') {
-    return <EmailView />;
-  }
-
-  // All Dashboards View
+  // Show HomeView when no dashboard is selected
   if (!currentDashboard) {
-    return (
-      <div className="p-4 lg:p-8 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <motion.div 
-            className="flex items-center justify-between mb-8"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div>
-              <h2 className="text-3xl font-bold">Your Dashboards</h2>
-              <p className="text-[hsl(var(--muted-foreground))] mt-2">
-                Organize your notes and ideas in dedicated spaces
-              </p>
-            </div>
-            <Button 
-              variant="primary"
-              onClick={() => setIsCreateDashboardOpen(true)}
-              leftIcon={<Plus className="h-4 w-4" />}
-            >
-              New Dashboard
-            </Button>
-          </motion.div>
-
-          {dashboards.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <Card variant="elevated" padding="lg" className="text-center">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-                <h3 className="text-lg font-semibold mb-2">No dashboards yet</h3>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6 max-w-sm mx-auto">
-                  Create your first dashboard to start organizing your notes and ideas
-                </p>
-                <Button 
-                  variant="primary"
-                  onClick={() => setIsCreateDashboardOpen(true)}
-                  leftIcon={<Plus className="h-4 w-4" />}
-                >
-                  Create Dashboard
-                </Button>
-              </Card>
-            </motion.div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dashboards.map((dashboard, index) => (
-                <motion.div
-                  key={dashboard._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <DashboardCard dashboard={dashboard} />
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <CreateDashboardDialog 
-          isOpen={isCreateDashboardOpen} 
-          onClose={() => setIsCreateDashboardOpen(false)} 
-        />
-      </div>
-    );
+    return <HomeView />;
   }
 
   // Single Dashboard View
@@ -340,7 +158,8 @@ export default function HomePage() {
   const regularContents = contents.filter(c => !c.isPinned && !c.isArchived);
   
   const archivedCount = contents.filter(c => c.isArchived).length;
-let hasContent = contents.length - archivedCount > 0;
+  let hasContent = contents.length - archivedCount > 0;
+
   // Show skeleton while loading
   if (isLoading) {
     const skeletonCount = currentDashboard?.contents?.length || 4;
@@ -348,7 +167,6 @@ let hasContent = contents.length - archivedCount > 0;
     return (
        <div className="p-4 lg:p-8 min-h-screen">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* <Skeleton className="h-12 w-64" /> */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Array.from({ length: skeletonCount }).map((_, index) => (
               <ContentCardSkeleton key={index} />
@@ -358,8 +176,6 @@ let hasContent = contents.length - archivedCount > 0;
       </div>                
     );
   }
-
- 
 
   return (
     <div className="p-4 lg:p-8 min-h-screen">

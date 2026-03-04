@@ -21,14 +21,29 @@ import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog';
 import { CloudSyncModal } from './CloudSyncModal';
 
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
-import { useViewStore } from '@/lib/store/viewStore';
+import { useRouter } from 'next/navigation';
 import { 
   getAllDrawingMetadata, 
   saveDrawingMetadata, 
   deleteDrawingMetadata,
   createDrawingMetadata,
 } from '@/lib/storage/drawingMetadata';
-import { ExcalidrawYjsEditor } from './excalidrawYjsEditor/ExcalidrawYjsEditor';
+import dynamic from 'next/dynamic';
+
+const ExcalidrawYjsEditor = dynamic(
+  () => import('./excalidrawYjsEditor/ExcalidrawYjsEditor').then((mod) => mod.ExcalidrawYjsEditor),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 min-h-screen z-[100] flex items-center justify-center bg-[hsl(var(--background))]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Loading Studio Workspace...</p>
+        </div>
+      </div>
+    )
+  }
+);
 import { DrawingCard } from './DrawingCard';
 import { useDrawingDashboard } from './useDrawingDashboard';
 
@@ -52,7 +67,6 @@ export function ExcalidrawDashboard() {
     setShowCreateDialog,
     setRenamingDrawing,
     setHasUnsavedChanges,
-    setCurrentView,
     
     createNewDrawing,
     openDrawing,
@@ -66,6 +80,7 @@ export function ExcalidrawDashboard() {
   } = useDrawingDashboard();
 
   const { resolvedTheme } = useTheme();
+  const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareEnabled, setShareEnabled] = useState(false);
   const [collaboratorCount, setCollaboratorCount] = useState(0);
@@ -182,7 +197,7 @@ export function ExcalidrawDashboard() {
           >
              <Button
               variant="outline"
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => router.push('/dashboard')}
               className="border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
               leftIcon={<ArrowLeft className="w-4 h-4" />}
             >

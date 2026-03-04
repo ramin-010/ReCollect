@@ -2,10 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
-import { useViewStore, ViewType } from '@/lib/store/viewStore';
+import { useViewStore } from '@/lib/store/viewStore';
 import { authApi } from '@/lib/api/auth';
 import { Button } from '@/components/ui-base/Button';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,8 @@ import { toast } from 'sonner';
 
 // ─── Nav Item Definition ────────────────────────────────────────────────────
 interface NavItem {
-  id: ViewType;
+  id: string;
+  route: string;
   label: string;
   icon: React.ReactNode;
   badge?: number | string;
@@ -41,39 +42,40 @@ interface NavItem {
 }
 
 const primaryNav: NavItem[] = [
-  { id: 'home', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
-  { id: 'docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
+  { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
+  { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
   { 
     id: 'todo', 
+    route: '/todo',
     label: 'Tasks', 
     icon: <CheckSquare className="h-[18px] w-[18px]" />,
     subItems: [
       { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },
+      { id: 'assigned', label: 'Assigned', icon: <Users className="h-3.5 w-3.5" /> },
       { id: 'workspace', label: 'Workspace', icon: <CalendarDays className="h-3.5 w-3.5" /> },
     ]
   },
-  { id: 'drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
-  { id: 'presentations', label: 'Presentations', icon: <Files className="h-[18px] w-[18px]" /> },
-  { id: 'email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
+  { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
+  { id: 'presentations', route: '/slides', label: 'Presentations', icon: <Files className="h-[18px] w-[18px]" /> },
+  { id: 'email', route: '/email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
 ];
 
 const secondaryNav: NavItem[] = [
-  { id: 'meetings', label: 'Meetings', icon: <CalendarDays className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'library', label: 'Library', icon: <Library className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'collaboration', label: 'Collaboration', icon: <Users className="h-[18px] w-[18px]" />, comingSoon: true },
+  { id: 'meetings', route: '#', label: 'Meetings', icon: <CalendarDays className="h-[18px] w-[18px]" />, comingSoon: true },
+  { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" />, comingSoon: true },
+  { id: 'library', route: '#', label: 'Library', icon: <Library className="h-[18px] w-[18px]" />, comingSoon: true },
+  { id: 'collaboration', route: '#', label: 'Collaboration', icon: <Users className="h-[18px] w-[18px]" />, comingSoon: true },
 ];
 
 // ─── Main Sidebar Wrapper ───────────────────────────────────────────────────
 export function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const currentView = useViewStore((state) => state.currentView);
-  const setCurrentView = useViewStore((state) => state.setCurrentView);
   const todoFilter = useViewStore((state) => state.todoFilter);
   const setTodoFilter = useViewStore((state) => state.setTodoFilter);
 
@@ -90,8 +92,8 @@ export function Sidebar() {
     }
   };
 
-  const handleNavClick = (view: ViewType) => {
-    setCurrentView(view);
+  const handleNavClick = (route: string) => {
+    router.push(route);
     setIsMobileOpen(false);
   };
 
@@ -140,9 +142,11 @@ export function Sidebar() {
                 onMobileClose={() => setIsMobileOpen(false)}
                 isMobile={true}
                 user={user}
-                currentView={currentView}
+                pathname={pathname}
+                todoFilter={todoFilter}
+                setTodoFilter={setTodoFilter}
                 onNavClick={handleNavClick}
-                onSettingsClick={() => handleNavClick('settings')}
+                onSettingsClick={() => handleNavClick('/settings')}
                 onLogout={handleLogout}
                 getInitials={getInitials}
               />
@@ -163,9 +167,11 @@ export function Sidebar() {
           onMobileClose={() => {}}
           isMobile={false}
           user={user}
-          currentView={currentView}
+          pathname={pathname}
+          todoFilter={todoFilter}
+          setTodoFilter={setTodoFilter}
           onNavClick={handleNavClick}
-          onSettingsClick={() => handleNavClick('settings')}
+          onSettingsClick={() => handleNavClick('/settings')}
           onLogout={handleLogout}
           getInitials={getInitials}
         />
@@ -181,10 +187,10 @@ interface SidebarContentProps {
   onMobileClose: () => void;
   isMobile: boolean;
   user: any;
-  currentView: ViewType;
+  pathname: string;
   todoFilter?: string;
   setTodoFilter?: (filter: any) => void;
-  onNavClick: (view: ViewType) => void;
+  onNavClick: (route: string) => void;
   onSettingsClick: () => void;
   onLogout: () => void;
   getInitials: (name?: string) => string;
@@ -196,14 +202,14 @@ function SidebarContent({
   onMobileClose,
   isMobile,
   user,
-  currentView,
+  pathname,
   todoFilter,
   setTodoFilter,
   onNavClick,
   onSettingsClick,
   onLogout,
   getInitials,
-}: SidebarContentProps) {
+}: SidebarContentProps & { currentView?: any }) {
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-white/5 text-white/90">
       
@@ -268,13 +274,13 @@ function SidebarContent({
             <SidebarNavItem
               key={item.id}
               item={item}
-              isActive={currentView === item.id || (item.id === 'presentations' && currentView === 'slides')}
+              isActive={pathname === item.route || (item.route === '/' && pathname === '/')}
               isCollapsed={isCollapsed}
-              onClick={() => onNavClick(item.id === 'presentations' ? 'slides' : item.id)}
+              onClick={() => onNavClick(item.route)}
               todoFilter={todoFilter}
               onSubItemClick={(filterId) => {
                 if (item.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
-                onNavClick('todo');
+                onNavClick('/todo');
               }}
             />
           ))}
@@ -294,7 +300,7 @@ function SidebarContent({
             <SidebarNavItem
               key={item.id}
               item={item}
-              isActive={currentView === item.id}
+              isActive={pathname === item.route}
               isCollapsed={isCollapsed}
               onClick={() => {
                 toast.info(`${item.label} is coming soon!`, {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, Plus, ChevronDown, Briefcase } from 'lucide-react';
+import { Loader2, CheckCircle2, Plus, ChevronDown, Briefcase, UserCheck } from 'lucide-react';
 import { TaskInput } from './task_Input';
 import { TodoHeader } from './TodoHeader';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';
 import { useTodoStore } from '@/lib/store/todoStore';
 import { useViewStore } from '@/lib/store/viewStore';
+import { useAuthStore } from '@/lib/store/authStore';
 import { isToday, isTomorrow, isPast, parseISO, format } from 'date-fns';
 import {
   DropdownMenu,
@@ -19,6 +20,11 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 import { RichTaskItem } from './RichTaskItem';
 import { TaskDetailView } from './TaskDetailView';
+import { WorkspaceView } from './WorkspaceView';
+import { AssignedView } from './AssignedView';
+
+// Inbox-type filters that use the standard task list layout
+const INBOX_FILTERS = ['inbox', 'today', 'upcoming', 'completed', 'docs', 'notes'];
 
 export function TodoView() {
   const {
@@ -34,6 +40,7 @@ export function TodoView() {
 
   // Get filter from viewStore (controlled by sidebar)
   const activeFilter = useViewStore((state) => state.todoFilter);
+  const currentUser = useAuthStore((state) => state.user);
 
   // UI State
   const [isInputExpanded, setIsInputExpanded] = useState(false);
@@ -55,7 +62,7 @@ export function TodoView() {
 
   useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
-  // Stats
+  // Stats (only used for inbox header)
   const stats = useMemo(() => {
     const total = todos.length;
     const completed = todos.filter(t => t.status === 'complete').length;
@@ -64,7 +71,7 @@ export function TodoView() {
     return { total, completed, pending, progress };
   }, [todos]);
 
-  // Filtered Tasks
+  // Filtered Tasks (only for inbox-type filters)
   const filteredTasks = useMemo(() => {
     let result = [...todos];
     
@@ -105,18 +112,15 @@ export function TodoView() {
     }
 
     // Sort by priority then date
-    // High > Medium > Low
     const pMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
     result.sort((a, b) => {
         const pDiff = (pMap[b.priority || 'medium'] || 1) - (pMap[a.priority || 'medium'] || 1);
         if (pDiff !== 0) return pDiff;
-        // Secondary sort by date
         const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return dateA - dateB;
     });
 
-    // Filter by priority if selected
     if (priorityFilter) {
       result = result.filter(t => t.priority === priorityFilter);
     }
@@ -150,10 +154,7 @@ export function TodoView() {
   };
 
   const handleUpdateTask = useCallback(async (id: string, updates: any) => {
-      // Synchronize local store
       updateTodo(id, updates);
-      
-      // Update local selection if needed
       setSelectedTask((prev: any) => {
           if (prev && prev._id === id) {
               return { ...prev, ...updates };
@@ -177,10 +178,26 @@ export function TodoView() {
     );
   }
 
+  // ── Route to dedicated views for Assigned & Workspace ──
+  if (activeFilter === 'workspace') {
+    return <WorkspaceView />;
+  }
+
+  if (activeFilter === 'assigned') {
+    return (
+      <AssignedView
+        onSelectTask={(t) => setSelectedTask(t)}
+        onDeleteTask={handleDeleteTask}
+        onToggleComplete={toggleComplete}
+      />
+    );
+  }
+
+  // ── Inbox-type view (with header, filters, task list) ──
   return (
-    <div className="min-h-screen  text-[hsl(var(--foreground))] bg-[#1A1A1A] font-sans pb-20 selection:bg-emerald-500/30">
+    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[#1A1A1A] font-sans pb-20 selection:bg-emerald-500/30">
       
-      {/* Header Area - Always visible */}
+      {/* Header Area - Only for inbox filters */}
       <AnimatePresence>
         {!isInputExpanded && (
           <motion.div
@@ -247,7 +264,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('inbox')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'inbox' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'inbox' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Inbox
@@ -257,7 +274,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('today')}
                                 className={cn(
                                 "hidden sm:block px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'today' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'today' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Today
@@ -267,7 +284,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('docs')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'docs' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'docs' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Docs
@@ -277,7 +294,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('notes')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'notes' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'notes' ? "bg-white/15 text-white shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Notes
@@ -287,7 +304,7 @@ export function TodoView() {
                                 onClick={() => useViewStore.getState().setTodoFilter('completed')}
                                 className={cn(
                                 "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'completed' ? "bg-emerald-500/10 text-emerald-400 shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                activeFilter === 'completed' ? "bg-emerald-500/15 text-emerald-400 shadow-sm" : "text-white/30 hover:text-white/60 hover:bg-white/5"
                                 )}
                             >
                                 Completed
@@ -330,47 +347,31 @@ export function TodoView() {
                         </DropdownMenu>
                     </div>
 
-                    {/* Task List or Workspace Placeholder */}
+                    {/* Task List */}
                     <div className="space-y-1">
-                        {activeFilter === 'workspace' ? (
+                        <AnimatePresence mode="popLayout">
+                        {filteredTasks.length === 0 ? (
                             <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex flex-col items-center justify-center py-20 text-center opacity-70"
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }}
+                                className="py-20 text-center opacity-30"
                             >
-                                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                                    <Briefcase className="w-8 h-8 text-indigo-400" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-2">Workspace</h3>
-                                <p className="text-sm text-white/50 max-w-md">
-                                    This feature is coming soon. Manage your projects and team collaboration in one place.
-                                </p>
+                                <CheckCircle2 className="w-12 h-12 mx-auto mb-3" />
+                                <p>No tasks here</p>
                             </motion.div>
                         ) : (
-                            <AnimatePresence mode="popLayout">
-                            {filteredTasks.length === 0 ? (
-                                <motion.div 
-                                    initial={{ opacity: 0 }} 
-                                    animate={{ opacity: 1 }}
-                                    className="py-20 text-center opacity-30"
-                                >
-                                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3" />
-                                    <p>No tasks here</p>
-                                </motion.div>
-                            ) : (
-                                filteredTasks.map((task) => (
-                                    <RichTaskItem 
-                                        key={task._id}
-                                        task={task}
-                                        isComplete={task.status === 'complete'}
-                                        onDelete={handleDeleteTask}
-                                        onToggleComplete={toggleComplete}
-                                        onSelect={(t) => setSelectedTask(t)}
-                                    />
-                                ))
-                            )}
-                            </AnimatePresence>
+                            filteredTasks.map((task) => (
+                                <RichTaskItem 
+                                    key={task._id}
+                                    task={task}
+                                    isComplete={task.status === 'complete'}
+                                    onDelete={handleDeleteTask}
+                                    onToggleComplete={toggleComplete}
+                                    onSelect={(t) => setSelectedTask(t)}
+                                />
+                            ))
                         )}
+                        </AnimatePresence>
                     </div>
                 </motion.div>
             )}

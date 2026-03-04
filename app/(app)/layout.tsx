@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useDocStore } from '@/lib/store/docStore';
@@ -20,20 +20,19 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
-  const currentView = useViewStore((state) => state.currentView);
   const isSlideFullscreen = useViewStore((state) => state.isSlideFullscreen);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
   // Quick Task Add modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   
-  // Hide navbar when editing a document (docs view with editor open) or viewing tasks
-  // For slides: only hide if in fullscreen mode (editing a slide)
-  const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || currentView === 'todo' || (currentView === 'slides' && isSlideFullscreen);
-  const hideSidebar = (currentView === 'slides' && isSlideFullscreen);
+  // Hide navbar/sidebar based on pathname
+  const isDocEditorOpen = pathname === '/docs' && currentDoc !== null;
+  const hideNavbar = isDocEditorOpen || pathname === '/todo' || (pathname === '/slides' && isSlideFullscreen);
+  const hideSidebar = (pathname === '/slides' && isSlideFullscreen);
   
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)

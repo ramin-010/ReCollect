@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useRouter } from 'next/navigation';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
@@ -23,7 +24,7 @@ export function UserSettings() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const dashboards = useDashboardStore((state) => state.dashboards);
-  const setCurrentView = useViewStore((state) => state.setCurrentView);
+  const router = useRouter();
   
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -366,7 +367,7 @@ export function UserSettings() {
             </div>
             <Button
               variant="ghost"
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => router.push('/dashboard')}
               leftIcon={<ArrowLeft className="h-4 w-4" />}
               className="hover:bg-[hsl(var(--muted))]"
             >

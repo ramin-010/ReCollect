@@ -139,7 +139,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
       className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-out rounded-2xl cursor-pointer"
     >
       <div 
-        className="relative h-[230px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))]/60 border border-[hsl(var(--border))]/30 cursor-pointer"
+        className="relative h-[210px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))]/60 border border-[hsl(var(--border))]/30 cursor-pointer"
         onClick={() => onOpen(deck)}
       >
         <MiniSlideRenderer slide={previewData.slide} blocks={previewData.blocks} connections={previewData.connections} />

@@ -97,7 +97,7 @@ export function PresentationSlide({
       >
         {/* Title */}
         {showTitle !== false && (
-          <div className={`w-full px-10 pb-8  ${coverImage ? 'pt-5' : 'mt-15'}`}>
+          <div className={`w-full px-10 ${previewMode ? 'pb-0' : 'pb-8'} ${coverImage ? 'pt-5' : previewMode ? 'mt-5' : 'mt-15'}`}>
             <h1
               className="w-full text-[62px] font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight"
               style={{ fontFamily: 'var(--font-inter), sans-serif' }}

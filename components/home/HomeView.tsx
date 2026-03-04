@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useRouter } from 'next/navigation';
 import { useViewStore } from '@/lib/store/viewStore';
 import { useDocStore } from '@/lib/store/docStore';
 import { docApi } from '@/lib/api/docApi';
@@ -22,7 +23,7 @@ interface RecentItem {
 
 export function HomeView() {
   const user = useAuthStore((state) => state.user);
-  const setCurrentView = useViewStore((state) => state.setCurrentView);
+  const router = useRouter();
   const setCurrentDoc = useDocStore((state) => state.setCurrentDoc);
   
   const [recents, setRecents] = useState<RecentItem[]>([]);
@@ -152,11 +153,11 @@ export function HomeView() {
       // In a real flow, you'd set the current doc so `DocsView` knows what to open
       // since `docStore` manages docs view state, we'd need to fetch it first.
       // But for simplicity, we switch to docs view. The user will see their docs list.
-      setCurrentView('docs');
+      router.push('/docs');
     } else if (item.type === 'drawing') {
-      setCurrentView('drawing');
+      router.push('/drawing');
     } else if (item.type === 'slide') {
-      setCurrentView('slides');
+      router.push('/slides');
     }
   };
 
@@ -180,8 +181,8 @@ export function HomeView() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setCurrentView('docs')} leftIcon={<Plus className="h-3.5 w-3.5" />}>New Doc</Button>
-            <Button variant="primary" size="sm" onClick={() => setCurrentView('todo')} leftIcon={<CheckSquare className="h-3.5 w-3.5" />}>Add Task</Button>
+            <Button variant="secondary" size="sm" onClick={() => router.push('/docs')} leftIcon={<Plus className="h-3.5 w-3.5" />}>New Doc</Button>
+            <Button variant="primary" size="sm" onClick={() => router.push('/todo')} leftIcon={<CheckSquare className="h-3.5 w-3.5" />}>Add Task</Button>
           </div>
         </motion.div>
 
@@ -275,7 +276,7 @@ export function HomeView() {
                   <CheckSquare className="h-5 w-5 text-brand-primary" />
                   Upcoming Tasks
                 </h2>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setCurrentView('todo')}>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => router.push('/todo')}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -301,7 +302,7 @@ export function HomeView() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
                       className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
-                      onClick={() => setCurrentView('todo')}
+                      onClick={() => router.push('/todo')}
                     >
                       <div className="mt-0.5 shrink-0 rounded border border-white/20 w-4 h-4 flex items-center justify-center text-white/20 group-hover:border-brand-primary" />
                       <div className="min-w-0 flex-1">
@@ -321,7 +322,7 @@ export function HomeView() {
                     </motion.div>
                   ))}
                   
-                  <Button variant="ghost" className="w-full text-xs text-white/40 hover:text-white mt-2" onClick={() => setCurrentView('todo')}>
+                  <Button variant="ghost" className="w-full text-xs text-white/40 hover:text-white mt-2" onClick={() => router.push('/todo')}>
                     View all tasks
                   </Button>
                 </div>
