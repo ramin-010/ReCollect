@@ -14,6 +14,7 @@ export interface Workspace {
   name: string;
   owner: { _id: string; name: string; email: string; avatar?: string };
   members: WorkspaceMember[];
+  spaces: { _id: string; name: string }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,8 +50,13 @@ export const workspaceApi = {
     return res.data;
   },
 
-  async createWorkspace(name: string): Promise<{ success: boolean; data: Workspace }> {
-    const res = await axiosInstance.post('/api/workspaces', { name });
+  async createWorkspace(name: string, defaultSpaceName?: string): Promise<{ success: boolean; data: Workspace }> {
+    const res = await axiosInstance.post('/api/workspaces', { name, defaultSpaceName });
+    return res.data;
+  },
+
+  async createWorkspaceSpace(workspaceId: string, name: string): Promise<{ success: boolean; data: Workspace; message?: string }> {
+    const res = await axiosInstance.post(`/api/workspaces/${workspaceId}/spaces`, { name });
     return res.data;
   },
 
@@ -70,13 +76,13 @@ export const workspaceApi = {
   },
 
   // Workspace-scoped data
-  async getWorkspaceTasks(workspaceId: string): Promise<{ success: boolean; data: any[]; count: number }> {
-    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/tasks`);
+  async getWorkspaceTasks(workspaceId: string, spaceId?: string): Promise<{ success: boolean; data: any[]; count: number }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/tasks`, { params: { spaceId } });
     return res.data;
   },
 
-  async getWorkspaceStats(workspaceId: string): Promise<{ success: boolean; data: WorkspaceStats }> {
-    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/stats`);
+  async getWorkspaceStats(workspaceId: string, spaceId?: string): Promise<{ success: boolean; data: WorkspaceStats }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/stats`, { params: { spaceId } });
     return res.data;
   },
 

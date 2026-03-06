@@ -19,6 +19,7 @@ interface OverviewTabProps {
   overviewInputExpanded: boolean;
   setOverviewInputExpanded: (val: boolean) => void;
   handleTaskSaved: (task: any) => void;
+  activeSpaceId: string | null;
 }
 
 export function OverviewTab({
@@ -34,6 +35,7 @@ export function OverviewTab({
   overviewInputExpanded,
   setOverviewInputExpanded,
   handleTaskSaved,
+  activeSpaceId,
 }: OverviewTabProps) {
   return (
     <div className="space-y-7">

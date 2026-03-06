@@ -16,6 +16,7 @@ interface TasksTabProps {
   handleTaskSaved: (task: any) => void;
   handleToggleTaskStatus: (taskId: string, currentStatus: string) => void;
   handleTaskClick: (task: any) => void;
+  activeSpaceId: string | null;
 }
 
 const TASK_FILTERS: { key: string; label: string }[] = [
@@ -36,7 +37,8 @@ export function TasksTab({
   setTaskFilter,
   handleTaskSaved,
   handleToggleTaskStatus,
-  handleTaskClick
+  handleTaskClick,
+  activeSpaceId
 }: TasksTabProps) {
   return (
     <div className="space-y-4">
@@ -50,6 +52,7 @@ export function TasksTab({
             visibility="workspace"
             onSave={handleTaskSaved}
             workspaceMembers={workspaceMembers}
+            spaceId={activeSpaceId === 'all' ? undefined : activeSpaceId || undefined}
           />
         </div>
       )}

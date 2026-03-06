@@ -60,6 +60,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   initialDescription,
   demoMode = false,
   workspaceId,
+  spaceId,
   visibility,
   workspaceMembers = []
 }, ref) => {
@@ -103,7 +104,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     handleSave,
     handleKeyDown,
     assignees, setAssignees,
-  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, visibility);
+  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility);
 
   useImperativeHandle(ref, () => inputRef.current!);
 

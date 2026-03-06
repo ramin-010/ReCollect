@@ -17,6 +17,7 @@ export interface TaskData {
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
   workspace?: string;
+  spaceId?: string;
   visibility?: 'private' | 'workspace' | 'public';
 }
 
@@ -31,6 +32,7 @@ export interface TaskInputProps {
   initialDescription?: string;
   demoMode?: boolean;
   workspaceId?: string;
+  spaceId?: string;
   visibility?: 'private' | 'workspace' | 'public';
   workspaceMembers?: { _id: string; name: string; email: string; avatar?: string }[];
 }

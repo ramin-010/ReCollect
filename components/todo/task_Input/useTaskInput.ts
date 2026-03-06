@@ -17,6 +17,7 @@ export const useTaskInput = (
   initialDescription?: TaskInputProps['initialDescription'],
   demoMode?: boolean,
   workspaceId?: string,
+  spaceId?: string,
   visibility?: 'private' | 'workspace' | 'public'
 ) => {
   const [title, setTitle] = useState(initialTitle || '');
@@ -173,6 +174,7 @@ export const useTaskInput = (
       recurrence: recurrenceData,
       references: initialReferences && initialReferences.length > 0 ? initialReferences : undefined,
       workspace: workspaceId,
+      spaceId: spaceId,
       visibility: visibility,
     };
     

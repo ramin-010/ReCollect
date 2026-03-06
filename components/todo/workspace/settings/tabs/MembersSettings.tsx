@@ -1,22 +1,12 @@
+'use client';
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Loader2, X, UserPlus, Crown, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { WorkspaceSettingsProps } from '../types';
 
-interface MembersTabProps {
-  selectedWorkspace: any;
-  currentUser: any;
-  isAdmin: boolean;
-  isInviting: boolean;
-  setIsInviting: (val: boolean) => void;
-  inviteEmail: string;
-  setInviteEmail: (val: string) => void;
-  isInviteLoading: boolean;
-  handleInvite: () => void;
-  handleRemoveMember: (id: string) => void;
-}
-
-export function MembersTab({
+export function MembersSettings({
   selectedWorkspace,
   currentUser,
   isAdmin,
@@ -27,11 +17,16 @@ export function MembersTab({
   isInviteLoading,
   handleInvite,
   handleRemoveMember
-}: MembersTabProps) {
+}: Omit<WorkspaceSettingsProps, 'isOpen' | 'onClose' | 'onDeleteWorkspace'>) {
   if (!selectedWorkspace) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Workspace Members</h2>
+        <p className="text-sm text-white/40">Manage who has access to this workspace and their permissions.</p>
+      </div>
+
       <AnimatePresence>
         {isInviting && (
           <motion.div
@@ -72,7 +67,7 @@ export function MembersTab({
       {isAdmin && !isInviting && (
         <button
           onClick={() => setIsInviting(true)}
-          className="flex items-center gap-2 w-full px-4 py-3 text-sm text-white/30 bg-white/[0.01] border border-dashed border-white/8 rounded-xl hover:bg-white/[0.03] hover:text-white/45 hover:border-white/15 transition-all"
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm text-white/30 bg-white/[0.01] border border-dashed border-white/8 rounded-xl hover:bg-white/[0.03] hover:text-white/45 hover:border-white/15 transition-all mb-4"
         >
           <UserPlus className="w-4 h-4" />
           Invite a team member
