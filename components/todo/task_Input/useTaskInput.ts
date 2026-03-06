@@ -40,7 +40,7 @@ export const useTaskInput = (
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [assigneeEmail, setAssigneeEmail] = useState<string | null>(null);
+  const [assignees, setAssignees] = useState<{ name: string; email: string; avatar?: string }[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
@@ -184,11 +184,12 @@ export const useTaskInput = (
       if (result.success && result.data) {
         toast.success('Task created!');
         
-        // If assignee was selected, assign after creation
-        if (assigneeEmail && result.data._id) {
-          todoApi.assignTask(result.data._id, assigneeEmail).then(assignResult => {
+        // If assignees were selected, assign after creation
+        if (assignees.length > 0 && result.data._id) {
+          const emails = assignees.map(a => a.email);
+          todoApi.assignTask(result.data._id, emails).then(assignResult => {
             if (assignResult.success) {
-              toast.success(assignResult.message || `Assigned to ${assigneeEmail}`);
+              toast.success(assignResult.message || `Assigned to ${emails.length} users`);
               // Update the task in store with assignee data
               if (assignResult.data) {
                 onSave?.(assignResult.data);
@@ -208,7 +209,7 @@ export const useTaskInput = (
         setConfirmedDueDate(null);
         setCurrentReminder(null);
         setIsRecurring(false);
-        setAssigneeEmail(null);
+        setAssignees([]);
         onExpandChange(false);
       } else {
         toast.error(result.message || 'Failed to create task');
@@ -347,7 +348,7 @@ export const useTaskInput = (
     previewImage, setPreviewImage,
     confirmedDueDate, setConfirmedDueDate,
     isSaving,
-    assigneeEmail, setAssigneeEmail,
+    assignees, setAssignees,
     
     // Refs
     fileInputRef,

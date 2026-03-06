@@ -32,6 +32,7 @@ export interface TaskInputProps {
   demoMode?: boolean;
   workspaceId?: string;
   visibility?: 'private' | 'workspace' | 'public';
+  workspaceMembers?: { _id: string; name: string; email: string; avatar?: string }[];
 }
 
 export const PRIORITIES = [

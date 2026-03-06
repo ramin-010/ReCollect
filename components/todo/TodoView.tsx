@@ -43,7 +43,8 @@ export function TodoView() {
   const currentUser = useAuthStore((state) => state.user);
 
   // UI State
-  const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const isInputExpanded = useViewStore((state) => state.isTodoInputExpanded);
+  const setIsInputExpanded = useViewStore((state) => state.setTodoInputExpanded);
   const [priorityFilter, setPriorityFilter] = useState<'' | 'high' | 'medium' | 'low'>('');
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
 

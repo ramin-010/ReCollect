@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useDocStore } from '@/lib/store/docStore';
@@ -29,9 +30,14 @@ export default function AppLayout({
   // Quick Task Add modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   
+  const isTodoInputExpanded = useViewStore((state) => state.isTodoInputExpanded);
+  const todoFilter = useViewStore((state) => state.todoFilter);
+
   // Hide navbar/sidebar based on pathname
   const isDocEditorOpen = pathname === '/docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || pathname === '/todo' || (pathname === '/slides' && isSlideFullscreen);
+  const INBOX_FILTERS = ['inbox', 'today', 'upcoming', 'completed', 'docs', 'notes'];
+  const isTodoInboxScreen = pathname === '/todo' && INBOX_FILTERS.includes(todoFilter);
+  const hideNavbar = isDocEditorOpen || (pathname === '/slides' && isSlideFullscreen) || (isTodoInboxScreen && !isTodoInputExpanded);
   const hideSidebar = (pathname === '/slides' && isSlideFullscreen);
   
 
@@ -106,7 +112,18 @@ export default function AppLayout({
       <div className="h-screen overflow-hidden flex bg-pattern">
         {!hideSidebar && <Sidebar />}
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))] overflow-hidden">
-          {!hideNavbar && <Navbar />}
+          <AnimatePresence>
+            {!hideNavbar && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -20, height: 0 }}
+                className="overflow-hidden shrink-0"
+              >
+                <Navbar />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
             {children}
           </main>

@@ -131,20 +131,29 @@ export function RichTaskItem({ task, onDelete, onToggleComplete, onSelect, isCom
                 </span>
             )}
 
-            {/* Assignee Icon */}
-            {task.assignee ? (() => {
-                const assigneeInfo = typeof task.assignee === 'string'
-                  ? { name: task.assignee, email: task.assignee, avatar: undefined }
-                  : task.assignee;
-                const initials = assigneeInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                return assigneeInfo.avatar ? (
-                  <img src={assigneeInfo.avatar} alt={assigneeInfo.name} className="w-6 h-6 rounded-full object-cover border border-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`} />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`}>
-                    <span className="text-[10px] font-bold">{initials}</span>
-                  </div>
-                );
-            })() : (
+            {/* Assignees Icon */}
+            {task.assignees && task.assignees.length > 0 ? (
+                <div className="flex -space-x-1.5" title={`${task.assignees.length} assignees`}>
+                  {task.assignees.slice(0, 3).map((assignee: any) => {
+                    const assigneeInfo = typeof assignee === 'string'
+                      ? { name: assignee, email: assignee, avatar: undefined, _id: assignee }
+                      : assignee;
+                    const initials = assigneeInfo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+                    return assigneeInfo.avatar ? (
+                      <img key={assigneeInfo._id} src={assigneeInfo.avatar} alt={assigneeInfo.name} className="w-6 h-6 rounded-full object-cover border border-[#1e1e1e] ring-1 ring-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`} />
+                    ) : (
+                      <div key={assigneeInfo._id} className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-[#1e1e1e] ring-1 ring-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`}>
+                        <span className="text-[10px] font-bold">{initials}</span>
+                      </div>
+                    );
+                  })}
+                  {task.assignees.length > 3 && (
+                    <div className="w-6 h-6 rounded-full bg-white/10 text-white/50 flex items-center justify-center border border-[#1e1e1e] ring-1 ring-white/10">
+                      <span className="text-[8px] font-bold">+{task.assignees.length - 3}</span>
+                    </div>
+                  )}
+                </div>
+            ) : (
                  <div className="w-6 h-6 rounded-full border border-dashed border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
                      <User className="w-3 h-3" />
                  </div>

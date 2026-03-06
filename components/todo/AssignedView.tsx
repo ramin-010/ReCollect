@@ -28,8 +28,9 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
   const currentUser = useAuthStore((s) => s.user);
 
   const assignedTasks = useMemo(() => {
-    return todos.filter((t) => {
-      const assigneeId = typeof t.assignee === 'object' ? t.assignee?._id : t.assignee;
+    return todos.filter((t: any) => {
+      const assignee = t.assignees && t.assignees.length > 0 ? t.assignees[0] : null;
+      const assigneeId = typeof assignee === 'object' && assignee !== null ? assignee._id : assignee;
       // Show tasks where I'm the assignee but not the creator
       return !!assigneeId && assigneeId === currentUser?._id;
     });

@@ -28,9 +28,11 @@ export interface CreateTodoPayload {
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: TodoLabel[];
-  assignee?: string;
+  assignees?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
+  workspace?: string;
+  visibility?: 'private' | 'workspace' | 'public';
 }
 
 export interface TodoResponse {
@@ -45,7 +47,7 @@ export interface TodoResponse {
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: TodoLabel[];
   attachments?: string[];
-  assignee?: string | { _id: string; name: string; email: string; avatar?: string };
+  assignees?: { _id: string; name: string; email: string; avatar?: string }[];
   assignedAt?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
@@ -185,9 +187,11 @@ export const todoApi = {
       if (payload.reminderDate) formData.append('reminderDate', payload.reminderDate);
       if (payload.subtasks) formData.append('subtasks', JSON.stringify(payload.subtasks));
       if (payload.labels) formData.append('labels', JSON.stringify(payload.labels));
-      if (payload.assignee) formData.append('assignee', payload.assignee);
+      if (payload.assignees) formData.append('assignees', JSON.stringify(payload.assignees));
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
       if (payload.references) formData.append('references', JSON.stringify(payload.references));
+      if (payload.workspace) formData.append('workspace', payload.workspace);
+      if (payload.visibility) formData.append('visibility', payload.visibility);
 
       console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
 
@@ -221,9 +225,11 @@ export const todoApi = {
           reminderDate: payload.reminderDate,
           subtasks: payload.subtasks,
           labels: payload.labels,
-          assignee: payload.assignee,
+          assignees: payload.assignees,
           recurrence: payload.recurrence,
           references: payload.references,
+          workspace: payload.workspace,
+          visibility: payload.visibility,
         });
 
         console.log('[todoApi] Response success:', response.data.success);
@@ -370,12 +376,12 @@ export const todoApi = {
   },
 
   /**
-   * Assign a task to a user by email
+   * Assign a task to user(s) by email
    */
-  async assignTask(todoId: string, email: string): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] Assigning task:', todoId, 'to:', email);
+  async assignTask(todoId: string, emails: string[]): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
+    console.log('[todoApi] Assigning task:', todoId, 'to:', emails);
     try {
-      const response = await axiosInstance.post(`/api/todos/${todoId}/assign`, { email });
+      const response = await axiosInstance.post(`/api/todos/${todoId}/assign`, { emails });
       return {
         success: response.data.success,
         data: response.data.data,
@@ -393,10 +399,10 @@ export const todoApi = {
   /**
    * Remove assignee from a task
    */
-  async unassignTask(todoId: string): Promise<{ success: boolean; message?: string }> {
+  async unassignTask(todoId: string, email?: string): Promise<{ success: boolean; message?: string }> {
     console.log('[todoApi] Unassigning task:', todoId);
     try {
-      const response = await axiosInstance.post(`/api/todos/${todoId}/unassign`);
+      const response = await axiosInstance.post(`/api/todos/${todoId}/unassign`, { email });
       return {
         success: response.data.success,
         message: response.data.message

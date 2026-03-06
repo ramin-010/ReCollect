@@ -6,7 +6,8 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
 import { Button } from '@/components/ui-base/Button';
-import { Share2, Plus, Bell, ImagePlus, X } from 'lucide-react';
+import { Share2, Plus, ImagePlus, X } from 'lucide-react';
+import { NotificationsPopover } from './NotificationsPopover';
 import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { Logo } from '@/components/brand/Logo';
@@ -93,13 +94,7 @@ export function Navbar() {
 
             <div className="mx-1 h-4 w-px bg-[hsl(var(--border))]"></div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] h-8 w-8 p-0"
-            >
-              <Bell className="h-4 w-4" />
-            </Button>
+            <NotificationsPopover />
             
             <ThemeSwitcher />
           </div>

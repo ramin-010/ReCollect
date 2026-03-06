@@ -14,12 +14,12 @@ interface UserResult {
 
 interface AssigneePickerProps {
   taskId: string;
-  currentAssignee?: string | { _id: string; name: string; email: string; avatar?: string } | null;
+  currentAssignees?: { _id: string; name: string; email: string; avatar?: string }[] | null;
   onAssigned: (updatedTask: any) => void;
   onUnassigned: () => void;
 }
 
-export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassigned }: AssigneePickerProps) {
+export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassigned }: AssigneePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserResult[]>([]);
@@ -75,7 +75,11 @@ export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassign
   const handleAssign = async (email: string) => {
     setIsAssigning(true);
     try {
-      const result = await todoApi.assignTask(taskId, email);
+      // Create a unified array blending the current assignees and the newly selected email
+      const existingEmails = currentAssignees?.map(a => a.email) || [];
+      const updatedEmails = Array.from(new Set([...existingEmails, email]));
+      
+      const result = await todoApi.assignTask(taskId, updatedEmails);
       if (result.success && result.data) {
         onAssigned(result.data);
         setIsOpen(false);
@@ -89,10 +93,10 @@ export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassign
     }
   };
 
-  const handleUnassign = async () => {
+  const handleUnassign = async (emailToRemove?: string) => {
     setIsAssigning(true);
     try {
-      const result = await todoApi.unassignTask(taskId);
+      const result = await todoApi.unassignTask(taskId, emailToRemove);
       if (result.success) {
         onUnassigned();
       }
@@ -104,11 +108,7 @@ export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassign
   };
 
   // Extract assignee info
-  const assigneeInfo = currentAssignee
-    ? typeof currentAssignee === 'string'
-      ? { name: currentAssignee, email: currentAssignee, avatar: undefined }
-      : currentAssignee
-    : null;
+  const assignees = currentAssignees || [];
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -121,21 +121,29 @@ export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassign
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-2 group cursor-pointer hover:bg-[hsl(var(--foreground))]/5 -mx-2 px-2 py-1.5 rounded-md transition-colors"
       >
-        {assigneeInfo ? (
-          <>
-            {assigneeInfo.avatar ? (
-              <img src={assigneeInfo.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-[hsl(var(--brand-primary))]/20 text-[hsl(var(--brand-primary))] flex items-center justify-center text-[10px] font-bold border border-[hsl(var(--brand-primary))]/30">
-                {getInitials(assigneeInfo.name)}
-              </div>
-            )}
-            <span className="text-sm text-[hsl(var(--foreground))]/70 truncate">{assigneeInfo.name}</span>
-          </>
+        {assignees.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1.5 shrink-0">
+              {assignees.slice(0, 3).map((assigneeInfo: any) => (
+                <div key={assigneeInfo._id || assigneeInfo.email} className="w-6 h-6 rounded-full ring-2 ring-[hsl(var(--background))] bg-[hsl(var(--brand-primary))]/20 text-[hsl(var(--brand-primary))] flex items-center justify-center text-[10px] font-bold border border-[hsl(var(--brand-primary))]/30 overflow-hidden" title={assigneeInfo.name}>
+                  {assigneeInfo.avatar ? (
+                    <img src={assigneeInfo.avatar} alt={assigneeInfo.name} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(assigneeInfo.name)
+                  )}
+                </div>
+              ))}
+            </div>
+            {assignees.length > 3 ? (
+              <span className="text-sm text-[hsl(var(--foreground))]/70 truncate">+{assignees.length - 3}</span>
+            ) : assignees.length === 1 ? (
+              <span className="text-sm text-[hsl(var(--foreground))]/70 truncate">{assignees[0].name}</span>
+            ) : null}
+          </div>
         ) : (
           <>
             <UserPlus className="w-3.5 h-3.5 text-[hsl(var(--foreground))]/30 group-hover:text-[hsl(var(--foreground))]/50" />
-            <span className="text-sm italic text-[hsl(var(--foreground))]/30 group-hover:text-[hsl(var(--foreground))]/50">Assign someone</span>
+            <span className="text-sm italic text-[hsl(var(--foreground))]/30 group-hover:text-[hsl(var(--foreground))]/50">Assign</span>
           </>
         )}
       </button>
@@ -214,16 +222,16 @@ export function AssigneePicker({ taskId, currentAssignee, onAssigned, onUnassign
             )}
           </div>
 
-          {/* Remove assignee option */}
-          {assigneeInfo && (
+          {/* Clear all assignees option */}
+          {assignees.length > 0 && !isSearching && !query.trim() && (
             <div className="border-t border-[hsl(var(--border))]">
               <button
-                onClick={handleUnassign}
+                onClick={() => handleUnassign()}
                 disabled={isAssigning}
                 className="w-full flex items-center gap-2 px-3 py-2 text-rose-400 hover:bg-rose-500/10 transition-colors text-sm disabled:opacity-50"
               >
                 <X className="w-3.5 h-3.5" />
-                Remove assignee
+                Clear all assignees
               </button>
             </div>
           )}

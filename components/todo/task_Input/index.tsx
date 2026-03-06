@@ -21,7 +21,8 @@ import {
   Paperclip,
   Loader2,
   Search,
-  Mail
+  Mail,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -59,7 +60,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   initialDescription,
   demoMode = false,
   workspaceId,
-  visibility
+  visibility,
+  workspaceMembers = []
 }, ref) => {
   const {
     // State
@@ -100,7 +102,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     clearConfirmedDate,
     handleSave,
     handleKeyDown,
-    assigneeEmail, setAssigneeEmail,
+    assignees, setAssignees,
   } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, visibility);
 
   useImperativeHandle(ref, () => inputRef.current!);
@@ -130,11 +132,13 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
   const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 
-  const selectAssignee = (email: string, name?: string) => {
-    setAssigneeEmail(email);
-    setIsAssigneeOpen(false);
-    setAssigneeQuery('');
-    setAssigneeResults([]);
+  const selectAssignee = (email: string, name?: string, avatar?: string) => {
+    const isSelected = assignees.some(a => a.email.toLowerCase() === email.toLowerCase());
+    if (isSelected) {
+      setAssignees(prev => prev.filter(a => a.email.toLowerCase() !== email.toLowerCase()));
+    } else {
+      setAssignees(prev => [...prev, { email, name: name || email.split('@')[0], avatar }]);
+    }
   };
 
   const currentPriority = PRIORITIES.find(p => p.value === priority);
@@ -434,19 +438,36 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     <PopoverTrigger asChild>
                       <button className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
-                        assigneeEmail
+                        assignees.length > 0
                           ? "border-indigo-500/30 text-indigo-400 bg-indigo-500/10"
                           : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
                       )}>
-                        {assigneeEmail ? <User className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                        <span>{assigneeEmail || 'Assignee'}</span>
-                        {assigneeEmail && (
-                          <span
-                            onClick={(e) => { e.stopPropagation(); setAssigneeEmail(null); }}
-                            className="ml-1 p-0.5 hover:text-white/60 rounded cursor-pointer"
-                          >
-                            <X className="w-3 h-3" />
-                          </span>
+                        {assignees.length === 0 ? (
+                          <>
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Assignee</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="flex -space-x-1.5 mr-1.5">
+                              {assignees.map((assignee, idx) => (
+                                <div key={assignee.email} className="w-5 h-5 rounded-full ring-2 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={assignee.name}>
+                                  {assignee.avatar ? (
+                                    <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    assignee.name.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <span>{assignees.length} assigned</span>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); setAssignees([]); }}
+                              className="ml-1 p-0.5 hover:text-white/60 rounded cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </span>
+                          </div>
                         )}
                       </button>
                     </PopoverTrigger>
@@ -471,21 +492,66 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             <span className="text-xs">Searching...</span>
                           </div>
                         )}
-                        {!isSearchingUsers && assigneeResults.map(user => (
+                        {/* Workspace members as default suggestions (when no query) */}
+                        {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
+                          <>
+                            <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                            {workspaceMembers.map(member => {
+                              const isSelected = assignees.some(a => a.email === member.email);
+                              return (
+                              <button
+                                key={member._id}
+                                onClick={() => selectAssignee(member.email, member.name, member.avatar)}
+                                className={cn(
+                                  "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                                  isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                )}
+                              >
+                                <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                  {member.avatar ? (
+                                    <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                  ) : (
+                                    member.name.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
+                                  <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                </div>
+                                {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                              </button>
+                            )})}
+                          </>
+                        )}
+                        {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
+                          <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                        )}
+                        {/* Search results (when query exists) */}
+                        {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
+                          const isSelected = assignees.some(a => a.email === user.email);
+                          return (
                           <button
                             key={user._id}
-                            onClick={() => selectAssignee(user.email, user.name)}
-                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                            onClick={() => selectAssignee(user.email, user.name, user.avatar)}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                              isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                            )}
                           >
                             <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                              {user.name.charAt(0).toUpperCase()}
+                              {user.avatar ? (
+                                <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                user.name.charAt(0).toUpperCase()
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm text-white/80 truncate">{user.name}</p>
-                              <p className="text-xs text-white/40 truncate">{user.email}</p>
+                              <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
+                              <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
                             </div>
+                            {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
                           </button>
-                        ))}
+                        )})}
                         {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
                           <button
                             onClick={() => selectAssignee(assigneeQuery.trim())}
@@ -496,12 +562,9 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
-                              <p className="text-xs text-white/40">Will send invitation</p>
+                              <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
                             </div>
                           </button>
-                        )}
-                        {!assigneeQuery.trim() && (
-                          <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
                         )}
                       </div>
                     </PopoverContent>

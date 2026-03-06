@@ -364,20 +364,20 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
             <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Assignee</label>
             <AssigneePicker
               taskId={task._id}
-              currentAssignee={task.assignee}
+              currentAssignees={task.assignees}
               onAssigned={(updatedTask) => {
                 onUpdate(task._id, {
-                  assignee: updatedTask.assignee,
+                  assignees: updatedTask.assignees,
                   assignedAt: updatedTask.assignedAt,
                 });
                 toast.success(updatedTask.message || 'Task assigned');
               }}
               onUnassigned={() => {
                 onUpdate(task._id, {
-                  assignee: undefined,
+                  assignees: [],
                   assignedAt: undefined,
                 });
-                toast.success('Assignee removed');
+                toast.success('Assignees removed');
               }}
             />
           </div>

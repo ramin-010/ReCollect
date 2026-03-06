@@ -54,7 +54,7 @@ export const workspaceApi = {
     return res.data;
   },
 
-  async inviteMember(workspaceId: string, email: string): Promise<{ success: boolean; data: Workspace; message?: string }> {
+  async inviteMember(workspaceId: string, email: string): Promise<{ success: boolean; message?: string }> {
     const res = await axiosInstance.post(`/api/workspaces/${workspaceId}/members`, { email });
     return res.data;
   },
