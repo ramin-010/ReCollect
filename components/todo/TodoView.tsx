@@ -20,7 +20,6 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 import { RichTaskItem } from './RichTaskItem';
 import { TaskDetailView } from './TaskDetailView';
-import { WorkspaceView } from './WorkspaceView';
 import { AssignedView } from './AssignedView';
 
 // Inbox-type filters that use the standard task list layout
@@ -179,11 +178,7 @@ export function TodoView() {
     );
   }
 
-  // ── Route to dedicated views for Assigned & Workspace ──
-  if (activeFilter === 'workspace') {
-    return <WorkspaceView />;
-  }
-
+  // ── Route to dedicated views for Assigned ──
   if (activeFilter === 'assigned') {
     return (
       <AssignedView

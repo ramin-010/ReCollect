@@ -57,7 +57,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
       const result = await todoApi.updateTodo(task._id, updates as any);
       if (result.success && result.data) {
-        onUpdate(task._id, result.data);
+        onUpdate(task._id, result.data as unknown as Partial<Task>);
         toast.success('Task updated');
       } else {
         toast.error(result.message || 'Failed to update task');

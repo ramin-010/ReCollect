@@ -15,6 +15,9 @@ export interface Workspace {
   owner: { _id: string; name: string; email: string; avatar?: string };
   members: WorkspaceMember[];
   spaces: { _id: string; name: string }[];
+  settings?: {
+    membersCanViewOverview: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +91,11 @@ export const workspaceApi = {
 
   async getWorkspaceActivity(workspaceId: string): Promise<{ success: boolean; data: ActivityLogEntry[] }> {
     const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/activity`);
+    return res.data;
+  },
+
+  async updateWorkspaceSettings(workspaceId: string, settings: { membersCanViewOverview: boolean }): Promise<{ success: boolean; data: Workspace; message?: string }> {
+    const res = await axiosInstance.patch(`/api/workspaces/${workspaceId}/settings`, settings);
     return res.data;
   },
 };

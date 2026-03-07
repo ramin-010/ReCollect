@@ -45,15 +45,17 @@ import { WorkspaceStats, ActivityLogEntry } from './workspace/types';
 import { OverviewTab } from './workspace/OverviewTab';
 import { TasksTab } from './workspace/TasksTab';
 import { WorkspaceSettingsModal } from './workspace/settings';
+import { TaskDetailModal } from './workspace/modals/TaskDetailModal';
 
 // ────────────────────────────────────────────────────────
 // Types
 // ────────────────────────────────────────────────────────
 type SubTab = 'overview' | 'tasks';
-type TaskFilter = 'all' | 'mine' | 'unassigned' | 'completed';
+export type TaskFilter = 'all' | 'mine' | 'unassigned' | 'completed';
 
-// Text-only sub-tabs (no icons — cleaner)
-const SUB_TABS: { key: SubTab; label: string }[] = [
+// We'll dynamically determine the tabs inside the component
+// to check if the current user can see the Overview tab.
+const BASE_SUB_TABS: { key: SubTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'tasks', label: 'Tasks' },
 ];
@@ -72,11 +74,12 @@ export function WorkspaceView() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<SubTab>('overview');
+  const [activeTab, setActiveTab] = useState<SubTab>('tasks');
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [overviewInputExpanded, setOverviewInputExpanded] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
+  const [editingTask, setEditingTask] = useState<any | null>(null);
 
   // Create workspace
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -104,6 +107,19 @@ export function WorkspaceView() {
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const currentUser = useAuthStore((state) => state.user);
+
+  const isOwner = selectedWorkspace?.owner._id === currentUser?._id;
+  const isAdmin = isOwner || selectedWorkspace?.members.some(
+    m => m.user._id === currentUser?._id && m.role === 'admin'
+  ) || false;
+
+  // Overview permission check
+  const canViewOverview = useMemo(() => {
+    if (!selectedWorkspace) return false;
+    if (isAdmin || isOwner) return true;
+    return !!selectedWorkspace.settings?.membersCanViewOverview;
+  }, [selectedWorkspace, isAdmin, isOwner]);
+
 
   // ── Fetch workspaces ──
   const fetchWorkspaces = useCallback(async () => {
@@ -136,14 +152,20 @@ export function WorkspaceView() {
     const load = async () => {
       setIsDataLoading(true);
       try {
-        const [statsRes, activityRes, tasksRes] = await Promise.all([
-          workspaceApi.getWorkspaceStats(wsId, activeSpaceId !== 'all' ? activeSpaceId! : undefined),
+        const fetches: Promise<any>[] = [
           workspaceApi.getWorkspaceActivity(wsId),
           workspaceApi.getWorkspaceTasks(wsId, activeSpaceId !== 'all' ? activeSpaceId! : undefined),
-        ]);
-        if (statsRes.success) setStats(statsRes.data);
-        if (activityRes.success) setActivity(activityRes.data);
-        if (tasksRes.success) setTasks(tasksRes.data);
+        ];
+
+        if (canViewOverview) {
+          fetches.push(workspaceApi.getWorkspaceStats(wsId, activeSpaceId !== 'all' ? activeSpaceId! : undefined));
+        }
+
+        const results = await Promise.all(fetches);
+        
+        if (results[0].success) setActivity(results[0].data);
+        if (results[1].success) setTasks(results[1].data);
+        if (canViewOverview && results[2]?.success) setStats(results[2].data);
       } catch {
         // Silently fail
       } finally {
@@ -151,7 +173,7 @@ export function WorkspaceView() {
       }
     };
     load();
-  }, [selectedWorkspace?._id, activeSpaceId]);
+  }, [selectedWorkspace?._id, activeSpaceId, canViewOverview]);
 
   // ── Derived counts for actionable stats ──
   const overdueTasks = useMemo(() => tasks.filter(t => isOverdue(t)), [tasks]);
@@ -170,23 +192,37 @@ export function WorkspaceView() {
     [tasks]
   );
 
-  // ── Flat workspace members for assignee picker (exclude self) ──
+  // ── Flat workspace members for assignee picker ──
   const workspaceMembers = useMemo(() => {
     if (!selectedWorkspace) return [];
-    const members = selectedWorkspace.members
-      .filter(m => m.user._id !== currentUser?._id)
-      .map(m => ({ _id: m.user._id, name: m.user.name, email: m.user.email, avatar: m.user.avatar }));
-    // Include owner if not self
-    if (selectedWorkspace.owner._id !== currentUser?._id) {
-      members.unshift({
+    
+    // Create a unique array of members (owner is usually already in members)
+    const membersMap = new Map();
+    
+    // Add owner explicitly just in case
+    if (selectedWorkspace.owner) {
+      membersMap.set(selectedWorkspace.owner._id, {
         _id: selectedWorkspace.owner._id,
         name: selectedWorkspace.owner.name,
         email: selectedWorkspace.owner.email,
         avatar: selectedWorkspace.owner.avatar,
       });
     }
-    return members;
-  }, [selectedWorkspace, currentUser?._id]);
+
+    // Add all members
+    selectedWorkspace.members.forEach((m: any) => {
+      if (m.user && !membersMap.has(m.user._id)) {
+        membersMap.set(m.user._id, {
+          _id: m.user._id,
+          name: m.user.name,
+          email: m.user.email,
+          avatar: m.user.avatar,
+        });
+      }
+    });
+
+    return Array.from(membersMap.values());
+  }, [selectedWorkspace]);
 
   // ── Filtered tasks for Tasks tab ──
   const filteredTasks = useMemo(() => {
@@ -223,20 +259,23 @@ export function WorkspaceView() {
   // ── Task save handler (shared by Overview + Tasks quick-add) ──
   const handleTaskSaved = useCallback((newTask: any) => {
     setTasks(prev => [newTask, ...prev]);
-    if (selectedWorkspace) {
+    if (selectedWorkspace && canViewOverview) {
       workspaceApi.getWorkspaceStats(selectedWorkspace._id)
         .then(res => res.success && setStats(res.data));
     }
-  }, [selectedWorkspace]);
+  }, [selectedWorkspace, canViewOverview]);
 
   // ── Handlers ──
-  const handleToggleTaskStatus = async (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'complete' ? 'pending' : 'complete';
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    const task = tasks.find(t => t._id === taskId);
+    if (!task) return;
+    const currentStatus = task.status;
+    
     try {
       // Optimistic update
-      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: newStatus } : t));
+      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: newStatus as any } : t));
       
-      const res = await todoApi.updateTodo(taskId, { status: newStatus });
+      const res = await todoApi.updateTodo(taskId, { status: newStatus as any });
       if (!res.success) {
         // Revert on failure
         setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: currentStatus } : t));
@@ -248,9 +287,23 @@ export function WorkspaceView() {
     }
   };
 
+  const handleUpdateTask = async (taskId: string, updates: any) => {
+    try {
+      // Optimistic update
+      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, ...updates } : t));
+      
+      const res = await todoApi.updateTodo(taskId, updates);
+      if (!res.success) {
+        // We'd ideally revert here, but for simplicity of generic updates, we can just refetch or rely on toast
+        toast.error('Failed to update task');
+      }
+    } catch {
+      toast.error('Failed to update task');
+    }
+  };
+
   const handleTaskClick = (task: any) => {
-    // Navigate to the main task dashboard and open this specific task
-    window.location.href = `/dashboard?view=todos&task=${task._id}`;
+    setEditingTask(task);
   };
 
   const handleCreate = async () => {
@@ -345,10 +398,14 @@ export function WorkspaceView() {
     }
   };
 
-  const isOwner = selectedWorkspace?.owner._id === currentUser?._id;
-  const isAdmin = isOwner || selectedWorkspace?.members.some(
-    m => m.user._id === currentUser?._id && m.role === 'admin'
-  ) || false;
+
+
+  // Adjust default tab if Overview is not allowed and it was somehow set
+  useEffect(() => {
+    if (activeTab === 'overview' && !canViewOverview) {
+      setActiveTab('tasks');
+    }
+  }, [canViewOverview, activeTab]);
 
   // ── Loading ──
   if (isLoading) {
@@ -408,69 +465,145 @@ export function WorkspaceView() {
   // ────────────────────────────────────────────────────────
   // Main Layout — No AppNavbar. Workspace switcher IS the header.
   // ────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen text-white bg-[#171717] pb-20 selection:bg-indigo-500/30">
-      <div className="max-w-[1100px] mx-auto px-6 md:px-8 pt-10">
+  const activeSpace = selectedWorkspace?.spaces?.find((s: any) => s._id === activeSpaceId);
 
-        {/* ── Header: Workspace Switcher (promoted to primary) ── */}
-        <div className="flex items-center justify-between mb-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-3 group outline-none py-1">
-                <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/8 flex items-center justify-center text-sm font-bold text-white/60">
-                  {selectedWorkspace?.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="text-left">
-                  <span className="text-lg font-semibold text-white/90 group-hover:text-white transition-colors flex items-center gap-2">
-                    {selectedWorkspace?.name}
-                    <ChevronDown className="w-4 h-4 text-white/20 group-hover:text-white/45 transition-colors" />
-                  </span>
-                  <span className="text-[11px] text-white/25 block -mt-0.5">
-                    {selectedWorkspace?.members.length} member{selectedWorkspace?.members.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[220px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
-              <div className="px-2 py-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Workspaces</span>
-              </div>
-              {workspaces.map(ws => (
-                <DropdownMenuItem
-                  key={ws._id}
-                  onClick={() => { 
-                    setSelectedWorkspace(ws); 
-                    if (ws.spaces && ws.spaces.length > 0) {
-                      setActiveSpaceId(ws.spaces[0]._id);
-                    } else {
-                      setActiveSpaceId('all');
-                    }
-                    setActiveTab('overview'); 
-                    setTaskFilter('all'); 
-                  }}
-                  className={cn(
-                    "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors !outline-none text-sm",
-                    selectedWorkspace?._id === ws._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
-                  )}
-                >
-                  <div className={cn(
-                    "w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold",
-                    selectedWorkspace?._id === ws._id ? "bg-white/10 text-white/70" : "bg-white/[0.04] text-white/40"
-                  )}>
-                    {ws.name.charAt(0).toUpperCase()}
+  return (
+    <div className="min-h-screen text-white bg-[hsl(var(--background))] pb-20 selection:bg-indigo-500/30">
+      <div className="max-w-[1250px] mx-auto px-6 md:px-8 pt-8">
+
+        {/* ── Header: Workspace & Space Switchers (Breadcrumb style) ── */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-1.5 text-xl font-bold bg-white/[0.02] px-3 py-1.5 rounded-xl border border-white/5">
+            {/* Workspace Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2.5 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent">
+                  <div className="flex items-center justify-center bg-indigo-500/10 p-1.5 rounded-lg">
+                    <Briefcase className="w-4 h-4 text-indigo-400" />
                   </div>
-                  <span className="truncate">{ws.name}</span>
+                  <span>{selectedWorkspace?.name}</span>
+                  <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[220px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
+                <div className="px-2 py-1.5 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Workspaces</span>
+                </div>
+                {workspaces.map(ws => (
+                  <DropdownMenuItem
+                    key={ws._id}
+                    onClick={() => { 
+                      setSelectedWorkspace(ws); 
+                      if (ws.spaces && ws.spaces.length > 0) {
+                        setActiveSpaceId(ws.spaces[0]._id);
+                      } else {
+                        setActiveSpaceId('all');
+                      }
+                      setActiveTab('tasks'); 
+                      setTaskFilter('all'); 
+                    }}
+                    className={cn(
+                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors !outline-none text-sm",
+                      selectedWorkspace?._id === ws._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold",
+                      selectedWorkspace?._id === ws._id ? "bg-white/10 text-white/70" : "bg-white/[0.04] text-white/40"
+                    )}>
+                      {ws.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="truncate">{ws.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator className="bg-white/5 my-1" />
+                <DropdownMenuItem
+                  onClick={() => setShowCreateForm(true)}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/70 !outline-none"
+                >
+                  <Plus className="w-3.5 h-3.5" /> New Workspace
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator className="bg-white/5 my-1" />
-              <DropdownMenuItem
-                onClick={() => setShowCreateForm(true)}
-                className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/70 !outline-none"
-              >
-                <Plus className="w-3.5 h-3.5" /> New Workspace
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <span className="text-white/20 font-light mx-1">/</span>
+
+            {/* Space Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-white/60 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent">
+                  {activeSpace?.name || 'All Spaces'}
+                  <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
+                <div className="px-2 py-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Spaces</span>
+                </div>
+                {selectedWorkspace?.spaces?.map(space => (
+                  <DropdownMenuItem
+                    key={space._id}
+                    onClick={() => setActiveSpaceId(space._id)}
+                    className={cn(
+                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors !outline-none text-sm",
+                      activeSpaceId === space._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
+                    )}
+                  >
+                    <span className="truncate">{space.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator className="bg-white/5 my-1" />
+                    {showCreateSpace ? (
+                      <div className="flex items-center gap-1.5 px-2 py-1.5">
+                        <input
+                          type="text"
+                          value={newSpaceInput}
+                          onChange={(e) => setNewSpaceInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            // Don't close the dropdown on space
+                            e.stopPropagation();
+                            if (e.key === 'Enter') handleCreateSpace();
+                          }}
+                          onClick={(e) => e.stopPropagation()} // Keep dropdown open when typing
+                          placeholder="Space name"
+                          className="flex-1 min-w-0 bg-white/[0.05] border border-white/10 rounded-md text-xs text-white placeholder-white/30 px-2 py-1 outline-none focus:border-white/20"
+                          autoFocus
+                        />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCreateSpace(); }}
+                          disabled={!newSpaceInput.trim() || isCreatingSpace}
+                          className="p-1 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+                        >
+                          {isCreatingSpace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowCreateSpace(false); setNewSpaceInput(''); }}
+                          className="p-1 text-white/40 hover:text-white/70 bg-transparent rounded transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={(e) => { e.preventDefault(); setShowCreateSpace(true); }}
+                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 !outline-none"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> New Space
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Breadcrumb Info Extra */}
+            <div className="ml-3 pl-3 border-l border-white/5 flex items-center gap-2 text-[11px] font-medium text-white/30 tracking-wide uppercase">
+              <Users className="w-3.5 h-3.5" />
+              <span>{selectedWorkspace?.members.length} member{selectedWorkspace?.members.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
 
           {/* Actions — Invite (ghost outline) vs Delete (very muted) */}
           <div className="flex items-center gap-2">
@@ -482,19 +615,18 @@ export function WorkspaceView() {
                 <UserPlus className="w-3.5 h-3.5" /> Invite
               </button>
             )}
-            {isOwner && (
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="p-1.5 text-white/45 hover:text-white/75 hover:bg-white/[0.03] rounded-lg transition-colors outline-none"
-                title="Workspace Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="p-1.5 text-white/45 hover:text-white/75 hover:bg-white/[0.03] rounded-lg transition-colors outline-none"
+              title="Workspace Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
         {/* ── Settings Modal ── */}
+        <div className='max-w-[1000px] mx-auto'>
         <WorkspaceSettingsModal 
            isOpen={showSettingsModal} 
            onClose={() => setShowSettingsModal(false)} 
@@ -510,6 +642,17 @@ export function WorkspaceView() {
            handleRemoveMember={handleRemoveMember}
            onDeleteWorkspace={handleDeleteWorkspace}
         />
+
+        {/* ── Task Detail Modal ── */}
+        {selectedWorkspace && (
+          <TaskDetailModal
+            task={editingTask}
+            isOpen={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            onUpdateTask={handleUpdateTask}
+            workspaceMembers={workspaceMembers}
+          />
+        )}
 
         {/* ── Create Workspace Inline ── */}
         <AnimatePresence>
@@ -554,100 +697,7 @@ export function WorkspaceView() {
           )}
         </AnimatePresence>
 
-        {/* ── Spaces Tabs (Horizontal) ── */}
-        {selectedWorkspace && selectedWorkspace.spaces && selectedWorkspace.spaces.length > 0 && (
-          <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-2 scrollbar-hide">
-            {selectedWorkspace.spaces.map(space => (
-              <button
-                key={space._id}
-                onClick={() => setActiveSpaceId(space._id)}
-                className={cn(
-                  "px-3.5 py-1.5 text-sm font-medium rounded-full transition-all flex border whitespace-nowrap",
-                  activeSpaceId === space._id
-                    ? "bg-white/10 border-white/20 text-white"
-                    : "bg-transparent border-white/5 text-white/50 hover:bg-white/[0.03] hover:text-white/80"
-                )}
-              >
-                {space.name}
-              </button>
-            ))}
-            <button
-               onClick={() => setActiveSpaceId('all')}
-               className={cn(
-                  "px-3.5 py-1.5 text-sm font-medium rounded-full transition-all flex border whitespace-nowrap",
-                  activeSpaceId === 'all'
-                    ? "bg-white/10 border-white/20 text-white"
-                    : "bg-transparent border-white/5 text-white/50 hover:bg-white/[0.03] hover:text-white/80"
-                )}
-            >
-              All Spaces
-            </button>
-            
-            {/* Inline Space Creation */}
-            {isAdmin && (
-              <div className="flex items-center">
-                <AnimatePresence>
-                  {showCreateSpace ? (
-                    <motion.div
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 'auto', opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      className="flex items-center gap-1 overflow-hidden"
-                    >
-                      <input
-                        type="text"
-                        value={newSpaceInput}
-                        onChange={(e) => setNewSpaceInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreateSpace()}
-                        placeholder="Space name"
-                        className="w-[120px] bg-white/[0.05] border border-white/10 rounded-full text-xs text-white placeholder-white/30 px-3 py-1.5 outline-none focus:border-white/20"
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleCreateSpace}
-                        disabled={!newSpaceInput.trim() || isCreatingSpace}
-                        className="p-1.5 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors disabled:opacity-50"
-                      >
-                        {isCreatingSpace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => { setShowCreateSpace(false); setNewSpaceInput(''); }}
-                        className="p-1.5 text-white/40 hover:text-white/70 bg-transparent rounded-full transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <button
-                      onClick={() => setShowCreateSpace(true)}
-                      className="px-3 py-1.5 text-sm font-medium rounded-full text-white/40 border border-transparent hover:border-dashed hover:border-white/20 hover:text-white/70 hover:bg-white/[0.02] transition-colors flex items-center gap-1.5 ml-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* ── Sub-Tabs (text-only, no icons) ── */}
-        <div className="flex items-center gap-0.5 border-b border-white/[0.05] mb-6 mt-2">
-          {SUB_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px",
-                activeTab === tab.key
-                  ? "border-white/60 text-white/90"
-                  : "border-transparent text-white/30 hover:text-white/50"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
 
         {/* ── Tab Content ── */}
         <AnimatePresence mode="wait">
@@ -687,14 +737,17 @@ export function WorkspaceView() {
               <TasksTab
                 selectedWorkspace={selectedWorkspace}
                 workspaceMembers={workspaceMembers}
+                allTasks={tasks}
                 filteredTasks={filteredTasks}
+                currentUserId={currentUser?._id}
                 isDataLoading={isDataLoading}
                 isInputExpanded={isInputExpanded}
                 setIsInputExpanded={setIsInputExpanded}
                 taskFilter={taskFilter}
                 setTaskFilter={(f) => setTaskFilter(f as TaskFilter)}
                 handleTaskSaved={handleTaskSaved}
-                handleToggleTaskStatus={handleToggleTaskStatus}
+                handleStatusChange={handleStatusChange}
+                handleUpdateTask={handleUpdateTask}
                 handleTaskClick={handleTaskClick}
                 activeSpaceId={activeSpaceId}
               />
@@ -702,6 +755,7 @@ export function WorkspaceView() {
 
           </motion.div>
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );

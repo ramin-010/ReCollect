@@ -26,7 +26,8 @@ import {
   Library,
   Users,
   ChevronDown,
-  Mail
+  Mail,
+  Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,15 +45,15 @@ interface NavItem {
 const primaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
+  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Briefcase className="h-[18px] w-[18px] text-indigo-500/80" /> },
   { 
     id: 'todo', 
     route: '/todo',
     label: 'Tasks', 
-    icon: <CheckSquare className="h-[18px] w-[18px] text-green-600/80" />,
+    icon: <CheckSquare className="h-[18px] w-[18px] text-emerald-500/80" />,
     subItems: [
       { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },
       { id: 'assigned', label: 'Assigned', icon: <Users className="h-3.5 w-3.5" /> },
-      { id: 'workspace', label: 'Workspace', icon: <CalendarDays className="h-3.5 w-3.5" /> },
     ]
   },
   { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
@@ -188,7 +189,7 @@ interface SidebarContentProps {
   isMobile: boolean;
   user: any;
   pathname: string;
-  todoFilter?: string;
+  todoFilter?: any;
   setTodoFilter?: (filter: any) => void;
   onNavClick: (route: string) => void;
   onSettingsClick: () => void;

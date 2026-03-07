@@ -37,7 +37,7 @@ export default function AppLayout({
   const isDocEditorOpen = pathname === '/docs' && currentDoc !== null;
   const INBOX_FILTERS = ['inbox', 'today', 'upcoming', 'completed', 'docs', 'notes'];
   const isTodoInboxScreen = pathname === '/todo' && INBOX_FILTERS.includes(todoFilter);
-  const hideNavbar = isDocEditorOpen || (pathname === '/slides' && isSlideFullscreen) || (isTodoInboxScreen && !isTodoInputExpanded);
+  const hideNavbar = isDocEditorOpen || (pathname === '/slides' && isSlideFullscreen) || (isTodoInboxScreen && !isTodoInputExpanded) || pathname === '/workspace';
   const hideSidebar = (pathname === '/slides' && isSlideFullscreen);
   
 

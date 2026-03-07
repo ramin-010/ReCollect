@@ -157,7 +157,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
           boxShadow: (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
         }}
         transition={{ duration: 0.3 }}
-        className= {`relative bg-[#2a2a2a] ${isExpanded ? 'rounded-xl' : 'rounded-full'} border border-transparent transition-colors duration-200`}
+        className= {`relative bg-[#2a2a2a] ${isExpanded ? 'rounded-xl' : 'rounded-xl'} border border-transparent transition-colors duration-200`}
       >
         {/* Main Input Row */}
         <div className="flex items-center gap-3 px-4 py-3">

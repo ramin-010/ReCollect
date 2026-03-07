@@ -22,7 +22,7 @@ export interface TaskReference {
 export interface CreateTodoPayload {
   title: string;
   description?: string; // HTML string with potential base64 images
-  status?: 'pending' | 'complete';
+  status?: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
   reminderDate?: string;
@@ -32,6 +32,7 @@ export interface CreateTodoPayload {
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
   workspace?: string;
+  spaceId?: string;
   visibility?: 'private' | 'workspace' | 'public';
 }
 
@@ -39,7 +40,7 @@ export interface TodoResponse {
   _id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'complete';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   priority: 'low' | 'medium' | 'high';
   dueDate?: string;
   reminderDate?: string;
@@ -191,6 +192,7 @@ export const todoApi = {
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
       if (payload.references) formData.append('references', JSON.stringify(payload.references));
       if (payload.workspace) formData.append('workspace', payload.workspace);
+      if (payload.spaceId) formData.append('spaceId', payload.spaceId);
       if (payload.visibility) formData.append('visibility', payload.visibility);
 
       console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
@@ -229,6 +231,7 @@ export const todoApi = {
           recurrence: payload.recurrence,
           references: payload.references,
           workspace: payload.workspace,
+          spaceId: payload.spaceId,
           visibility: payload.visibility,
         });
 
@@ -422,7 +425,7 @@ export const todoApi = {
   async searchUsers(query: string): Promise<{ _id: string; name: string; email: string; avatar?: string }[]> {
     console.log('[todoApi] Searching users:', query);
     try {
-      const response = await axiosInstance.get(`/api/user/search`, { params: { q: query } });
+      const response = await axiosInstance.get(`/api/search`, { params: { q: query } });
       return response.data.data || [];
     } catch (error: any) {
       console.error('[todoApi] User search failed:', error);

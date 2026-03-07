@@ -89,7 +89,7 @@ export function WorkspaceSettingsModal({
               </div>
               
               <div className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
-                {TABS.map((tab) => {
+                {TABS.filter(t => isAdmin || t.id === 'members').map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
@@ -147,7 +147,12 @@ export function WorkspaceSettingsModal({
                     />
                   )}
                   {activeTab === 'roles' && <RolesSettings />}
-                  {activeTab === 'customization' && <CustomizationSettings />}
+                  {activeTab === 'customization' && (
+                    <CustomizationSettings 
+                      selectedWorkspace={selectedWorkspace}
+                      isAdmin={isAdmin}
+                    />
+                  )}
                   {activeTab === 'danger' && (
                     <DangerSettings 
                       workspaceName={selectedWorkspace.name} 

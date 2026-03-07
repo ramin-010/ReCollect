@@ -432,7 +432,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           onSelect={handleCoverSelect}
         />
 
-        <div className={`max-w-6xl mx-auto px-8 ${state.coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
+        <div className={`max-w-[1100px] mx-auto px-8 ${state.coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
           <div className="mb-0 ">
             <input
               type="text"

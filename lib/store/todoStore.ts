@@ -27,7 +27,7 @@ export interface Todo {
   description?: string;
   
   // Status & Priority
-  status: 'pending' | 'complete';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   priority: 'low' | 'medium' | 'high';
   
   // Dates

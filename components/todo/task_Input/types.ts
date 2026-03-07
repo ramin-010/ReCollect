@@ -8,7 +8,7 @@ export interface TaskData {
   title: string;
   description?: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'complete';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   dueDate?: string;
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
