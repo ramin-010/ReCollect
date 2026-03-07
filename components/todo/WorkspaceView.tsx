@@ -472,19 +472,26 @@ export function WorkspaceView() {
       <div className="max-w-[1250px] mx-auto px-6 md:px-8 pt-8">
 
         {/* ── Header: Workspace & Space Switchers (Breadcrumb style) ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-1.5 text-xl font-bold bg-white/[0.02] px-3 py-1.5 rounded-xl border border-white/5">
-            {/* Workspace Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2.5 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent">
-                  <div className="flex items-center justify-center bg-indigo-500/10 p-1.5 rounded-lg">
-                    <Briefcase className="w-4 h-4 text-indigo-400" />
-                  </div>
-                  <span>{selectedWorkspace?.name}</span>
-                  <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
-                </button>
-              </DropdownMenuTrigger>
+        <div className="flex flex-col mb-8">
+          
+          {/* Subtle Overline Context */}
+          <div className="text-[11px] font-bold tracking-[0.15em] text-white/30 uppercase mb-3 flex items-center gap-1.5 ml-1">
+             Workspace
+          </div>
+
+          <div className="flex items-center justify-between border-b border-whie/5 pb-4 mt-2">
+            <div className="flex items-center gap-1 text-2xl font-bold">
+              {/* Workspace Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 pl-2 pr-1 py-1 -ml-2">
+                    <div className="flex items-center justify-center bg-indigo-500/15 p-1.5 rounded-md shadow-sm border border-indigo-500/20">
+                      <Briefcase className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <span className="tracking-tight text-[22px]">{selectedWorkspace?.name}</span>
+                    <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
+                  </button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[220px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
                 <div className="px-2 py-1.5 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Workspaces</span>
@@ -526,17 +533,17 @@ export function WorkspaceView() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <span className="text-white/20 font-light mx-1">/</span>
+            <div className="w-[1px] h-5 bg-white/20 mx-0.5 rotate-12"></div>
 
             {/* Space Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-white/60 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent">
-                  {activeSpace?.name || 'All Spaces'}
+                <button className="flex items-center gap-1 text-white/60 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 pl-1 pr-2 py-1">
+                  <span className="tracking-tight text-[22px] font-semibold">{activeSpaceId === 'all' ? 'All Spaces' : activeSpace?.name || 'Select Space'}</span>
                   <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
+              <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50 mt-1">
                 <div className="px-2 py-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Spaces</span>
                 </div>
@@ -549,7 +556,7 @@ export function WorkspaceView() {
                       activeSpaceId === space._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
                     )}
                   >
-                    <span className="truncate">{space.name}</span>
+                    <span className="truncate">{space.name }</span>
                   </DropdownMenuItem>
                 ))}
                 {isAdmin && (
@@ -598,30 +605,60 @@ export function WorkspaceView() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Breadcrumb Info Extra */}
-            <div className="ml-3 pl-3 border-l border-white/5 flex items-center gap-2 text-[11px] font-medium text-white/30 tracking-wide uppercase">
-              <Users className="w-3.5 h-3.5" />
-              <span>{selectedWorkspace?.members.length} member{selectedWorkspace?.members.length !== 1 ? 's' : ''}</span>
+              {/* Member Avatar Strip */}
+              <div className="flex items-center group ">
+                {selectedWorkspace?.members?.slice(0, 4).map((member: any, index: number) => {
+                  const mUser = member.user || member;
+                  const zIndex = 10 - index;
+                  return (
+                    <div 
+                      key={mUser._id || index}
+                      className={cn(
+                        "w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border-2 border-[hsl(var(--background))] flex items-center justify-center text-[10px] font-bold shadow-sm transition-transform hover:-translate-y-1 hover:z-20 cursor-default",
+                        index > 0 && "-ml-2.5"
+                      )}
+                      style={{ zIndex }}
+                      title={mUser.name || mUser.email}
+                    >
+                      {mUser.avatar ? (
+                        <img src={mUser.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        mUser.name?.[0]?.toUpperCase() || '?'
+                      )}
+                    </div>
+                  );
+                })}
+                {(selectedWorkspace?.members?.length || 0) > 4 && (
+                  <div 
+                    className="w-7 h-7 rounded-full bg-white/10 text-white/50 border-2 border-[hsl(var(--background))] flex items-center justify-center text-[10px] font-bold shadow-sm -ml-2.5 transition-transform hover:-translate-y-1 hover:z-20 cursor-default" 
+                    style={{ zIndex: 0 }}
+                    title={`${selectedWorkspace!.members!.length - 4} more member${(selectedWorkspace!.members!.length - 4) !== 1 ? 's' : ''}`}
+                  >
+                    +{selectedWorkspace!.members!.length - 4}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Actions — Invite (ghost outline) vs Delete (very muted) */}
-          <div className="flex items-center gap-2">
-            {isAdmin && (
+            {/* Actions (Invite, Settings) */}
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={() => { setShowSettingsModal(true); setIsInviting(true); }}
+                  className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold rounded-lg transition-colors border border-white/5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Invite
+                </button>
+              )}
               <button
-                onClick={() => { setShowSettingsModal(true); setIsInviting(true); }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white/45 border border-white/8 hover:text-white/75 hover:border-white/15 hover:bg-white/[0.03] rounded-lg transition-all"
+                onClick={() => setShowSettingsModal(true)}
+                className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                title="Workspace Settings"
               >
-                <UserPlus className="w-3.5 h-3.5" /> Invite
+                <Settings className="w-[18px] h-[18px]" />
               </button>
-            )}
-            <button
-              onClick={() => setShowSettingsModal(true)}
-              className="p-1.5 text-white/45 hover:text-white/75 hover:bg-white/[0.03] rounded-lg transition-colors outline-none"
-              title="Workspace Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
+            </div>
           </div>
         </div>
 
