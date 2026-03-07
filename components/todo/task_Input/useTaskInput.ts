@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { parseTaskInput } from '@/lib/utils/smartDateParser';
 import { todoApi } from '@/lib/api/todoApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
 import { subMinutes } from 'date-fns';
@@ -22,7 +23,7 @@ export const useTaskInput = (
 ) => {
   const [title, setTitle] = useState(initialTitle || '');
   const [description, setDescription] = useState(initialDescription || '');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [status, setStatus] = useState<'pending' | 'complete'>('pending');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -181,15 +182,21 @@ export const useTaskInput = (
     console.log('[TaskInput] Calling todoApi.createTodo...');
     
     try {
-      const result = await todoApi.createTodo(taskData);
+      const api = taskData.workspace ? workspaceTodoApi : todoApi;
+      const result = await api.createTodo(taskData);
       
       if (result.success && result.data) {
         toast.success('Task created!');
         
         // If assignees were selected, assign after creation
+        // NOTE: The createTodo API now accepts assignees directly in the payload.
+        // The following block is kept for historical context or if a separate assignment step is still needed for some reason.
+        // If the API handles assignment on creation, this block can be simplified or removed.
         if (assignees.length > 0 && result.data._id) {
           const emails = assignees.map(a => a.email);
-          todoApi.assignTask(result.data._id, emails).then(assignResult => {
+          // Conditionally use workspaceTodoApi for assignment if task is in a workspace
+          const assignApi = taskData.workspace ? workspaceTodoApi : todoApi;
+          assignApi.assignTask(result.data._id, emails).then(assignResult => {
             if (assignResult.success) {
               toast.success(assignResult.message || `Assigned to ${emails.length} users`);
               // Update the task in store with assignee data
@@ -206,7 +213,7 @@ export const useTaskInput = (
         setDescription('');
         setSubtasks([]);
         setSelectedLabels([]);
-        setPriority('medium');
+        setPriority('normal');
         setStatus('pending');
         setConfirmedDueDate(null);
         setCurrentReminder(null);

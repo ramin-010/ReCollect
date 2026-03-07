@@ -11,6 +11,7 @@ export interface WorkspaceSettingsProps {
   isInviteLoading: boolean;
   handleInvite: () => void;
   handleRemoveMember: (id: string) => void;
+  handleUpdateRole: (id: string, role: string) => void;
   onDeleteWorkspace?: () => void;
 }
 

@@ -146,7 +146,7 @@ function getExtension(mimeType: string): string {
   return map[mimeType] || 'png';
 }
 
-export const todoApi = {
+export const workspaceTodoApi = {
   /**
    * Create a new todo with optional image uploads
    */
@@ -198,7 +198,7 @@ export const todoApi = {
       console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
 
       try {
-        const response = await axiosInstance.post('/api/todos', formData, {
+        const response = await axiosInstance.post('/api/workspace-todos', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         
@@ -218,7 +218,7 @@ export const todoApi = {
       console.log('[todoApi] No images - sending JSON request');
 
       try {
-        const response = await axiosInstance.post('/api/todos', {
+        const response = await axiosInstance.post('/api/workspace-todos', {
           title: payload.title,
           description: payload.description || null,
           status: payload.status || 'pending',
@@ -255,7 +255,7 @@ export const todoApi = {
    */
   async fetchTodos(): Promise<TodoResponse[]> {
     console.log('[todoApi] Fetching all todos');
-    const response = await axiosInstance.get('/api/todos');
+    const response = await axiosInstance.get('/api/workspace-todos');
     return response.data.data || [];
   },
 
@@ -299,7 +299,7 @@ export const todoApi = {
 
         formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
 
-        const response = await axiosInstance.patch(`/api/todos/${id}`, formData, {
+        const response = await axiosInstance.patch(`/api/workspace-todos/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
 
@@ -310,7 +310,7 @@ export const todoApi = {
         };
       } else {
         // Simple JSON update
-        const response = await axiosInstance.patch(`/api/todos/${id}`, updates);
+        const response = await axiosInstance.patch(`/api/workspace-todos/${id}`, updates);
         return {
           success: true,
           data: response.data.data,
@@ -334,7 +334,7 @@ export const todoApi = {
   async deleteTodo(id: string): Promise<{ success: boolean; message?: string }> {
     console.log('[todoApi] Deleting todo:', id);
     try {
-      const response = await axiosInstance.delete(`/api/todos/${id}`);
+      const response = await axiosInstance.delete(`/api/workspace-todos/${id}`);
       return {
         success: true,
         message: response.data.message
@@ -355,7 +355,7 @@ export const todoApi = {
     console.log('[todoApi] Updating subtask:', todoId, subtaskId, updates);
     try {
       // For now, this fetches the todo, updates the subtask, and saves - since we don't have a dedicated subtask endpoint
-      const response = await axiosInstance.get(`/api/todos`);
+      const response = await axiosInstance.get(`/api/workspace-todos`);
       const todos = response.data.data || [];
       const todo = todos.find((t: TodoResponse) => t._id === todoId);
       
@@ -367,7 +367,7 @@ export const todoApi = {
         st.id === subtaskId ? { ...st, ...updates } : st
       ) || [];
 
-      await axiosInstance.patch(`/api/todos/${todoId}`, { subtasks: updatedSubtasks });
+      await axiosInstance.patch(`/api/workspace-todos/${todoId}`, { subtasks: updatedSubtasks });
       return { success: true };
     } catch (error: any) {
       console.error('[todoApi] Subtask update failed:', error);
@@ -384,7 +384,7 @@ export const todoApi = {
   async assignTask(todoId: string, emails: string[]): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
     console.log('[todoApi] Assigning task:', todoId, 'to:', emails);
     try {
-      const response = await axiosInstance.post(`/api/todos/${todoId}/assign`, { emails });
+      const response = await axiosInstance.post(`/api/workspace-todos/${todoId}/assign`, { emails });
       return {
         success: response.data.success,
         data: response.data.data,
@@ -405,7 +405,7 @@ export const todoApi = {
   async unassignTask(todoId: string, email?: string): Promise<{ success: boolean; message?: string }> {
     console.log('[todoApi] Unassigning task:', todoId);
     try {
-      const response = await axiosInstance.post(`/api/todos/${todoId}/unassign`, { email });
+      const response = await axiosInstance.post(`/api/workspace-todos/${todoId}/unassign`, { email });
       return {
         success: response.data.success,
         message: response.data.message

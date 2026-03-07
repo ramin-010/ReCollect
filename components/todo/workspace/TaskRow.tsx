@@ -1,11 +1,13 @@
 import React from 'react';
-import { CheckCircle2, Circle, MessageSquare, Flag, Calendar, AlignLeft, Paperclip, Bell } from 'lucide-react';
+import { CheckCircle2, Flag, Calendar, AlignLeft, Paperclip, Bell, Square, CheckSquare, GripVertical, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { parseISO, differenceInSeconds, differenceInHours, isToday, isTomorrow, format } from 'date-fns';
+import { subMinutes } from 'date-fns';
 
 import { TaskStatusDropdown, TaskStatus } from './TaskStatusDropdown';
 import { AssigneeDropdown } from './modals/AssigneeDropdown';
 import { DueDateDropdown } from './modals/DueDateDropdown';
+import { ReminderDropdown } from './modals/ReminderDropdown';
 import { PriorityDropdown } from './modals/PriorityDropdown';
 
 interface TaskRowProps {
@@ -14,22 +16,95 @@ interface TaskRowProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onUpdateTask: (id: string, updates: any) => void;
   onClick: (task: any) => void;
+  isViewer?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateTask, onClick }: TaskRowProps) {
+/**
+ * Smart date formatting:
+ * - Within 24h: "Due in Xhr", "Due in Xmin"
+ * - Tomorrow: "Due tomorrow"
+ * - Past: "Overdue by 1 day"
+ * - Otherwise: dd/MM/yy
+ */
+function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: string; isOverdue: boolean } {
+  const now = new Date();
+  const date = parseISO(dateStr);
+  const MathAbs = Math.abs; // for safe usage
+  const diffSecs = differenceInSeconds(date, now);
+
+  // Overdue
+  if (diffSecs < 0) {
+    const diffDays = Math.ceil(MathAbs(diffSecs) / 86400);
+    return { text: `Overdue by ${diffDays} day${diffDays > 1 ? 's' : ''}`, isOverdue: true };
+  }
+
+  // Within 24 hours
+  const diffHrs = differenceInHours(date, now);
+  if (diffHrs < 24) {
+    if (diffSecs < 60) return { text: `${isDueDate ? 'Due in' : 'In'} ${diffSecs}s`, isOverdue: false };
+    if (diffSecs < 3600) return { text: `${isDueDate ? 'Due in' : 'In'} ${Math.floor(diffSecs / 60)}min`, isOverdue: false };
+    return { text: `${isDueDate ? 'Due in' : 'In'} ${diffHrs}hr`, isOverdue: false };
+  }
+
+  // Tomorrow
+  if (isTomorrow(date)) return { text: `${isDueDate ? 'Due tomorrow' : 'Tomorrow'}`, isOverdue: false };
+
+  // Otherwise dd/MM/yy
+  return { text: format(date, 'dd/MM/yy'), isOverdue: false };
+}
+function getPriorityConfig(priority: string) {
+  switch (priority) {
+    case 'urgent': return { color: 'text-rose-400', fill: 'fill-rose-500/30' };
+    case 'high': return { color: 'text-amber-400', fill: 'fill-amber-500/30' };
+    case 'normal': case 'medium': return { color: 'text-blue-400', fill: 'fill-blue-500/30' };
+    case 'low': return { color: 'text-zinc-400', fill: 'fill-zinc-400/30' };
+    default: return { color: 'text-zinc-500', fill: '' };
+  }
+}
+
+export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateTask, onClick, isViewer, isSelected, onToggleSelect }: TaskRowProps) {
   const isDone = task.status === 'complete';
-  const createdAtStr = task.createdAt 
-    ? formatDistanceToNow(parseISO(task.createdAt), { addSuffix: true }).replace('about ', '') 
-    : '';
   const assignee = task.assignees && task.assignees.length > 0 ? task.assignees[0] : null;
+  const priorityConfig = getPriorityConfig(task.priority || 'low');
+
+  const dueDateDisplay = task.dueDate ? formatSmartDate(task.dueDate, true) : null;
+  const reminderDisplay = task.reminderDate ? formatSmartDate(task.reminderDate, false) : null;
 
   return (
     <div 
       onClick={() => onClick(task)}
-      className="group grid grid-cols-[40px_1fr_130px_120px_120px_100px_80px] gap-2 items-center px-3 py-3 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors cursor-pointer bg-transparent"
+      className={cn(
+        "group relative grid grid-cols-[40px_1fr_130px_130px_130px_100px_80px] gap-2 items-center px-3 py-3 border-b transition-colors cursor-pointer",
+        isSelected 
+          ? "bg-indigo-500/[0.08] border-indigo-500/10" 
+          : "bg-transparent border-white/[0.03] hover:bg-white/[0.02]"
+      )}
     >
-      {/* 1. Status Toggle (Leftmost Checkbox style) via Dropdown */}
-      <div className="flex items-center justify-center shrink-0" onClick={(e) => e.stopPropagation()}>
+      {/* Hover Select Checkbox — absolutely positioned, doesn't shift layout */}
+      {onToggleSelect && (
+        <div 
+          className={cn(
+            "absolute -left-12 top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition-opacity z-10",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
+        >
+          <GripVertical className="w-3.5 h-3.5 text-white/20 hover:text-white/50 cursor-grab hidden md:block" />
+          <button className={cn(
+            "flex items-center justify-center w-[16px] h-[16px] rounded-[4px] border transition-colors shadow-sm",
+            isSelected 
+              ? "bg-indigo-500 border-indigo-500 text-white" 
+              : "border-white/30 hover:border-indigo-400 bg-[#1e1e1e]"
+          )}>
+            {isSelected && <Check className="w-3 h-3" strokeWidth={3} />}
+          </button>
+        </div>
+      )}
+
+      {/* 1. Status Toggle */}
+      <div className={cn("flex items-center justify-center shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <TaskStatusDropdown 
           currentStatus={task.status as TaskStatus}
           onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
@@ -66,8 +141,6 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         )}>
           {task.title}
         </p>
-        
-        {/* Optional indicators for description/attachments next to name like in ClickUp */}
         {task.description && (
           <AlignLeft className="w-3.5 h-3.5 text-white/30 shrink-0" />
         )}
@@ -76,8 +149,8 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         )}
       </div>
 
-      {/* 3. Status Pill via Dropdown */}
-      <div className="flex items-center justify-start shrink-0 pr-2" onClick={(e) => e.stopPropagation()}>
+      {/* 3. Status Pill */}
+      <div className={cn("flex items-center justify-start shrink-0 pr-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <TaskStatusDropdown 
           currentStatus={task.status as TaskStatus}
           onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
@@ -99,8 +172,8 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         </TaskStatusDropdown>
       </div>
 
-      {/* 4. Assignees via Dropdown */}
-      <div className="flex items-center gap-1 shrink-0 px-2" onClick={(e) => e.stopPropagation()}>
+      {/* 4. Assignees */}
+      <div className={cn("flex items-center gap-1 shrink-0 px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <AssigneeDropdown 
           currentAssignees={task.assignees || []}
           workspaceMembers={workspaceMembers}
@@ -132,25 +205,29 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         )}
       </div>
 
-      {/* 4. Due Date via Dropdown */}
-      <div className="flex justify-start text-[11px] shrink-0 font-medium px-2" onClick={(e) => e.stopPropagation()}>
+      {/* 5. Due Date */}
+      <div className={cn("flex justify-start text-[11px] shrink-0 font-medium px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <DueDateDropdown 
           currentDate={task.dueDate}
-          onDateChange={(date) => onUpdateTask(task._id, { dueDate: date })}
+          onDateChange={(date) => {
+            const updates: any = { dueDate: date };
+            // Auto-set reminder 10 min before due date
+            if (date) {
+              updates.reminderDate = subMinutes(new Date(date), 10).toISOString();
+            } else {
+              updates.reminderDate = undefined;
+            }
+            onUpdateTask(task._id, updates);
+          }}
         >
           <button className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none",
-            task.dueDate ? "text-white/70" : "text-white/15"
+            "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none whitespace-nowrap",
+            dueDateDisplay?.isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
           )}>
-            {task.dueDate ? (
-              <>
-                <Calendar className="w-3.5 h-3.5 opacity-60" />
-                <span>
-                  {formatDistanceToNow(parseISO(task.dueDate), { addSuffix: true })}
-                </span>
-              </>
+            {task.dueDate && dueDateDisplay ? (
+              <span>{dueDateDisplay.text}</span>
             ) : (
-              <span className="text-[11px]">—</span>
+              <Calendar className="w-3.5 h-3.5 shrink-0 opacity-40" />
             )}
           </button>
         </DueDateDropdown>
@@ -158,46 +235,37 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
 
       {/* 6. Reminder */}
       <div className="flex justify-start text-[11px] shrink-0 font-medium px-2" onClick={(e) => e.stopPropagation()}>
-        <button className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none",
-          task.reminder ? "text-white/70" : "text-white/15"
-        )}>
-          {task.reminder ? (
-            <>
-              <Bell className="w-3.5 h-3.5 opacity-60" />
-              <span>
-                {formatDistanceToNow(parseISO(task.reminder), { addSuffix: true })}
-              </span>
-            </>
-          ) : (
-            <span className="text-[11px]">—</span>
-          )}
-        </button>
+        <ReminderDropdown 
+          dueDate={task.dueDate}
+          currentReminder={task.reminderDate}
+          onReminderChange={(date) => {
+            onUpdateTask(task._id, { reminderDate: date });
+          }}
+        >
+          <button className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors hover:bg-white/[0.04] focus:outline-none whitespace-nowrap",
+            task.reminderDate ? "text-white/70" : "text-white/20"
+          )}>
+            {task.reminderDate && reminderDisplay ? (
+              <span>{reminderDisplay.text}</span>
+            ) : (
+              <Bell className="w-3.5 h-3.5 shrink-0 opacity-40" />
+            )}
+          </button>
+        </ReminderDropdown>
       </div>
 
-      {/* 7. Priority via Dropdown */}
-      <div className="flex items-center justify-start shrink-0 px-2" onClick={(e) => e.stopPropagation()}>
+      {/* 7. Priority */}
+      <div className={cn("flex items-center justify-start shrink-0 px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <PriorityDropdown 
            currentPriority={task.priority}
            onPriorityChange={(priority) => onUpdateTask(task._id, { priority })}
         >
           <button className="p-1 rounded hover:bg-white/[0.04] transition-colors focus:outline-none">
-            {task.priority ? (
-              <Flag className={cn("w-[14px] h-[14px]", 
-                task.priority === 'high' ? "text-rose-400 fill-rose-500/20" :
-                task.priority === 'medium' ? "text-amber-400 fill-amber-500/20" :
-                task.priority === 'low' ? "text-blue-400 fill-blue-500/20" :
-                "text-white/10"
-              )} />
-            ) : (
-              <span className="text-[11px] text-white/15">—</span>
-            )}
+            <Flag className={cn("w-[14px] h-[14px]", priorityConfig.color, priorityConfig.fill)} />
           </button>
         </PriorityDropdown>
       </div>
-
-      {/* 8. Quick Row Actions (Visible on hover) */}
-     
     </div>
   );
 }

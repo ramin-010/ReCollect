@@ -30,6 +30,7 @@ export function WorkspaceSettingsModal({
   isInviteLoading,
   handleInvite,
   handleRemoveMember,
+  handleUpdateRole,
   onDeleteWorkspace
 }: WorkspaceSettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabType>('members');
@@ -53,7 +54,7 @@ export function WorkspaceSettingsModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
           {/* Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
@@ -70,7 +71,7 @@ export function WorkspaceSettingsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative w-full max-w-4xl bg-[#1E1E1E] border border-white/10 shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[80vh] min-h-[500px] z-[101]"
+            className="relative w-full max-w-6xl bg-[#1A1A1A] border border-white/5 shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] min-h-[600px] z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button (Mobile Absolute) */}
@@ -90,21 +91,19 @@ export function WorkspaceSettingsModal({
               
               <div className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
                 {TABS.filter(t => isAdmin || t.id === 'members').map((tab) => {
-                  const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as SettingsTabType)}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap md:whitespace-normal outline-none",
+                        "px-3 py-2 text-left rounded-md text-[12px] transition-all whitespace-nowrap md:whitespace-normal outline-none border-l-2",
                         isActive 
-                          ? (tab.isDestructive ? "bg-rose-500/10 text-rose-400" : "bg-white/10 text-white") 
-                          : (tab.isDestructive ? "text-rose-400/60 hover:bg-rose-500/5 hover:text-rose-400" : "text-white/50 hover:bg-white/5 hover:text-white/80")
+                          ? (tab.isDestructive ? "bg-rose-500/10 text-rose-400 border-rose-500 font-medium tracking-wide" : "bg-white/[0.08] text-white border-white/80 font-medium tracking-wide") 
+                          : (tab.isDestructive ? "text-rose-400/60 hover:bg-rose-500/5 hover:text-rose-400 border-transparent tracking-wide" : "text-white/40 hover:bg-white/5 hover:text-white/80 border-transparent tracking-wide")
                       )}
                     >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span>{tab.label}</span>
+                      <span className="truncate">{tab.label}</span>
                     </button>
                   );
                 })}
@@ -117,14 +116,14 @@ export function WorkspaceSettingsModal({
               <div className="hidden md:flex justify-end p-4 border-b border-transparent">
                 <button 
                   onClick={onClose}
-                  className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                  className="p-2 pb-0 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* View Content */}
-              <div className="flex-1 overflow-y-auto p-6 md:p-8">
+              <div className="flex-1 overflow-y-auto p-6 md:pt-4 md:p-8">
                 <motion.div
                   key={activeTab}
                   initial={{ opacity: 0, y: 10 }}
@@ -144,9 +143,17 @@ export function WorkspaceSettingsModal({
                       isInviteLoading={isInviteLoading}
                       handleInvite={handleInvite}
                       handleRemoveMember={handleRemoveMember}
+                      handleUpdateRole={handleUpdateRole}
                     />
                   )}
-                  {activeTab === 'roles' && <RolesSettings />}
+                  {activeTab === 'roles' && (
+                    <RolesSettings 
+                      selectedWorkspace={selectedWorkspace}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin}
+                      handleUpdateRole={handleUpdateRole}
+                    />
+                  )}
                   {activeTab === 'customization' && (
                     <CustomizationSettings 
                       selectedWorkspace={selectedWorkspace}

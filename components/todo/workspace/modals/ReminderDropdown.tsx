@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
+import { SmartReminderModal } from '../../SmartReminderModal';
 
-interface DueDateDropdownProps {
-  currentDate?: string;
-  onDateChange: (date: string | undefined) => void;
+interface ReminderDropdownProps {
+  dueDate?: string;
+  currentReminder?: string;
+  onReminderChange: (date: string | undefined) => void;
   children: React.ReactNode;
 }
 
-export function DueDateDropdown({ currentDate, onDateChange, children }: DueDateDropdownProps) {
+export function ReminderDropdown({ dueDate, currentReminder, onReminderChange, children }: ReminderDropdownProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -23,10 +24,11 @@ export function DueDateDropdown({ currentDate, onDateChange, children }: DueDate
           align="start"
           onClick={(e) => e.stopPropagation()}
         >
-          <SmartDatePicker 
-            selectedDate={currentDate ? new Date(currentDate) : undefined}
-            onSelect={(date) => {
-              onDateChange(date ? date.toISOString() : undefined);
+          <SmartReminderModal 
+            dueDate={dueDate ? new Date(dueDate) : null}
+            currentReminder={currentReminder ? new Date(currentReminder) : null}
+            onSetReminder={(date) => {
+              onReminderChange(date ? date.toISOString() : undefined);
             }}
             onClose={() => setOpen(false)}
           />

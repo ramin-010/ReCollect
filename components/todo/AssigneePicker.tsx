@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, UserPlus, X, Mail, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { todoApi } from '@/lib/api/todoApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 
 interface UserResult {
   _id: string;
@@ -14,12 +15,13 @@ interface UserResult {
 
 interface AssigneePickerProps {
   taskId: string;
+  isWorkspace?: boolean;
   currentAssignees?: { _id: string; name: string; email: string; avatar?: string }[] | null;
   onAssigned: (updatedTask: any) => void;
   onUnassigned: () => void;
 }
 
-export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassigned }: AssigneePickerProps) {
+export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassigned, isWorkspace }: AssigneePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserResult[]>([]);
@@ -58,7 +60,8 @@ export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassig
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const users = await todoApi.searchUsers(query.trim());
+        const api = isWorkspace ? workspaceTodoApi : todoApi;
+        const users = await api.searchUsers(query.trim());
         setResults(users);
       } catch (e) {
         console.error('Search failed:', e);
@@ -78,8 +81,8 @@ export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassig
       // Create a unified array blending the current assignees and the newly selected email
       const existingEmails = currentAssignees?.map(a => a.email) || [];
       const updatedEmails = Array.from(new Set([...existingEmails, email]));
-      
-      const result = await todoApi.assignTask(taskId, updatedEmails);
+      const api = isWorkspace ? workspaceTodoApi : todoApi;
+      const result = await api.assignTask(taskId, updatedEmails);
       if (result.success && result.data) {
         onAssigned(result.data);
         setIsOpen(false);
@@ -96,7 +99,8 @@ export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassig
   const handleUnassign = async (emailToRemove?: string) => {
     setIsAssigning(true);
     try {
-      const result = await todoApi.unassignTask(taskId, emailToRemove);
+      const api = isWorkspace ? workspaceTodoApi : todoApi;
+      const result = await api.unassignTask(taskId, emailToRemove);
       if (result.success) {
         onUnassigned();
       }

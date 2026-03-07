@@ -22,6 +22,7 @@ interface TasksTabProps {
   handleUpdateTask: (taskId: string, updates: any) => void;
   handleTaskClick: (task: any) => void;
   activeSpaceId: string | null;
+  isViewer?: boolean;
 }
 
 export function TasksTab({
@@ -39,9 +40,11 @@ export function TasksTab({
   handleStatusChange,
   handleUpdateTask,
   handleTaskClick,
-  activeSpaceId
+  activeSpaceId,
+  isViewer
 }: TasksTabProps) {
   const [currentView, setCurrentView] = useState<'list' | 'table' | 'calendar'>('list');
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
 
   // Compute filter counts from allTasks (unfiltered)
   const filterCounts = useMemo(() => {
@@ -125,7 +128,7 @@ export function TasksTab({
       ) : (
         <div className="flex flex-col">
           {/* Inline Add Task Input Area */}
-          {selectedWorkspace && (
+          {selectedWorkspace && !isViewer && (
             <div className="px-2 py-5 ">
               <TaskInput
                 isExpanded={isInputExpanded}
@@ -143,7 +146,7 @@ export function TasksTab({
           {currentView === 'list' && (
             <>
               {/* Table Header (List View Only) */}
-              <div className="grid grid-cols-[40px_1fr_130px_120px_120px_100px_80px] gap-2 px-3 py-2 border-b border-white/10 text-[12px] font-medium text-white/50 items-center select-none">
+              <div className="grid grid-cols-[40px_1fr_130px_130px_130px_100px_80px] gap-2 px-3 py-2 border-b border-white/10 text-[12px] font-medium text-white/50 items-center select-none">
                 <div className="flex justify-center"></div>
                 <div className="pl-1 text-white/70"> Tasks</div>
                 <div className="flex justify-start font-semibold pr-2">Status</div>
@@ -151,7 +154,6 @@ export function TasksTab({
                 <div className="flex justify-start font-semibold px-2">Due date</div>
                 <div className="flex justify-start font-semibold px-2">Reminder</div>
                 <div className="flex justify-start font-semibold px-2">Priority</div>
-                <div></div>
               </div>
               
               {/* List Body */}
@@ -177,6 +179,14 @@ export function TasksTab({
                       onStatusChange={handleStatusChange}
                       onUpdateTask={handleUpdateTask}
                       onClick={handleTaskClick}
+                      isViewer={isViewer}
+                      isSelected={selectedTasks.has(task._id)}
+                      onToggleSelect={(id) => setSelectedTasks(prev => {
+                        const next = new Set(prev);
+                        if (next.has(id)) next.delete(id);
+                        else next.add(id);
+                        return next;
+                      })}
                     />
                   ))
                 )}
@@ -192,6 +202,7 @@ export function TasksTab({
               onUpdateTask={handleUpdateTask}
               onClick={handleTaskClick}
               taskFilter={taskFilter}
+              isViewer={isViewer}
             />
           )}
 

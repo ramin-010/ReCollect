@@ -20,6 +20,7 @@ interface OverviewTabProps {
   setOverviewInputExpanded: (val: boolean) => void;
   handleTaskSaved: (task: any) => void;
   activeSpaceId: string | null;
+  isViewer?: boolean;
 }
 
 export function OverviewTab({
@@ -36,12 +37,13 @@ export function OverviewTab({
   setOverviewInputExpanded,
   handleTaskSaved,
   activeSpaceId,
+  isViewer
 }: OverviewTabProps) {
   return (
     <div className="space-y-7">
       {/* Quick-add bar — always visible on Overview */}
       <div className='max-w-[800px] mx-auto'>
-        {selectedWorkspace && (
+        {selectedWorkspace && !isViewer && (
           <TaskInput
             isExpanded={overviewInputExpanded}
             onExpandChange={setOverviewInputExpanded}

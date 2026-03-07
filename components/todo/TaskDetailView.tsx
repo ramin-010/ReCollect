@@ -23,6 +23,7 @@ import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date
 import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
 import { todoApi } from '@/lib/api/todoApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -55,7 +56,8 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       if (title !== task.title) updates.title = title;
       if (description !== (task.description || '')) updates.description = description;
 
-      const result = await todoApi.updateTodo(task._id, updates as any);
+      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
+      const result = await api.updateTodo(task._id, updates as any);
       if (result.success && result.data) {
         onUpdate(task._id, result.data as unknown as Partial<Task>);
         toast.success('Task updated');
@@ -107,8 +109,9 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
     updateLocalStore(task._id, { subtasks: newSubtasks });
     
     try {
-      if (todoApi.updateSubtask) {
-        await todoApi.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
+      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
+      if (api.updateSubtask) {
+        await api.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
       }
     } catch (e) {
       toast.error('Failed to update subtask');

@@ -5,7 +5,7 @@ import axiosInstance from '@/lib/utils/axios';
 
 export interface WorkspaceMember {
   user: { _id: string; name: string; email: string; avatar?: string };
-  role: 'admin' | 'member';
+  role: 'admin' | 'member' | 'viewer';
   joinedAt: string;
 }
 
@@ -96,6 +96,11 @@ export const workspaceApi = {
 
   async updateWorkspaceSettings(workspaceId: string, settings: { membersCanViewOverview: boolean }): Promise<{ success: boolean; data: Workspace; message?: string }> {
     const res = await axiosInstance.patch(`/api/workspaces/${workspaceId}/settings`, settings);
+    return res.data;
+  },
+
+  async updateWorkspaceRole(workspaceId: string, userId: string, role: string): Promise<{ success: boolean; data: Workspace; message?: string }> {
+    const res = await axiosInstance.patch(`/api/workspaces/${workspaceId}/members/${userId}/role`, { role });
     return res.data;
   },
 };

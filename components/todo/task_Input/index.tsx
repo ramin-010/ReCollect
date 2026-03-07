@@ -599,7 +599,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                       {PRIORITIES.map((p) => (
                         <DropdownMenuItem 
                           key={p.value} 
-                          onClick={() => setPriority(p.value as 'low' | 'medium' | 'high')}
+                          onClick={() => setPriority(p.value as 'low' | 'normal' | 'high' | 'urgent')}
                           className={cn("focus:bg-white/10", p.color)}
                         >
                           <Flag className="w-3.5 h-3.5 mr-2" />

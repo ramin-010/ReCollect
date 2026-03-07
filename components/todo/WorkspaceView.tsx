@@ -30,7 +30,7 @@ import {
   WorkspaceStats as WorkspaceStatsApi,
   ActivityLogEntry as ActivityLogEntryApi
 } from '@/lib/api/workspaceApi';
-import { todoApi } from '@/lib/api/todoApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useWorkspaceStore } from '@/lib/store/workspaceStore';
 import {
@@ -108,6 +108,10 @@ export function WorkspaceView() {
   const isOwner = selectedWorkspace?.owner._id === currentUser?._id;
   const isAdmin = isOwner || selectedWorkspace?.members.some(
     (m: any) => m.user._id === currentUser?._id && m.role === 'admin'
+  ) || false;
+
+  const isViewer = selectedWorkspace?.members.some(
+    (m: any) => m.user._id === currentUser?._id && m.role === 'viewer'
   ) || false;
 
   // Overview permission check
@@ -227,7 +231,7 @@ export function WorkspaceView() {
       // Optimistic update
       updateTask(taskId, { status: newStatus as any });
       
-      const res = await todoApi.updateTodo(taskId, { status: newStatus as any });
+      const res = await workspaceTodoApi.updateTodo(taskId, { status: newStatus as any });
       if (!res.success) {
         // Revert on failure
         updateTask(taskId, { status: currentStatus });
@@ -244,7 +248,7 @@ export function WorkspaceView() {
       // Optimistic update
       updateTask(taskId, updates);
       
-      const res = await todoApi.updateTodo(taskId, updates);
+      const res = await workspaceTodoApi.updateTodo(taskId, updates);
       if (!res.success) {
         toast.error('Failed to update task');
       }
@@ -334,6 +338,20 @@ export function WorkspaceView() {
     }
   };
 
+  const handleUpdateRole = async (memberId: string, role: string) => {
+    if (!selectedWorkspace) return;
+    try {
+      const res = await workspaceApi.updateWorkspaceRole(selectedWorkspace._id, memberId, role);
+      if (res.success) {
+        setSelectedWorkspace(res.data);
+        updateWorkspace(res.data._id, res.data);
+        toast.success('Role updated');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update role');
+    }
+  };
+
   const handleDeleteWorkspace = async () => {
     if (!selectedWorkspace) return;
     try {
@@ -370,7 +388,7 @@ export function WorkspaceView() {
   // ── Empty State ──
   if (workspaces.length === 0) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-6">
+      <div className="min-h-[70vh]  flex items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -420,7 +438,7 @@ export function WorkspaceView() {
 
   return (
     <div className="min-h-screen text-white bg-[hsl(var(--background))] pb-20 selection:bg-indigo-500/30">
-      <div className="max-w-[1250px] mx-auto px-6 md:px-8 pt-8">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8 pt-8">
 
         {/* ── Header: Workspace & Space Switchers (Breadcrumb style) ── */}
         <div className="flex flex-col mb-8">
@@ -628,6 +646,7 @@ export function WorkspaceView() {
            isInviteLoading={isInviteLoading}
            handleInvite={handleInvite}
            handleRemoveMember={handleRemoveMember}
+           handleUpdateRole={handleUpdateRole}
            onDeleteWorkspace={handleDeleteWorkspace}
         />
 
@@ -715,6 +734,7 @@ export function WorkspaceView() {
                 setOverviewInputExpanded={setOverviewInputExpanded}
                 handleTaskSaved={handleTaskSaved}
                 activeSpaceId={activeSpaceId}
+                isViewer={isViewer}
               />
             )}
 

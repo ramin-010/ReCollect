@@ -15,6 +15,7 @@ interface TableViewProps {
   onUpdateTask: (id: string, updates: any) => void;
   onClick: (task: any) => void;
   taskFilter: string;
+  isViewer?: boolean;
 }
 
 export function TableView({
@@ -23,7 +24,8 @@ export function TableView({
   onStatusChange,
   onUpdateTask,
   onClick,
-  taskFilter
+  taskFilter,
+  isViewer
 }: TableViewProps) {
 
   // A helper component to render grid cells with vertical borders
@@ -80,9 +82,9 @@ export function TableView({
                   </Cell>
 
                   {/* Completion Toggle */}
-                  <Cell borderRight={false} className="justify-center px-1" onClick={(e: any) => e.stopPropagation()}>
+                  <Cell borderRight={false} className={cn("justify-center px-1", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
                     <button 
-                      onClick={() => onStatusChange(task._id, isDone ? 'todo' : 'complete')}
+                      onClick={() => onStatusChange(task._id, isDone ? 'pending' : 'complete')}
                       className={cn(
                         "w-[14px] h-[14px] rounded-[4px] border border-white/20 flex items-center justify-center transition-colors focus:outline-none hover:border-indigo-400/50 hover:bg-indigo-400/10",
                         isDone && "bg-indigo-500 border-indigo-500 text-white hover:bg-indigo-600 hover:border-indigo-600"
@@ -104,7 +106,7 @@ export function TableView({
 
                   {/* Assignee */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className="w-full h-full hover:bg-white/[0.04]">
+                    <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                         <AssigneeDropdown 
                           currentAssignees={task.assignees || []}
                           workspaceMembers={workspaceMembers}
@@ -139,7 +141,7 @@ export function TableView({
 
                   {/* Status */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className="w-full h-full flex items-center hover:bg-white/[0.04]">
+                    <div className={cn("w-full h-full flex items-center", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                          <TaskStatusDropdown
                             currentStatus={task.status}
                             onStatusChange={(status) => onStatusChange(task._id, status)}
@@ -156,7 +158,7 @@ export function TableView({
 
                   {/* Due Date */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                     <div className="w-full h-full hover:bg-white/[0.04]">
+                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                          <DueDateDropdown 
                             currentDate={task.dueDate}
                             onDateChange={(date) => onUpdateTask(task._id, { dueDate: date })}
@@ -176,7 +178,7 @@ export function TableView({
 
                   {/* Priority */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                     <div className="w-full h-full hover:bg-white/[0.04]">
+                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                         <PriorityDropdown 
                           currentPriority={task.priority}
                           onPriorityChange={(priority) => onUpdateTask(task._id, { priority })}
