@@ -32,6 +32,7 @@ import {
 } from '@/lib/api/workspaceApi';
 import { todoApi } from '@/lib/api/todoApi';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useWorkspaceStore } from '@/lib/store/workspaceStore';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -71,11 +72,13 @@ const TASK_FILTERS: { key: TaskFilter; label: string }[] = [
 // Main Component
 // ────────────────────────────────────────────────────────
 export function WorkspaceView() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    workspaces, selectedWorkspace, activeSpaceId, tasks, stats, activity, isLoading, isDataLoading,
+    setSelectedWorkspace, setActiveSpaceId, fetchWorkspaces, fetchWorkspaceData,
+    updateTask, addTask, setWorkspaces, setStats, updateWorkspace
+  } = useWorkspaceStore();
+
   const [activeTab, setActiveTab] = useState<SubTab>('tasks');
-  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [overviewInputExpanded, setOverviewInputExpanded] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
@@ -100,17 +103,11 @@ export function WorkspaceView() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviteLoading, setIsInviteLoading] = useState(false);
 
-  // Data — fetched upfront for selected workspace
-  const [stats, setStats] = useState<WorkspaceStats | null>(null);
-  const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(false);
-
   const currentUser = useAuthStore((state) => state.user);
 
   const isOwner = selectedWorkspace?.owner._id === currentUser?._id;
   const isAdmin = isOwner || selectedWorkspace?.members.some(
-    m => m.user._id === currentUser?._id && m.role === 'admin'
+    (m: any) => m.user._id === currentUser?._id && m.role === 'admin'
   ) || false;
 
   // Overview permission check
@@ -122,58 +119,13 @@ export function WorkspaceView() {
 
 
   // ── Fetch workspaces ──
-  const fetchWorkspaces = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await workspaceApi.getWorkspaces();
-      if (res.success) {
-        setWorkspaces(res.data);
-        if (!selectedWorkspace && res.data.length > 0) {
-          const firstWorkspace = res.data[0];
-          setSelectedWorkspace(firstWorkspace);
-          if (firstWorkspace.spaces && firstWorkspace.spaces.length > 0) {
-            setActiveSpaceId(firstWorkspace.spaces[0]._id);
-          }
-        }
-      }
-    } catch {
-      toast.error('Failed to load workspaces');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => { fetchWorkspaces(); }, [fetchWorkspaces]);
 
   // ── Fetch ALL workspace data upfront ──
   useEffect(() => {
     if (!selectedWorkspace) return;
-    const wsId = selectedWorkspace._id;
-    const load = async () => {
-      setIsDataLoading(true);
-      try {
-        const fetches: Promise<any>[] = [
-          workspaceApi.getWorkspaceActivity(wsId),
-          workspaceApi.getWorkspaceTasks(wsId, activeSpaceId !== 'all' ? activeSpaceId! : undefined),
-        ];
-
-        if (canViewOverview) {
-          fetches.push(workspaceApi.getWorkspaceStats(wsId, activeSpaceId !== 'all' ? activeSpaceId! : undefined));
-        }
-
-        const results = await Promise.all(fetches);
-        
-        if (results[0].success) setActivity(results[0].data);
-        if (results[1].success) setTasks(results[1].data);
-        if (canViewOverview && results[2]?.success) setStats(results[2].data);
-      } catch {
-        // Silently fail
-      } finally {
-        setIsDataLoading(false);
-      }
-    };
-    load();
-  }, [selectedWorkspace?._id, activeSpaceId, canViewOverview]);
+    fetchWorkspaceData(selectedWorkspace._id, activeSpaceId !== 'all' ? activeSpaceId! : undefined, canViewOverview);
+  }, [selectedWorkspace?._id, activeSpaceId, canViewOverview, fetchWorkspaceData]);
 
   // ── Derived counts for actionable stats ──
   const overdueTasks = useMemo(() => tasks.filter(t => isOverdue(t)), [tasks]);
@@ -258,12 +210,12 @@ export function WorkspaceView() {
 
   // ── Task save handler (shared by Overview + Tasks quick-add) ──
   const handleTaskSaved = useCallback((newTask: any) => {
-    setTasks(prev => [newTask, ...prev]);
+    addTask(newTask);
     if (selectedWorkspace && canViewOverview) {
       workspaceApi.getWorkspaceStats(selectedWorkspace._id)
         .then(res => res.success && setStats(res.data));
     }
-  }, [selectedWorkspace, canViewOverview]);
+  }, [selectedWorkspace, canViewOverview, addTask, setStats]);
 
   // ── Handlers ──
   const handleStatusChange = async (taskId: string, newStatus: string) => {
@@ -273,16 +225,16 @@ export function WorkspaceView() {
     
     try {
       // Optimistic update
-      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: newStatus as any } : t));
+      updateTask(taskId, { status: newStatus as any });
       
       const res = await todoApi.updateTodo(taskId, { status: newStatus as any });
       if (!res.success) {
         // Revert on failure
-        setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: currentStatus } : t));
+        updateTask(taskId, { status: currentStatus });
         toast.error('Failed to update task status');
       }
     } catch {
-      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: currentStatus } : t));
+      updateTask(taskId, { status: currentStatus });
       toast.error('Failed to update task status');
     }
   };
@@ -290,11 +242,10 @@ export function WorkspaceView() {
   const handleUpdateTask = async (taskId: string, updates: any) => {
     try {
       // Optimistic update
-      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, ...updates } : t));
+      updateTask(taskId, updates);
       
       const res = await todoApi.updateTodo(taskId, updates);
       if (!res.success) {
-        // We'd ideally revert here, but for simplicity of generic updates, we can just refetch or rely on toast
         toast.error('Failed to update task');
       }
     } catch {
@@ -312,7 +263,7 @@ export function WorkspaceView() {
       setIsCreating(true);
       const res = await workspaceApi.createWorkspace(newWorkspaceName.trim(), newSpaceName.trim());
       if (res.success) {
-        setWorkspaces(prev => [res.data, ...prev]);
+        setWorkspaces([res.data, ...workspaces]);
         setSelectedWorkspace(res.data);
         if (res.data.spaces && res.data.spaces.length > 0) {
           setActiveSpaceId(res.data.spaces[0]._id);
@@ -335,7 +286,7 @@ export function WorkspaceView() {
       setIsCreatingSpace(true);
       const res = await workspaceApi.createWorkspaceSpace(selectedWorkspace._id, newSpaceInput.trim());
       if (res.success) {
-        setWorkspaces(prev => prev.map(w => w._id === res.data._id ? res.data : w));
+        setWorkspaces(workspaces.map(w => w._id === res.data._id ? res.data : w));
         setSelectedWorkspace(res.data);
         // Automatically select the new space
         const newSpace = res.data.spaces?.find(s => s.name === newSpaceInput.trim());
@@ -375,7 +326,7 @@ export function WorkspaceView() {
       const res = await workspaceApi.removeMember(selectedWorkspace._id, memberId);
       if (res.success) {
         setSelectedWorkspace(res.data);
-        setWorkspaces(prev => prev.map(w => w._id === res.data._id ? res.data : w));
+        updateWorkspace(res.data._id, res.data);
         toast.success('Member removed');
       }
     } catch (err: any) {
@@ -547,7 +498,7 @@ export function WorkspaceView() {
                 <div className="px-2 py-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Spaces</span>
                 </div>
-                {selectedWorkspace?.spaces?.map(space => (
+                {selectedWorkspace?.spaces?.map((space: any) => (
                   <DropdownMenuItem
                     key={space._id}
                     onClick={() => setActiveSpaceId(space._id)}

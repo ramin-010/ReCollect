@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
-import { Loader2, ListTodo, Plus } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Loader2, ListTodo, Plus, LayoutList, Table, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskInput } from '../task_Input';
 import { TaskRow } from './TaskRow';
+import { TableView } from './TableView';
+import { CalendarView } from './CalendarView';
 
 interface TasksTabProps {
   selectedWorkspace: any;
@@ -39,6 +41,7 @@ export function TasksTab({
   handleTaskClick,
   activeSpaceId
 }: TasksTabProps) {
+  const [currentView, setCurrentView] = useState<'list' | 'table' | 'calendar'>('list');
 
   // Compute filter counts from allTasks (unfiltered)
   const filterCounts = useMemo(() => {
@@ -87,6 +90,31 @@ export function TasksTab({
             </button>
           ))}
         </div>
+
+        {/* View Switcher Controls */}
+        <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
+          <button 
+            onClick={() => setCurrentView('list')}
+            className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+            title="List View"
+          >
+            <LayoutList className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => setCurrentView('table')}
+            className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+            title="Table View"
+          >
+            <Table className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => setCurrentView('calendar')}
+            className={cn("p-1.5 rounded-md transition-colors", currentView === 'calendar' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+            title="Calendar View"
+          >
+            <CalendarDays className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Task Table */}
@@ -111,45 +139,71 @@ export function TasksTab({
             </div>
           )}
 
-          {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_130px_120px_120px_100px_80px] gap-2 px-3 py-2 border-b border-white/10 text-[12px] font-medium text-white/50 items-center select-none">
-            <div className="flex justify-center"></div>
-            <div className="pl-1 text-white/70"> Tasks</div>
-            <div className="flex justify-start font-semibold pr-2">Status</div>
-            <div className="flex justify-start font-semibold px-2">Assignee</div>
-            <div className="flex justify-start font-semibold px-2">Due date</div>
-            <div className="flex justify-start font-semibold px-2">Reminder</div>
-            <div className="flex justify-start font-semibold px-2">Priority</div>
-            <div></div>
-          </div>
-          
-          {/* Table Body */}
-          <div className="flex flex-col">
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-3">
-                  <ListTodo className="w-4 h-4 text-white/20" />
-                </div>
-                <p className="text-sm text-white/35 mb-1">
-                  {taskFilter === 'all' ? 'No tasks yet' :
-                   taskFilter === 'mine' ? 'No tasks assigned to you' :
-                   taskFilter === 'unassigned' ? 'No unassigned tasks' :
-                   'No completed tasks'}
-                </p>
+          {/* Views Area */}
+          {currentView === 'list' && (
+            <>
+              {/* Table Header (List View Only) */}
+              <div className="grid grid-cols-[40px_1fr_130px_120px_120px_100px_80px] gap-2 px-3 py-2 border-b border-white/10 text-[12px] font-medium text-white/50 items-center select-none">
+                <div className="flex justify-center"></div>
+                <div className="pl-1 text-white/70"> Tasks</div>
+                <div className="flex justify-start font-semibold pr-2">Status</div>
+                <div className="flex justify-start font-semibold px-2">Assignee</div>
+                <div className="flex justify-start font-semibold px-2">Due date</div>
+                <div className="flex justify-start font-semibold px-2">Reminder</div>
+                <div className="flex justify-start font-semibold px-2">Priority</div>
+                <div></div>
               </div>
-            ) : (
-              filteredTasks.map((task) => (
-                <TaskRow 
-                  key={task._id} 
-                  task={task} 
-                  workspaceMembers={workspaceMembers}
-                  onStatusChange={handleStatusChange}
-                  onUpdateTask={handleUpdateTask}
-                  onClick={handleTaskClick}
-                />
-              ))
-            )}
-          </div>
+              
+              {/* List Body */}
+              <div className="flex flex-col">
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <ListTodo className="w-4 h-4 text-white/20" />
+                    </div>
+                    <p className="text-sm text-white/35 mb-1">
+                      {taskFilter === 'all' ? 'No tasks yet' :
+                       taskFilter === 'mine' ? 'No tasks assigned to you' :
+                       taskFilter === 'unassigned' ? 'No unassigned tasks' :
+                       'No completed tasks'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <TaskRow 
+                      key={task._id} 
+                      task={task} 
+                      workspaceMembers={workspaceMembers}
+                      onStatusChange={handleStatusChange}
+                      onUpdateTask={handleUpdateTask}
+                      onClick={handleTaskClick}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {currentView === 'table' && (
+            <TableView 
+              filteredTasks={filteredTasks}
+              workspaceMembers={workspaceMembers}
+              onStatusChange={handleStatusChange}
+              onUpdateTask={handleUpdateTask}
+              onClick={handleTaskClick}
+              taskFilter={taskFilter}
+            />
+          )}
+
+          {currentView === 'calendar' && (
+            <div className="h-[600px]">
+              <CalendarView 
+                filteredTasks={filteredTasks}
+                onClick={handleTaskClick}
+                onUpdateTask={handleUpdateTask}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
