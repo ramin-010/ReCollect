@@ -2,7 +2,7 @@ import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Clock, Calendar, Flag, Tag, CheckCircle2, CheckCircle, Share, MoreHorizontal, Sparkles, History, Box, CircleDot, UserCircle2 } from 'lucide-react';
 import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { AssigneeDropdown } from './AssigneeDropdown';
 import { DueDateDropdown } from './DueDateDropdown';
 import { PriorityDropdown } from './PriorityDropdown';
@@ -116,9 +116,9 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateTask, workspace
                         <AssigneeDropdown
                           currentAssignees={task.assignees || []}
                           workspaceMembers={workspaceMembers}
-                          onAssign={(email, name, avatar) => {
+                          onAssign={(email, name, avatar, _id) => {
                             const current = task.assignees || [];
-                            onUpdateTask(task._id, { assignees: [...current, { email, name, avatar }] });
+                            onUpdateTask(task._id, { assignees: [...current, { _id, email, name, avatar }] });
                           }}
                           onUnassign={(email) => {
                             const current = task.assignees || [];
@@ -133,7 +133,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateTask, workspace
                                      {a.avatar ? (
                                        <img src={a.avatar} alt="avatar" className="w-full h-full rounded-full" />
                                      ) : (
-                                       a.name?.[0]?.toUpperCase() || '?'
+                                       getInitials(a.name) || '?'
                                      )}
                                    </div>
                                    <span className="text-[12px] font-medium">{a.name}</span>
@@ -292,7 +292,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateTask, workspace
                  {/* Dummy Activity 1: Creation */}
                  <div className="flex gap-3">
                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5">
-                     {task.assignees?.[0]?.name?.[0]?.toUpperCase() || 'R'}
+                     {task.assignees?.[0] ? getInitials(task.assignees[0].name) : 'R'}
                    </div>
                    <div className="flex-1">
                      <p className="text-[13px] text-white/60 leading-snug">
@@ -309,7 +309,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdateTask, workspace
                  {task.dueDate && (
                    <div className="flex gap-3">
                      <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5">
-                       {task.assignees?.[0]?.name?.[0]?.toUpperCase() || 'R'}
+                       {task.assignees?.[0] ? getInitials(task.assignees[0].name) : 'R'}
                      </div>
                      <div className="flex-1">
                        <p className="text-[13px] text-white/60 leading-snug">

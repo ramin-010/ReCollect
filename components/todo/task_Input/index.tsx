@@ -24,7 +24,7 @@ import {
   Mail,
   Check
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
 import {
   DropdownMenu,
@@ -456,7 +456,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                   {assignee.avatar ? (
                                     <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
                                   ) : (
-                                    assignee.name.charAt(0).toUpperCase()
+                                    getInitials(assignee.name)
                                   )}
                                 </div>
                               ))}
@@ -512,7 +512,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                   {member.avatar ? (
                                     <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                                   ) : (
-                                    member.name.charAt(0).toUpperCase()
+                                    getInitials(member.name)
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -543,7 +543,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               {user.avatar ? (
                                 <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                               ) : (
-                                user.name.charAt(0).toUpperCase()
+                                getInitials(user.name)
                               )}
                             </div>
                             <div className="flex-1 min-w-0">

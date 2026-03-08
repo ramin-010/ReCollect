@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { TaskInput } from '../task_Input';
 import { activityLabel, activityIcon, formatDueDate, isOverdue } from './utils';
@@ -207,7 +207,7 @@ export function OverviewTab({
                         {assignee.avatar ? (
                           <img src={assignee.avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-[8px] font-bold text-white/30">{assignee.name?.charAt(0).toUpperCase()}</span>
+                          <span className="text-[8px] font-bold text-white/30">{getInitials(assignee.name)}</span>
                         )}
                       </div>
                     ))}

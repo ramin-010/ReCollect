@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Sparkles, User, Eye, Check, Search, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { WorkspaceSettingsProps } from '../types';
 
 function CrownIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -86,7 +86,7 @@ export function RolesSettings({
     }
   ];
 
-  const getInitials = (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  // getInitials is imported from utils
 
   // Filter members by search input
   const filteredMembers = selectedWorkspace?.members.filter((member: any) =>

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, UserPlus, X, Mail, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { todoApi } from '@/lib/api/todoApi';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 
@@ -114,9 +114,7 @@ export function AssigneePicker({ taskId, currentAssignees, onAssigned, onUnassig
   // Extract assignee info
   const assignees = currentAssignees || [];
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
+  // getInitials is imported from utils
 
   return (
     <div className="relative" ref={dropdownRef}>

@@ -62,3 +62,14 @@ export function isDueToday(task: any): boolean {
   if (!task.dueDate || task.status === 'complete') return false;
   try { return isToday(parseISO(task.dueDate)); } catch { return false; }
 }
+
+export function getPriorityTextConfig(priority: string | undefined | null) {
+  if (!priority) return 'text-white/10';
+  switch (priority) {
+    case 'urgent': 
+    case 'high': return 'text-rose-400/80';
+    case 'medium': return 'text-amber-400/70';
+    case 'low': return 'text-blue-400/70';
+    default: return 'text-white/10';
+  }
+}

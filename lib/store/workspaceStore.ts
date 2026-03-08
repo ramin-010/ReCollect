@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { workspaceApi } from '@/lib/api/workspaceApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
+import { toast } from 'sonner';
+
+
+const pendingUpdates = new Map<string, any>();        
+const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>(); 
+const DEBOUNCE_MS = 1000;
 
 interface WorkspaceStore {
   workspaces: any[];
@@ -11,7 +18,7 @@ interface WorkspaceStore {
   isLoading: boolean;
   isDataLoading: boolean;
 
-  // Actions
+ 
   setWorkspaces: (workspaces: any[]) => void;
   setSelectedWorkspace: (workspace: any | null) => void;
   setActiveSpaceId: (spaceId: string | null) => void;
@@ -21,15 +28,20 @@ interface WorkspaceStore {
   setIsLoading: (loading: boolean) => void;
   setIsDataLoading: (loading: boolean) => void;
 
-  // Thunks / Async actions
+ 
   fetchWorkspaces: () => Promise<void>;
   fetchWorkspaceData: (workspaceId: string, spaceId: string | undefined, canViewOverview: boolean) => Promise<void>;
   
-  // Optimistic updates
-  updateTask: (taskId: string, updates: any) => void;
+ 
+  updateTaskLocal: (taskId: string, updates: any) => void;
   addTask: (task: any) => void;
   addWorkspace: (workspace: any) => void;
   updateWorkspace: (workspaceId: string, updates: any) => void;
+
+ 
+  updateTask: (taskId: string, updates: any, onPermissionError?: (msg: string) => void) => void;
+ 
+  flushTaskUpdate: (taskId: string) => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -52,8 +64,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setIsDataLoading: (loading) => set({ isDataLoading: loading }),
 
   fetchWorkspaces: async () => {
-    const { workspaces, selectedWorkspace, isLoading } = get();
-    // Only set strictly to generating loader if we have zero workspaces cached
+    const { workspaces } = get();
     if (workspaces.length === 0) set({ isLoading: true });
     
     try {
@@ -61,7 +72,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       if (res.success) {
         set({ workspaces: res.data });
         
-        // Auto-select first workspace if none selected
         if (!get().selectedWorkspace && res.data.length > 0) {
           const firstWorkspace = res.data[0];
           set({ selectedWorkspace: firstWorkspace });
@@ -81,7 +91,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   fetchWorkspaceData: async (workspaceId, spaceId, canViewOverview) => {
     const { tasks } = get();
-    // Only show full loading spinner if we have no tasks cached for instant feel
     if (tasks.length === 0) set({ isDataLoading: true });
     
     try {
@@ -106,10 +115,72 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  updateTask: (taskId, updates) => {
+ 
+  updateTaskLocal: (taskId, updates) => {
     set((state) => ({
       tasks: state.tasks.map((t) => (t._id === taskId ? { ...t, ...updates } : t)),
     }));
+  },
+
+ 
+  updateTask: (taskId, updates, onPermissionError) => {
+   
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t._id === taskId ? { ...t, ...updates } : t)),
+    }));
+
+   
+    const existing = pendingUpdates.get(taskId) || {};
+    const merged = { ...existing, ...updates };
+    pendingUpdates.set(taskId, merged);
+
+   
+    const existingTimer = debounceTimers.get(taskId);
+    if (existingTimer) clearTimeout(existingTimer);
+
+   
+    const timer = setTimeout(async () => {
+      const payload = pendingUpdates.get(taskId);
+      pendingUpdates.delete(taskId);
+      debounceTimers.delete(taskId);
+
+      if (!payload) return;
+
+      try {
+        const res = await workspaceTodoApi.updateTodo(taskId, payload);
+        if (!res.success) {
+          const errMsg = res.message?.toLowerCase() || '';
+          if (errMsg.includes('permission') || errMsg.includes('unauthorized')) {
+            onPermissionError?.(res.message || 'Permission restricted.');
+          } else {
+            toast.error(res.message || 'Failed to update task');
+          }
+        }
+      } catch {
+        toast.error('Failed to update task');
+      }
+    }, DEBOUNCE_MS);
+
+    debounceTimers.set(taskId, timer);
+  },
+
+ 
+  flushTaskUpdate: (taskId) => {
+    const existingTimer = debounceTimers.get(taskId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.delete(taskId);
+    }
+
+    const payload = pendingUpdates.get(taskId);
+    pendingUpdates.delete(taskId);
+
+    if (!payload) return;
+
+   
+    workspaceTodoApi.updateTodo(taskId, payload).catch(() => {
+      toast.error('Failed to update task');
+    });
   },
 
   addTask: (task) => {

@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, ListTodo, Plus, LayoutList, Table, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TaskInput } from '../task_Input';
 import { TaskRow } from './TaskRow';
 import { TableView } from './TableView';
 import { CalendarView } from './CalendarView';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
+import { BulkActionBar } from './modals/BulkActionBar';
+import { useWorkspaceStore } from '@/lib/store/workspaceStore';
+import { toast } from 'sonner';
 
 interface TasksTabProps {
   selectedWorkspace: any;
@@ -45,6 +48,26 @@ export function TasksTab({
 }: TasksTabProps) {
   const [currentView, setCurrentView] = useState<'list' | 'table' | 'calendar'>('list');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const { tasks: storeTasks, setTasks } = useWorkspaceStore();
+
+  const handleBulkUpdate = async (taskIds: string[], updates: any) => {
+     for (const id of taskIds) {
+       handleUpdateTask(id, updates);
+     }
+  };
+
+  const handleBulkDelete = async (taskIds: string[]) => {
+    try {
+      const deletePromises = taskIds.map(id => workspaceTodoApi.deleteTodo(id));
+      await Promise.all(deletePromises);
+      
+      const remainingTasks = storeTasks.filter(t => !taskIds.includes(t._id));
+      setTasks(remainingTasks);
+      toast.success(`${taskIds.length} tasks deleted`);
+    } catch {
+      toast.error('Failed to delete some tasks');
+    }
+  };
 
   // Compute filter counts from allTasks (unfiltered)
   const filterCounts = useMemo(() => {
@@ -127,33 +150,17 @@ export function TasksTab({
         </div>
       ) : (
         <div className="flex flex-col">
-          {/* Inline Add Task Input Area */}
-          {selectedWorkspace && !isViewer && (
-            <div className="px-2 py-5 ">
-              <TaskInput
-                isExpanded={isInputExpanded}
-                onExpandChange={setIsInputExpanded}
-                workspaceId={selectedWorkspace._id}
-                visibility="workspace"
-                onSave={handleTaskSaved}
-                workspaceMembers={workspaceMembers}
-                spaceId={activeSpaceId === 'all' ? undefined : activeSpaceId || undefined}
-              />
-            </div>
-          )}
-
           {/* Views Area */}
           {currentView === 'list' && (
             <>
               {/* Table Header (List View Only) */}
-              <div className="grid grid-cols-[40px_1fr_130px_130px_130px_100px_80px] gap-2 px-3 py-2 border-b border-white/10 text-[12px] font-medium text-white/50 items-center select-none">
+              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2  text-[12px] font-medium text-white/50 items-center select-none">
                 <div className="flex justify-center"></div>
-                <div className="pl-1 text-white/70"> Tasks</div>
-                <div className="flex justify-start font-semibold pr-2">Status</div>
-                <div className="flex justify-start font-semibold px-2">Assignee</div>
-                <div className="flex justify-start font-semibold px-2">Due date</div>
-                <div className="flex justify-start font-semibold px-2">Reminder</div>
-                <div className="flex justify-start font-semibold px-2">Priority</div>
+                <div className="flex items-center">Tasks</div>
+                <div className="flex items-center">Assignee</div>
+                <div className="flex items-center">Due date</div>
+                <div className="flex items-center">Status</div>
+                <div className="flex items-center">Priority</div>
               </div>
               
               {/* List Body */}
@@ -217,6 +224,15 @@ export function TasksTab({
           )}
         </div>
       )}
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar 
+        selectedTasks={selectedTasks}
+        onClearSelection={() => setSelectedTasks(new Set())}
+        onDelete={handleBulkDelete}
+        onUpdate={handleBulkUpdate}
+        workspaceMembers={workspaceMembers}
+      />
     </div>
   );
 }

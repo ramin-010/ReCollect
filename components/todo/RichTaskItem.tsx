@@ -9,7 +9,7 @@ import {
   AlertTriangle,
   ListTodo
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { Task } from '@/lib/store/todoStore';
 import { format, isToday, isPast, parseISO, formatDistanceToNow } from 'date-fns';
 
@@ -138,7 +138,7 @@ export function RichTaskItem({ task, onDelete, onToggleComplete, onSelect, isCom
                     const assigneeInfo = typeof assignee === 'string'
                       ? { name: assignee, email: assignee, avatar: undefined, _id: assignee }
                       : assignee;
-                    const initials = assigneeInfo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+                    const initials = getInitials(assigneeInfo.name);
                     return assigneeInfo.avatar ? (
                       <img key={assigneeInfo._id} src={assigneeInfo.avatar} alt={assigneeInfo.name} className="w-6 h-6 rounded-full object-cover border border-[#1e1e1e] ring-1 ring-indigo-500/30" title={`Assigned to ${assigneeInfo.name}`} />
                     ) : (

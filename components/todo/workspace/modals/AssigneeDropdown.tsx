@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Search, UserPlus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 
 interface AssigneeDropdownProps {
   currentAssignees: any[];
   workspaceMembers: any[];
-  onAssign: (email: string, name: string, avatar?: string) => void;
+  onAssign: (email: string, name: string, avatar?: string, _id?: string) => void;
   onUnassign: (email: string) => void;
   children: React.ReactNode;
 }
@@ -57,7 +57,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                     if (isAssigned) {
                       onUnassign(member.email);
                     } else {
-                      onAssign(member.email, member.name, member.avatar);
+                      onAssign(member.email, member.name, member.avatar, member._id);
                     }
                     // Typically assigning doesn't automatically close a dropdown so you can assign multiple, 
                     // but depending on user preference we could setOpen(false)
@@ -71,7 +71,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                     <img src={member.avatar} alt={member.name} className="w-6 h-6 rounded-full" />
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                      {member.name?.charAt(0).toUpperCase() || '?'}
+                      {getInitials(member.name)}
                     </div>
                   )}
                   <span className="font-medium text-[13px] text-white/80 group-hover:text-white flex-1 truncate">

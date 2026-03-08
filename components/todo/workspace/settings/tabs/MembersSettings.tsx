@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Loader2, X, UserPlus, Crown, LogOut, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { WorkspaceSettingsProps } from '../types';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 
@@ -66,7 +66,7 @@ export function MembersSettings({
     setShowDropdown(false);
   };
 
-  const getInitials = (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  // getInitials is imported from utils
 
   if (!selectedWorkspace) return null;
 
@@ -190,7 +190,7 @@ export function MembersSettings({
                 {member.user.avatar ? (
                   <img src={member.user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                 ) : (
-                  member.user.name.charAt(0).toUpperCase()
+                  getInitials(member.user.name)
                 )}
               </div>
 

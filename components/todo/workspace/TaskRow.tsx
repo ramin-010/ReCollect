@@ -1,6 +1,6 @@
 import React from 'react';
-import { CheckCircle2, Flag, Calendar, AlignLeft, Paperclip, Bell, Square, CheckSquare, GripVertical, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CheckCircle2, Flag, Calendar, AlignLeft, Paperclip, Bell, Square, CheckSquare, GripVertical, Check, UserPlus } from 'lucide-react';
+import { cn, getInitials } from '@/lib/utils';
 import { parseISO, differenceInSeconds, differenceInHours, isToday, isTomorrow, format } from 'date-fns';
 import { subMinutes } from 'date-fns';
 
@@ -67,6 +67,7 @@ function getPriorityConfig(priority: string) {
 export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateTask, onClick, isViewer, isSelected, onToggleSelect }: TaskRowProps) {
   const isDone = task.status === 'complete';
   const assignee = task.assignees && task.assignees.length > 0 ? task.assignees[0] : null;
+  console.log("assignee", assignee)
   const priorityConfig = getPriorityConfig(task.priority || 'low');
 
   const dueDateDisplay = task.dueDate ? formatSmartDate(task.dueDate, true) : null;
@@ -76,10 +77,10 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
     <div 
       onClick={() => onClick(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_1fr_130px_130px_130px_100px_80px] gap-2 items-center px-3 py-3 border-b transition-colors cursor-pointer",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-colors cursor-pointer",
         isSelected 
           ? "bg-indigo-500/[0.08] border-indigo-500/10" 
-          : "bg-transparent border-white/[0.03] hover:bg-white/[0.02]"
+          : "bg-transparent border-white/10 hover:bg-white/[0.02]"
       )}
     >
       {/* Hover Select Checkbox — absolutely positioned, doesn't shift layout */}
@@ -134,7 +135,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
       </div>
 
       {/* 2. Task Name & Metadata */}
-      <div className="flex items-center gap-2 min-w-0 pr-4 pl-1">
+      <div className="flex items-center gap-2 min-w-0">
         <p className={cn(
           "text-[13px] truncate font-medium",
           isDone ? "text-white/40 line-through" : "text-white/90"
@@ -149,37 +150,14 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         )}
       </div>
 
-      {/* 3. Status Pill */}
-      <div className={cn("flex items-center justify-start shrink-0 pr-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
-        <TaskStatusDropdown 
-          currentStatus={task.status as TaskStatus}
-          onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
-        >
-          <button className={cn(
-            "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
-            isDone 
-              ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25" 
-              : task.status === 'in_progress'
-                ? "bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
-                : task.status === 'review'
-                  ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
-                  : task.status === 'blocked'
-                    ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
-                    : "bg-white/[0.05] text-white/40 hover:bg-white/10"
-          )}>
-            {isDone ? 'COMPLETE' : task.status === 'in_progress' ? 'IN PROGRESS' : task.status === 'review' ? 'REVIEW' : task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
-          </button>
-        </TaskStatusDropdown>
-      </div>
-
       {/* 4. Assignees */}
-      <div className={cn("flex items-center gap-1 shrink-0 px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
+      <div className={cn("flex items-center gap-1 shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <AssigneeDropdown 
           currentAssignees={task.assignees || []}
           workspaceMembers={workspaceMembers}
-          onAssign={(email, name, avatar) => {
+          onAssign={(email, name, avatar, _id) => {
             const current = task.assignees || [];
-            onUpdateTask(task._id, { assignees: [...current, { email, name, avatar }] });
+            onUpdateTask(task._id, { assignees: [...current, { _id, email, name, avatar }] });
           }}
           onUnassign={(email) => {
             const current = task.assignees || [];
@@ -192,11 +170,13 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
                 {assignee.avatar ? (
                   <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" />
                 ) : (
-                  assignee.name?.[0]?.toUpperCase() || '?'
+                  getInitials(assignee.name)
                 )}
               </div>
             ) : (
-              <span className="text-[11px] text-white/15">—</span>
+              <div className="w-6 h-6 rounded-full border border-dashed border-white/10 flex items-center justify-center opacity-30 group-hover:opacity-100 transition-opacity">
+                <UserPlus className="w-3.5 h-3.5" />
+              </div>
             )}
           </button>
         </AssigneeDropdown>
@@ -206,7 +186,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
       </div>
 
       {/* 5. Due Date */}
-      <div className={cn("flex justify-start text-[11px] shrink-0 font-medium px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
+      <div className={cn("flex justify-start text-[11px] shrink-0 font-medium", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <DueDateDropdown 
           currentDate={task.dueDate}
           onDateChange={(date) => {
@@ -233,36 +213,41 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         </DueDateDropdown>
       </div>
 
-      {/* 6. Reminder */}
-      <div className="flex justify-start text-[11px] shrink-0 font-medium px-2" onClick={(e) => e.stopPropagation()}>
-        <ReminderDropdown 
-          dueDate={task.dueDate}
-          currentReminder={task.reminderDate}
-          onReminderChange={(date) => {
-            onUpdateTask(task._id, { reminderDate: date });
-          }}
+      {/* 3. Status Pill */}
+      <div className={cn("flex items-center justify-start shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
+        <TaskStatusDropdown 
+          currentStatus={task.status as TaskStatus}
+          onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
         >
           <button className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors hover:bg-white/[0.04] focus:outline-none whitespace-nowrap",
-            task.reminderDate ? "text-white/70" : "text-white/20"
+            "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
+            isDone 
+              ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25" 
+              : task.status === 'in_progress'
+                ? "bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
+                : task.status === 'review'
+                  ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                  : task.status === 'blocked'
+                    ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
+                    : "bg-white/[0.05] text-white/40 hover:bg-white/10"
           )}>
-            {task.reminderDate && reminderDisplay ? (
-              <span>{reminderDisplay.text}</span>
-            ) : (
-              <Bell className="w-3.5 h-3.5 shrink-0 opacity-40" />
-            )}
+            {isDone ? 'COMPLETE' : task.status === 'in_progress' ? 'IN PROGRESS' : task.status === 'review' ? 'REVIEW' : task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
           </button>
-        </ReminderDropdown>
+        </TaskStatusDropdown>
       </div>
 
-      {/* 7. Priority */}
-      <div className={cn("flex items-center justify-start shrink-0 px-2", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
+      {/* 6. Priority */}
+      <div className={cn("flex items-center justify-start shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <PriorityDropdown 
            currentPriority={task.priority}
            onPriorityChange={(priority) => onUpdateTask(task._id, { priority })}
         >
-          <button className="p-1 rounded hover:bg-white/[0.04] transition-colors focus:outline-none">
-            <Flag className={cn("w-[14px] h-[14px]", priorityConfig.color, priorityConfig.fill)} />
+          <button className={cn(
+             "p-1 rounded hover:bg-white/[0.04] transition-colors focus:outline-none",
+             "font-medium uppercase tracking-wider text-[9px]", 
+             priorityConfig.color
+          )}>
+            {task.priority || 'Normal'}
           </button>
         </PriorityDropdown>
       </div>

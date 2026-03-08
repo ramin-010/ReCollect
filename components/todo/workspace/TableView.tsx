@@ -1,7 +1,8 @@
 import React from 'react';
-import { CheckCircle2, Circle, Flag, Calendar, AlignLeft, Paperclip, Bell, Plus, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CheckCircle2, Circle, Flag, Calendar, AlignLeft, Paperclip, Bell, Plus, MoreHorizontal, UserPlus } from 'lucide-react';
+import { cn, getInitials } from '@/lib/utils';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import { getPriorityTextConfig } from './utils';
 
 import { TaskStatusDropdown } from './TaskStatusDropdown';
 import { AssigneeDropdown } from './modals/AssigneeDropdown';
@@ -110,9 +111,9 @@ export function TableView({
                         <AssigneeDropdown 
                           currentAssignees={task.assignees || []}
                           workspaceMembers={workspaceMembers}
-                          onAssign={(email, name, avatar) => {
+                          onAssign={(email, name, avatar, _id) => {
                             const current = task.assignees || [];
-                            onUpdateTask(task._id, { assignees: [...current, { email, name, avatar }] });
+                            onUpdateTask(task._id, { assignees: [...current, { _id, email, name, avatar }] });
                           }}
                           onUnassign={(email) => {
                             const current = task.assignees || [];
@@ -126,33 +127,21 @@ export function TableView({
                                   {assignee.avatar ? (
                                     <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" />
                                   ) : (
-                                    assignee.name?.[0]?.toUpperCase() || '?'
+                                    getInitials(assignee.name)
                                   )}
                                 </div>
                                 <span className="text-[11px] truncate">{assignee.name || assignee.email}</span>
                               </div>
                             ) : (
-                              <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px]">Set assignee</span>
+                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-5 h-5 rounded-full border border-dashed border-white/10 flex items-center justify-center">
+                                  <UserPlus className="w-3 h-3 text-white/20" />
+                                </div>
+                                <span className="text-[11px] text-white/20">Set assignee</span>
+                              </div>
                             )}
                           </div>
                         </AssigneeDropdown>
-                    </div>
-                  </Cell>
-
-                  {/* Status */}
-                  <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className={cn("w-full h-full flex items-center", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
-                         <TaskStatusDropdown
-                            currentStatus={task.status}
-                            onStatusChange={(status) => onStatusChange(task._id, status)}
-                          >
-                            <button className="w-full h-full flex items-center px-3 cursor-pointer text-left text-[11px] text-white/70">
-                               {task.status === 'complete' ? 'Complete' :
-                                task.status === 'in_progress' ? 'In Progress' :
-                                task.status === 'review' ? 'Review' :
-                                task.status === 'blocked' ? 'Blocked' : 'To Do'}
-                            </button>
-                          </TaskStatusDropdown>
                     </div>
                   </Cell>
 
@@ -176,6 +165,23 @@ export function TableView({
                      </div>
                   </Cell>
 
+                  {/* Status */}
+                  <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
+                    <div className={cn("w-full h-full flex items-center", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
+                         <TaskStatusDropdown
+                            currentStatus={task.status}
+                            onStatusChange={(status) => onStatusChange(task._id, status)}
+                          >
+                            <button className="w-full h-full flex items-center px-3 cursor-pointer text-left text-[11px] text-white/70">
+                               {task.status === 'complete' ? 'Complete' :
+                                task.status === 'in_progress' ? 'In Progress' :
+                                task.status === 'review' ? 'Review' :
+                                task.status === 'blocked' ? 'Blocked' : 'To Do'}
+                            </button>
+                          </TaskStatusDropdown>
+                    </div>
+                  </Cell>
+
                   {/* Priority */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
                      <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
@@ -185,12 +191,12 @@ export function TableView({
                         >
                           <div className="w-full h-full flex items-center px-3 cursor-pointer">
                               {task.priority ? (
-                                <Flag className={cn("w-3.5 h-3.5", 
-                                  task.priority === 'high' ? "text-rose-400 fill-rose-500/20" :
-                                  task.priority === 'medium' ? "text-amber-400 fill-amber-500/20" :
-                                  task.priority === 'low' ? "text-blue-400 fill-blue-500/20" :
-                                  "text-white/10"
-                                )} />
+                                <span className={cn(
+                                   "font-medium uppercase tracking-wider text-[9px]",
+                                   getPriorityTextConfig(task.priority)
+                                )}>
+                                    {task.priority}
+                                </span>
                               ) : (
                                 <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px]"><Flag className="w-3.5 h-3.5" /></span>
                               )}
