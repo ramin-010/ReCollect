@@ -46,7 +46,7 @@ export function CalendarView({ filteredTasks, onClick }: CalendarViewProps) {
   const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="flex flex-col h-full bg-[#1a1a1a] rounded-xl border border-white/[0.06] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#1A1A1A] rounded-xl border border-white/[0.05] shadow-2xl overflow-hidden relative">
       {/* Calendar Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-white/[0.01]">
         <div className="flex items-center gap-4">

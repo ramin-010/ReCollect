@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, ListTodo, Plus, LayoutList, Table, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskRow } from './TaskRow';
@@ -91,9 +92,9 @@ export function TasksTab({
   ];
 
   return (
-    <div>
+    <div className="w-full">
       {/* Filter Bar — left-aligned with count badges, Add Task on right */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="max-w-[1000px] mx-auto px-6 md:px-8 w-full flex items-center justify-between mb-4">
         <div className="flex items-center gap-1">
           {TASK_FILTERS.map(f => (
             <button
@@ -150,11 +151,19 @@ export function TasksTab({
         </div>
       ) : (
         <div className="flex flex-col">
-          {/* Views Area */}
-          {currentView === 'list' && (
-            <>
+          {/* Views Area — animated transitions */}
+          <AnimatePresence mode="wait">
+            {currentView === 'list' && (
+              <motion.div
+                key="list-view"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="max-w-[1000px] mx-auto px-4 md:px-4 w-full"
+              >
               {/* Table Header (List View Only) */}
-              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2  text-[12px] font-medium text-white/50 items-center select-none">
+              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_50px] gap-4 px-4 py-2  text-[12px] font-medium text-white/50 items-center select-none">
                 <div className="flex justify-center"></div>
                 <div className="flex items-center">Tasks</div>
                 <div className="flex items-center">Assignee</div>
@@ -164,7 +173,7 @@ export function TasksTab({
               </div>
               
               {/* List Body */}
-              <div className="flex flex-col">
+              <div className="flex flex-col ">
                 {filteredTasks.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-3">
@@ -198,37 +207,54 @@ export function TasksTab({
                   ))
                 )}
               </div>
-            </>
-          )}
+              </motion.div>
+            )}
 
-          {currentView === 'table' && (
-            <TableView 
-              filteredTasks={filteredTasks}
-              workspaceMembers={workspaceMembers}
-              onStatusChange={handleStatusChange}
-              onUpdateTask={handleUpdateTask}
-              onClick={handleTaskClick}
-              taskFilter={taskFilter}
-              isViewer={isViewer}
-              selectedTasks={selectedTasks}
-              onToggleSelect={(id) => setSelectedTasks(prev => {
-                const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              })}
-            />
-          )}
+            {currentView === 'table' && (
+              <motion.div
+                key="table-view"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="px-6 md:px-8 w-[1200px] mx-auto"
+              >
+              <TableView 
+                filteredTasks={filteredTasks}
+                workspaceMembers={workspaceMembers}
+                onStatusChange={handleStatusChange}
+                onUpdateTask={handleUpdateTask}
+                onClick={handleTaskClick}
+                taskFilter={taskFilter}
+                isViewer={isViewer}
+                selectedTasks={selectedTasks}
+                onToggleSelect={(id) => setSelectedTasks(prev => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })}
+              />
+              </motion.div>
+            )}
 
-          {currentView === 'calendar' && (
-            <div className="h-[600px]">
+            {currentView === 'calendar' && (
+              <motion.div
+                key="calendar-view"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="px-6 md:px-8 w-[1200px] mx-auto h-[600px]"
+              >
               <CalendarView 
                 filteredTasks={filteredTasks}
                 onClick={handleTaskClick}
                 onUpdateTask={handleUpdateTask}
               />
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

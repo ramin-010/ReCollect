@@ -77,7 +77,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
     <div 
       onClick={() => onClick(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_50px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
         isSelected 
           ? "bg-indigo-500/[0.08] border-indigo-500/10" 
           : "bg-transparent border-white/10 hover:bg-white/[0.02]",

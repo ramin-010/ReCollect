@@ -120,9 +120,14 @@ export function WorkspaceHeader({
         
         {/* TOP ROW: Action Bar (Avatars, Invite, Settings) */}
         <div className="flex items-center justify-end w-full pt-4">
-          <div className="flex items-center gap-2">
+          <motion.div 
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.3 }}
+            className="flex items-center gap-2"
+          >
             {/* Member Avatar Strip */}
-            <div className="flex items-center group mr-4">
+            <div className="flex items-center mr-1">
               {selectedWorkspace?.members?.slice(0, 4).map((member: any, index: number) => {
                 const mUser = member.user || member;
                 const zIndex = 10 - index;
@@ -130,14 +135,14 @@ export function WorkspaceHeader({
                   <div 
                     key={mUser._id || index}
                     className={cn(
-                      "w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border-2 border-[#1E1E1E] flex items-center justify-center text-[10px] font-bold shadow-sm transition-transform hover:-translate-y-1 hover:z-20 cursor-default",
-                      index > 0 && "-ml-2.5"
+                      "w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 border-2 border-[#1E1E1E] flex items-center justify-center text-[10px] font-bold shadow-sm transition-transform hover:-translate-y-0.5 cursor-default",
+                      index > 0 && "-ml-2"
                     )}
                     style={{ zIndex }}
                     title={mUser.name || mUser.email}
                   >
                     {mUser.avatar ? (
-                      <img src={mUser.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                      <img src={mUser.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                     ) : (
                       getInitials(mUser.name)
                     )}
@@ -146,9 +151,9 @@ export function WorkspaceHeader({
               })}
               {(selectedWorkspace?.members?.length || 0) > 4 && (
                 <div 
-                  className="w-7 h-7 rounded-full bg-white/10 text-white/50 border-2 border-[#1E1E1E] flex items-center justify-center text-[10px] font-bold shadow-sm -ml-2.5 transition-transform hover:-translate-y-1 hover:z-20 cursor-default" 
+                  className="w-7 h-7 rounded-full bg-white/10 text-white/50 border-2 border-[#1E1E1E] flex items-center justify-center text-[9px] font-bold shadow-sm -ml-2 cursor-default" 
                   style={{ zIndex: 0 }}
-                  title={`${selectedWorkspace!.members!.length - 4} more member${(selectedWorkspace!.members!.length - 4) !== 1 ? 's' : ''}`}
+                  title={`${selectedWorkspace!.members!.length - 4} more`}
                 >
                   +{selectedWorkspace!.members!.length - 4}
                 </div>
@@ -158,23 +163,23 @@ export function WorkspaceHeader({
             {isAdmin && (
               <button
                 onClick={() => { setShowSettingsModal(true); setIsInviting(true); }}
-                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold rounded-lg transition-colors border border-white/5"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/10 text-white/60 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-white/[0.06] hover:border-white/10"
               >
-                <UserPlus className="w-3.5 h-3.5" />
+                <UserPlus className="w-3 h-3" />
                 Invite
               </button>
             )}
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              className="p-1.5 text-white/30 hover:text-white/70 hover:bg-white/[0.06] rounded-lg transition-all"
               title="Workspace Settings"
             >
-              <Settings className="w-[18px] h-[18px]" />
+              <Settings className="w-4 h-4" />
             </button>
-          </div>
+          </motion.div>
         </div>
 
-        {/* BOTTOM ROW: Identity and Stats */}
+        {/* BOTTOM ROW: Identity */}
         <div className="flex items-end justify-between w-full">
           {/* LEFT: Identity (Elegant Serif + Selectors) */}
           <div className="flex flex-col justify-end space-y-1 mb-2">
@@ -351,40 +356,8 @@ export function WorkspaceHeader({
             </motion.p>
         </div>
 
-        {/* RIGHT: Floating Stats (Minimal) */}
-        {stats && (
-            <div className="flex flex-col items-end justify-end mb-2 z-10">
-                 <motion.div 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex items-center gap-5"
-                >
-                    <div className="flex flex-col items-end">
-                        <span className="text-3xl font-bold tabular-nums text-white tracking-tighter drop-shadow-md">{Math.round(progress)}%</span>
-                        <span className="text-[9px] uppercase tracking-[0.2em] text-indigo-400 font-bold opacity-80">Completion</span>
-                    </div>
-                    <div className="relative w-14 h-14">
-                        <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/10" />
-                        <motion.circle 
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: progress / 100 }}
-                            transition={{ duration: 1.5, ease: "easeOut" }}
-                            cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
-                            strokeLinecap="round"
-                            className="text-indigo-500 drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
-                            strokeDasharray="1"
-                            pathLength="1"
-                        />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-indigo-400 fill-indigo-400/10" />
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-        )}
+        {/* RIGHT: Clean spacer */}
+        <div />
         </div>
       </div>
     </div>

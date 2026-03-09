@@ -451,10 +451,12 @@ export function WorkspaceView() {
         setIsInviting={setIsInviting}
       />
 
-      <div className="max-w-[1200px] mx-auto px-6 md:px-8 mt-6">
+      {/* ── Main Content Area (Unconstrained width) ── */}
+      <div className="w-full mt-6">
 
-        {/* ── Settings Modal ── */}
-        <div className='max-w-[1000px] mx-auto'>
+        {/* ── Constrained Inner Wrapper for Modals & Input ── */}
+        <div className="max-w-[1000px] mx-auto px-6 md:px-8">
+          {/* ── Settings Modal ── */}
         <WorkspaceSettingsModal 
            isOpen={showSettingsModal} 
            onClose={() => setShowSettingsModal(false)} 
@@ -549,43 +551,53 @@ export function WorkspaceView() {
           </div>
         )}
 
-        {/* ── Tab Content ── */}
+        </div> {/* End Constrained Wrapper */}
+
+        {/* ── Tab Content (May have local constraints) ── */}
         <AnimatePresence mode="wait">
           <motion.div
             key={`${selectedWorkspace?._id}-${activeTab}`}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ 
+              duration: 0.35, 
+              ease: [0.22, 1, 0.36, 1],
+              opacity: { duration: 0.25 }
+            }}
+            className="w-full"
           >
 
             {/* ═══════════════════════════════════════════════ */}
             {/* ─── OVERVIEW TAB ─── */}
             {/* ═══════════════════════════════════════════════ */}
             {activeTab === 'overview' && selectedWorkspace && (
-              <OverviewTab
-                selectedWorkspace={selectedWorkspace}
-                workspaceMembers={workspaceMembers}
-                overdueTasks={overdueTasks}
-                dueTodayTasks={dueTodayTasks}
-                unassignedTasks={unassignedTasks}
-                needsAttentionTasks={needsAttentionTasks}
-                recentlyUpdatedTasks={recentlyUpdatedTasks}
-                activity={activity}
-                isDataLoading={isDataLoading}
-                overviewInputExpanded={overviewInputExpanded}
-                setOverviewInputExpanded={setOverviewInputExpanded}
-                handleTaskSaved={handleTaskSaved}
-                activeSpaceId={activeSpaceId}
-                isViewer={isViewer}
-              />
+              <div className="max-w-[1000px] mx-auto px-6 md:px-8">
+                <OverviewTab
+                  selectedWorkspace={selectedWorkspace}
+                  workspaceMembers={workspaceMembers}
+                  overdueTasks={overdueTasks}
+                  dueTodayTasks={dueTodayTasks}
+                  unassignedTasks={unassignedTasks}
+                  needsAttentionTasks={needsAttentionTasks}
+                  recentlyUpdatedTasks={recentlyUpdatedTasks}
+                  activity={activity}
+                  isDataLoading={isDataLoading}
+                  overviewInputExpanded={overviewInputExpanded}
+                  setOverviewInputExpanded={setOverviewInputExpanded}
+                  handleTaskSaved={handleTaskSaved}
+                  activeSpaceId={activeSpaceId}
+                  isViewer={isViewer}
+                />
+              </div>
             )}
 
             {/* ═══════════════════════════════════════════════ */}
             {/* ─── TASKS TAB ─── */}
             {/* ═══════════════════════════════════════════════ */}
             {activeTab === 'tasks' && selectedWorkspace && (
-              <TasksTab
+              <div className="w-full">
+                <TasksTab
                 selectedWorkspace={selectedWorkspace}
                 workspaceMembers={workspaceMembers}
                 allTasks={tasks}
@@ -603,11 +615,11 @@ export function WorkspaceView() {
                 activeSpaceId={activeSpaceId}
                 isViewer={isViewer}
               />
+              </div>
             )}
 
           </motion.div>
         </AnimatePresence>
-        </div>
       </div>
     </div>
   );

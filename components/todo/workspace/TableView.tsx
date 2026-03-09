@@ -151,18 +151,23 @@ export function TableView({
 
   // The CSS property linking to our custom variables
   const gridStyle = { 
-    gridTemplateColumns: 'var(--col-index, 40px) var(--col-check, 35px) minmax(var(--col-name, 300px), 1fr) var(--col-assignee, 140px) var(--col-status, 140px) var(--col-dueDate, 140px) var(--col-priority, 120px)' 
+    // Ordered to exactly match the DOM layout. Name expands, rest strictly bounds to right.
+    gridTemplateColumns: 'var(--col-index, 40px) var(--col-check, 35px) minmax(var(--col-name, 300px), 1fr) var(--col-assignee, 140px) var(--col-dueDate, 140px) var(--col-status, 140px) var(--col-priority, 120px)' 
   };
 
   return (
-    <div className="w-full overflow-x-auto bg-[#1E1E1E] rounded-none" ref={tableRef}>
-      <div className="min-w-[900px]">
-        {/* Table Header */}
-        <div 
-           className="table-header grid border-b border-white/10 text-xs font-semibold text-white/50 bg-[#252525]/50 sticky top-0 z-10 w-full hover:bg-white/[0.02]"
-           style={gridStyle}
-        >
-          <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-2">#</Cell>
+    <div className="py-2 w-full">
+      <div 
+        className="w-full overflow-x-auto bg-[#1A1A1A] rounded-xl border border-white/[0.05] shadow-2xl relative"
+        ref={tableRef}
+      >
+        <div className="min-w-[900px]">
+          {/* Table Header */}
+          <div 
+             className="table-header grid border-b border-white/[0.06] text-[11px] font-medium text-white/50 bg-gradient-to-r from-transparent via-white/[0.015] to-transparent sticky top-0 z-10 w-full hover:bg-white/[0.02]"
+             style={gridStyle}
+          >
+            <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-4">#</Cell>
           <Cell borderRight={false} className="justify-center px-1">
             <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />
           </Cell>
@@ -174,9 +179,9 @@ export function TableView({
         </div>
 
         {/* Table Body */}
-        <div className="flex flex-col flex-1 w-full bg-[#1E1E1E]">
+        <div className="flex flex-col flex-1 w-full bg-transparent">
           {filteredTasks.length === 0 ? (
-            <div className="text-center py-12 border-b border-white/10">
+            <div className="text-center py-12 border-b border-white/[0.04]">
                <p className="text-sm text-white/35">No tasks available in table view.</p>
             </div>
           ) : (
@@ -192,19 +197,19 @@ export function TableView({
                   key={task._id}
                   onClick={() => onClick(task)}
                   className={cn(
-                    "table-row group grid border-b border-white/10 hover:bg-white/[0.03] transition-all cursor-pointer w-full bg-[#1e1e1e]",
-                    isSelected && "bg-indigo-500/[0.08] hover:bg-indigo-500/[0.12]",
+                    "table-row group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors cursor-pointer w-full bg-transparent last:border-b-0",
+                    isSelected && "bg-indigo-500/[0.06] hover:bg-indigo-500/[0.10]",
                     isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.99]"
                   )}
                   style={gridStyle}
                 >
                   {/* # Column / Hover Select */}
-                  <Cell borderRight={false} className="relative justify-center text-[10px] text-white/20 pl-2 select-none group-hover:text-white/40">
+                  <Cell borderRight={false} className="relative justify-center text-[10px] text-white/20 pl-4 select-none group-hover:text-white/40">
                      <div className={cn(
                           "absolute inset-0 flex items-center justify-center transition-opacity z-10",
                           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         )}
-                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : '#232323' }}>
+                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.06)' : '#1D1D1D' }}>
                         {/* We set hover background to a solid #232323 (slightly lighter than row base #1e1e1e) to fully hide the number behind it */}
                         <button 
                           onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
@@ -417,6 +422,7 @@ export function TableView({
               );
             })
           )}
+        </div>
         </div>
       </div>
     </div>

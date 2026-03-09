@@ -213,10 +213,13 @@
 
   html {
     scroll-behavior: smooth;
-    scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shift */
+    scrollbar-width: thin; /* Firefox: thin scrollbar */
+    scrollbar-color: hsl(0 0% 40% / 0.3) transparent; /* Firefox */
   }
 
   body {
+    width: 100vw; /* Always full viewport — immune to scrollbar width changes */
+    overflow-x: hidden; /* Clip the tiny overhang from 100vw vs 100% */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings:
@@ -233,8 +236,8 @@
 
 /* Fix browser autofill styling for dark mode */
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
   -webkit-text-fill-color: hsl(var(--foreground)) !important;
@@ -331,7 +334,27 @@ input:-webkit-autofill:active {
   content: none;
 }
 
-/* Custom Scrollbar - Minimal & Pretty */
+/* Custom Scrollbar - Overlay style, floats on top */
+html::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 50% / 0.2);
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 50% / 0.4);
+}
+
+/* Inner scrollbars (panels, modals etc) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -344,7 +367,7 @@ input:-webkit-autofill:active {
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 10px;
-  border: 1px solid transparent; /* Creates padding around thumb */
+  border: 1px solid transparent;
   background-clip: content-box;
 }
 
