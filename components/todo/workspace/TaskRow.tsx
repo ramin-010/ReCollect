@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, Flag, Calendar, AlignLeft, Paperclip, Bell, Square, CheckSquare, GripVertical, Check, UserPlus } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { parseISO, differenceInSeconds, differenceInHours, isToday, isTomorrow, format } from 'date-fns';
@@ -65,9 +65,9 @@ function getPriorityConfig(priority: string) {
 }
 
 export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateTask, onClick, isViewer, isSelected, onToggleSelect }: TaskRowProps) {
-  const isDone = task.status === 'complete';
+  const [isCompleting, setIsCompleting] = useState(false);
+  const isDone = task.status === 'complete' || isCompleting;
   const assignee = task.assignees && task.assignees.length > 0 ? task.assignees[0] : null;
-  console.log("assignee", assignee)
   const priorityConfig = getPriorityConfig(task.priority || 'low');
 
   const dueDateDisplay = task.dueDate ? formatSmartDate(task.dueDate, true) : null;
@@ -77,10 +77,11 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
     <div 
       onClick={() => onClick(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-colors cursor-pointer",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_90px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
         isSelected 
           ? "bg-indigo-500/[0.08] border-indigo-500/10" 
-          : "bg-transparent border-white/10 hover:bg-white/[0.02]"
+          : "bg-transparent border-white/10 hover:bg-white/[0.02]",
+        isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
       )}
     >
       {/* Hover Select Checkbox — absolutely positioned, doesn't shift layout */}
@@ -107,8 +108,17 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
       {/* 1. Status Toggle */}
       <div className={cn("flex items-center justify-center shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <TaskStatusDropdown 
-          currentStatus={task.status as TaskStatus}
-          onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
+          currentStatus={(isCompleting ? 'complete' : task.status) as TaskStatus}
+          onStatusChange={(newStatus) => {
+            if (newStatus === 'complete' && task.status !== 'complete') {
+              setIsCompleting(true);
+              setTimeout(() => {
+                onStatusChange(task._id, newStatus);
+              }, 2000); // 1s wait, 1s fade
+            } else {
+              onStatusChange(task._id, newStatus);
+            }
+          }}
         >
           <button 
             className="flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity focus:outline-none"
@@ -216,8 +226,17 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
       {/* 3. Status Pill */}
       <div className={cn("flex items-center justify-start shrink-0", isViewer && "pointer-events-none")} onClick={(e) => e.stopPropagation()}>
         <TaskStatusDropdown 
-          currentStatus={task.status as TaskStatus}
-          onStatusChange={(newStatus) => onStatusChange(task._id, newStatus)}
+          currentStatus={(isCompleting ? 'complete' : task.status) as TaskStatus}
+          onStatusChange={(newStatus) => {
+            if (newStatus === 'complete' && task.status !== 'complete') {
+              setIsCompleting(true);
+              setTimeout(() => {
+                onStatusChange(task._id, newStatus);
+              }, 2000);
+            } else {
+              onStatusChange(task._id, newStatus);
+            }
+          }}
         >
           <button className={cn(
             "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",

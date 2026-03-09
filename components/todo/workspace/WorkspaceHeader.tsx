@@ -113,12 +113,7 @@ export function WorkspaceHeader({
              {/* Noise Texture */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
 
-            {/* Giant Faded Workspaces Text */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none mix-blend-overlay opacity-5 z-0 select-none">
-               <span className="text-[clamp(80px,12vw,220px)] leading-none font-black tracking-tighter uppercase text-white whitespace-nowrap">
-                  WORKSPACE
-               </span>
-            </div>
+
         </div>
 
       <div className="relative z-10 w-full h-full max-w-[1200px] mx-auto px-6 md:px-8 flex flex-col justify-between pb-3">

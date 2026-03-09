@@ -210,6 +210,13 @@ export function TasksTab({
               onClick={handleTaskClick}
               taskFilter={taskFilter}
               isViewer={isViewer}
+              selectedTasks={selectedTasks}
+              onToggleSelect={(id) => setSelectedTasks(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })}
             />
           )}
 

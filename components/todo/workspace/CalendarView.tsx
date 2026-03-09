@@ -144,17 +144,22 @@ export function CalendarView({ filteredTasks, onClick }: CalendarViewProps) {
 
                             {/* Assignee mini avatar */}
                             {assignee && (
-                              assignee.avatar ? (
-                                <img 
-                                  src={assignee.avatar} 
-                                  alt="" 
-                                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0 ring-1 ring-black/20" 
-                                />
-                              ) : (
-                                <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/25 text-indigo-400 flex items-center justify-center text-[6px] font-bold shrink-0">
-                                  {getInitials(assignee.name)}
-                                </div>
-                              )
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {assignee.avatar ? (
+                                  <img 
+                                    src={assignee.avatar} 
+                                    alt="" 
+                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0 ring-1 ring-black/20" 
+                                  />
+                                ) : (
+                                  <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/25 text-indigo-400 flex items-center justify-center text-[6px] font-bold shrink-0">
+                                    {getInitials(assignee.name)}
+                                  </div>
+                                )}
+                                {task.assignees?.length > 1 && (
+                                  <span className="text-[8px] font-medium text-white/40 tracking-tighter shrink-0">+{task.assignees.length - 1}</span>
+                                )}
+                              </div>
                             )}
                           </button>
                         );

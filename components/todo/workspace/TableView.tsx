@@ -1,8 +1,31 @@
-import React from 'react';
-import { CheckCircle2, Circle, Flag, Calendar, AlignLeft, Paperclip, Bell, Plus, MoreHorizontal, UserPlus } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { CheckCircle2, Circle, Flag, AlignLeft, Plus, MoreHorizontal, UserPlus, Square, CheckSquare, Check, Calendar } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { parseISO, differenceInSeconds, differenceInHours, isTomorrow, format, subMinutes } from 'date-fns';
 import { getPriorityTextConfig } from './utils';
+
+/**
+ * Smart date formatting copied from TaskRow
+ */
+function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: string; isOverdue: boolean } {
+  const now = new Date();
+  const date = parseISO(dateStr);
+  const MathAbs = Math.abs; // for safe usage
+  const diffSecs = differenceInSeconds(date, now);
+
+  if (diffSecs < 0) {
+    const diffDays = Math.ceil(MathAbs(diffSecs) / 86400);
+    return { text: `Overdue by ${diffDays} day${diffDays > 1 ? 's' : ''}`, isOverdue: true };
+  }
+  const diffHrs = differenceInHours(date, now);
+  if (diffHrs < 24) {
+    if (diffSecs < 60) return { text: `${isDueDate ? 'Due in' : 'In'} ${diffSecs}s`, isOverdue: false };
+    if (diffSecs < 3600) return { text: `${isDueDate ? 'Due in' : 'In'} ${Math.floor(diffSecs / 60)}min`, isOverdue: false };
+    return { text: `${isDueDate ? 'Due in' : 'In'} ${diffHrs}hr`, isOverdue: false };
+  }
+  if (isTomorrow(date)) return { text: `${isDueDate ? 'Due tomorrow' : 'Tomorrow'}`, isOverdue: false };
+  return { text: format(date, 'dd/MM/yy'), isOverdue: false };
+}
 
 import { TaskStatusDropdown } from './TaskStatusDropdown';
 import { AssigneeDropdown } from './modals/AssigneeDropdown';
@@ -17,6 +40,8 @@ interface TableViewProps {
   onClick: (task: any) => void;
   taskFilter: string;
   isViewer?: boolean;
+  selectedTasks: Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
 export function TableView({
@@ -26,38 +51,126 @@ export function TableView({
   onUpdateTask,
   onClick,
   taskFilter,
-  isViewer
+  isViewer,
+  selectedTasks,
+  onToggleSelect
 }: TableViewProps) {
+  const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(new Set());
+
+  // Use refs for 60fps resizing without React re-renders
+  const colWidths = useRef({
+    index: 40,
+    check: 35,
+    name: 300,        
+    assignee: 140,
+    dueDate: 140,
+    status: 140,
+    priority: 120
+  });
+
+  const resizingCol = useRef<keyof typeof colWidths.current | null>(null);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // Apply CSS variables to the container for 60fps resizing without React re-renders wiping it out
+  const applyColWidths = (widths: typeof colWidths.current) => {
+    if (!tableRef.current) return;
+    Object.entries(widths).forEach(([key, val]) => {
+      if (tableRef.current) {
+        tableRef.current.style.setProperty(`--col-${key}`, `${val}px`);
+      }
+    });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, colKey: keyof typeof colWidths.current) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingCol.current = colKey;
+    startX.current = e.clientX;
+    startWidth.current = colWidths.current[colKey];
+    document.body.style.cursor = 'col-resize';
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingCol.current) return;
+    const dx = e.clientX - startX.current;
+    let newWidth = Math.max(50, startWidth.current + dx); 
+    
+    // special rule for the smallest columns
+    if (resizingCol.current === 'index' || resizingCol.current === 'check') {
+      newWidth = Math.max(30, startWidth.current + dx);
+    }
+
+    colWidths.current[resizingCol.current] = newWidth;
+    
+    // Apply DOM updates instantly via CSS variables
+    requestAnimationFrame(() => applyColWidths(colWidths.current));
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    resizingCol.current = null;
+    document.body.style.cursor = '';
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
+  // Apply initial inline styles once mounted
+  useEffect(() => {
+    applyColWidths(colWidths.current);
+  }, []); // Only on mount, CSS vars stay on the DOM element
 
   // A helper component to render grid cells with vertical borders
-  const Cell = ({ children, className, borderRight = true, onClick }: any) => (
+  const Cell = ({ children, className, borderRight = true, onClick, onMouseDownResizer, onMouseUpResizer }: any) => (
     <div 
       onClick={onClick}
       className={cn(
-        "flex items-center px-3 py-2 text-sm text-white/80 h-full",
+        "relative flex items-center px-3 py-2 text-sm text-white/80 h-full",
         borderRight && "border-r border-white-[0.05] border-white/10",
         className
       )}
     >
       {children}
+      {onMouseDownResizer && (
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-20 shrink-0"
+          onMouseDown={onMouseDownResizer}
+          onMouseUp={onMouseUpResizer}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
     </div>
   );
 
+  // The CSS property linking to our custom variables
+  const gridStyle = { 
+    gridTemplateColumns: 'var(--col-index, 40px) var(--col-check, 35px) minmax(var(--col-name, 300px), 1fr) var(--col-assignee, 140px) var(--col-status, 140px) var(--col-dueDate, 140px) var(--col-priority, 120px)' 
+  };
+
   return (
-    <div className="w-full overflow-x-auto bg-[#1E1E1E] rounded-none">
+    <div className="w-full overflow-x-auto bg-[#1E1E1E] rounded-none" ref={tableRef}>
       <div className="min-w-[900px]">
         {/* Table Header */}
-        <div className="grid grid-cols-[30px_35px_1fr_140px_140px_140px_120px_50px] border-b border-white/10 text-xs font-semibold text-white/50 bg-[#252525]/50 sticky top-0 z-10 w-full hover:bg-white/[0.02]">
+        <div 
+           className="table-header grid border-b border-white/10 text-xs font-semibold text-white/50 bg-[#252525]/50 sticky top-0 z-10 w-full hover:bg-white/[0.02]"
+           style={gridStyle}
+        >
           <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-2">#</Cell>
           <Cell borderRight={false} className="justify-center px-1">
             <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />
           </Cell>
-          <Cell className="border-l border-white/10 text-white/60">Name</Cell>
-          <Cell className="text-white/60">Assignee</Cell>
-          <Cell className="text-white/60">Status</Cell>
-          <Cell className="text-white/60">Due date</Cell>
-          <Cell className="text-white/60">Priority</Cell>
-          <Cell borderRight={false} className="justify-center"><Plus className="w-3.5 h-3.5" /></Cell>
+          <Cell className="border-l border-white/10 text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'name')}>Name</Cell>
+          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'assignee')}>Assignee</Cell>
+          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'dueDate')}>Due date</Cell>
+          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'status')}>Status</Cell>
+          <Cell borderRight={false} className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'priority')}>Priority</Cell>
         </div>
 
         {/* Table Body */}
@@ -69,30 +182,87 @@ export function TableView({
           ) : (
             filteredTasks.map((task, index) => {
               const assignee = task.assignees && task.assignees.length > 0 ? task.assignees[0] : null;
-              const isDone = task.status === 'complete';
+              const isCompleting = completingTaskIds.has(task._id);
+              const isDone = task.status === 'complete' || isCompleting;
+
+              const isSelected = selectedTasks.has(task._id);
 
               return (
                 <div 
                   key={task._id}
                   onClick={() => onClick(task)}
-                  className="group grid grid-cols-[30px_35px_1fr_140px_140px_140px_120px_50px] border-b border-white/10 hover:bg-white/[0.03] transition-colors cursor-pointer w-full bg-[#1e1e1e]"
+                  className={cn(
+                    "table-row group grid border-b border-white/10 hover:bg-white/[0.03] transition-all cursor-pointer w-full bg-[#1e1e1e]",
+                    isSelected && "bg-indigo-500/[0.08] hover:bg-indigo-500/[0.12]",
+                    isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.99]"
+                  )}
+                  style={gridStyle}
                 >
-                  {/* # Column */}
-                  <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-2 select-none group-hover:text-white/40">
-                    {index + 1}
+                  {/* # Column / Hover Select */}
+                  <Cell borderRight={false} className="relative justify-center text-[10px] text-white/20 pl-2 select-none group-hover:text-white/40">
+                     <div className={cn(
+                          "absolute inset-0 flex items-center justify-center transition-opacity z-10",
+                          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        )}
+                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : '#232323' }}>
+                        {/* We set hover background to a solid #232323 (slightly lighter than row base #1e1e1e) to fully hide the number behind it */}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
+                          className={cn(
+                             "w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors focus:outline-none",
+                             isSelected 
+                               ? "bg-indigo-500 border-indigo-500 text-white" 
+                               : "bg-transparent border-white/30 hover:border-white/60 text-transparent"
+                          )}
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                     </div>
+                     <span className={cn("transition-opacity", isSelected && "opacity-0")}>{index + 1}</span>
                   </Cell>
 
                   {/* Completion Toggle */}
                   <Cell borderRight={false} className={cn("justify-center px-1", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
-                    <button 
-                      onClick={() => onStatusChange(task._id, isDone ? 'pending' : 'complete')}
-                      className={cn(
-                        "w-[14px] h-[14px] rounded-[4px] border border-white/20 flex items-center justify-center transition-colors focus:outline-none hover:border-indigo-400/50 hover:bg-indigo-400/10",
-                        isDone && "bg-indigo-500 border-indigo-500 text-white hover:bg-indigo-600 hover:border-indigo-600"
-                      )}
+                    <TaskStatusDropdown 
+                      currentStatus={(isCompleting ? 'complete' : task.status) as any}
+                      onStatusChange={(newStatus) => {
+                        if (newStatus === 'complete' && task.status !== 'complete') {
+                          setCompletingTaskIds(prev => new Set(prev).add(task._id));
+                          setTimeout(() => {
+                            onStatusChange(task._id, newStatus);
+                            setCompletingTaskIds(prev => {
+                              const next = new Set(prev);
+                              next.delete(task._id);
+                              return next;
+                            });
+                          }, 2000);
+                        } else {
+                          onStatusChange(task._id, newStatus);
+                        }
+                      }}
                     >
-                      {isDone && <CheckCircle2 className="w-2.5 h-2.5" />}
-                    </button>
+                      <button 
+                        className="flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity focus:outline-none"
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-[18px] h-[18px] text-emerald-500 fill-emerald-500/20" />
+                        ) : task.status === 'in_progress' ? (
+                          <div className="w-[18px] h-[18px] rounded-full border-[2px] border-blue-500 flex items-center justify-center">
+                            <div className="w-[6px] h-[6px] rounded-full bg-blue-500" />
+                          </div>
+                        ) : task.status === 'review' ? (
+                          <div className="w-[18px] h-[18px] rounded-full border-[2px] border-amber-400 flex items-center justify-center">
+                            <div className="w-[6px] h-[6px] rounded-full bg-amber-400" />
+                          </div>
+                        ) : task.status === 'blocked' ? (
+                          <div className="w-[18px] h-[18px] rounded-full border-[2px] border-rose-500 flex items-center justify-center">
+                            <div className="w-[6px] h-[6px] rounded-full bg-rose-500" />
+                          </div>
+                        ) : (
+                          <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-white/40 group-hover:border-solid group-hover:border-white/60 transition-all flex items-center justify-center" />
+                        )}
+                      </button>
+                    </TaskStatusDropdown>
                   </Cell>
 
                   {/* Name */}
@@ -120,18 +290,23 @@ export function TableView({
                             onUpdateTask(task._id, { assignees: current.filter((a: any) => a.email !== email) });
                           }}
                         >
-                          <div className="w-full h-full flex items-center px-3 cursor-pointer">
+                          <button className="w-full h-full flex items-center gap-1.5 px-3 cursor-pointer focus:outline-none">
                             {assignee ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-[9px] font-bold">
-                                  {assignee.avatar ? (
-                                    <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" />
-                                  ) : (
-                                    getInitials(assignee.name)
-                                  )}
+                              <>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-[9px] font-bold shrink-0">
+                                    {assignee.avatar ? (
+                                      <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" />
+                                    ) : (
+                                      getInitials(assignee.name)
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] truncate">{assignee.name || assignee.email}</span>
                                 </div>
-                                <span className="text-[11px] truncate">{assignee.name || assignee.email}</span>
-                              </div>
+                                {task.assignees?.length > 1 && (
+                                  <div className="text-[10px] text-white/40 font-medium shrink-0">+{task.assignees.length - 1}</div>
+                                )}
+                              </>
                             ) : (
                               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <div className="w-5 h-5 rounded-full border border-dashed border-white/10 flex items-center justify-center">
@@ -140,7 +315,7 @@ export function TableView({
                                 <span className="text-[11px] text-white/20">Set assignee</span>
                               </div>
                             )}
-                          </div>
+                          </button>
                         </AssigneeDropdown>
                     </div>
                   </Cell>
@@ -150,40 +325,74 @@ export function TableView({
                      <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                          <DueDateDropdown 
                             currentDate={task.dueDate}
-                            onDateChange={(date) => onUpdateTask(task._id, { dueDate: date })}
+                            onDateChange={(date) => {
+                               const updates: any = { dueDate: date };
+                               if (date) {
+                                 updates.reminderDate = subMinutes(new Date(date), 10).toISOString();
+                               } else {
+                                 updates.reminderDate = undefined;
+                               }
+                               onUpdateTask(task._id, updates);
+                            }}
                           >
-                            <div className="w-full h-full flex items-center px-3 cursor-pointer">
+                            <button className={cn(
+                              "w-full h-full flex items-center px-3 cursor-pointer text-[11px] whitespace-nowrap focus:outline-none transition-colors",
+                              task.dueDate && formatSmartDate(task.dueDate).isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
+                            )}>
                               {task.dueDate ? (
-                                <span className="text-[11px] text-white/70">
-                                  {formatDistanceToNow(parseISO(task.dueDate), { addSuffix: true })}
-                                </span>
+                                <span>{formatSmartDate(task.dueDate).text}</span>
                               ) : (
-                                <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px]">Set date</span>
+                                <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px] flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 shrink-0 opacity-40" /> Set date</span>
                               )}
-                            </div>
+                            </button>
                           </DueDateDropdown>
                      </div>
                   </Cell>
 
                   {/* Status */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className={cn("w-full h-full flex items-center", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
+                    <div className={cn("w-full h-full flex items-center px-3", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                          <TaskStatusDropdown
-                            currentStatus={task.status}
-                            onStatusChange={(status) => onStatusChange(task._id, status)}
+                            currentStatus={(isCompleting ? 'complete' : task.status) as any}
+                            onStatusChange={(status) => {
+                              if (status === 'complete' && task.status !== 'complete') {
+                                setCompletingTaskIds(prev => new Set(prev).add(task._id));
+                                setTimeout(() => {
+                                  onStatusChange(task._id, status);
+                                  setCompletingTaskIds(prev => {
+                                    const next = new Set(prev);
+                                    next.delete(task._id);
+                                    return next;
+                                  });
+                                }, 2000);
+                              } else {
+                                onStatusChange(task._id, status);
+                              }
+                            }}
                           >
-                            <button className="w-full h-full flex items-center px-3 cursor-pointer text-left text-[11px] text-white/70">
-                               {task.status === 'complete' ? 'Complete' :
-                                task.status === 'in_progress' ? 'In Progress' :
-                                task.status === 'review' ? 'Review' :
-                                task.status === 'blocked' ? 'Blocked' : 'To Do'}
+                            <button className={cn(
+                              "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
+                              isDone 
+                                ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25" 
+                                : task.status === 'in_progress'
+                                  ? "bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
+                                  : task.status === 'review'
+                                    ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                                    : task.status === 'blocked'
+                                      ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
+                                      : "bg-white/[0.05] text-white/40 hover:bg-white/10"
+                            )}>
+                               {isDone ? 'COMPLETE' :
+                                task.status === 'in_progress' ? 'IN PROGRESS' :
+                                task.status === 'review' ? 'REVIEW' :
+                                task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
                             </button>
                           </TaskStatusDropdown>
                     </div>
                   </Cell>
 
                   {/* Priority */}
-                  <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
+                  <Cell borderRight={false} onClick={(e: any) => e.stopPropagation()} className="p-0">
                      <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
                         <PriorityDropdown 
                           currentPriority={task.priority}
@@ -203,13 +412,6 @@ export function TableView({
                           </div>
                         </PriorityDropdown>
                      </div>
-                  </Cell>
-
-                  {/* End/Options Placeholder */}
-                  <Cell borderRight={false} className="justify-center">
-                    <button className="opacity-0 group-hover:opacity-100 p-1 text-white/20 hover:text-white/50 hover:bg-white/5 transition-colors rounded">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
                   </Cell>
                 </div>
               );
