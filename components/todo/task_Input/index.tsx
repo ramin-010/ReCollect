@@ -35,6 +35,7 @@ import {
 import { SmartReminderModal } from '../SmartReminderModal';
 import { LabelsModal, getLabelColorConfig } from '../LabelsModal';
 import { InlineLabelDropdown } from '../InlineLabelDropdown';
+import { InlineAssigneeDropdown } from '../InlineAssigneeDropdown';
 import { 
   Popover, 
   PopoverContent, 
@@ -74,8 +75,10 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     isLabelsOpen, setIsLabelsOpen,
     isInlineLabelOpen, setIsInlineLabelOpen,
     tagSearchQuery,
+    isInlineAssigneeOpen, setIsInlineAssigneeOpen,
+    assigneeSearchQuery,
     currentReminder, setCurrentReminder,
-    selectedLabels,
+    selectedLabels, setSelectedLabels,
     isRecurring, setIsRecurring,
     recurringInterval, setRecurringInterval,
     recurringUnit, setRecurringUnit,
@@ -89,6 +92,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     inputRef,
     containerRef,
     inlineLabelRef,
+    inlineAssigneeRef,
     
     // Computed
     parsedResult,
@@ -99,6 +103,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     handleTitleChange,
     handleInlineSelectLabel,
     handleInlineCreateLabel,
+    handleInlineSelectAssignee,
     acceptSuggestion,
     clearConfirmedDate,
     handleSave,
@@ -107,6 +112,29 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility);
 
   useImperativeHandle(ref, () => inputRef.current!);
+
+  // Editor-only selection handlers (don't touch title text)
+  const handleEditorSelectAssignee = React.useCallback((user: any) => {
+    setAssignees((prev: any[]) => {
+      if (prev.some((a: any) => a.email === user.email || a._id === user._id)) return prev;
+      return [...prev, { name: user.name, email: user.email, avatar: user.avatar, _id: user._id }];
+    });
+  }, [setAssignees]);
+
+  const handleEditorSelectLabel = React.useCallback((label: any) => {
+    setSelectedLabels((prev: any[]) => {
+      if (prev.some((l: any) => l.name === label.name)) return prev;
+      return [...prev, { id: label.id || `tag-${label.name}`, name: label.name, color: label.color || 'blue' }];
+    });
+  }, [setSelectedLabels]);
+
+  const handleEditorMentionDelete = React.useCallback((name: string) => {
+    setAssignees((prev: any[]) => prev.filter((a: any) => a.name.toLowerCase() !== name.toLowerCase()));
+  }, [setAssignees]);
+
+  const handleEditorLabelDelete = React.useCallback((name: string) => {
+    setSelectedLabels((prev: any[]) => prev.filter((l: any) => l.name.toLowerCase() !== name.toLowerCase()));
+  }, [setSelectedLabels]);
 
   // Assignee picker state
   const [isAssigneeOpen, setIsAssigneeOpen] = React.useState(false);
@@ -188,6 +216,14 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               onSelectLabel={handleInlineSelectLabel}
               onCreateLabel={handleInlineCreateLabel}
               onClose={() => setIsInlineLabelOpen(false)}
+            />
+            <InlineAssigneeDropdown
+              ref={inlineAssigneeRef}
+              isOpen={isInlineAssigneeOpen}
+              searchQuery={assigneeSearchQuery}
+              onSelectAssignee={handleInlineSelectAssignee}
+              onClose={() => setIsInlineAssigneeOpen(false)}
+              workspaceMembers={workspaceMembers}
             />
           </div>
 
@@ -360,6 +396,11 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                   onChange={setDescription}
                   onImageClick={setPreviewImage}
                   placeholder="Add description..."
+                  workspaceMembers={workspaceMembers}
+                  onSelectAssignee={handleEditorSelectAssignee}
+                  onSelectLabel={handleEditorSelectLabel}
+                  onMentionDelete={handleEditorMentionDelete}
+                  onLabelDelete={handleEditorLabelDelete}
                 />
               </div>
 

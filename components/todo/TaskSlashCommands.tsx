@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperat
 import { Extension } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import Suggestion, { SuggestionOptions, SuggestionProps } from '@tiptap/suggestion';
+import { PluginKey } from '@tiptap/pm/state';
 import tippy, { Instance } from 'tippy.js';
 import {
   Type,
@@ -167,6 +168,7 @@ export const TaskSlashCommands = Extension.create({
     return [
       Suggestion({
         editor: this.editor,
+        pluginKey: new PluginKey('slashCommands'),
         ...this.options.suggestion,
         items: ({ query }: { query: string }) => {
           return getSuggestionItems().filter((item) =>

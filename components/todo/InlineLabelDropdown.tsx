@@ -211,7 +211,7 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
                 >
                   <div className="flex flex-col">
                       <span className="text-xs opacity-50">Create new tag</span>
-                      <span className="font-medium text-indigo-300">@{searchQuery.trim()}</span>
+                      <span className="font-medium text-indigo-300">#{searchQuery.trim()}</span>
                   </div>
                   {(highlightedIndex === displayOptions.length || !displayOptions.length) && (
                     <CornerDownLeft className="w-3 h-3 opacity-40" />

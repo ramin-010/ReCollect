@@ -8,6 +8,7 @@ import { subMinutes } from 'date-fns';
 import { TaskData, TaskInputProps } from './types';
 import { Label } from '../LabelsModal';
 import { InlineLabelDropdownHandle } from '../InlineLabelDropdown';
+import { InlineAssigneeDropdownHandle, Assignee } from '../InlineAssigneeDropdown';
 
 export const useTaskInput = (
   onSave: TaskInputProps['onSave'],
@@ -30,6 +31,8 @@ export const useTaskInput = (
   const [isLabelsOpen, setIsLabelsOpen] = useState(false);
   const [isInlineLabelOpen, setIsInlineLabelOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [isInlineAssigneeOpen, setIsInlineAssigneeOpen] = useState(false);
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState('');
   const [currentReminder, setCurrentReminder] = useState<Date | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [isRecurring, setIsRecurring] = useState(false);
@@ -49,6 +52,7 @@ export const useTaskInput = (
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
+  const inlineAssigneeRef = useRef<InlineAssigneeDropdownHandle>(null);
   const isMouseDownInsideRef = useRef(false);
   const isExpandedRef = useRef(isExpanded);
   const savingRef = useRef(false);
@@ -83,12 +87,17 @@ export const useTaskInput = (
     const value = e.target.value;
     setTitle(value);
 
-    const labelsInText = value.match(/@(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
+    const labelsInText = value.match(/#(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
     setSelectedLabels(prev => 
       prev.filter(label => labelsInText.includes(label.name.toLowerCase()))
     );
 
-    const match = value.match(/@(\w*)$/);
+    const assigneesInText = value.match(/@(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
+    setAssignees(prev =>
+      prev.filter(a => assigneesInText.some(t => a.name.toLowerCase().startsWith(t)))
+    );
+
+    const match = value.match(/#(\w*)$/);
     if (match) {
       const query = match[1]; 
       setTagSearchQuery(query);
@@ -97,20 +106,43 @@ export const useTaskInput = (
       setTagSearchQuery('');
       setIsInlineLabelOpen(false);
     }
+
+    const assigneeMatch = value.match(/@(\w*)$/);
+    if (assigneeMatch) {
+      const query = assigneeMatch[1];
+      setAssigneeSearchQuery(query);
+      setIsInlineAssigneeOpen(true);
+    } else {
+      setAssigneeSearchQuery('');
+      setIsInlineAssigneeOpen(false);
+    }
   };
 
   const handleInlineSelectLabel = (label: Label) => {
-    setTitle(prev => prev.replace(/@\w*$/, `@${label.name} `));
+    setTitle(prev => prev.replace(/#\w*$/, `#${label.name} `));
     setSelectedLabels(prev => [...prev, label]);
     setIsInlineLabelOpen(false);
     setTagSearchQuery('');
   };
 
   const handleInlineCreateLabel = (label: Label) => {
-    setTitle(prev => prev.replace(/@\w*$/, `@${label.name} `));
+    setTitle(prev => prev.replace(/#\w*$/, `#${label.name} `));
     setSelectedLabels(prev => [...prev, label]);
     setIsInlineLabelOpen(false);
     setTagSearchQuery('');
+  };
+
+  const handleInlineSelectAssignee = (user: Assignee) => {
+    setTitle(prev => prev.replace(/@\w*$/, `@${user.name} `));
+    
+    // Only add if not already assigned
+    setAssignees(prev => {
+      if (prev.some(a => a.email === user.email)) return prev;
+      return [...prev, { name: user.name, email: user.email, avatar: user.avatar }];
+    });
+    
+    setIsInlineAssigneeOpen(false);
+    setAssigneeSearchQuery('');
   };
 
   const acceptSuggestion = () => {
@@ -150,7 +182,7 @@ export const useTaskInput = (
       ? title.trim() 
       : (parsedResult?.cleanText || title.trim());
     
-    const taskTitle = rawTitle.replace(/@\w+\s?/g, '').trim();
+    const taskTitle = rawTitle.replace(/#\w+\s?/g, '').trim();
     
     // Extract subtasks from HTML and remove them from description
     let finalDescription = description.trim();
@@ -277,12 +309,18 @@ export const useTaskInput = (
     if (isInlineLabelOpen && inlineLabelRef.current?.handleKeyDown(e)) {
       return;
     }
+    if (isInlineAssigneeOpen && inlineAssigneeRef.current?.handleKeyDown(e)) {
+      return;
+    }
 
-    if (e.key === 'Backspace' && inputRef.current) {
+    // Only handle Backspace label deletion if we are actively focused on the title input
+    const isFocusedOnTitleInput = e.target === inputRef.current;
+    
+    if (e.key === 'Backspace' && isFocusedOnTitleInput && inputRef.current) {
       const cursorPos = inputRef.current.selectionStart || 0;
       const textBeforeCursor = title.slice(0, cursorPos);
       
-      const labelMatch = textBeforeCursor.match(/@(\w+)\s?$/);
+      const labelMatch = textBeforeCursor.match(/#(\w+)\s?$/);
       if (labelMatch) {
         const labelName = labelMatch[1];
         const fullMatch = labelMatch[0];
@@ -299,6 +337,36 @@ export const useTaskInput = (
             
             setSelectedLabels(prev => 
               prev.filter(label => label.name.toLowerCase() !== labelName.toLowerCase())
+            );
+            
+            setTimeout(() => {
+              if (inputRef.current) {
+                const newPos = cursorPos - fullMatch.length;
+                inputRef.current.setSelectionRange(newPos, newPos);
+              }
+            }, 0);
+            return;
+        }
+      }
+
+      // Handle assignee deletion with one backspace
+      const assigneeMatch = textBeforeCursor.match(/@(\w+)\s?$/);
+      if (assigneeMatch) {
+        const assigneeName = assigneeMatch[1];
+        const fullMatch = assigneeMatch[0];
+        
+        const isConfirmedAssignee = assignees.some(
+          a => a.name.toLowerCase().startsWith(assigneeName.toLowerCase())
+        );
+
+        if (isConfirmedAssignee) {
+            e.preventDefault();
+            
+            const newTitle = title.slice(0, cursorPos - fullMatch.length) + title.slice(cursorPos);
+            setTitle(newTitle);
+            
+            setAssignees(prev => 
+              prev.filter(a => !a.name.toLowerCase().startsWith(assigneeName.toLowerCase()))
             );
             
             setTimeout(() => {
@@ -391,6 +459,8 @@ export const useTaskInput = (
     isLabelsOpen, setIsLabelsOpen,
     isInlineLabelOpen, setIsInlineLabelOpen,
     tagSearchQuery, setTagSearchQuery,
+    isInlineAssigneeOpen, setIsInlineAssigneeOpen,
+    assigneeSearchQuery, setAssigneeSearchQuery,
     currentReminder, setCurrentReminder,
     selectedLabels, setSelectedLabels,
     isRecurring, setIsRecurring,
@@ -411,6 +481,7 @@ export const useTaskInput = (
     inputRef,
     containerRef,
     inlineLabelRef,
+    inlineAssigneeRef,
     
     // Computed
     parsedResult,
@@ -421,6 +492,7 @@ export const useTaskInput = (
     handleTitleChange,
     handleInlineSelectLabel,
     handleInlineCreateLabel,
+    handleInlineSelectAssignee,
     acceptSuggestion,
     clearConfirmedDate,
     handleSave,

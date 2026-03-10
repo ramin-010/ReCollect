@@ -14,6 +14,7 @@ import { TaskStatusDropdown, TaskStatus } from '../TaskStatusDropdown';
 import { TiptapTaskEditor } from '../../TiptapTaskEditor';
 import { LabelsModal, Label } from '../../LabelsModal';
 import { InlineLabelDropdown, InlineLabelDropdownHandle } from '../../InlineLabelDropdown';
+import { InlineAssigneeDropdown, InlineAssigneeDropdownHandle } from '../../InlineAssigneeDropdown';
 import { SmartReminderModal } from '../../SmartReminderModal';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 import {
@@ -21,6 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui-base/Popover';
+import { getHighlightedContent } from '../../task_Input/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,12 +74,15 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const [isSaving, setIsSaving] = useState(false);
   const [isInlineLabelOpen, setIsInlineLabelOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [isInlineAssigneeOpen, setIsInlineAssigneeOpen] = useState(false);
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isLabelsOpen, setIsLabelsOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
+  const inlineAssigneeRef = useRef<InlineAssigneeDropdownHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mark dirty on any change
@@ -142,7 +147,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
     }
 
     const updates: any = {
-      title: title.replace(/@\w+\s?/g, '').trim(),
+      title: title.replace(/#\w+\s?/g, '').trim(),
       description: finalDescription,
       status,
       priority: priority || undefined,
@@ -164,21 +169,64 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
     markDirty();
-    const match = e.target.value.match(/@(\w*)$/);
-    if (match) { setTagSearchQuery(match[1]); setIsInlineLabelOpen(true); }
+    const labelMatch = e.target.value.match(/#(\w*)$/);
+    if (labelMatch) { setTagSearchQuery(labelMatch[1]); setIsInlineLabelOpen(true); }
     else { setTagSearchQuery(''); setIsInlineLabelOpen(false); }
+    
+    const assigneeMatch = e.target.value.match(/@(\w*)$/);
+    if (assigneeMatch) { setAssigneeSearchQuery(assigneeMatch[1]); setIsInlineAssigneeOpen(true); }
+    else { setAssigneeSearchQuery(''); setIsInlineAssigneeOpen(false); }
   };
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (isInlineLabelOpen && inlineLabelRef.current?.handleKeyDown(e)) return;
+    if (isInlineAssigneeOpen && inlineAssigneeRef.current?.handleKeyDown(e)) return;
+    
+    // Handle atomic backspace deletion for tags and assignees
+    if (e.key === 'Backspace' && inputRef.current) {
+      const cursorPos = inputRef.current.selectionStart || 0;
+      const textBeforeCursor = title.slice(0, cursorPos);
+      
+      // Check labels
+      const labelMatch = textBeforeCursor.match(/#(\w+)\s?$/);
+      if (labelMatch && selectedLabels.some(l => l.name.toLowerCase() === labelMatch[1].toLowerCase())) {
+        e.preventDefault();
+        const fullMatch = labelMatch[0];
+        setTitle(title.slice(0, cursorPos - fullMatch.length) + title.slice(cursorPos));
+        setSelectedLabels(prev => prev.filter(l => l.name.toLowerCase() !== labelMatch[1].toLowerCase()));
+        markDirty();
+        setTimeout(() => { if (inputRef.current) inputRef.current.setSelectionRange(cursorPos - fullMatch.length, cursorPos - fullMatch.length); }, 0);
+        return;
+      }
+      
+      // Check assignees
+      const assigneeMatch = textBeforeCursor.match(/@(\w+)\s?$/);
+      if (assigneeMatch && assignees.some(a => a.name.toLowerCase().startsWith(assigneeMatch[1].toLowerCase()))) {
+        e.preventDefault();
+        const fullMatch = assigneeMatch[0];
+        setTitle(title.slice(0, cursorPos - fullMatch.length) + title.slice(cursorPos));
+        setAssignees(prev => prev.filter(a => !a.name.toLowerCase().startsWith(assigneeMatch[1].toLowerCase())));
+        markDirty();
+        setTimeout(() => { if (inputRef.current) inputRef.current.setSelectionRange(cursorPos - fullMatch.length, cursorPos - fullMatch.length); }, 0);
+        return;
+      }
+    }
+
     if (e.key === 'Escape') inputRef.current?.blur();
   };
+  const handleInlineSelectAssignee = (assignee: any) => {
+    setTitle((prev: string) => prev.replace(/@\w*$/, `@${assignee.name} `));
+    if (!assignees.some((a: any) => a._id === assignee._id)) {
+      setAssignees((prev: any[]) => [...prev, assignee]);
+    }
+    setIsInlineAssigneeOpen(false); setAssigneeSearchQuery(''); markDirty();
+  };
   const handleInlineSelectLabel = (label: Label) => {
-    setTitle((prev: string) => prev.replace(/@\w*$/, `@${label.name} `));
+    setTitle((prev: string) => prev.replace(/#\w*$/, `#${label.name} `));
     setSelectedLabels((prev: Label[]) => [...prev, label]);
     setIsInlineLabelOpen(false); setTagSearchQuery(''); markDirty();
   };
   const handleInlineCreateLabel = (label: Label) => {
-    setTitle((prev: string) => prev.replace(/@\w*$/, `@${label.name} `));
+    setTitle((prev: string) => prev.replace(/#\w*$/, `#${label.name} `));
     setSelectedLabels((prev: Label[]) => [...prev, label]);
     setIsInlineLabelOpen(false); setTagSearchQuery(''); markDirty();
   };
@@ -187,6 +235,31 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const addSubtask = () => { setSubtasks(prev => [...prev, { id: `st-${Date.now()}`, text: '', isCompleted: false }]); markDirty(); };
   const removeSubtask = (id: string) => { setSubtasks(prev => prev.filter(s => s.id !== id)); markDirty(); };
   const toggleSubtask = (id: string) => { setSubtasks(prev => prev.map(s => s.id === id ? { ...s, isCompleted: !s.isCompleted } : s)); markDirty(); };
+
+  // ── Editor-only selection handlers (don't touch title) ──
+  const handleEditorSelectAssignee = (user: any) => {
+    setAssignees((prev: any[]) => {
+      if (prev.some((a: any) => a.email === user.email || a._id === user._id)) return prev;
+      return [...prev, { name: user.name, email: user.email, avatar: user.avatar, _id: user._id }];
+    });
+    markDirty();
+  };
+  const handleEditorSelectLabel = (label: any) => {
+    setSelectedLabels((prev: any[]) => {
+      if (prev.some((l: any) => l.name === label.name)) return prev;
+      return [...prev, { id: label.id || `tag-${label.name}`, name: label.name, color: label.color || 'blue' }];
+    });
+    markDirty();
+  };
+
+  const handleEditorMentionDelete = (name: string) => {
+    setAssignees((prev: any[]) => prev.filter((a: any) => a.name.toLowerCase() !== name.toLowerCase()));
+    markDirty();
+  };
+  const handleEditorLabelDelete = (name: string) => {
+    setSelectedLabels((prev: any[]) => prev.filter((l: any) => l.name.toLowerCase() !== name.toLowerCase()));
+    markDirty();
+  };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -233,6 +306,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
               {/* Title */}
               <div className="relative mb-6">
+                {getHighlightedContent(title, null, null, selectedLabels, "absolute inset-0 text-[28px] font-bold pointer-events-none overflow-hidden whitespace-pre bg-transparent text-transparent")}
                 <input
                   ref={inputRef}
                   type="text"
@@ -252,6 +326,14 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                   onSelectLabel={handleInlineSelectLabel}
                   onCreateLabel={handleInlineCreateLabel}
                   onClose={() => setIsInlineLabelOpen(false)}
+                />
+                <InlineAssigneeDropdown
+                  ref={inlineAssigneeRef}
+                  isOpen={isInlineAssigneeOpen}
+                  searchQuery={assigneeSearchQuery}
+                  onSelectAssignee={handleInlineSelectAssignee}
+                  onClose={() => setIsInlineAssigneeOpen(false)}
+                  workspaceMembers={workspaceMembers}
                 />
               </div>
 
@@ -531,6 +613,11 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                     onChange={(val: string) => { setDescription(val); markDirty(); }}
                     onImageClick={setPreviewImage}
                     placeholder="Add description... Write or type / for command and AI action"
+                    workspaceMembers={workspaceMembers}
+                    onSelectAssignee={handleEditorSelectAssignee}
+                    onSelectLabel={handleEditorSelectLabel}
+                    onMentionDelete={handleEditorMentionDelete}
+                    onLabelDelete={handleEditorLabelDelete}
                   />
                 </div>
               </div>

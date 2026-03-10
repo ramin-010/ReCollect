@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Subtask } from '@/lib/store/todoStore';
-import { TaskDescriptionEditor } from './TaskDescriptionEditor';
+import { TiptapTaskEditor } from './TiptapTaskEditor';
 import { AssigneePicker } from './AssigneePicker';
 import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date-fns';
 import { useTodoStore } from '@/lib/store/todoStore';
@@ -139,7 +139,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       className="flex flex-col h-full"
     >
       {/* Minimal Top Bar */}
-      <div className="flex items-center justify-between pb-6 border-b border-white/5">
+      <div className="flex items-center justify-between pb-6 border-b border-white/5 ">
         <button 
           onClick={onBack}
           className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
@@ -188,7 +188,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       </div>
 
       {/* Main Content Area with Two Columns */}
-      <div className="flex-1 pt-8 flex gap-8">
+      <div className="flex-1 pt-8 flex gap-8 ">
         
         {/* LEFT: Main Content */}
         <div className="flex-1 min-w-0">
@@ -213,7 +213,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Description */}
           <div className="min-h-[200px] p-0">
-            <TaskDescriptionEditor 
+            <TiptapTaskEditor 
               content={description}
               onChange={setDescription}
               placeholder="Write a description..."

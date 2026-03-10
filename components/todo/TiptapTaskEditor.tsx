@@ -10,13 +10,21 @@ import { cn } from '@/lib/utils';
 import { TaskImageExtension } from './TaskImageExtension';
 import { TaskSlashCommands } from './TaskSlashCommands';
 import { TaskSubtaskExtension } from './TaskSubtaskExtension';
+import { createTaskMentionExtension } from './TaskMentionExtension';
+import { createTaskLabelExtension } from './TaskLabelExtension';
+import { createTaskHighlightExtension } from './TaskHighlightExtension';
 
 interface TiptapTaskEditorProps {
   content: string;
   onChange: (content: string) => void;
   onImageClick?: (src: string) => void;
-  placeholder?: string;
   autoFocus?: boolean;
+  workspaceMembers?: any[];
+  onSelectAssignee?: (user: any) => void;
+  onSelectLabel?: (label: any) => void;
+  onMentionDelete?: (name: string) => void;
+  onLabelDelete?: (name: string) => void;
+  placeholder?: string;
 }
 
 export function TiptapTaskEditor({
@@ -24,9 +32,28 @@ export function TiptapTaskEditor({
   onChange,
   onImageClick,
   placeholder = 'Add description... Write or type / for command and AI action',
-  autoFocus = false
+  autoFocus = false,
+  workspaceMembers = [],
+  onSelectAssignee,
+  onSelectLabel,
+  onMentionDelete,
+  onLabelDelete,
 }: TiptapTaskEditorProps) {
   const isInternalChange = useRef(false);
+
+  // ── Refs to hold the latest callback values ──
+  // useEditor creates extensions ONCE at mount. If we pass callbacks directly,
+  // they are captured at that moment and never update (stale closure).
+  // By storing them in refs, the extension reads the LATEST value at runtime.
+  const onSelectAssigneeRef = useRef(onSelectAssignee);
+  const onSelectLabelRef = useRef(onSelectLabel);
+  const onMentionDeleteRef = useRef(onMentionDelete);
+  const onLabelDeleteRef = useRef(onLabelDelete);
+
+  useEffect(() => { onSelectAssigneeRef.current = onSelectAssignee; }, [onSelectAssignee]);
+  useEffect(() => { onSelectLabelRef.current = onSelectLabel; }, [onSelectLabel]);
+  useEffect(() => { onMentionDeleteRef.current = onMentionDelete; }, [onMentionDelete]);
+  useEffect(() => { onLabelDeleteRef.current = onLabelDelete; }, [onLabelDelete]);
 
   const editor = useEditor({
     extensions: [
@@ -46,6 +73,17 @@ export function TiptapTaskEditor({
         emptyEditorClass: 'is-editor-empty',
       }),
       TaskImageExtension,
+      createTaskMentionExtension({
+        workspaceMembers,
+        onSelectAssignee: (user: any) => onSelectAssigneeRef.current?.(user),
+      }),
+      createTaskLabelExtension({
+        onSelectLabel: (label: any) => onSelectLabelRef.current?.(label),
+      }),
+      createTaskHighlightExtension({
+        onMentionDelete: (name: string) => onMentionDeleteRef.current?.(name),
+        onLabelDelete: (name: string) => onLabelDeleteRef.current?.(name),
+      }),
     ],
     content: content,
     autofocus: autoFocus,

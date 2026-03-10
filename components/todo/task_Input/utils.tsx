@@ -16,11 +16,12 @@ export const getHighlightedContent = (
   title: string,
   parsedResult: any,
   confirmedDueDate: Date | null,
-  selectedLabels: any[]
+  selectedLabels: any[],
+  className?: string
 ) => {
   if (!title) return null;
 
-  const highlightSegments: { text: string; type: 'date' | 'tag' }[] = [];
+  const highlightSegments: { text: string; type: 'date' | 'tag' | 'assignee' }[] = [];
 
   if (parsedResult?.matchedSegments?.length && !confirmedDueDate) {
     parsedResult.matchedSegments.forEach((segment: string) => {
@@ -28,10 +29,17 @@ export const getHighlightedContent = (
     });
   }
 
-  const tagMatches = title.match(/@\w+/g);
+  const tagMatches = title.match(/#\w+/g);
   if (tagMatches) {
     tagMatches.forEach((tag) => {
       highlightSegments.push({ text: tag, type: 'tag' });
+    });
+  }
+
+  const assigneeMatches = title.match(/@\w+/g);
+  if (assigneeMatches) {
+    assigneeMatches.forEach((assignee) => {
+      highlightSegments.push({ text: assignee, type: 'assignee' });
     });
   }
 
@@ -46,13 +54,15 @@ export const getHighlightedContent = (
 
   return (
     <div 
-      className="absolute inset-0 flex items-center font-medium pointer-events-none overflow-hidden whitespace-pre"
+      className={className || "absolute inset-0 flex items-center font-medium pointer-events-none overflow-hidden whitespace-pre"}
       aria-hidden="true"
     >
       {splitParts.map((part, i) => {
         const segment = highlightSegments.find(s => s.text.toLowerCase() === part.toLowerCase());
         if (segment?.type === 'tag') {
           return <span key={i} className="bg-blue-500/20 text-blue-300 rounded-sm">{part}</span>;
+        } else if (segment?.type === 'assignee') {
+          return <span key={i} className="bg-indigo-500/20 text-indigo-300 rounded-sm">{part}</span>;
         } else if (segment?.type === 'date') {
           return <span key={i} className="bg-indigo-500/20 text-white rounded-sm">{part}</span>;
         }

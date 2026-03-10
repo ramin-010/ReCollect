@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui-base/DropdownMenu';
 import { RichTaskItem } from './RichTaskItem';
-import { TaskDetailView } from './TaskDetailView';
+import { TaskDetailModal } from './workspace/modals/TaskDetailModal';
 import { AssignedView } from './AssignedView';
 
 // Inbox-type filters that use the standard task list layout
@@ -214,44 +214,14 @@ export function TodoView() {
         isInputExpanded ? "pt-27" : "mt-4"
       )}>
         
-        {/* VIEW SWITCHER: List vs Detail */}
-        <AnimatePresence mode="wait">
-            {selectedTask ? (
-                // DETAIL VIEW
-                <motion.div
-                    key="detail"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <TaskDetailView 
-                        task={selectedTask}
-                        onBack={() => setSelectedTask(null)}
-                        onUpdate={handleUpdateTask}
-                        onDelete={(id) => {
-                            handleDeleteTask(id);
-                            setSelectedTask(null);
-                        }}
-                    />
-                </motion.div>
-            ) : (
-                // LIST VIEW
-                <motion.div
-                    key="list"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                >
-                     {/* Unified Task Input */}
-                    <div className="max-w-[1000px] mx-auto mb-10">
-                        <TaskInput
-                        onSave={handleCreateTask}
-                        isExpanded={isInputExpanded}
-                        onExpandChange={setIsInputExpanded}
-                        />
-                    </div>
+        {/* Unified Task Input */}
+        <div className="max-w-[1000px] mx-auto mb-10">
+            <TaskInput
+                onSave={handleCreateTask}
+                isExpanded={isInputExpanded}
+                onExpandChange={setIsInputExpanded}
+            />
+        </div>
 
                     {/* Filters & Toggles */}
                     <div className="flex items-center gap-2 mt-4 mb-6 text-sm">
@@ -369,11 +339,16 @@ export function TodoView() {
                         )}
                         </AnimatePresence>
                     </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
 
       </div>
+
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdateTask={handleUpdateTask}
+        workspaceMembers={[]}
+      />
     </div>
   );
 }
