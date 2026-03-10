@@ -5,6 +5,7 @@ import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
 import { subMinutes } from 'date-fns';
+import getCaretCoordinates from 'textarea-caret';
 import { TaskData, TaskInputProps } from './types';
 import { Label } from '../LabelsModal';
 import { InlineLabelDropdownHandle } from '../InlineLabelDropdown';
@@ -47,10 +48,11 @@ export const useTaskInput = (
   const [isSaving, setIsSaving] = useState(false);
   const [assignees, setAssignees] = useState<{ name: string; email: string; avatar?: string }[]>([]);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [caretPosition, setCaretPosition] = useState<{ top: number; left: number; height: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
   const inlineAssigneeRef = useRef<InlineAssigneeDropdownHandle>(null);
@@ -84,7 +86,7 @@ export const useTaskInput = (
     setTagSearchQuery('');
   };
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
     setTitle(value);
 
@@ -97,25 +99,38 @@ export const useTaskInput = (
     setAssignees(prev =>
       prev.filter(a => assigneesInText.some(t => a.name.toLowerCase().startsWith(t)))
     );
-
     const match = value.match(/#(\w*)$/);
+    let isMenuOpen = false;
+
     if (match) {
       const query = match[1]; 
       setTagSearchQuery(query);
       setIsInlineLabelOpen(true);
+      isMenuOpen = true;
     } else {
       setTagSearchQuery('');
       setIsInlineLabelOpen(false);
     }
 
     const assigneeMatch = value.match(/@(\w*)$/);
-    if (assigneeMatch) {
+    if (assigneeMatch && !isMenuOpen) {
       const query = assigneeMatch[1];
       setAssigneeSearchQuery(query);
       setIsInlineAssigneeOpen(true);
+      isMenuOpen = true;
     } else {
       setAssigneeSearchQuery('');
       setIsInlineAssigneeOpen(false);
+    }
+
+    if (isMenuOpen && e.target) {
+      setTimeout(() => {
+        try {
+          const target = e.target as HTMLTextAreaElement;
+          const coords = getCaretCoordinates(target, target.selectionEnd || value.length);
+          setCaretPosition(coords);
+        } catch(e) {}
+      }, 0);
     }
   };
 
@@ -136,11 +151,13 @@ export const useTaskInput = (
   const handleInlineSelectAssignee = (user: Assignee) => {
     setTitle(prev => prev.replace(/@\w*$/, `@${user.name} `));
     
-    // Only add if not already assigned
-    setAssignees(prev => {
-      if (prev.some(a => a.email === user.email)) return prev;
-      return [...prev, { name: user.name, email: user.email, avatar: user.avatar }];
-    });
+    // Only add if not already assigned, and not the AI system virtual user
+    if (user._id !== 'ai-system') {
+      setAssignees(prev => {
+        if (prev.some(a => a.email === user.email)) return prev;
+        return [...prev, { name: user.name, email: user.email, avatar: user.avatar }];
+      });
+    }
     
     setIsInlineAssigneeOpen(false);
     setAssigneeSearchQuery('');
@@ -168,7 +185,8 @@ export const useTaskInput = (
       const result = await todoApi.generateTaskWithAI(
         aiPrompt,
         workspaceMembers.map((m: any) => ({ name: m.name, email: m.email })),
-        selectedLabels.map(l => l.name)
+        selectedLabels.map(l => l.name),
+        assignees.map(a => ({ name: a.name, email: a.email }))
       );
 
       if (result.success && result.data) {
@@ -478,11 +496,18 @@ export const useTaskInput = (
     }
     
     // Save on Enter only from the main input, or Ctrl/Cmd+Enter from anywhere
-    const isInput = (e.target as HTMLElement).tagName.toLowerCase() === 'input';
+    const targetTag = (e.target as HTMLElement).tagName.toLowerCase();
+    const isInputOrTextarea = targetTag === 'input' || targetTag === 'textarea';
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
     if (e.key === 'Enter') {
-      if (isCtrlOrCmd || (isInput && !e.shiftKey)) {
+      if (isCtrlOrCmd || (isInputOrTextarea && !e.shiftKey)) {
+        // Prevent form submission if a dropdown is actively handling the enter key
+        if (isInlineLabelOpen || isInlineAssigneeOpen) {
+          e.preventDefault();
+          return;
+        }
+
         e.preventDefault();
 
         // Check if user is invoking @ai
@@ -592,6 +617,8 @@ export const useTaskInput = (
     handleSave,
     handleKeyDown,
     isAiGenerating,
+    setIsAiGenerating,
     handleAiGenerate,
+    caretPosition,
   };
 };

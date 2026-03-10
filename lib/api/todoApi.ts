@@ -401,7 +401,8 @@ export const todoApi = {
   async generateTaskWithAI(
     prompt: string,
     workspaceMembers: { name: string; email: string }[] = [],
-    availableTags: string[] = []
+    availableTags: string[] = [],
+    preSelectedAssignees: { name: string; email: string }[] = []
   ): Promise<{
     success: boolean;
     data?: {
@@ -419,6 +420,7 @@ export const todoApi = {
         prompt,
         workspaceMembers,
         availableTags,
+        preSelectedAssignees,
       });
       return { success: true, data: response.data.data };
     } catch (error: any) {

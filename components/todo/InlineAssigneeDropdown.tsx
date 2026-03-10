@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserCircle2, Loader2 } from 'lucide-react';
+import { UserCircle2, Loader2, Sparkles } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { todoApi } from '@/lib/api/todoApi';
 import { useDebounce } from '@/lib/hooks/useDebounce';
@@ -20,6 +20,7 @@ interface InlineAssigneeDropdownProps {
   onSelectAssignee: (assignee: Assignee) => void;
   onClose: () => void;
   workspaceMembers?: Assignee[];
+  caretPosition?: { top: number; left: number; height: number } | null;
 }
 
 export interface InlineAssigneeDropdownHandle {
@@ -27,7 +28,7 @@ export interface InlineAssigneeDropdownHandle {
 }
 
 export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, InlineAssigneeDropdownProps>(
-  ({ isOpen, searchQuery, onSelectAssignee, onClose, workspaceMembers }, ref) => {
+  ({ isOpen, searchQuery, onSelectAssignee, onClose, workspaceMembers, caretPosition }, ref) => {
     const [fetchedAssignees, setFetchedAssignees] = useState<Assignee[]>([]);
     const [highlightedIndex, setHighlightedIndex] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,15 +41,22 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
         if (!isOpen) return;
         
         const fetchUsers = async () => {
+            const aiUser: Assignee = { _id: 'ai-system', name: 'ai', email: 'ai@system', avatar: '' };
+
             if (!debouncedSearch.trim() || debouncedSearch.trim().length < 2) {
-                 setFetchedAssignees(workspaceMembers || []);
+                 setFetchedAssignees([aiUser, ...(workspaceMembers || [])]);
                  return;
             }
             
             setIsLoading(true);
             try {
                 const users = await todoApi.searchUsers(debouncedSearch.trim());
-                setFetchedAssignees(users);
+                // Only prepend AI if it matches the search query
+                if ('ai'.includes(debouncedSearch.trim().toLowerCase())) {
+                  setFetchedAssignees([aiUser, ...users]);
+                } else {
+                  setFetchedAssignees(users);
+                }
             } catch (err) {
                 console.error("Failed to search users", err);
             } finally {
@@ -116,7 +124,12 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full mt-2 w-64 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute w-64 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+            style={{
+              top: caretPosition ? caretPosition.top + caretPosition.height + 4 : '100%',
+              left: caretPosition ? caretPosition.left : 0,
+              marginTop: caretPosition ? 0 : '0.5rem'
+            }}
           >
             <div className="p-2 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center gap-2">
               <UserCircle2 className="w-3.5 h-3.5 text-indigo-400" />
@@ -151,12 +164,17 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
                   className={cn(
                     "w-full flex items-center gap-2 px-2 py-1.5 min-h-[36px] text-left rounded-lg transition-all",
                     highlightedIndex === idx 
-                      ? "bg-indigo-500/20 text-indigo-300" 
+                      ? (user._id === 'ai-system' ? "bg-purple-500/20 text-purple-300" : "bg-indigo-500/20 text-indigo-300")
                       : "text-white/70 hover:bg-white/5"
                   )}
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center flex-none overflow-hidden text-[10px] font-bold">
-                    {user.avatar ? (
+                  <div className={cn(
+                    "w-6 h-6 shrink-0 rounded-full flex items-center justify-center flex-none overflow-hidden text-[10px] font-bold",
+                    user._id === 'ai-system' ? "bg-purple-500/20 text-purple-400" : "bg-indigo-500/15 text-indigo-400"
+                  )}>
+                    {user._id === 'ai-system' ? (
+                      <Sparkles className="w-3 h-3" />
+                    ) : user.avatar ? (
                       <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
                       getInitials(user.name)
@@ -164,7 +182,9 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate leading-snug">{user.name}</p>
-                    <p className="text-[10px] truncate text-white/40 leading-tight">{user.email}</p>
+                    <p className="text-[10px] truncate text-white/40 leading-tight">
+                      {user._id === 'ai-system' ? 'AI Assistant' : user.email}
+                    </p>
                   </div>
                 </button>
               ))}

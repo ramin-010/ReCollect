@@ -131,10 +131,15 @@ export function LabelsModal({
           <div className="flex items-center justify-center py-4">
             <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
           </div>
-        ) : fetchedLabels.length > 0 ? (
-          fetchedLabels.map((label) => {
-            const isSelected = selectedLabels.some(l => l.id === label.id);
-            const colorConfig = getColorConfig(label.color);
+        ) : (() => {
+            const lowerQuery = searchQuery.trim().toLowerCase();
+            const localMatches = selectedLabels.filter(sl => sl.name.toLowerCase().includes(lowerQuery));
+            const mergedLabels = [...localMatches, ...fetchedLabels.filter(fl => !localMatches.some(lm => lm.id === fl.id))];
+
+            if (mergedLabels.length > 0) {
+              return mergedLabels.map((label) => {
+                const isSelected = selectedLabels.some(l => l.id === label.id);
+                const colorConfig = getColorConfig(label.color);
             
             return (
               <button
@@ -152,14 +157,15 @@ export function LabelsModal({
                 )}
               </button>
             );
-          })
-        ) : (
-          !searchQuery.trim() && (
-            <div className="px-3 py-3 text-xs text-white/40 text-center">
-              Type to create your first label
-            </div>
-          )
-        )}
+          });
+        }
+        
+        return !searchQuery.trim() ? (
+          <div className="px-3 py-3 text-xs text-white/40 text-center">
+            Type to search or create your first label
+          </div>
+        ) : null;
+      })()}
       </div>
 
       {/* Create Label Option */}

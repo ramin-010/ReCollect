@@ -25,6 +25,8 @@ import {
   Check,
   Sparkles
 } from 'lucide-react';
+import TextareaAutosize from 'react-textarea-autosize';
+
 import { cn, getInitials } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
 import {
@@ -111,26 +113,31 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     handleKeyDown: hookKeyDown,
     assignees, setAssignees,
     isAiGenerating,
+    setIsAiGenerating,
     handleAiGenerate,
+    caretPosition,
   } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility);
 
   // Wrap handleKeyDown to inject workspaceMembers for @ai
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Before delegating back to the hook, intercept Enter for @ai
-    const isInput = (e.target as HTMLElement).tagName.toLowerCase() === 'input';
+    const targetTag = (e.target as HTMLElement).tagName.toLowerCase();
+    const isInputOrTextarea = targetTag === 'input' || targetTag === 'textarea';
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-    if (e.key === 'Enter' && (isCtrlOrCmd || (isInput && !e.shiftKey))) {
-      const aiMatch = title.match(/^@ai\s+(.+)/i);
-      if (aiMatch) {
-        e.preventDefault();
-        handleAiGenerate(aiMatch[1].trim(), workspaceMembers || []);
-        return;
+    if (!(isInlineLabelOpen || isInlineAssigneeOpen)) {
+      if (e.key === 'Enter' && (isCtrlOrCmd || (isInputOrTextarea && !e.shiftKey))) {
+        const aiMatch = title.match(/^@ai\s+(.+)/i);
+        if (aiMatch) {
+          e.preventDefault();
+          handleAiGenerate(aiMatch[1].trim(), workspaceMembers || []);
+          return;
+        }
       }
     }
     hookKeyDown(e);
   };
 
-  useImperativeHandle(ref, () => inputRef.current!);
+  useImperativeHandle(ref, () => inputRef.current as any);
 
   // Editor-only selection handlers (don't touch title text)
   const handleEditorSelectAssignee = React.useCallback((user: any) => {
@@ -190,7 +197,13 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   };
 
   const currentPriority = PRIORITIES.find(p => p.value === priority);
-  const highlightedOverlay = getHighlightedContent(title, parsedResult, confirmedDueDate, selectedLabels);
+  const highlightedOverlay = getHighlightedContent(
+    title,
+    parsedResult,
+    confirmedDueDate,
+    selectedLabels,
+    "absolute top-0 left-0 right-0 font-medium pointer-events-none whitespace-pre-wrap break-words text-transparent p-0 m-0 leading-normal"
+  );
 
   const isAiMode = title.trim().toLowerCase().startsWith('@ai');
 
@@ -209,7 +222,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   return (
     <div 
       ref={containerRef}
-      className="w-full"
+      className={cn("w-full ", isExpanded ? "items-start" : "items-center")}
       onKeyDown={handleKeyDown}
     >
       <motion.div 
@@ -220,43 +233,45 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
         transition={{ duration: 0.3 }}
         className= {cn("relative bg-[#2a2a2a] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[#2a2638] border-purple-500/10")}
       >
+        {/* AI generating loading indicator moved top */}
+        {isAiGenerating && (
+          <div className="flex items-center gap-2 px-12 pt-3 pb-1">
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-xs text-indigo-400 font-medium">AI is generating your task...</span>
+          </div>
+        )}
+        
         {/* Main Input Row */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className={cn("flex gap-3 px-4", isAiGenerating ? "pb-3" : "py-3", isExpanded ? "items-start items-center" : "items-center")}>
           {(isAiMode || isAiGenerating) ? (
-            <Sparkles className="w-5 h-5 text-purple-400 shrink-0" strokeWidth={1.5} />
+            <Sparkles className={cn("w-5 h-5 text-purple-400 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           ) : (
-            <Circle className="w-5 h-5 text-white/20 shrink-0" strokeWidth={1.5} />
+            <Circle className={cn("w-5 h-5 text-white/20 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           )}
           
           <div className="relative flex-1">
-            {highlightedOverlay}
+            
+            {!isAiGenerating && highlightedOverlay}
             <style>{`.task-title-input::selection { background-color: rgba(59,130,246,0.4) !important; color: white !important; }`}</style>
-            <input
-              ref={inputRef}
-              type="text"
+            <TextareaAutosize
+              ref={inputRef as any}
               value={title}
-              onChange={handleTitleChange}
+              onChange={handleTitleChange as any}
               onFocus={() => onExpandChange(true)}
               placeholder="Create a new task or type @ai to generate..."
               autoComplete="off"
+              minRows={1}
+              maxRows={5}
               suppressHydrationWarning={demoMode}
               className={cn(
-                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative transition-colors duration-300",
+                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative transition-colors duration-300 resize-none overflow-hidden block p-0 m-0 border-none leading-normal",
                 highlightedOverlay && !isAiGenerating ? "text-transparent caret-white" : (isAiMode || isAiGenerating ? "text-purple-200" : "text-white")
               )}
             />
-
-            {/* AI generating loading indicator */}
-            {isAiGenerating && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-                <span className="text-xs text-indigo-400">AI generating...</span>
-              </div>
-            )}
             
             <InlineLabelDropdown
               ref={inlineLabelRef}
@@ -265,6 +280,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               onSelectLabel={handleInlineSelectLabel}
               onCreateLabel={handleInlineCreateLabel}
               onClose={() => setIsInlineLabelOpen(false)}
+              caretPosition={caretPosition}
             />
             <InlineAssigneeDropdown
               ref={inlineAssigneeRef}
@@ -273,6 +289,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               onSelectAssignee={handleInlineSelectAssignee}
               onClose={() => setIsInlineAssigneeOpen(false)}
               workspaceMembers={workspaceMembers}
+              caretPosition={caretPosition}
             />
           </div>
 
@@ -285,7 +302,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.15 }}
-                  className="flex items-center gap-1"
+                  className={cn("flex gap-1", isExpanded ? "items-start mt-0.5" : "items-center")}
                 >
                   <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
@@ -449,6 +466,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                 type="text"
                                 value={assigneeQuery}
                                 onChange={(e) => setAssigneeQuery(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
                                 placeholder="Search or enter email..."
                                 className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
                                 autoFocus
@@ -538,6 +556,24 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         </PopoverContent>
                       </Popover>
                     </>
+                  )}
+                  
+                  {isAiMode && (
+                    <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+                      <PopoverTrigger asChild>
+                        <button className="p-1.5 rounded-md transition-colors text-white/30 hover:text-white/60">
+                          <Tag className={cn("w-4 h-4", selectedLabels.length > 0 ? "text-indigo-400" : "text-white/30")} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="center" side="bottom" sideOffset={8}>
+                        <LabelsModal
+                          selectedLabels={selectedLabels}
+                          onLabelsChange={handleLabelsChange}
+                          onClose={() => setIsLabelsOpen(false)}
+                          initialSearchQuery={tagSearchQuery}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </motion.div>
               ) : (
