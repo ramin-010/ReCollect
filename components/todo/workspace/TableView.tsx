@@ -158,7 +158,7 @@ export function TableView({
   return (
     <div className="py-2 w-full">
       <div 
-        className="w-full overflow-x-auto bg-[#1A1A1A] rounded-xl border border-white/[0.05] shadow-2xl relative"
+        className="w-full overflow-x-auto bg-[#1A1A1A] rounded-xl border border-white/[0.03] p-2 py-1  relative"
         ref={tableRef}
       >
         <div className="min-w-[900px]">

@@ -152,9 +152,50 @@ export const useTaskInput = (
     
     const taskTitle = rawTitle.replace(/@\w+\s?/g, '').trim();
     
-    const formattedSubtasks = subtasks
+    // Extract subtasks from HTML and remove them from description
+    let finalDescription = description.trim();
+    let extractedSubtasks: { id: string; text: string; isCompleted: boolean }[] = [];
+
+    try {
+      if (finalDescription) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(finalDescription, 'text/html');
+        const widgetNodes = doc.querySelectorAll('div[data-type="subtask-widget"]');
+        
+        let foundNewSubtasks = false;
+        widgetNodes.forEach(node => {
+          const rawData = node.getAttribute('data-subtasks');
+          if (rawData) {
+            try {
+              const parsed = JSON.parse(rawData);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                extractedSubtasks = [...extractedSubtasks, ...parsed];
+                foundNewSubtasks = true;
+              }
+            } catch (e) {
+              console.error("Failed to parse subtasks from HTML widget", e);
+            }
+          }
+          // Remove from descriptions so it's not saved as raw HTML
+          node.remove();
+        });
+
+        if (foundNewSubtasks || widgetNodes.length > 0) {
+          finalDescription = doc.body.innerHTML;
+          // Clean empty lines
+          finalDescription = finalDescription.replace(/<p><\/p>/g, '').trim();
+        }
+      }
+    } catch (e) {
+      console.error("Failed to extract subtasks in useTaskInput", e);
+    }
+    
+    // Combine HTML extracted subtasks with manual input array subtasks
+    const manualSubtasks = subtasks
       .filter(t => t.trim().length > 0)
       .map(text => ({ id: nanoid(8), text: text.trim(), isCompleted: false }));
+      
+    const formattedSubtasks = [...extractedSubtasks, ...manualSubtasks];
     
     const recurrenceData = isRecurring 
       ? { 
@@ -165,7 +206,7 @@ export const useTaskInput = (
     
     const taskData: TaskData = {
       title: taskTitle,
-      description: description.trim() || undefined,
+      description: finalDescription || undefined,
       priority,
       status,
       dueDate: finalDueDate?.toISOString(),
@@ -282,10 +323,15 @@ export const useTaskInput = (
       return;
     }
     
-    // Save on plain Enter (when no suggestion is pending) or Ctrl/Cmd+Enter
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSave();
+    // Save on Enter only from the main input, or Ctrl/Cmd+Enter from anywhere
+    const isInput = (e.target as HTMLElement).tagName.toLowerCase() === 'input';
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'Enter') {
+      if (isCtrlOrCmd || (isInput && !e.shiftKey)) {
+        e.preventDefault();
+        handleSave();
+      }
     }
   };
 

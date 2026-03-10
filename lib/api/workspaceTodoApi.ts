@@ -151,36 +151,21 @@ export const workspaceTodoApi = {
    * Create a new todo with optional image uploads
    */
   async createTodo(payload: CreateTodoPayload): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] ========== START createTodo ==========');
-    console.log('[todoApi] Title:', payload.title);
-    console.log('[todoApi] Description length:', payload.description?.length || 0);
-    console.log('[todoApi] Has description:', !!payload.description);
-
     const { processedHtml, images, imageNodeIds } = payload.description
       ? extractImagesFromHtml(payload.description)
       : { processedHtml: '', images: [], imageNodeIds: [] };
 
-    console.log('[todoApi] Extracted images count:', images.length);
-    console.log('[todoApi] Image node IDs:', imageNodeIds);
-    console.log('[todoApi] Processed HTML length:', processedHtml?.length || 0);
-
     if (images.length > 0) {
-      console.log('[todoApi] Building FormData with images...');
-      
       const formData = new FormData();
 
       for (const { imageId, blob, mimeType } of images) {
         const ext = getExtension(mimeType);
-        const fieldName = `image_${imageId}`;
-        console.log('[todoApi] Appending image:', fieldName, 'size:', blob.size, 'type:', mimeType);
-        formData.append(fieldName, blob, `image.${ext}`);
+        formData.append(`image_${imageId}`, blob, `image.${ext}`);
       }
 
       formData.append('title', payload.title);
       formData.append('description', processedHtml);
       formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
-      
-      console.log('[todoApi] Description in FormData (first 100 chars):', processedHtml?.substring(0, 100));
 
       if (payload.status) formData.append('status', payload.status);
       if (payload.priority) formData.append('priority', payload.priority);
@@ -195,15 +180,11 @@ export const workspaceTodoApi = {
       if (payload.spaceId) formData.append('spaceId', payload.spaceId);
       if (payload.visibility) formData.append('visibility', payload.visibility);
 
-      console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
 
       try {
         const response = await axiosInstance.post('/api/workspace-todos', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        
-        console.log('[todoApi] Response success:', response.data.success);
-        console.log('[todoApi] ========== END createTodo ==========');
 
         return {
           success: response.data.success,
@@ -215,8 +196,6 @@ export const workspaceTodoApi = {
         throw error;
       }
     } else {
-      console.log('[todoApi] No images - sending JSON request');
-
       try {
         const response = await axiosInstance.post('/api/workspace-todos', {
           title: payload.title,
@@ -235,9 +214,6 @@ export const workspaceTodoApi = {
           visibility: payload.visibility,
         });
 
-        console.log('[todoApi] Response success:', response.data.success);
-        console.log('[todoApi] ========== END createTodo ==========');
-
         return {
           success: response.data.success,
           data: response.data.data,
@@ -254,7 +230,6 @@ export const workspaceTodoApi = {
    * Fetch all todos for current user
    */
   async fetchTodos(): Promise<TodoResponse[]> {
-    console.log('[todoApi] Fetching all todos');
     const response = await axiosInstance.get('/api/workspace-todos');
     return response.data.data || [];
   },
@@ -263,9 +238,6 @@ export const workspaceTodoApi = {
    * Update an existing todo
    */
   async updateTodo(id: string, updates: Partial<CreateTodoPayload>): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] ========== START updateTodo ==========');
-    console.log('[todoApi] ID:', id);
-    console.log('[todoApi] Updates:', Object.keys(updates));
 
     const { processedHtml, images, imageNodeIds } = updates.description
       ? extractImagesFromHtml(updates.description)
@@ -273,7 +245,6 @@ export const workspaceTodoApi = {
 
     try {
       if (images.length > 0) {
-        console.log('[todoApi] Building FormData for update...');
         const formData = new FormData();
 
         for (const { imageId, blob, mimeType } of images) {
@@ -323,8 +294,6 @@ export const workspaceTodoApi = {
         success: false,
         message: error.response?.data?.message || 'Failed to update task'
       };
-    } finally {
-      console.log('[todoApi] ========== END updateTodo ==========');
     }
   },
 
@@ -332,7 +301,6 @@ export const workspaceTodoApi = {
    * Delete a todo
    */
   async deleteTodo(id: string): Promise<{ success: boolean; message?: string }> {
-    console.log('[todoApi] Deleting todo:', id);
     try {
       const response = await axiosInstance.delete(`/api/workspace-todos/${id}`);
       return {
@@ -352,7 +320,6 @@ export const workspaceTodoApi = {
    * Update a subtask within a todo
    */
   async updateSubtask(todoId: string, subtaskId: string, updates: { isCompleted?: boolean; text?: string }): Promise<{ success: boolean; message?: string }> {
-    console.log('[todoApi] Updating subtask:', todoId, subtaskId, updates);
     try {
       // For now, this fetches the todo, updates the subtask, and saves - since we don't have a dedicated subtask endpoint
       const response = await axiosInstance.get(`/api/workspace-todos`);
@@ -382,7 +349,6 @@ export const workspaceTodoApi = {
    * Assign a task to user(s) by email
    */
   async assignTask(todoId: string, emails: string[]): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] Assigning task:', todoId, 'to:', emails);
     try {
       const response = await axiosInstance.post(`/api/workspace-todos/${todoId}/assign`, { emails });
       return {
@@ -403,7 +369,6 @@ export const workspaceTodoApi = {
    * Remove assignee from a task
    */
   async unassignTask(todoId: string, email?: string): Promise<{ success: boolean; message?: string }> {
-    console.log('[todoApi] Unassigning task:', todoId);
     try {
       const response = await axiosInstance.post(`/api/workspace-todos/${todoId}/unassign`, { email });
       return {
@@ -423,7 +388,6 @@ export const workspaceTodoApi = {
    * Search users by name or email (for assignee picker)
    */
   async searchUsers(query: string): Promise<{ _id: string; name: string; email: string; avatar?: string }[]> {
-    console.log('[todoApi] Searching users:', query);
     try {
       const response = await axiosInstance.get(`/api/search`, { params: { q: query } });
       return response.data.data || [];

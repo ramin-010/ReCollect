@@ -41,7 +41,7 @@ import {
   PopoverTrigger 
 } from '@/components/ui-base/Popover';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
-import { TaskDescriptionEditor } from '../TaskDescriptionEditor';
+import { TiptapTaskEditor } from '../TiptapTaskEditor';
 import { subMinutes } from 'date-fns';
 
 import { TaskInputProps, PRIORITIES } from './types';
@@ -355,7 +355,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               className="overflow-hidden"
             >
               <div className="px-4 pl-13 pb-3">
-                <TaskDescriptionEditor
+                <TiptapTaskEditor
                   content={description}
                   onChange={setDescription}
                   onImageClick={setPreviewImage}

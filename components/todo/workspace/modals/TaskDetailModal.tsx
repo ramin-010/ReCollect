@@ -11,7 +11,7 @@ import { cn, getInitials } from '@/lib/utils';
 import { AssigneeDropdown } from './AssigneeDropdown';
 import { PriorityDropdown } from './PriorityDropdown';
 import { TaskStatusDropdown, TaskStatus } from '../TaskStatusDropdown';
-import { TaskDescriptionEditor } from '../../TaskDescriptionEditor';
+import { TiptapTaskEditor } from '../../TiptapTaskEditor';
 import { LabelsModal, Label } from '../../LabelsModal';
 import { InlineLabelDropdown, InlineLabelDropdownHandle } from '../../InlineLabelDropdown';
 import { SmartReminderModal } from '../../SmartReminderModal';
@@ -97,16 +97,60 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   // ━━━━━━━━━━━━━━━━━━━━━━
   const handleSave = useCallback(() => {
     setIsSaving(true);
+    
+    // Extract subtasks from HTML and remove them from description
+    let finalDescription = description;
+    let extractedSubtasks: { id: string; text: string; isCompleted: boolean }[] = [...subtasks];
+
+    try {
+      if (finalDescription) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(finalDescription, 'text/html');
+        const widgetNodes = doc.querySelectorAll('div[data-type="subtask-widget"]');
+        
+        let foundNewSubtasks = false;
+        widgetNodes.forEach(node => {
+          const rawData = node.getAttribute('data-subtasks');
+          if (rawData) {
+            try {
+              const parsed = JSON.parse(rawData);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                // If it's the first one we process, we can just replace the old top-level state
+                if (!foundNewSubtasks) {
+                  extractedSubtasks = [...parsed];
+                  foundNewSubtasks = true;
+                } else {
+                  extractedSubtasks = [...extractedSubtasks, ...parsed];
+                }
+              }
+            } catch (e) {
+              console.error("Failed to parse subtasks from HTML widget", e);
+            }
+          }
+          // Remove the widget from the HTML payload so it isn't saved as raw string
+          node.remove();
+        });
+
+        if (foundNewSubtasks || widgetNodes.length > 0) {
+          finalDescription = doc.body.innerHTML;
+          // Clean up empty lines that might be left behind
+          finalDescription = finalDescription.replace(/<p><\/p>/g, '').trim();
+        }
+      }
+    } catch (e) {
+      console.error("Failed to extract subtasks in save", e);
+    }
+
     const updates: any = {
       title: title.replace(/@\w+\s?/g, '').trim(),
-      description,
+      description: finalDescription,
       status,
       priority: priority || undefined,
       assignees,
       dueDate: dueDate?.toISOString() || null,
       reminderDate: currentReminder?.toISOString() || null,
       labels: selectedLabels.map(l => ({ id: l.id, name: l.name, color: l.color })),
-      subtasks,
+      subtasks: extractedSubtasks,
       recurrence: isRecurring
         ? { pattern: recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly', interval: recurringInterval }
         : null,
@@ -482,7 +526,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
               {/* ── Description (scrollable, spacious) ── */}
               <div className="flex-1 min-h-[350px] flex flex-col pt-2 pb-4">
                 <div className="flex-1 overflow-y-auto custom-scrollbar rounded-lg border border-white/5 bg-white/[0.02] p-4">
-                  <TaskDescriptionEditor
+                  <TiptapTaskEditor
                     content={description}
                     onChange={(val: string) => { setDescription(val); markDirty(); }}
                     onImageClick={setPreviewImage}

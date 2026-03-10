@@ -35,7 +35,7 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const debouncedSearch = useDebounce(searchQuery, 300);
+    const debouncedSearch = useDebounce(searchQuery, 700);
 
     // Fetch tags from API and map to Labels
     useEffect(() => {
@@ -134,6 +134,7 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
         }
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.stopPropagation(); // Prevent TaskInput from triggering save
           
           if (highlightedIndex < displayOptions.length) {
               handleSelectLabel(displayOptions[highlightedIndex]);
