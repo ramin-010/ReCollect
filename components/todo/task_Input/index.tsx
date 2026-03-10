@@ -22,7 +22,8 @@ import {
   Loader2,
   Search,
   Mail,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { Button } from '@/components/ui-base/Button';
@@ -107,9 +108,27 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     acceptSuggestion,
     clearConfirmedDate,
     handleSave,
-    handleKeyDown,
+    handleKeyDown: hookKeyDown,
     assignees, setAssignees,
+    isAiGenerating,
+    handleAiGenerate,
   } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility);
+
+  // Wrap handleKeyDown to inject workspaceMembers for @ai
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Before delegating back to the hook, intercept Enter for @ai
+    const isInput = (e.target as HTMLElement).tagName.toLowerCase() === 'input';
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    if (e.key === 'Enter' && (isCtrlOrCmd || (isInput && !e.shiftKey))) {
+      const aiMatch = title.match(/^@ai\s+(.+)/i);
+      if (aiMatch) {
+        e.preventDefault();
+        handleAiGenerate(aiMatch[1].trim(), workspaceMembers || []);
+        return;
+      }
+    }
+    hookKeyDown(e);
+  };
 
   useImperativeHandle(ref, () => inputRef.current!);
 
@@ -173,6 +192,20 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   const currentPriority = PRIORITIES.find(p => p.value === priority);
   const highlightedOverlay = getHighlightedContent(title, parsedResult, confirmedDueDate, selectedLabels);
 
+  const isAiMode = title.trim().toLowerCase().startsWith('@ai');
+
+  const handlePrimaryClick = () => {
+    if (isAiGenerating) return;
+    if (isAiMode) {
+      const match = title.match(/^@ai\s+(.+)/i);
+      if (match) {
+        handleAiGenerate(match[1].trim(), workspaceMembers || []);
+      }
+    } else {
+      handleSave();
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -181,15 +214,19 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     >
       <motion.div 
         animate={{ 
-          borderColor: (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
-          boxShadow: (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
+          borderColor: isAiGenerating ? "rgba(168, 85, 247, 0.4)" : isAiMode ? "rgba(168, 85, 247, 0.2)" : (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
+          boxShadow: isAiGenerating ? "0 0 25px -5px rgba(168, 85, 247, 0.25)" : isAiMode ? "0 0 15px -5px rgba(168, 85, 247, 0.15)" : (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
         }}
         transition={{ duration: 0.3 }}
-        className= {`relative bg-[#2a2a2a] ${isExpanded ? 'rounded-xl' : 'rounded-xl'} border border-transparent transition-colors duration-200`}
+        className= {cn("relative bg-[#2a2a2a] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[#2a2638] border-purple-500/10")}
       >
         {/* Main Input Row */}
         <div className="flex items-center gap-3 px-4 py-3">
-          <Circle className="w-5 h-5 text-white/20 shrink-0" strokeWidth={1.5} />
+          {(isAiMode || isAiGenerating) ? (
+            <Sparkles className="w-5 h-5 text-purple-400 shrink-0" strokeWidth={1.5} />
+          ) : (
+            <Circle className="w-5 h-5 text-white/20 shrink-0" strokeWidth={1.5} />
+          )}
           
           <div className="relative flex-1">
             {highlightedOverlay}
@@ -200,14 +237,26 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               value={title}
               onChange={handleTitleChange}
               onFocus={() => onExpandChange(true)}
-              placeholder="Create a new task..."
+              placeholder="Create a new task or type @ai to generate..."
               autoComplete="off"
               suppressHydrationWarning={demoMode}
               className={cn(
-                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative",
-                highlightedOverlay ? "text-transparent caret-white" : "text-white"
+                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative transition-colors duration-300",
+                highlightedOverlay && !isAiGenerating ? "text-transparent caret-white" : (isAiMode || isAiGenerating ? "text-purple-200" : "text-white")
               )}
             />
+
+            {/* AI generating loading indicator */}
+            {isAiGenerating && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-xs text-indigo-400">AI generating...</span>
+              </div>
+            )}
             
             <InlineLabelDropdown
               ref={inlineLabelRef}
@@ -290,53 +339,206 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     </PopoverContent>
                   </Popover>
 
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
-                    title="Add attachment"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (files) {
-                        Array.from(files).forEach(file => {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            if (event.target?.result as string) {
-                               const src = event.target?.result as string;
-                               const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
-                                 <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
-                                 <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
-                                   <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                       <polyline points="15 3 21 3 21 9"></polyline>
-                                       <polyline points="9 21 3 21 3 15"></polyline>
-                                       <line x1="21" y1="3" x2="14" y2="10"></line>
-                                       <line x1="3" y1="21" x2="10" y2="14"></line>
-                                     </svg>
-                                   </button>
-                                   <button class="img-delete-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                       <line x1="18" y1="6" x2="6" y2="18"></line>
-                                       <line x1="6" y1="6" x2="18" y2="18"></line>
-                                     </svg>
-                                   </button>
-                                 </div>
-                               </div><p style="margin: 0; min-height: 1em;"></p>`;
-                               setDescription(prev => prev + imgHtml);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                    }}}
-                  />
+                  {!isAiMode && (
+                    <>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
+                        title="Add attachment"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files) {
+                            Array.from(files).forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result as string) {
+                                   const src = event.target?.result as string;
+                                   const imgHtml = `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
+                                     <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
+                                     <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
+                                       <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                           <polyline points="15 3 21 3 21 9"></polyline>
+                                           <polyline points="9 21 3 21 3 15"></polyline>
+                                           <line x1="21" y1="3" x2="14" y2="10"></line>
+                                           <line x1="3" y1="21" x2="10" y2="14"></line>
+                                         </svg>
+                                       </button>
+                                       <button class="img-delete-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                           <line x1="18" y1="6" x2="6" y2="18"></line>
+                                           <line x1="6" y1="6" x2="18" y2="18"></line>
+                                         </svg>
+                                       </button>
+                                     </div>
+                                   </div><p style="margin: 0; min-height: 1em;"></p>`;
+                                   setDescription(prev => prev + imgHtml);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                        }}}
+                      />
+                    </>
+                  )}
+
+                  {isAiMode && (
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button 
+                            className={cn(
+                              "p-1.5 rounded-md transition-colors",
+                              currentPriority?.value !== 'normal' ? "text-indigo-400" : "text-white/30 hover:text-white/60"
+                            )}>
+                            <Flag className={cn("w-4 h-4", currentPriority?.value !== 'normal' ? currentPriority?.color : "text-white/30")} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10">
+                          {PRIORITIES.map((p) => (
+                            <DropdownMenuItem 
+                              key={p.value} 
+                              onClick={() => setPriority(p.value as 'low' | 'normal' | 'high' | 'urgent')}
+                              className={cn("focus:bg-white/10", p.color)}
+                            >
+                              <Flag className="w-3.5 h-3.5 mr-2" />
+                              <span>{p.label}</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Popover open={isAssigneeOpen} onOpenChange={setIsAssigneeOpen}>
+                        <PopoverTrigger asChild>
+                          <button className={cn(
+                            "p-1.5 rounded-md transition-colors",
+                            assignees.length > 0 ? "text-indigo-400" : "text-white/30 hover:text-white/60"
+                          )}>
+                            {assignees.length === 0 ? (
+                              <UserPlus className="w-4 h-4" />
+                            ) : (
+                              <div className="flex -space-x-1.5">
+                                {assignees.slice(0, 2).map((a, i) => (
+                                  <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
+                                    {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover"/> : getInitials(a.name)}
+                                  </div>
+                                ))}
+                                {assignees.length > 2 && (
+                                  <div className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-[#3a3a3a] text-white/60 flex items-center justify-center text-[8px] font-bold">
+                                    +{assignees.length - 2}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
+                          <div className="p-2 border-b border-white/10">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                              <input
+                                type="text"
+                                value={assigneeQuery}
+                                onChange={(e) => setAssigneeQuery(e.target.value)}
+                                placeholder="Search or enter email..."
+                                className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto">
+                            {isSearchingUsers && (
+                              <div className="flex items-center justify-center py-3 text-white/40">
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                <span className="text-xs">Searching...</span>
+                              </div>
+                            )}
+                            {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
+                              <>
+                                <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                                {workspaceMembers.map(member => {
+                                  const isSelected = assignees.some(a => a.email === member.email);
+                                  return (
+                                  <button
+                                    key={member._id}
+                                    onClick={() => selectAssignee(member.email, member.name, member.avatar)}
+                                    className={cn(
+                                      "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                                      isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                    )}
+                                  >
+                                    <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                      {member.avatar ? (
+                                        <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                      ) : (
+                                        getInitials(member.name)
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
+                                      <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                    </div>
+                                    {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                                  </button>
+                                )})}
+                              </>
+                            )}
+                            {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
+                              <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                            )}
+                            {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
+                              const isSelected = assignees.some(a => a.email === user.email);
+                              return (
+                              <button
+                                key={user._id}
+                                onClick={() => selectAssignee(user.email, user.name, user.avatar)}
+                                className={cn(
+                                  "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                                  isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                )}
+                              >
+                                <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                  {user.avatar ? (
+                                    <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                  ) : (
+                                    getInitials(user.name)
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
+                                  <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
+                                </div>
+                                {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                              </button>
+                            )})}
+                            {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
+                              <button
+                                onClick={() => selectAssignee(assigneeQuery.trim())}
+                                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                                  <Mail className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
+                                  <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -382,7 +584,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
         {/* Expanded Section */}
         <AnimatePresence>
-          {isExpanded && (
+          {isExpanded && !isAiMode && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -462,6 +664,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               {/* Meta Bar / Footer */}
               {!isQuickAdd && (
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/5">
+                {!isAiMode && (
                 <div className="flex items-center gap-2">
                   {confirmedDueDate && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-white/10 text-white/60">
@@ -728,21 +931,40 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+                )}
 
-                <Button
-                  onClick={handleSave}
-                  disabled={!title.trim() || isSaving}
-                  className="bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 min-w-[80px]"
-                >
-                  {isSaving ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating</span>
-                    </div>
-                  ) : (
-                    'Create Task'
+                <div className={cn("flex items-center gap-3 justify-end", isAiMode && "w-full justify-between")}>
+                  {isAiMode && (
+                    <span className="text-xs text-purple-400/60 font-medium px-2 italic">Describe the task and let AI magically populate the rest ✨</span>
                   )}
-                </Button>
+                  <Button
+                    onClick={handlePrimaryClick}
+                    disabled={!title.trim() || isSaving || isAiGenerating}
+                    className={cn(
+                      "text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 min-w-[80px] transition-all duration-300",
+                      (isAiMode || isAiGenerating) ? "bg-purple-600 hover:bg-purple-500 shadow-[0_0_15px_-3px_rgba(168,85,247,0.4)]" : "bg-indigo-500 hover:bg-indigo-400"
+                    )}
+                  >
+                    {isSaving ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Creating</span>
+                      </div>
+                    ) : isAiGenerating ? (
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        <span>Generating</span>
+                      </div>
+                    ) : isAiMode ? (
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate</span>
+                      </div>
+                    ) : (
+                      'Create Task'
+                    )}
+                  </Button>
+                </div>
               </div>
               )}
             </motion.div>

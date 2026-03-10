@@ -394,4 +394,39 @@ export const todoApi = {
       return [];
     }
   },
+
+  /**
+   * Generate task fields using AI from a natural language prompt
+   */
+  async generateTaskWithAI(
+    prompt: string,
+    workspaceMembers: { name: string; email: string }[] = [],
+    availableTags: string[] = []
+  ): Promise<{
+    success: boolean;
+    data?: {
+      title: string;
+      description?: string;
+      priority?: 'low' | 'normal' | 'high' | 'urgent';
+      dueDate?: string;
+      tags?: string[];
+      assignees?: string[];
+    };
+    message?: string;
+  }> {
+    try {
+      const response = await axiosInstance.post('/api/todos/ai/generate', {
+        prompt,
+        workspaceMembers,
+        availableTags,
+      });
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('[todoApi] AI task generation failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'AI generation failed',
+      };
+    }
+  },
 };

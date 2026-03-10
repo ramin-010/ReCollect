@@ -46,6 +46,7 @@ export const useTaskInput = (
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [assignees, setAssignees] = useState<{ name: string; email: string; avatar?: string }[]>([]);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
@@ -156,6 +157,91 @@ export const useTaskInput = (
   const clearConfirmedDate = () => {
     setConfirmedDueDate(null);
     setCurrentReminder(null);
+  };
+
+  // ── @ai task generation ──
+  const handleAiGenerate = async (aiPrompt: string, workspaceMembers: any[] = []) => {
+    if (isAiGenerating) return;
+    setIsAiGenerating(true);
+
+    try {
+      const result = await todoApi.generateTaskWithAI(
+        aiPrompt,
+        workspaceMembers.map((m: any) => ({ name: m.name, email: m.email })),
+        selectedLabels.map(l => l.name)
+      );
+
+      if (result.success && result.data) {
+        const d = result.data;
+
+        // Auto-fill title
+        if (d.title) setTitle(d.title);
+
+        // Auto-fill description
+        if (d.description) setDescription(d.description);
+
+        // Auto-fill priority
+        if (d.priority && ['low', 'normal', 'high', 'urgent'].includes(d.priority)) {
+          setPriority(d.priority as any);
+        }
+
+        // Auto-fill due date
+        if (d.dueDate) {
+          const parsed = new Date(d.dueDate);
+          if (!isNaN(parsed.getTime())) {
+            setConfirmedDueDate(parsed);
+            setCurrentReminder(subMinutes(parsed, 10));
+          }
+        }
+
+        // Auto-fill tags/labels
+        if (d.tags && d.tags.length > 0) {
+          const newLabels = d.tags.map((tag: string) => ({
+            id: `ai-tag-${tag}`,
+            name: tag,
+            color: 'blue',
+          }));
+          setSelectedLabels(prev => {
+            const merged = [...prev];
+            for (const nl of newLabels) {
+              if (!merged.some(l => l.name.toLowerCase() === nl.name.toLowerCase())) {
+                merged.push(nl);
+              }
+            }
+            return merged;
+          });
+        }
+
+        // Auto-fill assignees
+        if (d.assignees && d.assignees.length > 0 && workspaceMembers.length > 0) {
+          const matchedAssignees = d.assignees
+            .map((email: string) => workspaceMembers.find((m: any) => m.email.toLowerCase() === email.toLowerCase()))
+            .filter(Boolean)
+            .map((m: any) => ({ name: m.name, email: m.email, avatar: m.avatar }));
+          
+          setAssignees(prev => {
+            const merged = [...prev];
+            for (const ma of matchedAssignees) {
+              if (!merged.some(a => a.email === ma.email)) {
+                merged.push(ma);
+              }
+            }
+            return merged;
+          });
+        }
+
+        // Expand the task input so user can review
+        onExpandChange(true);
+        toast.success('✨ AI generated your task!');
+      } else {
+        toast.error(result.message || 'AI generation failed');
+      }
+    } catch (err: any) {
+      console.error('[useTaskInput] AI generation error:', err);
+      toast.error('Failed to generate task with AI');
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
 
   const handleSave = async () => {
@@ -398,6 +484,14 @@ export const useTaskInput = (
     if (e.key === 'Enter') {
       if (isCtrlOrCmd || (isInput && !e.shiftKey)) {
         e.preventDefault();
+
+        // Check if user is invoking @ai
+        const aiMatch = title.match(/^@ai\s+(.+)/i);
+        if (aiMatch) {
+          handleAiGenerate(aiMatch[1].trim());
+          return;
+        }
+
         handleSave();
       }
     }
@@ -497,5 +591,7 @@ export const useTaskInput = (
     clearConfirmedDate,
     handleSave,
     handleKeyDown,
+    isAiGenerating,
+    handleAiGenerate,
   };
 };
