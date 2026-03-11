@@ -47,6 +47,7 @@ import { TasksTab } from './workspace/TasksTab';
 import { WorkspaceSettingsModal } from './workspace/settings';
 import { TaskDetailModal } from './workspace/modals/TaskDetailModal';
 import { PermissionModal } from './workspace/modals/PermissionModal';
+import { ShareLinkModal } from './workspace/modals/ShareLinkModal';
 import { WorkspaceHeader } from './workspace/WorkspaceHeader';
 import { TaskInput } from './task_Input';
 
@@ -100,6 +101,9 @@ export function WorkspaceView() {
 
   // Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Share Link Modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
 
   // Invite
   const [isInviting, setIsInviting] = useState(false);
@@ -449,6 +453,7 @@ export function WorkspaceView() {
         onSpaceSelect={setActiveSpaceId}
         setShowSettingsModal={setShowSettingsModal}
         setIsInviting={setIsInviting}
+        setShowShareLinkModal={setShowShareLinkModal}
       />
 
       {/* ── Main Content Area (Unconstrained width) ── */}
@@ -490,6 +495,15 @@ export function WorkspaceView() {
           onClose={() => setPermissionError(null)} 
           message={permissionError || ""} 
         />
+
+        {/* ── Share Link Modal ── */}
+        {selectedWorkspace && (
+          <ShareLinkModal
+            isOpen={showShareLinkModal}
+            onClose={() => setShowShareLinkModal(false)}
+            workspace={selectedWorkspace}
+          />
+        )}
 
         {/* ── Create Workspace Inline ── */}
         <AnimatePresence>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Briefcase, ChevronDown, Plus, CheckCircle2, Loader2, X, UserPlus, Settings } from 'lucide-react';
+import { Zap, Briefcase, ChevronDown, Plus, CheckCircle2, Loader2, X, UserPlus, Settings, Link2 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -36,6 +36,7 @@ interface WorkspaceHeaderProps {
   onSpaceSelect: (spaceId: string) => void;
   setShowSettingsModal: (val: boolean) => void;
   setIsInviting: (val: boolean) => void;
+  setShowShareLinkModal: (val: boolean) => void;
 }
 
 const backgroundImages: string[] = []; // Intentionally blank for abstract dark mode
@@ -63,7 +64,8 @@ export function WorkspaceHeader({
   onWorkspaceSelect,
   onSpaceSelect,
   setShowSettingsModal,
-  setIsInviting
+  setIsInviting,
+  setShowShareLinkModal
 }: WorkspaceHeaderProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -161,6 +163,7 @@ export function WorkspaceHeader({
             </div>
 
             {isAdmin && (
+              <>
               <button
                 onClick={() => { setShowSettingsModal(true); setIsInviting(true); }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/10 text-white/60 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-white/[0.06] hover:border-white/10"
@@ -168,6 +171,14 @@ export function WorkspaceHeader({
                 <UserPlus className="w-3 h-3" />
                 Invite
               </button>
+              <button
+                onClick={() => setShowShareLinkModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-[11px] font-semibold rounded-lg transition-all border border-indigo-500/20 hover:border-indigo-500/30"
+              >
+                <Link2 className="w-3 h-3" />
+                Share Link
+              </button>
+              </>
             )}
             <button
               onClick={() => setShowSettingsModal(true)}

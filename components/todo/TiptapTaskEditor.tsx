@@ -129,7 +129,10 @@ export function TiptapTaskEditor({
         // If content is empty string but editor is `<p></p>`, we don't need to update
         if (!content && editor.isEmpty) return;
         
-        editor.commands.setContent(content, { emitUpdate: false } as any);
+        // Defer to microtask to avoid flushSync error when called during React's commit phase
+        queueMicrotask(() => {
+          editor.commands.setContent(content, { emitUpdate: false } as any);
+        });
       }
     }
     isInternalChange.current = false;

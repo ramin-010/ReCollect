@@ -122,18 +122,25 @@ export function TableView({
     };
   }, [handleMouseMove, handleMouseUp]);
 
-  // Apply initial inline styles once mounted
+  // Measure container width and expand Name column on mount so it looks full-width naturally
   useEffect(() => {
-    applyColWidths(colWidths.current);
-  }, []); // Only on mount, CSS vars stay on the DOM element
+    if (tableRef.current) {
+      const fixedTotal = 40 + 35 + 140 + 140 + 140 + 120; // Sum of default widths of other columns
+      const availableSpace = tableRef.current.clientWidth - fixedTotal;
+      if (availableSpace > colWidths.current.name) {
+        colWidths.current.name = availableSpace - 20; // Leave tiny buffer
+      }
+      applyColWidths(colWidths.current);
+    }
+  }, []);
 
   // A helper component to render grid cells with vertical borders
   const Cell = ({ children, className, borderRight = true, onClick, onMouseDownResizer, onMouseUpResizer }: any) => (
     <div 
       onClick={onClick}
       className={cn(
-        "relative flex items-center px-3 py-2 text-sm text-white/80 h-full",
-        borderRight && "border-r border-white-[0.05] border-white/10",
+        "relative flex items-center px-4 py-3 text-[13px] text-white/80 h-full",
+        borderRight && "border-r border-white/5",
         className
       )}
     >
@@ -151,31 +158,34 @@ export function TableView({
 
   // The CSS property linking to our custom variables
   const gridStyle = { 
-    // Ordered to exactly match the DOM layout. Name expands, rest strictly bounds to right.
-    gridTemplateColumns: 'var(--col-index, 40px) var(--col-check, 35px) minmax(var(--col-name, 300px), 1fr) var(--col-assignee, 140px) var(--col-dueDate, 140px) var(--col-status, 140px) var(--col-priority, 120px)' 
+    // All specific columns are strictly bounded to their variables so dragging is 1:1. 
+    // The trailing minmax(0, 1fr) dummy column absorbs any extra space on massive screens.
+    gridTemplateColumns: 'var(--col-index, 40px) var(--col-check, 35px) var(--col-name, 300px) var(--col-assignee, 140px) var(--col-dueDate, 140px) var(--col-status, 140px) var(--col-priority, 120px) minmax(0, 1fr)' 
   };
 
   return (
     <div className="py-2 w-full">
       <div 
-        className="w-full overflow-x-auto bg-[#1A1A1A] rounded-xl border border-white/[0.03] p-2 py-1  relative"
+        className="w-full overflow-x-auto relative"
         ref={tableRef}
       >
         <div className="min-w-[900px]">
           {/* Table Header */}
           <div 
-             className="table-header grid border-b border-white/[0.06] text-[11px] font-medium text-white/50 bg-gradient-to-r from-transparent via-white/[0.015] to-transparent sticky top-0 z-10 w-full hover:bg-white/[0.02]"
+             className="table-header grid border-b border-white/5 text-[12px] font-medium text-white/50 sticky top-0 z-10 w-full"
              style={gridStyle}
           >
             <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-4">#</Cell>
-          <Cell borderRight={false} className="justify-center px-1">
+          <Cell borderRight={false} className="justify-center px-1 border-r border-white/5">
             <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />
           </Cell>
-          <Cell className="border-l border-white/10 text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'name')}>Name</Cell>
+          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'name')}>Name</Cell>
           <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'assignee')}>Assignee</Cell>
           <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'dueDate')}>Due date</Cell>
           <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'status')}>Status</Cell>
           <Cell borderRight={false} className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'priority')}>Priority</Cell>
+          {/* Dummy element to fill minmax(0, 1fr) */}
+          <div className="w-full" />
         </div>
 
         {/* Table Body */}
@@ -227,7 +237,7 @@ export function TableView({
                   </Cell>
 
                   {/* Completion Toggle */}
-                  <Cell borderRight={false} className={cn("justify-center px-1", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
+                  <Cell borderRight={false} className={cn("justify-center px-1 border-r border-white/5", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
                     <TaskStatusDropdown 
                       currentStatus={(isCompleting ? 'complete' : task.status) as any}
                       onStatusChange={(newStatus) => {
@@ -271,7 +281,7 @@ export function TableView({
                   </Cell>
 
                   {/* Name */}
-                  <Cell className="border-l border-white/10 font-medium">
+                  <Cell className="font-medium">
                     <span className={cn("truncate", isDone && "line-through text-white/30 decoration-white/20")}>
                       {task.title}
                     </span>
@@ -403,21 +413,39 @@ export function TableView({
                           currentPriority={task.priority}
                           onPriorityChange={(priority) => onUpdateTask(task._id, { priority })}
                         >
-                          <div className="w-full h-full flex items-center px-3 cursor-pointer">
+                          <div className="w-full h-full flex items-center px-4 cursor-pointer">
                               {task.priority ? (
-                                <span className={cn(
-                                   "font-medium uppercase tracking-wider text-[9px]",
-                                   getPriorityTextConfig(task.priority)
-                                )}>
-                                    {task.priority}
-                                </span>
+                                <div className="flex items-center gap-2 focus:outline-none">
+                                  <Flag className={cn(
+                                    "w-3.5 h-3.5",
+                                    task.priority === 'urgent' ? 'text-rose-500' :
+                                    task.priority === 'high' ? 'text-amber-500' :
+                                    task.priority === 'low' ? 'text-blue-400' :
+                                    'text-white/40' // normal priority
+                                  )} />
+                                  <span className={cn(
+                                    "capitalize text-[13px]",
+                                    task.priority === 'urgent' ? 'text-rose-500' :
+                                    task.priority === 'high' ? 'text-amber-500' :
+                                    task.priority === 'low' ? 'text-blue-400' :
+                                    'text-white/60'
+                                  )}>
+                                    {task.priority === 'normal' ? 'Normal' : task.priority}
+                                  </span>
+                                </div>
                               ) : (
-                                <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px]"><Flag className="w-3.5 h-3.5" /></span>
+                                <span className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-white/50 transition-opacity flex items-center gap-1.5 text-[12px]">
+                                  <Flag className="w-3.5 h-3.5" />
+                                  Set priority
+                                </span>
                               )}
                           </div>
                         </PriorityDropdown>
                      </div>
                   </Cell>
+
+                  {/* Dummy element to fill minmax(0, 1fr) tracking */}
+                  <div className="w-full" />
                 </div>
               );
             })

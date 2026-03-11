@@ -103,4 +103,38 @@ export const workspaceApi = {
     const res = await axiosInstance.patch(`/api/workspaces/${workspaceId}/members/${userId}/role`, { role });
     return res.data;
   },
+
+  // ── Invite link endpoints ──
+  async generateInviteLink(workspaceId: string, spaceId?: string): Promise<{ success: boolean; data: { token: string; expiresAt: string | null; useCount: number }; message?: string }> {
+    const res = await axiosInstance.post(`/api/workspaces/${workspaceId}/invite-link`, { spaceId });
+    return res.data;
+  },
+
+  async getInviteLinks(workspaceId: string): Promise<{ success: boolean; data: { _id: string; token: string; spaceId: string | null; expiresAt: string | null; useCount: number; createdAt: string }[] }> {
+    const res = await axiosInstance.get(`/api/workspaces/${workspaceId}/invite-links`);
+    return res.data;
+  },
+
+  async revokeInviteLink(workspaceId: string, linkId: string): Promise<{ success: boolean; message?: string }> {
+    const res = await axiosInstance.delete(`/api/workspaces/${workspaceId}/invite-link/${linkId}`);
+    return res.data;
+  },
+
+  async requestToJoinViaLink(token: string): Promise<{ success: boolean; message?: string }> {
+    const res = await axiosInstance.post(`/api/workspaces/invite-link/${token}/request`);
+    return res.data;
+  },
 };
+
+// ── Public (no-auth) invite link info ──
+export async function getInviteLinkInfo(token: string): Promise<{ success: boolean; data: { workspaceName: string; spaceName: string | null; invitedBy: { name: string; avatar: string | null } } }> {
+  // Use raw fetch (no auth cookie) — this is a public endpoint.
+  // Do NOT use axiosInstance here: its 401 interceptor would redirect
+  // unauthenticated visitors away from the invite page.
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8002'}/api/workspaces/invite-link/${token}/info`);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Invalid link' }));
+    throw new Error(error.message || 'Invalid link');
+  }
+  return res.json();
+}
