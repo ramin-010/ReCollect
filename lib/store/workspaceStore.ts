@@ -40,7 +40,7 @@ interface WorkspaceStore {
 
  
   updateTask: (taskId: string, updates: any, onPermissionError?: (msg: string) => void) => void;
- 
+  updateTaskImmediate: (taskId: string, updates: any, onPermissionError?: (msg: string) => void) => Promise<boolean>;
   flushTaskUpdate: (taskId: string) => void;
 }
 
@@ -164,6 +164,42 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     debounceTimers.set(taskId, timer);
   },
 
+  updateTaskImmediate: async (taskId, updates, onPermissionError) => {
+    // 1. Optimistic local update
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t._id === taskId ? { ...t, ...updates } : t)),
+    }));
+
+    // 2. Clear any pending debounced updates for this task
+    const existingTimer = debounceTimers.get(taskId);
+    if (existingTimer) clearTimeout(existingTimer);
+    
+    // 3. Merge with any existing pending updates
+    const existing = pendingUpdates.get(taskId) || {};
+    const finalPayload = { ...existing, ...updates };
+    pendingUpdates.delete(taskId);
+    debounceTimers.delete(taskId);
+
+    if (Object.keys(finalPayload).length === 0) return true;
+
+    try {
+      const res = await workspaceTodoApi.updateTodo(taskId, finalPayload);
+      if (res.success) {
+        return true;
+      } else {
+        const errMsg = res.message?.toLowerCase() || '';
+        if (errMsg.includes('permission') || errMsg.includes('unauthorized')) {
+          onPermissionError?.(res.message || 'Permission restricted.');
+        } else {
+          toast.error(res.message || 'Failed to update task');
+        }
+        return false;
+      }
+    } catch (error) {
+      toast.error('Failed to update task');
+      return false;
+    }
+  },
  
   flushTaskUpdate: (taskId) => {
     const existingTimer = debounceTimers.get(taskId);

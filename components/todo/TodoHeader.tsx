@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Zap, Timer, Clock } from 'lucide-react';
+import { Timer, Clock } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { FlipClock } from '@/components/ui-base/FlipClock';
 
@@ -41,7 +41,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const currentImage = backgroundImages.length > 0 ? backgroundImages[currentImageIndex] : null;
 
   return (
-    <div className="relative w-full h-[30vh] min-h-[200px] -mt-16 pt-16">
+    <div className="relative w-full h-[20vh] min-h-[200px] -mt-16 pt-16">
         {/* Background Layer */}
         <div className="absolute inset-0 z-0 overflow-hidden">
             {/* Default Gradient Background */}
@@ -73,7 +73,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
       <div className="relative z-10 w-full h-full max-w-[1400px] mx-auto px-12 flex items-end justify-between pb-3">
         
         {/* LEFT: Greeting (Elegant Serif) */}
-        <div className="flex flex-col justify-end space-y-1 mb-2">
+        <div className="flex flex-col justify-end space-y-1 ">
            
             
             <motion.h1 
@@ -90,23 +90,24 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-white/40 text-xs font-medium pl-1 mt-1 border-l-2 border-emerald-500/30"
+                className="text-white/40 text-xs font-medium pl-2 mt-1 border-l-2 border-emerald-500/30"
             >
-                {stats.pending} tasks pending review.
+                {stats.pending} items needing attention. <br/>
+                {/* <span className="opacity-70 text-[10px]">Managing personal tasks, docs, and app environments.</span> */}
             </motion.p>
         </div>
 
         {/* CENTER: The Prism Clock (Sophisticated Watermark) */}
         <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex flex-col items-center select-none z-20">
              {/* Main Clock - Watermark Style */}
-             <div className="relative opacity-50 mix-blend-overlay scale-125 origin-bottom group">
-                <FlipClock 
-                  transparent 
-                  scale={0.33} 
-                  showSeconds={false} 
-                  mode={clockMode}
-                  className="text-white cursor-pointer" 
-                />
+              <div className="relative" style={{ opacity: 0.2}}>
+            <FlipClock
+              transparent
+              scale={0.3}
+              showSeconds={false}
+              mode={clockMode}
+              className="text-white"
+            />
                 
                  {/* Mode Toggle Button - Icon Only, Bottom Right of Clock */}
                  <button
@@ -122,38 +123,17 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                  </button>
              </div>
         </div>
-
-        {/* RIGHT: Floating Stats (Minimal) */}
-        <div className="flex flex-col items-end justify-end mb-2 z-10">
-             <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+        {/* RIGHT: Stats Badge */}
+        <div className="flex flex-col items-end justify-end mb-2 z-10 w-32">
+             <motion.p 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center gap-5"
+                className="text-white/40 text-xs font-medium pr-2 mt-1 border-r-2 border-emerald-500/30 text-right opacity-70"
             >
-                <div className="flex flex-col items-end">
-                    <span className="text-3xl font-bold tabular-nums text-white tracking-tighter drop-shadow-md">{Math.round(stats.progress)}%</span>
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-emerald-400 font-bold opacity-80">Efficiency</span>
-                </div>
-                <div className="relative w-14 h-14">
-                    <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/10" />
-                    <motion.circle 
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: stats.progress / 100 }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
-                        strokeLinecap="round"
-                        className="text-emerald-500 drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]"
-                        strokeDasharray="1"
-                        pathLength="1"
-                    />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Zap className="w-5 h-5 text-emerald-400 fill-emerald-400/10" />
-                    </div>
-                </div>
-            </motion.div>
+                {Math.round(stats.progress)}% efficiency. <br/>
+                {/* <span className="opacity-70 text-[10px]">Your daily progress.</span> */}
+            </motion.p>
         </div>
 
       </div>

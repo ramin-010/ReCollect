@@ -78,7 +78,7 @@ export function WorkspaceView() {
   const {
     workspaces, selectedWorkspace, activeSpaceId, tasks, stats, activity, isLoading, isDataLoading,
     setSelectedWorkspace, setActiveSpaceId, fetchWorkspaces, fetchWorkspaceData,
-    updateTask, addTask, setWorkspaces, setStats, updateWorkspace
+    updateTask, updateTaskImmediate, addTask, setWorkspaces, setStats, updateWorkspace, setActivity
   } = useWorkspaceStore();
 
   const [activeTab, setActiveTab] = useState<SubTab>('tasks');
@@ -136,6 +136,12 @@ export function WorkspaceView() {
   useEffect(() => {
     if (!selectedWorkspace) return;
     fetchWorkspaceData(selectedWorkspace._id, activeSpaceId !== 'all' ? activeSpaceId! : undefined, canViewOverview);
+    
+    // Also fetch initial activity feed if overview is accessible
+    if (canViewOverview) {
+      workspaceApi.getWorkspaceActivity(selectedWorkspace._id)
+        .then(res => res.success && setActivity(res.data));
+    }
   }, [selectedWorkspace?._id, activeSpaceId, canViewOverview, fetchWorkspaceData]);
 
   // ── Derived counts for actionable stats ──
@@ -222,20 +228,37 @@ export function WorkspaceView() {
   // ── Task save handler (shared by Overview + Tasks quick-add) ──
   const handleTaskSaved = useCallback((newTask: any) => {
     addTask(newTask);
-    if (selectedWorkspace && canViewOverview) {
-      workspaceApi.getWorkspaceStats(selectedWorkspace._id)
-        .then(res => res.success && setStats(res.data));
+    if (selectedWorkspace) {
+      if (canViewOverview) {
+        workspaceApi.getWorkspaceStats(selectedWorkspace._id)
+          .then(res => res.success && setStats(res.data));
+      }
+      workspaceApi.getWorkspaceActivity(selectedWorkspace._id)
+        .then(res => res.success && setActivity(res.data));
     }
-  }, [selectedWorkspace, canViewOverview, addTask, setStats]);
+  }, [selectedWorkspace, canViewOverview, addTask, setStats, setActivity]);
 
   // ── Handlers ──
   const handleStatusChange = useCallback((taskId: string, newStatus: string) => {
     updateTask(taskId, { status: newStatus as any }, (msg) => setPermissionError(msg));
-  }, [updateTask]);
+    if (selectedWorkspace) {
+      setTimeout(() => {
+        workspaceApi.getWorkspaceActivity(selectedWorkspace._id)
+          .then(res => res.success && setActivity(res.data));
+      }, 500);
+    }
+  }, [updateTask, selectedWorkspace, setActivity]);
 
-  const handleUpdateTask = useCallback((taskId: string, updates: any) => {
-    updateTask(taskId, updates, (msg) => setPermissionError(msg));
-  }, [updateTask]);
+  const handleUpdateTask = useCallback(async (taskId: string, updates: any) => {
+    const success = await updateTaskImmediate(taskId, updates, (msg) => setPermissionError(msg));
+    if (success && selectedWorkspace) {
+      // Small delay to ensure DB triggers/activity log creation are finished
+      setTimeout(() => {
+        workspaceApi.getWorkspaceActivity(selectedWorkspace._id)
+          .then(res => res.success && setActivity(res.data));
+      }, 500);
+    }
+  }, [updateTaskImmediate, selectedWorkspace, setActivity]);
 
   const handleTaskClick = (task: any) => {
     setEditingTask(task);

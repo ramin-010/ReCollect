@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState,useEffect, useRef, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { cn, getInitials } from '@/lib/utils';
+import { useAuthStore } from '@/lib/store/authStore';
 import { AssigneeDropdown } from './AssigneeDropdown';
 import { PriorityDropdown } from './PriorityDropdown';
 import { TaskStatusDropdown, TaskStatus } from '../TaskStatusDropdown';
@@ -17,6 +18,7 @@ import { InlineLabelDropdown, InlineLabelDropdownHandle } from '../../InlineLabe
 import { InlineAssigneeDropdown, InlineAssigneeDropdownHandle } from '../../InlineAssigneeDropdown';
 import { SmartReminderModal } from '../../SmartReminderModal';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
+import axiosInstance from '@/lib/utils/axios';
 import {
   Popover,
   PopoverContent,
@@ -34,7 +36,7 @@ interface TaskDetailModalProps {
   task: any | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateTask: (taskId: string, updates: any) => void;
+  onUpdateTask: (taskId: string, updates: any) => Promise<void>;
   workspaceMembers: any[];
 }
 
@@ -84,6 +86,34 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const inlineLabelRef = useRef<InlineLabelDropdownHandle>(null);
   const inlineAssigneeRef = useRef<InlineAssigneeDropdownHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const user = useAuthStore((state) => state.user); // for optimistic log actor
+
+  const [activities, setActivities] = useState<any[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+  const [activityRefreshCounter, setActivityRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen || !task?._id) return;
+    
+    let isMounted = true;
+    const fetchActivities = async () => {
+      try {
+        setIsLoadingActivities(true);
+        const res = await axiosInstance.get(`/api/workspace-todos/${task._id}/activity`);
+        if (isMounted && res.data?.success) {
+          setActivities(res.data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch activities", err);
+      } finally {
+        if (isMounted) setIsLoadingActivities(false);
+      }
+    };
+    
+    fetchActivities();
+    
+    return () => { isMounted = false; };
+  }, [isOpen, task?._id]); // removed activityRefreshCounter dependency
 
   // Mark dirty on any change
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -100,7 +130,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   // ━━━━━━━━━━━━━━━━━━━━━━
   // SAVE — single entry point
   // ━━━━━━━━━━━━━━━━━━━━━━
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     setIsSaving(true);
     
     // Extract subtasks from HTML and remove them from description
@@ -160,10 +190,45 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
         ? { pattern: recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly', interval: recurringInterval }
         : null,
     };
-    onUpdateTask(task._id, updates);
+    await onUpdateTask(task._id, updates);
+    
+    // --- OPTIMISTIC UI UPDATE FOR ACTIVITY LOG ---
+    // Instead of re-fetching, we locally push what just happened
+    const newLogs: any[] = [];
+    const actor = user ? { _id: user._id, name: user.name, avatar: user.avatar } : { name: 'You' };
+    const now = new Date().toISOString();
+
+    if (updates.status && updates.status !== task.status && updates.status === 'complete') {
+        newLogs.push({ action: 'task_completed', actor, createdAt: now, metadata: task.title });
+    } else if (updates.status && updates.status !== task.status) {
+        newLogs.push({ action: 'task_status_changed', actor, createdAt: now, metadata: `${task.status} → ${updates.status}` });
+    }
+    
+    if (updates.priority !== undefined && updates.priority !== task.priority) {
+        newLogs.push({ action: 'task_priority_changed', actor, createdAt: now, metadata: `${task.priority || 'none'} → ${updates.priority}` });
+    }
+
+    const titleChanged = updates.title && updates.title !== task.title;
+    const descChanged = updates.description !== undefined && updates.description !== task.description;
+    if (titleChanged || descChanged) {
+        newLogs.push({ action: 'task_content_changed', actor, createdAt: now, metadata: 'updated the content' });
+    }
+
+    if (updates.dueDate !== undefined) {
+        const oldT = task.dueDate ? new Date(task.dueDate).getTime() : 0;
+        const newT = updates.dueDate ? new Date(updates.dueDate).getTime() : 0;
+        if (oldT !== newT) {
+            newLogs.push({ action: 'task_due_date_changed', actor, createdAt: now, metadata: `due date changed` });
+        }
+    }
+
+    if (newLogs.length > 0) {
+        setActivities(prev => [...newLogs, ...prev]);
+    }
+
     setIsDirty(false);
     setIsSaving(false);
-  }, [title, description, status, priority, assignees, dueDate, currentReminder, selectedLabels, subtasks, isRecurring, recurringUnit, recurringInterval, task._id, onUpdateTask]);
+  }, [title, description, status, priority, assignees, dueDate, currentReminder, selectedLabels, subtasks, isRecurring, recurringUnit, recurringInterval, task._id, onUpdateTask, task, user]);
 
   // ── Title handlers ──
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -654,31 +719,42 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                       <button className="text-white/40 hover:text-white transition-colors" title="History"><History className="w-4 h-4" /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
-                      <div className="flex gap-3">
-                        <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5">
-                          {task.assignees?.[0] ? getInitials(task.assignees[0].name) : 'R'}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[13px] text-white/60 leading-snug">
-                            <span className="font-semibold text-white/80 capitalize mr-1">{task.assignees?.[0]?.name || 'Ramin'}</span>
-                            created this task
-                          </p>
-                          <p className="text-[11px] text-white/30 mt-1">{createdDate}</p>
-                        </div>
-                      </div>
-                      {task.dueDate && (
-                        <div className="flex gap-3">
-                          <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5">
-                            {task.assignees?.[0] ? getInitials(task.assignees[0].name) : 'R'}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-[13px] text-white/60 leading-snug">
-                              <span className="font-semibold text-white/80 capitalize mr-1">{task.assignees?.[0]?.name || 'Ramin'}</span>
-                              set the due date to <span className="text-white/80">{dateLabel}</span>
-                            </p>
-                            <p className="text-[11px] text-white/30 mt-1">Recently</p>
-                          </div>
-                        </div>
+                      {isLoadingActivities ? (
+                        <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                      ) : activities.length > 0 ? (
+                        activities.map((activity, idx) => {
+                          const actorName = activity.actor?.name || 'Someone';
+                          const actorAvatar = activity.actor?.avatar;
+                          const actionText = 
+                            activity.action === 'task_created' ? 'created this task' :
+                            activity.action === 'task_completed' ? 'completed this task' :
+                            activity.action === 'task_assigned' ? `assigned ${activity.targetUser?._id === activity.actor?._id ? 'themselves' : activity.targetUser?.name || 'someone'}` :
+                            activity.action === 'task_unassigned' ? `unassigned ${activity.targetUser?._id === activity.actor?._id ? 'themselves' : activity.targetUser?.name || 'someone'}` :
+                            activity.action === 'task_status_changed' ? `changed status to ${activity.metadata?.split('→')[1]?.trim() || 'unknown'}` :
+                            activity.action === 'task_priority_changed' ? `changed priority to ${activity.metadata?.split('→')[1]?.trim() || 'unknown'}` :
+                            activity.action === 'task_due_date_changed' ? 'changed the due date' :
+                            activity.action === 'task_content_changed' ? 'updated the content' :
+                            'updated the task';
+
+                          return (
+                            <div key={idx} className="flex gap-3">
+                              <div className="w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5 overflow-hidden">
+                                {actorAvatar ? <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" /> : getInitials(actorName) || 'S'}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[13px] text-white/60 leading-snug">
+                                  <span className="font-semibold text-white/80 capitalize mr-1">{actorName}</span>
+                                  {actionText}
+                                </p>
+                                <p className="text-[11px] text-white/30 mt-1">
+                                  {format(new Date(activity.createdAt), 'MMM d, yyyy h:mm a')}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-[13px] text-white/40 text-center py-4">No activity yet</div>
                       )}
                     </div>
                   </div>

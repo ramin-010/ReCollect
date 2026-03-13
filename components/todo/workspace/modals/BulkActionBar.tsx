@@ -12,6 +12,7 @@ interface BulkActionBarProps {
   onDelete: (taskIds: string[]) => Promise<void>;
   onUpdate: (taskIds: string[], updates: any) => Promise<void>;
   workspaceMembers: any[];
+  hideAssignees?: boolean;
 }
 
 export function BulkActionBar({
@@ -19,7 +20,8 @@ export function BulkActionBar({
   onClearSelection,
   onDelete,
   onUpdate,
-  workspaceMembers
+  workspaceMembers,
+  hideAssignees = false
 }: BulkActionBarProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -75,27 +77,27 @@ export function BulkActionBar({
           </TaskStatusDropdown>
 
           {/* Assignees */}
-          <AssigneeDropdown
-            currentAssignees={[]}
-            workspaceMembers={workspaceMembers}
-            onAssign={async (email, name, avatar, _id) => {
-               setIsUpdatingAssignee(true);
-               // Simple override assignees logic. The AssigneeDropdown uses the email to lookup the user in the parent, or the parent just appends the email.
-               // We will just replace assignees with the new selected member.
-               const member = workspaceMembers.find(m => m.email === email);
-               if (member) {
-                 await onUpdate(taskIds, { assignees: [member._id] }); 
-               }
-               setIsUpdatingAssignee(false);
-               onClearSelection();
-            }}
-            onUnassign={() => {}}
-          >
-            <button disabled={isUpdatingAssignee} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
-               {isUpdatingAssignee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-               Assignees
-            </button>
-          </AssigneeDropdown>
+          {!hideAssignees && (
+            <AssigneeDropdown
+              currentAssignees={[]}
+              workspaceMembers={workspaceMembers}
+              onAssign={async (email, name, avatar, _id) => {
+                 setIsUpdatingAssignee(true);
+                 const member = workspaceMembers.find(m => m.email === email);
+                 if (member) {
+                   await onUpdate(taskIds, { assignees: [member._id] }); 
+                 }
+                 setIsUpdatingAssignee(false);
+                 onClearSelection();
+              }}
+              onUnassign={() => {}}
+            >
+              <button disabled={isUpdatingAssignee} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
+                 {isUpdatingAssignee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                 Assignees
+              </button>
+            </AssigneeDropdown>
+          )}
 
           {/* Due Date */}
           <DueDateDropdown

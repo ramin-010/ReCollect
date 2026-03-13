@@ -80,19 +80,17 @@ export function WorkspaceHeader({
   const currentImage = backgroundImages.length > 0 ? backgroundImages[currentImageIndex] : null;
   
   // Stats
-  const progress = stats?.completionRate || 0;
-  const pendingCount = stats?.totalTasks && stats?.completedTasks !== undefined 
-    ? stats.totalTasks - stats.completedTasks 
-    : 0;
+  const progress = stats?.totalTasks > 0 ? Math.round((stats.completed / stats.totalTasks) * 100) : 0;
+  const pendingCount = stats?.pending || 0;
 
   const activeSpace = selectedWorkspace?.spaces?.find((s: any) => s._id === activeSpaceId);
 
   return (
-    <div className="relative w-full h-[30vh] min-h-[200px] -mt-16 pt-16">
+    <div className="relative w-full h-[20vh] min-h-[200px] -mt-16 pt-16">
         {/* Background Layer */}
         <div className="absolute inset-0 z-0 overflow-hidden">
             {/* Default Gradient Background */}
-            <div className={`absolute inset-0 bg-gradient-to-r from-zinc-900 via-neutral-900 to-zinc-900`} />
+            <div className={`absolute inset-0bg-gradient-to-r from-zinc-900 via-neutral-900 to-zinc-900`} />
             
              {/* Slider Images */}
             <AnimatePresence mode="wait">
@@ -110,7 +108,7 @@ export function WorkspaceHeader({
                 )}
             </AnimatePresence>
 
-             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 opacity-30 blur-3xl" />
+             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 opacity-30 blur-3xl" />
 
              {/* Noise Texture */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
@@ -118,10 +116,10 @@ export function WorkspaceHeader({
 
         </div>
 
-      <div className="relative z-10 w-full h-full max-w-[1200px] mx-auto px-6 md:px-8 flex flex-col justify-between pb-3">
+      <div className="relative z-10 w-full h-full max-w-[1200px] mx-auto px-6 md:px-8 flex flex-col justify-end pb-3">
         
         {/* TOP ROW: Action Bar (Avatars, Invite, Settings) */}
-        <div className="flex items-center justify-end w-full pt-4">
+        <div className="absolute top-0 right-6 md:right-8 flex items-center justify-end pt-4 z-20">
           <motion.div 
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -173,10 +171,10 @@ export function WorkspaceHeader({
               </button>
               <button
                 onClick={() => setShowShareLinkModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-[11px] font-semibold rounded-lg transition-all border border-indigo-500/20 hover:border-indigo-500/30"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/10 text-white/60 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-white/[0.06] hover:border-white/10"
               >
                 <Link2 className="w-3 h-3" />
-                Share Link
+                Share
               </button>
               </>
             )}
@@ -194,24 +192,19 @@ export function WorkspaceHeader({
         <div className="flex items-end justify-between w-full">
           {/* LEFT: Identity (Elegant Serif + Selectors) */}
           <div className="flex flex-col justify-end space-y-1 mb-2">
-            
-            <div className="flex items-center gap-2">
                {/* Workspace Dropdown */}
                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 pl-2 pr-1 py-1 -ml-2">
-                      <div className="flex items-center justify-center bg-indigo-500/15 p-1.5 rounded-md shadow-sm border border-indigo-500/20">
-                        <Briefcase className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
-                      </div>
+                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 px-2 -ml-2">
                       <motion.h1 
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 }}
-                          className="text-3xl lg:text-4xl font-light tracking-tight text-white font-serif"
+                          className="text-xl lg:text-2xl font-light tracking-tight text-white/70 font-serif leading-none"
                       >
-                          {selectedWorkspace?.name}
+                          {selectedWorkspace?.name} <span className="font-sans">workspace</span>
                       </motion.h1>
-                      <ChevronDown className="w-5 h-5 text-white/30 group-hover:text-white/60 transition-colors mt-1" />
+                      <ChevronDown className="w-5 h-5 text-white/30 opacity-20 group-hover:text-white/60 group-hover:opacity-100 transition-colors mt-2" />
                     </button>
                   </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[300px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
@@ -281,27 +274,26 @@ export function WorkspaceHeader({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-              
-              <div className="w-[1px] h-6 bg-white/20 mx-1 rotate-12 mb-1"></div>
-
-              {/* Space Dropdown */}
+                            {/* Space Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button onClick={() => setShowCreateSpace(false)} className="flex items-center gap-1 text-white/60 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 px-2 py-1 mt-1">
-                    <motion.span 
-                       initial={{ opacity: 0, x: -10 }}
-                       animate={{ opacity: 1, x: 0 }}
+                  <button onClick={() => setShowCreateSpace(false)} className="flex items-center gap-2 text-white hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg px-2 -ml-2">
+                    <motion.div 
+                       initial={{ opacity: 0, y: 10 }}
+                       animate={{ opacity: 1, y: 0 }}
                        transition={{ delay: 0.15 }}
-                       className="tracking-tight text-xl font-medium"
+                       className="flex items-center gap-2"
                     >
-                      {activeSpaceId === 'all' ? 'All Spaces' : activeSpace?.name || 'Select Space'}
-                    </motion.span>
-                    <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors" />
+                      <span className="text-3xl lg:text-4xl font-bold tracking-tight font-sans text-white leading-none">
+                        {activeSpaceId === 'all' ? 'All Spaces' : activeSpace?.name || 'Select Space'}
+                      </span>
+                      <ChevronDown className="w-5 h-5 opacity-20 group-hover:opacity-100   text-white/30 group-hover:text-white/60 transition-colors mt-2" />
+                    </motion.div>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50 mt-1">
+                <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl z-50 mt-1">
                   <div className="px-2 py-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Spaces</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Sub spaces of {selectedWorkspace?.name}</span>
                   </div>
                   {selectedWorkspace?.spaces?.map((space: any) => (
                     <DropdownMenuItem
@@ -355,8 +347,6 @@ export function WorkspaceHeader({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-            
             <motion.p 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
