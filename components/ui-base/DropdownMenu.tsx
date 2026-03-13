@@ -258,8 +258,20 @@ const DropdownMenuSubContext = React.createContext<{
 })
 
 export const DropdownMenuSub: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isSubOpen, setIsSubOpen] = useState(false)
+  const [isSubOpen, setIsSubOpenState] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const setIsSubOpen = (open: boolean) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (open) {
+      setIsSubOpenState(true)
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        setIsSubOpenState(false)
+      }, 150)
+    }
+  }
   
   return (
     <DropdownMenuSubContext.Provider value={{ isSubOpen, setIsSubOpen, triggerRef }}>

@@ -1,10 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, ListTodo, Plus, LayoutList, Table, CalendarDays } from 'lucide-react';
+import { Loader2, ListTodo, Plus, LayoutList, Table, CalendarDays, ArrowDownUp, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskRow } from './TaskRow';
 import { TableView } from './TableView';
 import { CalendarView } from './CalendarView';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui-base/DropdownMenu';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 import { BulkActionBar } from './modals/BulkActionBar';
 import { useWorkspaceStore } from '@/lib/store/workspaceStore';
@@ -21,6 +31,10 @@ interface TasksTabProps {
   setIsInputExpanded: (val: boolean) => void;
   taskFilter: string;
   setTaskFilter: (filter: string) => void;
+  sortBy: 'priority' | 'dueDate' | 'recent';
+  setSortBy: (sort: 'priority' | 'dueDate' | 'recent') => void;
+  assigneeFilter: string;
+  setAssigneeFilter: (assigneeId: string) => void;
   handleTaskSaved: (task: any) => void;
   handleStatusChange: (taskId: string, newStatus: string) => void;
   handleUpdateTask: (taskId: string, updates: any) => void;
@@ -40,6 +54,10 @@ export function TasksTab({
   setIsInputExpanded,
   taskFilter,
   setTaskFilter,
+  sortBy,
+  setSortBy,
+  assigneeFilter,
+  setAssigneeFilter,
   handleTaskSaved,
   handleStatusChange,
   handleUpdateTask,
@@ -118,29 +136,108 @@ export function TasksTab({
           ))}
         </div>
 
-        {/* View Switcher Controls */}
-        <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
-          <button 
-            onClick={() => setCurrentView('list')}
-            className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-            title="List View"
-          >
-            <LayoutList className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => setCurrentView('table')}
-            className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-            title="Table View"
-          >
-            <Table className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => setCurrentView('calendar')}
-            className={cn("p-1.5 rounded-md transition-colors", currentView === 'calendar' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-            title="Calendar View"
-          >
-            <CalendarDays className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Active Assignee Filter Badge */}
+          {assigneeFilter !== 'all' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 text-white text-xs font-medium rounded-md border border-white/10">
+              {(() => {
+                const m = workspaceMembers.find(member => member._id === assigneeFilter);
+                if (!m) return null;
+                return (
+                  <>
+                    {m.avatar ? (
+                      <img src={m.avatar} alt="" className="w-3.5 h-3.5 rounded-full" />
+                    ) : (
+                      <div className="w-3.5 h-3.5 rounded-full bg-indigo-500 flex items-center justify-center text-[7px] font-bold text-white">
+                        {m.name.charAt(0)}
+                      </div>
+                    )}
+                    <span>{m.name}</span>
+                    <button 
+                      onClick={() => setAssigneeFilter('all')}
+                      className="ml-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Combined Sort & Filter Dropdown */}
+          <div className="flex items-center gap-1 mr-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={cn(
+                  "px-3 py-1.5 flex items-center gap-2 text-xs font-medium border rounded-md transition-colors",
+                  "border-white/5 text-white/40 hover:text-white hover:bg-white/5"
+                )}>
+                  <ArrowDownUp className="w-3.5 h-3.5" />
+                  Sort
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px]">
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('priority'); }} className={cn(sortBy === 'priority' ? "bg-white/5 font-medium" : "")}>
+                  Priority {sortBy === 'priority' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('dueDate'); }} className={cn(sortBy === 'dueDate' ? "bg-white/5 font-medium" : "")}>
+                  Due Date {sortBy === 'dueDate' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('recent'); }} className={cn(sortBy === 'recent' ? "bg-white/5 font-medium" : "")}>
+                  Recently Added {sortBy === 'recent' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-white/50" />
+                    Filter by Assignee
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-[180px]">
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setAssigneeFilter('all'); }} className={cn(assigneeFilter === 'all' ? "bg-white/5 font-medium" : "")}>
+                      Anyone
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {workspaceMembers.map(m => (
+                      <DropdownMenuItem key={m._id} onClick={(e) => { e.preventDefault(); setAssigneeFilter(m._id); }} className={cn(assigneeFilter === m._id ? "bg-white/5 font-medium" : "")}>
+                        <div className="flex items-center gap-2">
+                          {m.avatar ? <img src={m.avatar} alt="" className="w-4 h-4 rounded-full" /> : <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] font-medium text-white">{m.name.charAt(0)}</div>}
+                          {m.name}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* View Switcher Controls */}
+          <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
+            <button 
+              onClick={() => setCurrentView('list')}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              title="List View"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setCurrentView('table')}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              title="Table View"
+            >
+              <Table className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setCurrentView('calendar')}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'calendar' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              title="Calendar View"
+            >
+              <CalendarDays className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

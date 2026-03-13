@@ -85,6 +85,8 @@ export function WorkspaceView() {
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [overviewInputExpanded, setOverviewInputExpanded] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
+  const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'recent'>('priority');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
@@ -215,15 +217,43 @@ export function WorkspaceView() {
         result = result.filter(t => t.status !== 'complete');
         break;
     }
-    const pMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
-    result.sort((a, b) => {
-      const aOverdue = isOverdue(a) ? 1 : 0;
-      const bOverdue = isOverdue(b) ? 1 : 0;
-      if (bOverdue !== aOverdue) return bOverdue - aOverdue;
-      return (pMap[b.priority || 'medium'] || 2) - (pMap[a.priority || 'medium'] || 2);
-    });
+
+    // Apply Assignee filter
+    if (assigneeFilter !== 'all') {
+      result = result.filter(t => {
+        return t.assignees?.some((a: any) => {
+          const assigneeId = typeof a === 'object' ? a._id : a;
+          return assigneeId === assigneeFilter;
+        });
+      });
+    }
+
+    // Apply Sorting
+    if (sortBy === 'priority') {
+      const pMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
+      result.sort((a, b) => {
+        const aOverdue = isOverdue(a) ? 1 : 0;
+        const bOverdue = isOverdue(b) ? 1 : 0;
+        if (bOverdue !== aOverdue) return bOverdue - aOverdue;
+        return (pMap[b.priority || 'medium'] || 2) - (pMap[a.priority || 'medium'] || 2);
+      });
+    } else if (sortBy === 'dueDate') {
+      result.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
+    } else if (sortBy === 'recent') {
+      result.sort((a, b) => {
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
+
     return result;
-  }, [tasks, taskFilter, currentUser?._id]);
+  }, [tasks, taskFilter, currentUser?._id, assigneeFilter, sortBy]);
 
   // ── Task save handler (shared by Overview + Tasks quick-add) ──
   const handleTaskSaved = useCallback((newTask: any) => {
@@ -645,6 +675,10 @@ export function WorkspaceView() {
                 setIsInputExpanded={setIsInputExpanded}
                 taskFilter={taskFilter}
                 setTaskFilter={(f) => setTaskFilter(f as TaskFilter)}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                assigneeFilter={assigneeFilter}
+                setAssigneeFilter={setAssigneeFilter}
                 handleTaskSaved={handleTaskSaved}
                 handleStatusChange={handleStatusChange}
                 handleUpdateTask={handleUpdateTask}
