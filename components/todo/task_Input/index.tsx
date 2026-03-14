@@ -227,11 +227,11 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     >
       <motion.div 
         animate={{ 
-          borderColor: isAiGenerating ? "rgba(168, 85, 247, 0.4)" : isAiMode ? "rgba(168, 85, 247, 0.2)" : (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
-          boxShadow: isAiGenerating ? "0 0 25px -5px rgba(168, 85, 247, 0.25)" : isAiMode ? "0 0 15px -5px rgba(168, 85, 247, 0.15)" : (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
+          borderColor: isAiGenerating ? "rgba(99, 102, 241, 0.4)" : isAiMode ? "rgba(99, 102, 241, 0.2)" : (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
+          boxShadow: isAiGenerating ? "0 0 25px -5px rgba(99, 102, 241, 0.25)" : isAiMode ? "0 0 25px -5px rgba(99, 102, 241, 0.15)" : (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
         }}
         transition={{ duration: 0.3 }}
-        className= {cn("relative bg-[#2a2a2a] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[#2a2638] border-purple-500/10")}
+        className= {cn("relative bg-[#2a2a2a] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[#262938] border-indigo-500/10")}
       >
         {/* AI generating loading indicator moved top */}
         {isAiGenerating && (
@@ -248,7 +248,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
         {/* Main Input Row */}
         <div className={cn("flex gap-3 px-4", isAiGenerating ? "pb-3" : "py-3", isExpanded ? "items-start items-center" : "items-center")}>
           {(isAiMode || isAiGenerating) ? (
-            <Sparkles className={cn("w-5 h-5 text-purple-400 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
+            <Sparkles className={cn("w-5 h-5 text-indigo-400 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           ) : (
             <Circle className={cn("w-5 h-5 text-white/20 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           )}
@@ -269,7 +269,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               suppressHydrationWarning={demoMode}
               className={cn(
                 "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative transition-colors duration-300 resize-none overflow-hidden block p-0 m-0 border-none leading-normal",
-                highlightedOverlay && !isAiGenerating ? "text-transparent caret-white" : (isAiMode || isAiGenerating ? "text-purple-200" : "text-white")
+                highlightedOverlay && !isAiGenerating ? "text-transparent caret-white" : (isAiMode || isAiGenerating ? "text-indigo-200" : "text-white")
               )}
             />
             
@@ -446,7 +446,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               <div className="flex -space-x-1.5">
                                 {assignees.slice(0, 2).map((a, i) => (
                                   <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
-                                    {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover"/> : getInitials(a.name)}
+                                    {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(a.name)}
                                   </div>
                                 ))}
                                 {assignees.length > 2 && (
@@ -496,7 +496,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                   >
                                     <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                                       {member.avatar ? (
-                                        <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                        <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                                       ) : (
                                         getInitials(member.name)
                                       )}
@@ -526,7 +526,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               >
                                 <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                                   {user.avatar ? (
-                                    <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                    <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                                   ) : (
                                     getInitials(user.name)
                                   )}
@@ -734,7 +734,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               {assignees.map((assignee, idx) => (
                                 <div key={assignee.email} className="w-5 h-5 rounded-full ring-2 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={assignee.name}>
                                   {assignee.avatar ? (
-                                    <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
+                                    <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   ) : (
                                     getInitials(assignee.name)
                                   )}
@@ -790,7 +790,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               >
                                 <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                                   {member.avatar ? (
-                                    <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                    <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                                   ) : (
                                     getInitials(member.name)
                                   )}
@@ -821,7 +821,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           >
                             <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                               {user.avatar ? (
-                                <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 getInitials(user.name)
                               )}
@@ -1031,6 +1031,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                 src={previewImage} 
                 alt="Preview"
                 className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
+                referrerPolicy="no-referrer"
               />
               <button
                 onClick={() => setPreviewImage(null)}

@@ -96,7 +96,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                        )}
                      >
                        {member.avatar ? (
-                         <img src={member.avatar} alt={member.name} className="w-6 h-6 rounded-full" />
+                         <img src={member.avatar} alt={member.name} referrerPolicy="no-referrer" className="w-6 h-6 rounded-full" />
                        ) : (
                          <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                            {getInitials(member.name)}
@@ -133,7 +133,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                 >
                   <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
                     {user.avatar ? (
-                      <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                      <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       getInitials(user.name)
                     )}

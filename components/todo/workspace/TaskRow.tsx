@@ -68,6 +68,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
   const [isCompleting, setIsCompleting] = useState(false);
   const isDone = task.status === 'complete' || isCompleting;
   const assignee = task.assignees && task.assignees.length > 0 ? task.assignees[0] : null;
+  console.log(assignee);
   const priorityConfig = getPriorityConfig(task.priority || 'low');
 
   const dueDateDisplay = task.dueDate ? formatSmartDate(task.dueDate, true) : null;
@@ -178,7 +179,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
             {assignee ? (
               <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-[10px] font-bold">
                 {assignee.avatar ? (
-                  <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" />
+                  <img src={assignee.avatar} alt="avatar" className="w-full h-full rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   getInitials(assignee.name)
                 )}

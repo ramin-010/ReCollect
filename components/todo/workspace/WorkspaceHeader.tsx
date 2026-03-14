@@ -111,7 +111,7 @@ export function WorkspaceHeader({
              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 opacity-30 blur-3xl" />
 
              {/* Noise Texture */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 pointer-events-none" />
 
 
         </div>
@@ -142,7 +142,7 @@ export function WorkspaceHeader({
                     title={mUser.name || mUser.email}
                   >
                     {mUser.avatar ? (
-                      <img src={mUser.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                      <img src={mUser.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       getInitials(mUser.name)
                     )}

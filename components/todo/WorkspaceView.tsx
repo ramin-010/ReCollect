@@ -114,14 +114,49 @@ export function WorkspaceView() {
 
   const currentUser = useAuthStore((state) => state.user);
 
-  const isOwner = selectedWorkspace?.owner._id === currentUser?._id;
-  const isAdmin = isOwner || selectedWorkspace?.members.some(
+  const isOwner = selectedWorkspace?.owner?._id === currentUser?._id;
+  const isAdmin = isOwner || selectedWorkspace?.members?.some(
     (m: any) => m.user._id === currentUser?._id && m.role === 'admin'
   ) || false;
 
-  const isViewer = selectedWorkspace?.members.some(
+  const isViewer = selectedWorkspace?.members?.some(
     (m: any) => m.user._id === currentUser?._id && m.role === 'viewer'
   ) || false;
+  const handleRemoveMember = async (userId: string) => {
+    try {
+      if (!selectedWorkspace) return;
+      const res = await workspaceApi.removeMember(selectedWorkspace._id, userId);
+      if (res.success) {
+        setSelectedWorkspace(res.data);
+        toast.success('Member removed successfully!');
+      } else {
+        toast.error(res.message || 'Failed to remove member');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
+  const handleLeaveWorkspace = async () => {
+    try {
+      if (!selectedWorkspace || !currentUser) return;
+      
+      const res = await workspaceApi.removeMember(selectedWorkspace._id, currentUser._id || currentUser._id);
+      if (res.success) {
+        toast.success("You have left the workspace.");
+        setShowSettingsModal(false);
+        fetchWorkspaces();
+        setSelectedWorkspace(null);
+        setActiveSpaceId('all');
+      } else {
+        toast.error(res.message || 'Failed to leave workspace');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to leave workspace');
+    }
+  };
 
   // Overview permission check
   const canViewOverview = useMemo(() => {
@@ -177,6 +212,7 @@ export function WorkspaceView() {
         name: selectedWorkspace.owner.name,
         email: selectedWorkspace.owner.email,
         avatar: selectedWorkspace.owner.avatar,
+        role: 'owner'
       });
     }
 
@@ -188,6 +224,7 @@ export function WorkspaceView() {
           name: m.user.name,
           email: m.user.email,
           avatar: m.user.avatar,
+          role: m.role
         });
       }
     });
@@ -357,19 +394,7 @@ export function WorkspaceView() {
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!selectedWorkspace) return;
-    try {
-      const res = await workspaceApi.removeMember(selectedWorkspace._id, memberId);
-      if (res.success) {
-        setSelectedWorkspace(res.data);
-        updateWorkspace(res.data._id, res.data);
-        toast.success('Member removed');
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to remove member');
-    }
-  };
+
 
   const handleUpdateRole = async (memberId: string, role: string) => {
     if (!selectedWorkspace) return;
@@ -514,23 +539,27 @@ export function WorkspaceView() {
 
         {/* ── Constrained Inner Wrapper for Modals & Input ── */}
         <div className="max-w-[1000px] mx-auto px-6 md:px-8">
-          {/* ── Settings Modal ── */}
-        <WorkspaceSettingsModal 
-           isOpen={showSettingsModal} 
-           onClose={() => setShowSettingsModal(false)} 
-           selectedWorkspace={selectedWorkspace}
-           currentUser={currentUser}
-           isAdmin={isAdmin ?? false}
-           isInviting={isInviting}
-           setIsInviting={setIsInviting}
-           inviteEmail={inviteEmail}
-           setInviteEmail={setInviteEmail}
-           isInviteLoading={isInviteLoading}
-           handleInvite={handleInvite}
-           handleRemoveMember={handleRemoveMember}
-           handleUpdateRole={handleUpdateRole}
-           onDeleteWorkspace={handleDeleteWorkspace}
-        />
+        {/* ── Settings Modal ── */}
+        {selectedWorkspace && (
+          <WorkspaceSettingsModal 
+             isOpen={showSettingsModal} 
+             onClose={() => setShowSettingsModal(false)} 
+             selectedWorkspace={selectedWorkspace}
+             currentUser={currentUser}
+             isAdmin={isAdmin ?? false}
+             isInviting={isInviting}
+             setIsInviting={setIsInviting}
+             inviteEmail={inviteEmail}
+             setInviteEmail={setInviteEmail}
+             isInviteLoading={isInviteLoading}
+             handleInvite={handleInvite}
+             handleRemoveMember={handleRemoveMember}
+             handleUpdateRole={handleUpdateRole}
+             onDeleteWorkspace={handleDeleteWorkspace}
+             isOwner={selectedWorkspace?.owner?._id === currentUser?._id || selectedWorkspace?.owner === currentUser?._id}
+             onLeaveWorkspace={handleLeaveWorkspace}
+          />
+        )}
 
         {/* ── Task Detail Modal ── */}
         {selectedWorkspace && (

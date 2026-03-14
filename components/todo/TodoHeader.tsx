@@ -66,7 +66,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 opacity-30 blur-3xl" />
 
              {/* Noise Texture */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20" />
         </div>
 
 

@@ -41,8 +41,10 @@ export function Navbar() {
   return (
     <>
       {/* Navbar Container */}
-      <nav className="sticky top-0 z-30 w-full bg-[hsl(var(--sidebar-bg))] backdrop-blur-md ">
-        <div className="flex h-[52px] items-center px-4 lg:px-6 gap-4">
+      <nav className="sticky top-0 z-30 w-full bg-[hsl(var(--sidebar-bg))] backdrop-blur-md overflow-hidden">
+        {/* <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-[hsl(var(--background))] opacity-100 blur-3xl" />
+        <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-15 pointer-events-none" /> */}
+        <div className="flex h-[52px] items-center px-4 lg:px-6 gap-4 relative z-10">
           
           {/* ReCollect Logo and Title */}
           <div className="flex items-center gap-1">

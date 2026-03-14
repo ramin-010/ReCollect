@@ -13,6 +13,8 @@ export interface WorkspaceSettingsProps {
   handleRemoveMember: (id: string) => void;
   handleUpdateRole: (id: string, role: string) => void;
   onDeleteWorkspace?: () => void;
+  isOwner: boolean;
+  onLeaveWorkspace?: () => void;
 }
 
 export type SettingsTabType = 'members' | 'roles' | 'customization' | 'danger';

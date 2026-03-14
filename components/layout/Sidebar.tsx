@@ -228,6 +228,7 @@ function SidebarContent({
                     src={user.avatar} 
                     alt={user?.name} 
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
                   <span className="text-[10px] font-bold text-white">{getInitials(user?.name)}</span>
@@ -326,6 +327,7 @@ function SidebarContent({
                   src={user.avatar} 
                   alt={user?.name} 
                   className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
                 />
               ) : getInitials(user?.name)}
             </div>

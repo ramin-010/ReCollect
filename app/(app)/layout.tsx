@@ -124,7 +124,7 @@ export default function AppLayout({
               </motion.div>
             )}
           </AnimatePresence>
-          <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
+          <main className="flex-1 overflow-y-auto custom-scrollbar bg-[hsl(var(--background))] relative">
             {children}
           </main>
         </div>

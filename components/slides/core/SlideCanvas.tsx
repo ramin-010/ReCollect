@@ -397,7 +397,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
       <div 
         ref={containerRef}
         className={cn(
-        "flex-1 overflow-y-auto relative bg-[hsl(var(--background))]/50 pt-14 transition-[margin] duration-300 ease-in-out",
+        "flex-1 overflow-y-auto custom-scrollbar relative bg-[hsl(var(--background))]/50 pt-14 transition-[margin] duration-300 ease-in-out",
         isTasksPanelOpen ? "ml-[168px]" : "ml-0"
       )}>
       <div 

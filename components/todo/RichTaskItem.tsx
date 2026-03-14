@@ -70,7 +70,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
     <div 
       onClick={() => onSelect(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_100px_80px_50px] gap-4 px-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 pl-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
         "bg-transparent border-white/10 hover:bg-white/[0.02]",
         isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
       )}

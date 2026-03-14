@@ -374,7 +374,7 @@ export function SlidesView() {
   // ---- Deck List View ----
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-6 py-10 lg:px-12">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-10 lg:px-12">
         {/* Header Area */}
         <div className="max-w-[1060px] mx-auto mb-4" >
           <h1 className="flex items-center gap-2.5 text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">

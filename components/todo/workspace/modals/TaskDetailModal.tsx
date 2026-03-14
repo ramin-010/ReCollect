@@ -25,6 +25,7 @@ import {
   PopoverTrigger
 } from '@/components/ui-base/Popover';
 import { getHighlightedContent } from '../../task_Input/utils';
+import TextareaAutosize from 'react-textarea-autosize';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +89,14 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const fileInputRef = useRef<HTMLInputElement>(null);
   const user = useAuthStore((state) => state.user); // for optimistic log actor
 
+  // ── Role detection: is the current user a viewer? ──
+  const currentMember = workspaceMembers?.find((m: any) => {
+    const memberUserId = m._id?.toString() || m.user?._id?.toString() || m.user?.toString();
+    const currentUserId = user?._id?.toString() || (user as any)?.id?.toString();
+    return memberUserId && currentUserId && memberUserId === currentUserId;
+  });
+  const isViewer = currentMember?.role === 'viewer';
+  
   const [activities, setActivities] = useState<any[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
   const [activityRefreshCounter, setActivityRefreshCounter] = useState(0);
@@ -183,13 +192,20 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
       priority: priority || undefined,
       assignees,
       dueDate: dueDate?.toISOString() || null,
-      reminderDate: currentReminder?.toISOString() || null,
       labels: selectedLabels.map(l => ({ id: l.id, name: l.name, color: l.color })),
       subtasks: extractedSubtasks,
       recurrence: isRecurring
         ? { pattern: recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly', interval: recurringInterval }
         : null,
     };
+
+    // Only include reminderDate in payload if it actually changed.
+    // Sending it unconditionally would cause the backend to delete+recreate the reminder on every save.
+    const originalReminderMs = task.reminderDate ? new Date(task.reminderDate).getTime() : null;
+    const newReminderMs = currentReminder ? currentReminder.getTime() : null;
+    if (originalReminderMs !== newReminderMs) {
+      updates.reminderDate = currentReminder?.toISOString() || null;
+    }
     await onUpdateTask(task._id, updates);
     
     // --- OPTIMISTIC UI UPDATE FOR ACTIVITY LOG ---
@@ -231,7 +247,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   }, [title, description, status, priority, assignees, dueDate, currentReminder, selectedLabels, subtasks, isRecurring, recurringUnit, recurringInterval, task._id, onUpdateTask, task, user]);
 
   // ── Title handlers ──
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
     markDirty();
     const labelMatch = e.target.value.match(/#(\w*)$/);
@@ -368,20 +384,22 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                   <div className="flex items-center gap-3 text-[12px] text-white/50">
                     <span>Created {createdDate}</span>
 
-                    {/* ──── SAVE BUTTON ──── */}
-                    <button
-                      onClick={handleSave}
-                      disabled={!isDirty || isSaving}
-                      className={cn(
-                        "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all",
-                        isDirty
-                          ? "bg-indigo-500 text-white hover:bg-indigo-400 shadow-lg shadow-indigo-500/20"
-                          : "bg-white/5 text-white/25 cursor-not-allowed"
-                      )}
-                    >
-                      {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </button>
+                    {/* ──── SAVE BUTTON (hidden for viewers) ──── */}
+                    {!isViewer && (
+                      <button
+                        onClick={handleSave}
+                        disabled={!isDirty || isSaving}
+                        className={cn(
+                          "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all",
+                          isDirty
+                            ? "bg-indigo-500 text-white hover:bg-indigo-400 shadow-lg shadow-indigo-500/20"
+                            : "bg-white/5 text-white/25 cursor-not-allowed"
+                        )}
+                      >
+                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {isSaving ? 'Saving...' : 'Save'}
+                      </button>
+                    )}
 
                     <button className="hover:text-white transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
                     <button onClick={onClose} className="p-1 -mr-1 hover:text-white hover:bg-white/10 rounded transition-colors"><X className="w-5 h-5" /></button>
@@ -395,18 +413,20 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                     {/* Title */}
                     <div className="relative mb-6">
-                      {getHighlightedContent(title, null, null, selectedLabels, "absolute inset-0 text-[28px] font-bold pointer-events-none overflow-hidden whitespace-pre bg-transparent text-transparent")}
-                      <input
-                        ref={inputRef}
-                        type="text"
+                      {getHighlightedContent(title, null, null, selectedLabels, "absolute inset-0 text-[28px] font-bold pointer-events-none overflow-hidden whitespace-pre-wrap break-words bg-transparent text-transparent")}
+                      <TextareaAutosize
+                        ref={inputRef as any}
                         value={title}
                         onChange={handleTitleChange}
                         onKeyDown={handleTitleKeyDown}
+                        readOnly={isViewer}
                         className={cn(
-                          "w-full bg-transparent text-[28px] font-bold border-none outline-none focus:ring-0 p-0 transition-colors",
-                          isComplete ? "text-white/40 line-through" : "text-white/90 placeholder-white/20"
+                          "w-full bg-transparent text-[28px] font-bold border-none outline-none focus:ring-0 p-0 transition-colors resize-none overflow-hidden",
+                          isComplete ? "text-white/40 line-through" : "text-white/90 placeholder-white/20",
+                          isViewer && "cursor-default select-text"
                         )}
                         placeholder="Task title"
+                        minRows={1}
                       />
                       <InlineLabelDropdown
                         ref={inlineLabelRef}
@@ -474,7 +494,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                                 assignees.map((a: any) => (
                                   <div key={a.email} className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 pr-2 rounded-full border border-indigo-500/20" title={a.name}>
                                     <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center text-[9px] font-bold">
-                                      {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full rounded-full" /> : getInitials(a.name) || '?'}
+                                      {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full rounded-full" referrerPolicy="no-referrer" /> : getInitials(a.name) || '?'}
                                     </div>
                                     <span className="text-[12px] font-medium">{a.name}</span>
                                   </div>
@@ -594,7 +614,8 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                       </div>
                     </div>
 
-                    {/* Options Bar */}
+                    {/* Options Bar — hidden for viewers */}
+                    {!isViewer && (
                     <div className="flex items-center gap-2 mb-4">
                       <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5 transition-colors">
                         <Paperclip className="w-3.5 h-3.5" /> Attachment
@@ -657,6 +678,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                         </div>
                       )}
                     </div>
+                    )} {/* end !isViewer Options Bar */}
 
                     {/* Subtasks */}
                     {subtasks.length > 0 && (
@@ -701,6 +723,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                           content={description}
                           onChange={(val: string) => { setDescription(val); markDirty(); }}
                           onImageClick={setPreviewImage}
+                          readOnly={isViewer}
                           placeholder="Add description... Write or type / for commands"
                           workspaceMembers={workspaceMembers}
                           onSelectAssignee={handleEditorSelectAssignee}
@@ -739,7 +762,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                           return (
                             <div key={idx} className="flex gap-3">
                               <div className="w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex justify-center items-center text-[10px] font-bold shrink-0 mt-0.5 overflow-hidden">
-                                {actorAvatar ? <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" /> : getInitials(actorName) || 'S'}
+                                {actorAvatar ? <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(actorName) || 'S'}
                               </div>
                               <div className="flex-1">
                                 <p className="text-[13px] text-white/60 leading-snug">

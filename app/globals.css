@@ -213,19 +213,41 @@
 
   html {
     scroll-behavior: smooth;
-    scrollbar-width: thin; /* Firefox: thin scrollbar */
-    scrollbar-color: hsl(0 0% 40% / 0.3) transparent; /* Firefox */
   }
 
   body {
-    width: 100vw; /* Always full viewport — immune to scrollbar width changes */
-    overflow-x: hidden; /* Clip the tiny overhang from 100vw vs 100% */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
   }
+}
+
+.custom-scrollbar {
+  /* Permanently reserves the scrollbar track space (which is transparent).
+     This guarantees centering math never changes when content gets tall. */
+  overflow-y: scroll;
+  scrollbar-width:none;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Restore text selection highlighting (Tailwind v4 Preflight resets it) */

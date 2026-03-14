@@ -110,8 +110,8 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
                     key={task._id}
                     task={task}
                     isComplete={false}
-                    onDelete={onDeleteTask}
-                    onToggleComplete={onToggleComplete}
+                    onStatusChange={(id, newStatus) => onToggleComplete(id, newStatus === 'complete')}
+                    onUpdateTask={() => {}}
                     onSelect={onSelectTask}
                   />
                 ))}
@@ -136,8 +136,8 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
                     key={task._id}
                     task={task}
                     isComplete={true}
-                    onDelete={onDeleteTask}
-                    onToggleComplete={onToggleComplete}
+                    onStatusChange={(id, newStatus) => onToggleComplete(id, newStatus === 'complete')}
+                    onUpdateTask={() => {}}
                     onSelect={onSelectTask}
                   />
                 ))}

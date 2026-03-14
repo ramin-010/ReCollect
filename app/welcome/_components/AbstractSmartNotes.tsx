@@ -185,7 +185,7 @@ export const AbstractSmartNotes = () => {
         <div ref={containerRef} className="relative w-full h-full min-h-[500px] flex items-center justify-center overflow-hidden bg-[#0A0A0A]">
             
             {/* Grid Pattern */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
             <div 
                 className="absolute inset-0 opacity-10" 
                 style={{ backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)', backgroundSize: '20px 20px' }} 

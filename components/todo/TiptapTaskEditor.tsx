@@ -19,6 +19,7 @@ interface TiptapTaskEditorProps {
   onChange: (content: string) => void;
   onImageClick?: (src: string) => void;
   autoFocus?: boolean;
+  readOnly?: boolean;
   workspaceMembers?: any[];
   onSelectAssignee?: (user: any) => void;
   onSelectLabel?: (label: any) => void;
@@ -31,6 +32,7 @@ export function TiptapTaskEditor({
   content,
   onChange,
   onImageClick,
+  readOnly = false,
   placeholder = 'Add description... Write or type / for command and AI action',
   autoFocus = false,
   workspaceMembers = [],
@@ -85,9 +87,11 @@ export function TiptapTaskEditor({
         onLabelDelete: (name: string) => onLabelDeleteRef.current?.(name),
       }),
     ],
+    editable: !readOnly,
     content: content,
     autofocus: autoFocus,
     onUpdate: ({ editor }) => {
+      if (readOnly) return;
       isInternalChange.current = true;
       const html = editor.getHTML();
       // If the editor is functionally empty, return empty string so our parent knows
@@ -163,7 +167,10 @@ export function TiptapTaskEditor({
   }, [editor]);
 
   return (
-    <div className="relative w-full cursor-text" onClick={() => editor?.commands.focus()}>
+    <div 
+      className={cn("relative w-full", !readOnly && "cursor-text")} 
+      onClick={() => !readOnly && editor?.commands.focus()}
+    >
       <div onPaste={handlePaste} className="w-full">
         <EditorContent editor={editor} className="w-full" />
       </div>

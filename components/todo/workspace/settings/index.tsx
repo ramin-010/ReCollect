@@ -10,13 +10,6 @@ import { RolesSettings } from './tabs/RolesSettings';
 import { CustomizationSettings } from './tabs/CustomizationSettings';
 import { DangerSettings } from './tabs/DangerSettings';
 
-const TABS: TabConfig[] = [
-  { id: 'members', label: 'Members', icon: Users },
-  { id: 'roles', label: 'Manage Roles', icon: Shield },
-  { id: 'customization', label: 'Customization', icon: Palette },
-  { id: 'danger', label: 'Delete Workspace', icon: Trash2, isDestructive: true },
-];
-
 export function WorkspaceSettingsModal({
   isOpen,
   onClose,
@@ -31,9 +24,18 @@ export function WorkspaceSettingsModal({
   handleInvite,
   handleRemoveMember,
   handleUpdateRole,
-  onDeleteWorkspace
+  onDeleteWorkspace,
+  isOwner,
+  onLeaveWorkspace
 }: WorkspaceSettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabType>('members');
+
+  const TABS: TabConfig[] = [
+    { id: 'members', label: 'Members', icon: Users },
+    { id: 'roles', label: 'Manage Roles', icon: Shield },
+    { id: 'customization', label: 'Customization', icon: Palette },
+    { id: 'danger', label: isOwner ? 'Delete Workspace' : 'Leave Workspace', icon: Trash2, isDestructive: true },
+  ];
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -90,7 +92,7 @@ export function WorkspaceSettingsModal({
               </div>
               
               <div className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
-                {TABS.filter(t => isAdmin || t.id === 'members').map((tab) => {
+                {TABS.filter(t => isAdmin || t.id === 'members' || t.id === 'danger').map((tab) => {
                   const isActive = activeTab === tab.id;
                   return (
                     <button
@@ -116,7 +118,7 @@ export function WorkspaceSettingsModal({
               <div className="hidden md:flex justify-end p-4 border-b border-transparent">
                 <button 
                   onClick={onClose}
-                  className="p-2 pb-0 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                  className="p-2 pb-0 text-white/40 hover:text-white rounded-full transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -144,6 +146,8 @@ export function WorkspaceSettingsModal({
                       handleInvite={handleInvite}
                       handleRemoveMember={handleRemoveMember}
                       handleUpdateRole={handleUpdateRole}
+                      isOwner={isOwner}
+                      onLeaveWorkspace={onLeaveWorkspace}
                     />
                   )}
                   {activeTab === 'roles' && (
@@ -165,6 +169,8 @@ export function WorkspaceSettingsModal({
                       workspaceName={selectedWorkspace.name} 
                       onDeleteWorkspace={onDeleteWorkspace} 
                       onClose={onClose}
+                      isOwner={isOwner}
+                      onLeaveWorkspace={onLeaveWorkspace}
                     />
                   )}
                 </motion.div>

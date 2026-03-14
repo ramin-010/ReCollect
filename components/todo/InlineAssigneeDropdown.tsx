@@ -41,7 +41,12 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
         if (!isOpen) return;
         
         const fetchUsers = async () => {
-            const aiUser: Assignee = { _id: 'ai-system', name: 'ai', email: 'ai@system', avatar: '' };
+            const aiUser: Assignee = { 
+              _id: 'ai-system', 
+              name: 'ai', 
+              email: 'ai@system', 
+              avatar: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1773391852/recollect-logo-1024px_4_crmydu.png' 
+            };
 
             if (!debouncedSearch.trim() || debouncedSearch.trim().length < 2) {
                  setFetchedAssignees([aiUser, ...(workspaceMembers || [])]);
@@ -156,38 +161,71 @@ export const InlineAssigneeDropdown = forwardRef<InlineAssigneeDropdownHandle, I
                 </div>
               )}
 
-              {fetchedAssignees.map((user, idx) => (
-                <button
-                  key={user._id}
-                  onClick={() => onSelectAssignee(user)}
-                  onMouseEnter={() => setHighlightedIndex(idx)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 min-h-[36px] text-left rounded-lg transition-all",
-                    highlightedIndex === idx 
-                      ? (user._id === 'ai-system' ? "bg-purple-500/20 text-purple-300" : "bg-indigo-500/20 text-indigo-300")
-                      : "text-white/70 hover:bg-white/5"
-                  )}
-                >
-                  <div className={cn(
-                    "w-6 h-6 shrink-0 rounded-full flex items-center justify-center flex-none overflow-hidden text-[10px] font-bold",
-                    user._id === 'ai-system' ? "bg-purple-500/20 text-purple-400" : "bg-indigo-500/15 text-indigo-400"
-                  )}>
-                    {user._id === 'ai-system' ? (
-                      <Sparkles className="w-3 h-3" />
-                    ) : user.avatar ? (
-                      <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      getInitials(user.name)
+              {fetchedAssignees.map((user, idx) => {
+                const isAi = user._id === 'ai-system';
+                const isSelected = highlightedIndex === idx;
+
+                return (
+                  <button
+                    key={user._id}
+                    onClick={() => onSelectAssignee(user)}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 min-h-[40px] text-left rounded-lg transition-all relative overflow-hidden group",
+                      isAi 
+                        ? (isSelected ? "bg-indigo-600/10 text-indigo-200 ring-1 ring-indigo-500/30" : "bg-indigo-500/5 text-indigo-300/80")
+                        : (isSelected ? "bg-white/5 text-white" : "text-white/70 hover:bg-white/5")
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate leading-snug">{user.name}</p>
-                    <p className="text-[10px] truncate text-white/40 leading-tight">
-                      {user._id === 'ai-system' ? 'AI Assistant' : user.email}
-                    </p>
-                  </div>
-                </button>
-              ))}
+                  >
+                    {isAi && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none" />
+                    )}
+                    
+                    <div className={cn(
+                      "w-7 h-7 shrink-0 rounded-full flex items-center justify-center flex-none overflow-hidden text-[10px] font-bold transition-all duration-300 shadow-sm",
+                      isAi 
+                        ? "bg-black ring-1 ring-indigo-500/30 p-1 group-hover:scale-110 shadow-indigo-500/20 shadow-[0_0_8px_rgba(99,102,241,0.3)]" 
+                        : "bg-indigo-500/15 text-indigo-400"
+                    )}>
+                      {user.avatar ? (
+                        <img 
+                          src={user.avatar} 
+                          alt="" 
+                          className={cn("w-full h-full", isAi ? "object-contain" : "object-cover")} 
+                          referrerPolicy="no-referrer" 
+                        />
+                      ) : isAi ? (
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      ) : (
+                        getInitials(user.name)
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 relative z-10">
+                      <div className="flex items-center gap-1.5">
+                        <p className={cn(
+                          "text-sm truncate leading-snug",
+                          isAi ? "font-semibold text-white" : "font-medium"
+                        )}>
+                          {user.name}
+                        </p>
+                        {isAi && (
+                          <div className="flex items-center">
+                            <Sparkles className="w-2.5 h-2.5 text-indigo-400 animate-pulse" />
+                          </div>
+                        )}
+                      </div>
+                      <p className={cn(
+                        "text-[10px] truncate leading-tight",
+                        isAi ? "text-indigo-400/70" : "text-white/40"
+                      )}>
+                        {isAi ? 'AI Assistant' : user.email}
+                      </p>
+                    </div>
+
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}

@@ -392,6 +392,14 @@ export function TodoView() {
                           transition={{ duration: 0.2 }}
                           className="space-y-1"
                         >
+                          <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 pl-4 py-2 text-[12px] font-medium text-white/50 items-center select-none">
+                            <div className="flex justify-center"></div>
+                            <div className="flex items-center">Tasks</div>
+                            <div className="flex items-center justify-start pl-2">Due date</div>
+                            <div className="flex items-center justify-start pl-2.5">Status</div>
+                            <div className="flex items-center justify-start pl-1">Priority</div>
+                          </div>
+
                           <AnimatePresence mode="popLayout">
                             {filteredTasks.length === 0 ? (
                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center opacity-30">

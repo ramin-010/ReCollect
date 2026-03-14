@@ -480,6 +480,7 @@ export function UserSettings() {
                                   src={user.avatar} 
                                   alt={user.name} 
                                   className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
                                 />
                               ) : (
                                 getInitials(user?.name)
