@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, ChevronDown, LayoutList, Table, Inbox, Calendar, FileText, StickyNote } from 'lucide-react';
+import { Loader2, CheckCircle2, ChevronDown, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown } from 'lucide-react';
 import { TaskInput } from './task_Input';
 import { BulkActionBar } from './workspace/modals/BulkActionBar';
 import { TodoHeader } from './TodoHeader';
@@ -47,6 +47,7 @@ export function TodoView() {
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
+  const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'recent'>('priority');
   const [currentView, setCurrentView] = useState<'list' | 'table'>('list');
 
   // Fetch todos
@@ -113,15 +114,21 @@ export function TodoView() {
         break;
     }
 
-    // Sort by priority then date
+    // Sort by Priority (High > Medium > Low)
     const pMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
-    result.sort((a, b) => {
-        const pDiff = (pMap[b.priority || 'medium'] || 1) - (pMap[a.priority || 'medium'] || 1);
-        if (pDiff !== 0) return pDiff;
-        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        return dateA - dateB;
-    });
+    
+    if (sortBy === 'priority') {
+      result.sort((a, b) => (pMap[b.priority || 'low'] || 1) - (pMap[a.priority || 'low'] || 1));
+    } else if (sortBy === 'dueDate') {
+      result.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
+    } else if (sortBy === 'recent') {
+      result.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+    }
 
     if (priorityFilter) {
       result = result.filter(t => t.priority === priorityFilter);
@@ -238,13 +245,9 @@ export function TodoView() {
         <TodoHeader greeting={greeting} stats={stats} />
       </div>
 
-      <div className={cn(
-        "max-w-[1000px] mx-auto px-6 md:px-8 relative z-20 transition-all duration-500",
-        "mt-0"
-      )}>
-        
+      <div className="max-w-[1000px] mx-auto px-6 md:px-8 w-full">
         {/* Unified Task Input */}
-        <div className="max-w-[1000px] mx-auto mb-10">
+        <div className="mb-6">
             <TaskInput
                 onSave={handleCreateTask}
                 isExpanded={isInputExpanded}
@@ -252,134 +255,142 @@ export function TodoView() {
             />
         </div>
 
-                    {/* Filter bar & View Switcher */}
-                    <div className="flex items-center gap-2 mt-4 mb-6 text-sm">
-                        {/* Filter Tabs */}
-                        <div className="flex items-center p-1 rounded-xl bg-[hsl(var(--background))] gap-1 overflow-x-auto no-scrollbar">
-                            {/* Core Tasks */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              {[
-                                { key: 'inbox', label: 'Inbox', icon: <Inbox className="w-3.5 h-3.5" /> },
-                                { key: 'today', label: 'Today', hideOnMobile: true, icon: <Calendar className="w-3.5 h-3.5" /> },
-                              ].map(f => (
-                                <button
-                                  key={f.key}
-                                  onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    f.hideOnMobile && "hidden sm:flex",
-                                    activeFilter === f.key
-                                      ? "bg-white/5 text-[hsl(var(--foreground))] shadow-sm"
-                                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                                  )}
-                                >
-                                  {f.icon}
-                                  {f.label}
-                                </button>
-                              ))}
-                            </div>
+        {/* Filter Bar — left-aligned with count badges, View Switcher on right */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            {/* Core Tasks */}
+            {[
+              { key: 'inbox', label: 'Inbox', icon: <Inbox className="w-3.5 h-3.5" /> },
+              { key: 'today', label: 'Today', hideOnMobile: true, icon: <Calendar className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  f.hideOnMobile && "hidden sm:flex",
+                  activeFilter === f.key
+                    ? "text-white/80 bg-white/[0.06]"
+                    : "text-white/30 hover:text-white/50"
+                )}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
 
-                            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
 
-                            {/* App Integrations */}
-                            <div className="flex items-center gap-1 shrink-0" title="Tasks linked to your environment">
-                              {[
-                                { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
-                                { key: 'notes', label: 'Notes', icon: <StickyNote className="w-3.5 h-3.5" /> },
-                              ].map(f => (
-                                <button
-                                  key={f.key}
-                                  onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    activeFilter === f.key
-                                      ? "bg-white/5 text-amber-400 shadow-sm"
-                                      : "text-amber-500/40 hover:text-amber-400/80 hover:bg-amber-500/10"
-                                  )}
-                                >
-                                  {f.icon}
-                                  {f.label}
-                                </button>
-                              ))}
-                            </div>
+            {/* App Integrations */}
+            {[
+              { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
+              { key: 'notes', label: 'Notes', icon: <StickyNote className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  activeFilter === f.key
+                    ? "text-amber-400 bg-amber-400/10"
+                    : "text-amber-500/40 hover:text-amber-400/80"
+                )}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
 
-                            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
 
-                            {/* Completed */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              {[
-                                { key: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-                              ].map(f => (
-                                <button
-                                  key={f.key}
-                                  onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    activeFilter === f.key
-                                      ? "bg-[hsl(var(--background))] text-emerald-400/80 shadow-sm"
-                                      : "text-white/30 hover:text-white/60 hover:bg-white/5"
-                                  )}
-                                >
-                                  {f.icon}
-                                  {f.label}
-                                </button>
-                              ))}
-                            </div>
-                        </div>
+            {/* Completed */}
+            {[
+              { key: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  activeFilter === f.key
+                    ? "text-emerald-400 bg-emerald-400/10"
+                    : "text-white/30 hover:text-white/60"
+                )}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
+          </div>
 
-                        <div className="flex-1 min-w-[1rem]" />
+          <div className="flex items-center gap-2">
+            {/* Sort filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium border border-white/5 text-white/40 rounded-md hover:text-white hover:bg-white/5 transition-colors">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  {sortBy === 'priority' ? 'Priority' : sortBy === 'dueDate' ? 'Due Date' : 'Recent'}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
+                <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('dueDate')}>Due Date</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('recent')}>Recent</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                        {/* Priority filter */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                                "flex items-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold transition-all uppercase tracking-wide",
-                                priorityFilter 
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                                : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
-                            )}>
-                                {priorityFilter ? (
-                                    <>
-                                        <div className={cn("w-2 h-2 rounded-full", 
-                                            priorityFilter === 'high' ? "bg-rose-500" :
-                                            priorityFilter === 'medium' ? "bg-amber-500" : "bg-blue-400"
-                                        )} />
-                                        {priorityFilter}
-                                    </>
-                                ) : (
-                                    <>
-                                        Priority
-                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                    </>
-                                )}
-                            </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
-                            <DropdownMenuItem onClick={() => setPriorityFilter('')}>All</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('high')} className="text-rose-400">High</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('medium')} className="text-amber-400">Medium</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('low')} className="text-blue-400">Low</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+            {/* Priority filter */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <button className={cn(
+                    "px-3 py-1.5 flex items-center gap-2 text-xs font-medium border rounded-md transition-colors",
+                    priorityFilter 
+                    ? "border-emerald-500/10 bg-emerald-500/10 text-emerald-500"
+                    : "border-white/5 text-white/40 hover:text-white hover:bg-white/5"
+                )}>
+                    {priorityFilter ? (
+                        <>
+                            <div className={cn("w-2 h-2 rounded-full", 
+                                priorityFilter === 'high' ? "bg-rose-500" :
+                                priorityFilter === 'medium' ? "bg-amber-500" : "bg-blue-400"
+                            )} />
+                            {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}
+                        </>
+                    ) : (
+                        <>
+                            Priority
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                        </>
+                    )}
+                </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
+                <DropdownMenuItem onClick={() => setPriorityFilter('')}>All</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPriorityFilter('high')} className="text-rose-400">High</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPriorityFilter('medium')} className="text-amber-400">Medium</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPriorityFilter('low')} className="text-blue-400">Low</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
-                        {/* View Switcher */}
-                        <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
-                          <button
-                            onClick={() => setCurrentView('list')}
-                            className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-                            title="List View"
-                          >
-                            <LayoutList className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setCurrentView('table')}
-                            className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-                            title="Table View"
-                          >
-                            <Table className="w-4 h-4" />
-                          </button>
-                        </div>
-                    </div>
+            {/* View Switcher */}
+            <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
+              <button
+                onClick={() => setCurrentView('list')}
+                className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+                title="List View"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentView('table')}
+                className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+                title="Table View"
+              >
+                <Table className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
 
                     {/* Views */}
                     <AnimatePresence mode="wait">
