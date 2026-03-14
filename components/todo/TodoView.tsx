@@ -343,18 +343,19 @@ export function TodoView() {
             </div>
           </div>
         </div>
+      </div>
 
-                    {/* Views */}
-                    <AnimatePresence mode="wait">
-                      {currentView === 'list' ? (
-                        <motion.div
-                          key="list"
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="space-y-1"
-                        >
+      {/* Views */}
+      <AnimatePresence mode="wait">
+        {currentView === 'list' ? (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-1 max-w-[1000px] mx-auto px-6 md:px-8 w-full"
+          >
                           <AnimatePresence mode="popLayout">
                             {filteredTasks.length === 0 ? (
                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center opacity-30">
@@ -389,18 +390,24 @@ export function TodoView() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.2 }}
+                           className="px-6 md:px-8 w-[1100px] mx-auto"
                         >
                           <PersonalTableView
                             filteredTasks={filteredTasks}
                             onStatusChange={handleStatusChange}
                             onUpdateTask={handleUpdateTask}
                             onClick={(t) => setSelectedTask(t as unknown as Todo)}
+                            selectedTasks={selectedTasks}
+                            onToggleSelect={(id) => setSelectedTasks(prev => {
+                              const next = new Set(prev);
+                              if (next.has(id)) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            })}
                           />
                         </motion.div>
                       )}
                     </AnimatePresence>
-
-      </div>
 
       <BulkActionBar 
         selectedTasks={selectedTasks}

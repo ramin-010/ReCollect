@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CheckCircle2, Flag, AlignLeft, Calendar, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, differenceInHours, isTomorrow, format, subMinutes } from 'date-fns';
 import { TaskStatusDropdown } from './workspace/TaskStatusDropdown';
@@ -54,6 +55,8 @@ interface PersonalTableViewProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onUpdateTask: (id: string, updates: Record<string, unknown>) => void;
   onClick: (task: PersonalTask) => void;
+  selectedTasks: Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
 interface CellProps {
@@ -86,9 +89,8 @@ function Cell({ children, className, borderRight = true, onClick: cellClick, onM
   );
 }
 
-export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask, onClick }: PersonalTableViewProps) {
+export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask, onClick, selectedTasks, onToggleSelect }: PersonalTableViewProps) {
   const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(new Set());
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
 
   const colWidths = useRef<ColWidths>({
     index: 40,
@@ -167,7 +169,7 @@ export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask,
             className="grid border-b border-white/[0.05] text-[12px] font-medium text-white/50 sticky top-0 z-10 bg-[hsl(var(--background))]"
             style={gridStyle}
           >
-            <Cell borderRight={false} className="justify-center text-[10px] text-white/20">#</Cell>
+            <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-4">#</Cell>
             <Cell borderRight={false} className="justify-center px-1 border-r border-white/[0.05]">
               <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />
             </Cell>
@@ -212,9 +214,9 @@ export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask,
                     key={task._id}
                     onClick={() => onClick(task)}
                     className={cn(
-                      'group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors cursor-pointer w-full bg-transparent last:border-b-0',
+                      'group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-all cursor-pointer w-full bg-transparent last:border-b-0',
                       isSelected && 'bg-indigo-500/[0.06] hover:bg-indigo-500/[0.10]',
-                      isCompleting && 'opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.99]'
+                      isCompleting && 'opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]'
                     )}
                     style={gridStyle}
                   >
@@ -222,19 +224,15 @@ export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask,
                     <Cell borderRight={false} className="relative justify-center text-[10px] text-white/20 pl-4 select-none group-hover:text-white/40">
                       <div
                         className={cn(
-                          'absolute inset-0 flex items-center justify-center transition-opacity z-10',
-                          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          "absolute inset-0 flex items-center justify-center transition-opacity z-10",
+                          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         )}
-                        style={{ backgroundColor: isSelected ? 'rgba(99,102,241,0.06)' : 'rgba(0,0,0,0.3)' }}
+                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.06)' : '#1D1D1D' }}
                       >
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedTasks(prev => {
-                              const next = new Set(prev);
-                              if (next.has(task._id)) next.delete(task._id); else next.add(task._id);
-                              return next;
-                            });
+                            onToggleSelect(task._id);
                           }}
                           className={cn(
                             'w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors focus:outline-none',
@@ -283,8 +281,8 @@ export function PersonalTableView({ filteredTasks, onStatusChange, onUpdateTask,
                       {task.description && (
                         <AlignLeft className="w-3.5 h-3.5 text-white/20 ml-2 shrink-0 group-hover:text-white/40" />
                       )}
-                      {task.references && task.references.length > 0 && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-400/70 text-[9px] font-medium uppercase tracking-wider shrink-0">
+                      {isDone && task.references && task.references.length > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-white/5 border border-white/5 text-white/40 text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
                           {task.references[0].type}
                         </span>
                       )}

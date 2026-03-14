@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CheckCircle2, Circle, Flag, AlignLeft, Plus, MoreHorizontal, UserPlus, Square, CheckSquare, Check, Calendar } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { parseISO, differenceInSeconds, differenceInHours, isTomorrow, format, subMinutes } from 'date-fns';
+import { motion } from 'framer-motion';
 import { getPriorityTextConfig } from './utils';
 
 /**
@@ -207,9 +208,9 @@ export function TableView({
                   key={task._id}
                   onClick={() => onClick(task)}
                   className={cn(
-                    "table-row group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors cursor-pointer w-full bg-transparent last:border-b-0",
+                    "table-row group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-all cursor-pointer w-full bg-transparent last:border-b-0",
                     isSelected && "bg-indigo-500/[0.06] hover:bg-indigo-500/[0.10]",
-                    isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.99]"
+                    isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
                   )}
                   style={gridStyle}
                 >

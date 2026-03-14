@@ -25,7 +25,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
   const user = useAuthStore((state) => state.user);
   const [clockMode, setClockMode] = useState<'clock' | 'stopwatch'>('clock');
 
-  const raw_name = user?.name || "User";
+  const raw_name = user?.name?.split(' ')[0] || "User";
   const name = raw_name.charAt(0).toUpperCase() + raw_name.slice(1).toLowerCase();
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export function TodoHeader({ greeting, stats }: TodoHeaderProps) {
                 className="text-3xl lg:text-4xl font-light tracking-tight text-white/90 font-serif"
             >
                 Good {greeting.split(' ')[1] || 'Day'}, <br/>
-                <span className="font-bold font-sans text-white">{name}.</span>
+                <span className="font-bold font-sans text-white">{name}</span>
             </motion.h1>
             
             <motion.p 

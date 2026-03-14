@@ -93,7 +93,7 @@ export function WorkspaceView() {
   // Create workspace
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [newSpaceName, setNewSpaceName] = useState('Team 1');
+  const [newSpaceName, setNewSpaceName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   // Create Space within Workspace
@@ -446,18 +446,18 @@ export function WorkspaceView() {
   // ── Empty State ──
   if (workspaces.length === 0) {
     return (
-      <div className="min-h-[70vh]  flex items-center justify-center px-6">
+      <div className="min-h-[80vh]  flex items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-sm w-full text-center"
+          className="max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-5">
-            <Users className="w-7 h-7 text-white/30" />
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-indigo-500/10 flex items-center justify-center mx-auto mb-5">
+            <Users className="w-7 h-7 text-indigo-500/80" />
           </div>
           <h2 className="text-lg font-semibold text-white/80 mb-1.5">No workspaces yet</h2>
           <p className="text-sm text-white/35 leading-relaxed mb-6">
-            Create a workspace to start collaborating on tasks with your team.
+            Create a workspace to start collaborating on tasks with your teams.
           </p>
           <div className="space-y-3">
             <input
@@ -473,7 +473,7 @@ export function WorkspaceView() {
               value={newSpaceName}
               onChange={(e) => setNewSpaceName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              placeholder="Default Space Name (e.g. Team 1)"
+              placeholder="Default Sub-Space Name (e.g. Dev Team, Marketing Team etc.)"
               className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/8 rounded-xl text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
             />
             <button

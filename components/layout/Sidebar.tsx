@@ -45,7 +45,7 @@ interface NavItem {
 const primaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
-  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Briefcase className="h-[18px] w-[18px] text-indigo-500/80" /> },
+  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Users className="h-[18px] w-[18px] text-indigo-500/80" /> },
   { 
     id: 'todo', 
     route: '/todo',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Calendar, AlignLeft, Paperclip, GripVertical, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, differenceInHours, isTomorrow, format } from 'date-fns';
 import { subMinutes } from 'date-fns';
@@ -152,6 +153,11 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
         </p>
         {task.description && (
           <AlignLeft className="w-3.5 h-3.5 text-white/30 shrink-0" />
+        )}
+        {isDone && task.references && task.references.length > 0 && (
+          <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-white/5 border border-white/5 text-white/40 text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
+             {task.references[0].type}
+          </span>
         )}
       </div>
 
