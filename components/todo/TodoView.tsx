@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, ChevronDown, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown } from 'lucide-react';
+import { Loader2, CheckCircle2, ChevronDown, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown, LayoutTemplate } from 'lucide-react';
 import { TaskInput } from './task_Input';
 import { BulkActionBar } from './workspace/modals/BulkActionBar';
 import { TodoHeader } from './TodoHeader';
@@ -23,8 +23,6 @@ import {
 import { RichTaskItem } from './RichTaskItem';
 import { PersonalTableView } from './PersonalTableView';
 import type { TaskData } from './task_Input/types';
-import { AssignedView } from './AssignedView';
-
 
 
 export function TodoView() {
@@ -44,7 +42,6 @@ export function TodoView() {
   // UI State
   const isInputExpanded = useViewStore((state) => state.isTodoInputExpanded);
   const setIsInputExpanded = useViewStore((state) => state.setTodoInputExpanded);
-  const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
   const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'recent'>('priority');
@@ -106,10 +103,10 @@ export function TodoView() {
           t.references?.some(ref => ref.type === 'doc')
         );
         break;
-      case 'notes':
+      case 'slides':
         result = result.filter(t => 
           t.status !== 'complete' && 
-          t.references?.some(ref => ref.type === 'content')
+          t.references?.some(ref => ref.type === 'slide')
         );
         break;
     }
@@ -130,12 +127,8 @@ export function TodoView() {
       result.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
     }
 
-    if (priorityFilter) {
-      result = result.filter(t => t.priority === priorityFilter);
-    }
-
     return result;
-  }, [todos, activeFilter, priorityFilter]);
+  }, [todos, activeFilter, sortBy]);
 
   // Handlers
   const handleCreateTask = async (data: TaskData & { _id?: string }) => {
@@ -225,17 +218,6 @@ export function TodoView() {
     );
   }
 
-  // ── Route to dedicated views for Assigned ──
-  if (activeFilter === 'assigned') {
-    return (
-      <AssignedView
-        onSelectTask={(t) => setSelectedTask(t)}
-        onDeleteTask={handleDeleteTask}
-        onToggleComplete={toggleComplete}
-      />
-    );
-  }
-
   // ── Inbox-type view (with header, filters, task list) ──
   return (
     <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] font-sans pb-20 selection:bg-emerald-500/30">
@@ -247,7 +229,7 @@ export function TodoView() {
 
       <div className="max-w-[1000px] mx-auto px-6 md:px-8 w-full">
         {/* Unified Task Input */}
-        <div className="mb-6">
+        <div className="mb-5">
             <TaskInput
                 onSave={handleCreateTask}
                 isExpanded={isInputExpanded}
@@ -284,7 +266,7 @@ export function TodoView() {
             {/* App Integrations */}
             {[
               { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
-              { key: 'notes', label: 'Notes', icon: <StickyNote className="w-3.5 h-3.5" /> },
+              { key: 'slides', label: 'Slides', icon: <LayoutTemplate className="w-3.5 h-3.5" /> },
             ].map(f => (
               <button
                 key={f.key}
@@ -337,39 +319,6 @@ export function TodoView() {
                 <DropdownMenuItem onClick={() => setSortBy('dueDate')}>Due Date</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('recent')}>Recent</DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Priority filter */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <button className={cn(
-                    "px-3 py-1.5 flex items-center gap-2 text-xs font-medium border rounded-md transition-colors",
-                    priorityFilter 
-                    ? "border-emerald-500/10 bg-emerald-500/10 text-emerald-500"
-                    : "border-white/5 text-white/40 hover:text-white hover:bg-white/5"
-                )}>
-                    {priorityFilter ? (
-                        <>
-                            <div className={cn("w-2 h-2 rounded-full", 
-                                priorityFilter === 'high' ? "bg-rose-500" :
-                                priorityFilter === 'medium' ? "bg-amber-500" : "bg-blue-400"
-                            )} />
-                            {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}
-                        </>
-                    ) : (
-                        <>
-                            Priority
-                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                        </>
-                    )}
-                </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
-                <DropdownMenuItem onClick={() => setPriorityFilter('')}>All</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriorityFilter('high')} className="text-rose-400">High</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriorityFilter('medium')} className="text-amber-400">Medium</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPriorityFilter('low')} className="text-blue-400">Low</DropdownMenuItem>
-                </DropdownMenuContent>
             </DropdownMenu>
 
             {/* View Switcher */}

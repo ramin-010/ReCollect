@@ -23,7 +23,8 @@ import {
   Search,
   Mail,
   Check,
-  Sparkles
+  Sparkles,
+  FileText,
 } from 'lucide-react';
 import TextareaAutosize from 'react-textarea-autosize';
 
@@ -39,6 +40,7 @@ import { SmartReminderModal } from '../SmartReminderModal';
 import { LabelsModal, getLabelColorConfig } from '../LabelsModal';
 import { InlineLabelDropdown } from '../InlineLabelDropdown';
 import { InlineAssigneeDropdown } from '../InlineAssigneeDropdown';
+import { InlineReferenceDropdown } from '../InlineReferenceDropdown';
 import { 
   Popover, 
   PopoverContent, 
@@ -107,6 +109,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     handleInlineSelectLabel,
     handleInlineCreateLabel,
     handleInlineSelectAssignee,
+    handleInlineSelectReference,
+    references, setReferences,
     acceptSuggestion,
     clearConfirmedDate,
     handleSave,
@@ -196,6 +200,25 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     }
   };
 
+  // Reference picker state (personal tasks only)
+  const [isReferencePickerOpen, setIsReferencePickerOpen] = React.useState(false);
+  const [referenceQuery, setReferenceQuery] = React.useState('');
+  const [referenceResults, setReferenceResults] = React.useState<{ type: 'doc' | 'slide'; refId: string; title: string }[]>([]);
+  const [isSearchingRefs, setIsSearchingRefs] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isReferencePickerOpen) { setReferenceQuery(''); setReferenceResults([]); return; }
+    const timer = setTimeout(async () => {
+      setIsSearchingRefs(true);
+      try {
+        const data = await todoApi.searchReferences(referenceQuery.trim());
+        setReferenceResults(data);
+      } catch (_) { setReferenceResults([]); }
+      setIsSearchingRefs(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [referenceQuery, isReferencePickerOpen]);
+
   const currentPriority = PRIORITIES.find(p => p.value === priority);
   const highlightedOverlay = getHighlightedContent(
     title,
@@ -282,15 +305,17 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               onClose={() => setIsInlineLabelOpen(false)}
               caretPosition={caretPosition}
             />
-            <InlineAssigneeDropdown
-              ref={inlineAssigneeRef}
-              isOpen={isInlineAssigneeOpen}
-              searchQuery={assigneeSearchQuery}
-              onSelectAssignee={handleInlineSelectAssignee}
-              onClose={() => setIsInlineAssigneeOpen(false)}
-              workspaceMembers={workspaceMembers}
-              caretPosition={caretPosition}
-            />
+            {workspaceId ? (
+              <InlineAssigneeDropdown
+                ref={inlineAssigneeRef}
+                isOpen={isInlineAssigneeOpen}
+                searchQuery={assigneeSearchQuery}
+                onSelectAssignee={handleInlineSelectAssignee}
+                onClose={() => setIsInlineAssigneeOpen(false)}
+                workspaceMembers={workspaceMembers}
+                caretPosition={caretPosition}
+              />
+            ) : null}
           </div>
 
           <div className="flex items-center gap-1 shrink-0 min-h-[32px]">
@@ -434,127 +459,199 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <Popover open={isAssigneeOpen} onOpenChange={setIsAssigneeOpen}>
-                        <PopoverTrigger asChild>
-                          <button className={cn(
-                            "p-1.5 rounded-md transition-colors",
-                            assignees.length > 0 ? "text-indigo-400" : "text-white/30 hover:text-white/60"
-                          )}>
-                            {assignees.length === 0 ? (
-                              <UserPlus className="w-4 h-4" />
-                            ) : (
-                              <div className="flex -space-x-1.5">
-                                {assignees.slice(0, 2).map((a, i) => (
-                                  <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
-                                    {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(a.name)}
-                                  </div>
-                                ))}
-                                {assignees.length > 2 && (
-                                  <div className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-[#3a3a3a] text-white/60 flex items-center justify-center text-[8px] font-bold">
-                                    +{assignees.length - 2}
-                                  </div>
-                                )}
+                      {workspaceId ? (
+                        <Popover open={isAssigneeOpen} onOpenChange={setIsAssigneeOpen}>
+                          <PopoverTrigger asChild>
+                            <button className={cn(
+                              "p-1.5 rounded-md transition-colors",
+                              assignees.length > 0 ? "text-indigo-400" : "text-white/30 hover:text-white/60"
+                            )}>
+                              {assignees.length === 0 ? (
+                                <UserPlus className="w-4 h-4" />
+                              ) : (
+                                <div className="flex -space-x-1.5">
+                                  {assignees.slice(0, 2).map((a, i) => (
+                                    <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
+                                      {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(a.name)}
+                                    </div>
+                                  ))}
+                                  {assignees.length > 2 && (
+                                    <div className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-[#3a3a3a] text-white/60 flex items-center justify-center text-[8px] font-bold">
+                                      +{assignees.length - 2}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
+                            <div className="p-2 border-b border-white/10">
+                              <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                                <input
+                                  type="text"
+                                  value={assigneeQuery}
+                                  onChange={(e) => setAssigneeQuery(e.target.value)}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  placeholder="Search or enter email..."
+                                  className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                                  autoFocus
+                                />
                               </div>
-                            )}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
-                          <div className="p-2 border-b border-white/10">
-                            <div className="relative">
-                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                            </div>
+                            <div className="max-h-40 overflow-y-auto">
+                              {isSearchingUsers && (
+                                <div className="flex items-center justify-center py-3 text-white/40">
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  <span className="text-xs">Searching...</span>
+                                </div>
+                              )}
+                              {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
+                                <>
+                                  <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                                  {workspaceMembers.map(member => {
+                                    const isSelected = assignees.some(a => a.email === member.email);
+                                    return (
+                                    <button
+                                      key={member._id}
+                                      onClick={() => selectAssignee(member.email, member.name, member.avatar)}
+                                      className={cn(
+                                        "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                                        isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                      )}
+                                    >
+                                      <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                        {member.avatar ? (
+                                          <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+                                        ) : (
+                                          getInitials(member.name)
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
+                                        <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                      </div>
+                                      {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                                    </button>
+                                  )})}
+                                </>
+                              )}
+                              {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
+                                <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                              )}
+                              {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
+                                const isSelected = assignees.some(a => a.email === user.email);
+                                return (
+                                <button
+                                  key={user._id}
+                                  onClick={() => selectAssignee(user.email, user.name, user.avatar)}
+                                  className={cn(
+                                    "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
+                                    isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                  )}
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
+                                    {user.avatar ? (
+                                      <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+                                    ) : (
+                                      getInitials(user.name)
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
+                                    <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
+                                  </div>
+                                  {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                                </button>
+                              )})}
+                              {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
+                                <button
+                                  onClick={() => selectAssignee(assigneeQuery.trim())}
+                                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
+                                    <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
+                                  </div>
+                                </button>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        /* Personal mode — reference picker icon button */
+                        <Popover open={isReferencePickerOpen} onOpenChange={setIsReferencePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button className={cn(
+                              "p-1.5 rounded-md transition-colors",
+                              references.length > 0 ? "text-emerald-400" : "text-white/30 hover:text-white/60"
+                            )} title="Link to a Doc or Slide">
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 w-72 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
+                            <div className="p-2 border-b border-white/10 bg-white/5 flex items-center gap-2">
+                              <Search className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Link to Doc or Slide</span>
+                            </div>
+                            <div className="p-2 border-b border-white/10">
                               <input
                                 type="text"
-                                value={assigneeQuery}
-                                onChange={(e) => setAssigneeQuery(e.target.value)}
+                                value={referenceQuery}
+                                onChange={(e) => setReferenceQuery(e.target.value)}
                                 onKeyDown={(e) => e.stopPropagation()}
-                                placeholder="Search or enter email..."
-                                className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                                placeholder="Search docs & slides..."
+                                className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-emerald-500/50"
                                 autoFocus
                               />
                             </div>
-                          </div>
-                          <div className="max-h-40 overflow-y-auto">
-                            {isSearchingUsers && (
-                              <div className="flex items-center justify-center py-3 text-white/40">
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                <span className="text-xs">Searching...</span>
-                              </div>
-                            )}
-                            {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
-                              <>
-                                <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
-                                {workspaceMembers.map(member => {
-                                  const isSelected = assignees.some(a => a.email === member.email);
-                                  return (
+                            <div className="max-h-52 overflow-y-auto p-1">
+                              {isSearchingRefs && (
+                                <div className="flex items-center justify-center py-3 text-white/40">
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  <span className="text-xs">Searching...</span>
+                                </div>
+                              )}
+                              {!isSearchingRefs && referenceResults.length === 0 && (
+                                <p className="text-xs text-white/30 text-center py-3">
+                                  {referenceQuery ? 'No docs or slides found' : 'Type to search docs & slides'}
+                                </p>
+                              )}
+                              {!isSearchingRefs && referenceResults.map(item => {
+                                const isDoc = item.type === 'doc';
+                                const isSelected = references.some(r => r.refId === item.refId);
+                                const accentColor = isDoc ? 'text-amber-400' : 'text-blue-400';
+                                const accentBg = isDoc ? 'bg-amber-500/15' : 'bg-blue-500/15';
+                                return (
                                   <button
-                                    key={member._id}
-                                    onClick={() => selectAssignee(member.email, member.name, member.avatar)}
+                                    key={`${item.type}-${item.refId}`}
+                                    onClick={() => { handleInlineSelectReference(item); setIsReferencePickerOpen(false); }}
                                     className={cn(
-                                      "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                                      isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                      "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left",
+                                      isSelected ? "bg-emerald-500/10" : "hover:bg-white/5"
                                     )}
                                   >
-                                    <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                                      {member.avatar ? (
-                                        <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-                                      ) : (
-                                        getInitials(member.name)
-                                      )}
+                                    <div className={cn('w-7 h-7 shrink-0 rounded-md flex items-center justify-center', accentBg)}>
+                                      <FileText className={cn('w-3.5 h-3.5', accentColor)} />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
-                                      <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                      <span className={cn('text-[10px] font-bold uppercase tracking-wide shrink-0', accentColor)}>
+                                        {isDoc ? 'Doc' : 'Slide'}
+                                      </span>
+                                      <span className="text-white/20">—</span>
+                                      <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-white/80')}>{item.title}</p>
                                     </div>
-                                    {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
+                                    {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                                   </button>
-                                )})}
-                              </>
-                            )}
-                            {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
-                              <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
-                            )}
-                            {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
-                              const isSelected = assignees.some(a => a.email === user.email);
-                              return (
-                              <button
-                                key={user._id}
-                                onClick={() => selectAssignee(user.email, user.name, user.avatar)}
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                                  isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
-                                )}
-                              >
-                                <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
-                                  {user.avatar ? (
-                                    <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-                                  ) : (
-                                    getInitials(user.name)
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
-                                  <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
-                                </div>
-                                {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
-                              </button>
-                            )})}
-                            {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
-                              <button
-                                onClick={() => selectAssignee(assigneeQuery.trim())}
-                                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
-                              >
-                                <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                                  <Mail className="w-3.5 h-3.5" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
-                                  <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
-                                </div>
-                              </button>
-                            )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                                );
+                              })}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </>
                   )}
                   
@@ -715,6 +812,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     </div>
                   )}
 
+                  {workspaceId ? (
                   <Popover open={isAssigneeOpen} onOpenChange={setIsAssigneeOpen}>
                     <PopoverTrigger asChild>
                       <button className={cn(
@@ -850,6 +948,96 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                       </div>
                     </PopoverContent>
                   </Popover>
+                  ) : (
+                  /* Personal mode — reference picker in expanded meta bar */
+                  <Popover open={isReferencePickerOpen} onOpenChange={setIsReferencePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <button className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                        references.length > 0
+                          ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
+                          : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
+                      )}>
+                        {references.length === 0 ? (
+                          <>
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Link Doc / Slide</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{references.length} linked</span>
+                            <span
+                              onClick={(e) => { e.stopPropagation(); setReferences([]); }}
+                              className="ml-0.5 p-0.5 hover:text-white/60 rounded cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-72 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
+                      <div className="p-2 border-b border-white/10 bg-white/5 flex items-center gap-2">
+                        <Search className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Link to Doc or Slide</span>
+                      </div>
+                      <div className="p-2 border-b border-white/10">
+                        <input
+                          type="text"
+                          value={referenceQuery}
+                          onChange={(e) => setReferenceQuery(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Search docs & slides..."
+                          className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-emerald-500/50"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-52 overflow-y-auto p-1">
+                        {isSearchingRefs && (
+                          <div className="flex items-center justify-center py-3 text-white/40">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <span className="text-xs">Searching...</span>
+                          </div>
+                        )}
+                        {!isSearchingRefs && referenceResults.length === 0 && (
+                          <p className="text-xs text-white/30 text-center py-3">
+                            {referenceQuery ? 'No docs or slides found' : 'Type to search docs & slides'}
+                          </p>
+                        )}
+                        {!isSearchingRefs && referenceResults.map(item => {
+                          const isDoc = item.type === 'doc';
+                          const isSelected = references.some(r => r.refId === item.refId);
+                          const accentColor = isDoc ? 'text-amber-400' : 'text-blue-400';
+                          const accentBg = isDoc ? 'bg-amber-500/15' : 'bg-blue-500/15';
+                          return (
+                            <button
+                              key={`${item.type}-${item.refId}`}
+                              onClick={() => { handleInlineSelectReference(item); setIsReferencePickerOpen(false); }}
+                              className={cn(
+                                "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left",
+                                isSelected ? "bg-emerald-500/10" : "hover:bg-white/5"
+                              )}
+                            >
+                              <div className={cn('w-7 h-7 shrink-0 rounded-md flex items-center justify-center', accentBg)}>
+                                <FileText className={cn('w-3.5 h-3.5', accentColor)} />
+                              </div>
+                              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                <span className={cn('text-[10px] font-bold uppercase tracking-wide shrink-0', accentColor)}>
+                                  {isDoc ? 'Doc' : 'Slide'}
+                                </span>
+                                <span className="text-white/20">—</span>
+                                <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-white/80')}>{item.title}</p>
+                              </div>
+                              {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  )}
+
 
                   <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
                     <PopoverTrigger asChild>

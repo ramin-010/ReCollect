@@ -396,6 +396,19 @@ export const todoApi = {
   },
 
   /**
+   * Search user's personal docs and slides by title (for @ mention)
+   */
+  async searchReferences(query: string): Promise<{ type: 'doc' | 'slide'; refId: string; title: string }[]> {
+    try {
+      const response = await axiosInstance.get('/api/todos/search-references', { params: { q: query } });
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('[todoApi] Reference search failed:', error);
+      return [];
+    }
+  },
+
+  /**
    * Generate task fields using AI from a natural language prompt
    */
   async generateTaskWithAI(

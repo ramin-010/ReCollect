@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { parseTaskInput } from '@/lib/utils/smartDateParser';
 import { todoApi } from '@/lib/api/todoApi';
+import { TaskReference } from './types';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -47,6 +48,7 @@ export const useTaskInput = (
   const [confirmedDueDate, setConfirmedDueDate] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [assignees, setAssignees] = useState<{ name: string; email: string; avatar?: string }[]>([]);
+  const [references, setReferences] = useState<TaskReference[]>(initialReferences || []);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [caretPosition, setCaretPosition] = useState<{ top: number; left: number; height: number } | null>(null);
 
@@ -159,6 +161,16 @@ export const useTaskInput = (
       });
     }
     
+    setIsInlineAssigneeOpen(false);
+    setAssigneeSearchQuery('');
+  };
+
+  const handleInlineSelectReference = (ref: TaskReference) => {
+    setTitle(prev => prev.replace(/@[\w\s]*$/, `@${ref.title} `));
+    setReferences(prev => {
+      if (prev.some(r => r.refId === ref.refId && r.type === ref.type)) return prev;
+      return [...prev, ref];
+    });
     setIsInlineAssigneeOpen(false);
     setAssigneeSearchQuery('');
   };
@@ -350,7 +362,7 @@ export const useTaskInput = (
       subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
       tags: selectedLabels.length > 0 ? selectedLabels.map(l => l.name) : undefined,
       recurrence: recurrenceData,
-      references: initialReferences && initialReferences.length > 0 ? initialReferences : undefined,
+      references: references.length > 0 ? references : (initialReferences && initialReferences.length > 0 ? initialReferences : undefined),
       workspace: workspaceId,
       spaceId: spaceId,
       visibility: visibility,
@@ -396,6 +408,7 @@ export const useTaskInput = (
         setCurrentReminder(null);
         setIsRecurring(false);
         setAssignees([]);
+        setReferences(initialReferences || []);
         onExpandChange(false);
       } else {
         toast.error(result.message || 'Failed to create task');
@@ -612,6 +625,8 @@ export const useTaskInput = (
     handleInlineSelectLabel,
     handleInlineCreateLabel,
     handleInlineSelectAssignee,
+    handleInlineSelectReference,
+    references, setReferences,
     acceptSuggestion,
     clearConfirmedDate,
     handleSave,
