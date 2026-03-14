@@ -36,8 +36,17 @@ function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: st
 
   // Overdue
   if (diffSecs < 0) {
-    const diffDays = Math.ceil(MathAbs(diffSecs) / 86400);
-    return { text: `Overdue by ${diffDays} day${diffDays > 1 ? 's' : ''}`, isOverdue: true };
+    const absDiffSecs = MathAbs(diffSecs);
+    if (absDiffSecs < 3600) {
+      const diffMins = Math.floor(absDiffSecs / 60);
+      return { text: `Overdue by ${diffMins} min${diffMins !== 1 ? 's' : ''}`, isOverdue: true };
+    }
+    const diffHrs = Math.floor(absDiffSecs / 3600);
+    if (diffHrs < 24) {
+      return { text: `Overdue by ${diffHrs} hr${diffHrs !== 1 ? 's' : ''}`, isOverdue: true };
+    }
+    const diffDays = Math.floor(absDiffSecs / 86400);
+    return { text: `Overdue by ${diffDays} day${diffDays !== 1 ? 's' : ''}`, isOverdue: true };
   }
 
   // Within 24 hours
@@ -213,7 +222,7 @@ export function TaskRow({ task, workspaceMembers = [], onStatusChange, onUpdateT
         >
           <button className={cn(
             "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none whitespace-nowrap",
-            dueDateDisplay?.isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
+            dueDateDisplay?.isOverdue ? "text-rose-400/80 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
           )}>
             {task.dueDate && dueDateDisplay ? (
               <span>{dueDateDisplay.text}</span>

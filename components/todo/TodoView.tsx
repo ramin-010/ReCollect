@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, ChevronDown, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown, LayoutTemplate } from 'lucide-react';
+import { Loader2, CheckCircle2, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown, LayoutTemplate } from 'lucide-react';
 import { TaskInput } from './task_Input';
 import { BulkActionBar } from './workspace/modals/BulkActionBar';
 import { TodoHeader } from './TodoHeader';
@@ -23,6 +23,7 @@ import {
 import { RichTaskItem } from './RichTaskItem';
 import { PersonalTableView } from './PersonalTableView';
 import type { TaskData } from './task_Input/types';
+import { PersonalTaskDetailModal } from './PersonalTaskDetailModal';
 
 
 export function TodoView() {
@@ -77,7 +78,7 @@ export function TodoView() {
     
     switch (activeFilter) {
       case 'inbox':
-        result = result.filter(t => t.status !== 'complete');
+        result = result.filter(t => t.status !== 'complete' && (!t.references || t.references.length === 0));
         break;
       case 'today':
         result = result.filter(t => {
@@ -174,14 +175,6 @@ export function TodoView() {
     }
   };
 
-  const toggleComplete = async (id: string, currentlyCompleted: boolean) => {
-    const newStatus = currentlyCompleted ? 'pending' : 'complete';
-    updateTodo(id, { status: newStatus as 'pending' | 'complete' });
-    axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
-        updateTodo(id, { status: currentlyCompleted ? 'complete' : 'pending' });
-        toast.error('Failed to update status');
-    });
-  };
 
   const handleUpdateTask = useCallback(async (id: string, updates: Partial<Todo>) => {
       updateTodo(id, updates);
@@ -192,7 +185,19 @@ export function TodoView() {
           return prev;
       });
       // Persist to backend
-      axiosInstance.patch(`/api/todos/${id}`, updates).catch(() => {});
+      await axiosInstance.patch(`/api/todos/${id}`, updates).catch(() => {});
+  }, [updateTodo, setSelectedTask]);
+
+  // State-only sync (no API call) — used by PersonalTaskDetailModal
+  // which saves via todoApi.updateTodo() internally to handle cloud image uploads
+  const handleModalTaskSync = useCallback(async (id: string, updates: Partial<Todo>) => {
+      updateTodo(id, updates);
+      setSelectedTask((prev) => {
+          if (prev && prev._id === id) {
+              return { ...prev, ...updates } as Todo;
+          }
+          return prev;
+      });
   }, [updateTodo, setSelectedTask]);
 
   // Adapter for workspace-style components (onStatusChange(id, newStatus))
@@ -256,7 +261,6 @@ export function TodoView() {
                     : "text-white/30 hover:text-white/50"
                 )}
               >
-                {f.icon}
                 {f.label}
               </button>
             ))}
@@ -274,8 +278,8 @@ export function TodoView() {
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                   activeFilter === f.key
-                    ? "text-amber-400 bg-amber-400/10"
-                    : "text-amber-500/40 hover:text-amber-400/80"
+                    ? "text-white/80 bg-white/[0.06]"
+                    : "text-white/30 hover:text-white/50"
                 )}
               >
                 {f.icon}
@@ -295,11 +299,10 @@ export function TodoView() {
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                   activeFilter === f.key
-                    ? "text-emerald-400 bg-emerald-400/10"
+                    ? "text-white/80 bg-white/[0.06]"
                     : "text-white/30 hover:text-white/60"
                 )}
               >
-                {f.icon}
                 {f.label}
               </button>
             ))}
@@ -352,14 +355,6 @@ export function TodoView() {
                           transition={{ duration: 0.2 }}
                           className="space-y-1"
                         >
-                          <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 pl-4 py-2 text-[12px] font-medium text-white/50 items-center select-none">
-                            <div className="flex justify-center"></div>
-                            <div className="flex items-center">Tasks</div>
-                            <div className="flex items-center justify-start pl-2">Due date</div>
-                            <div className="flex items-center justify-start pl-2.5">Status</div>
-                            <div className="flex items-center justify-start pl-1">Priority</div>
-                          </div>
-
                           <AnimatePresence mode="popLayout">
                             {filteredTasks.length === 0 ? (
                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center opacity-30">
@@ -414,6 +409,14 @@ export function TodoView() {
         onUpdate={handleBulkUpdate}
         workspaceMembers={[]}
         hideAssignees={true}
+      />
+
+      {/* Personal Task Detail Modal */}
+      <PersonalTaskDetailModal
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdateTask={handleModalTaskSync}
       />
     </div>
   );

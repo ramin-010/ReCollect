@@ -30,8 +30,17 @@ function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: st
 
   // Overdue
   if (diffSecs < 0) {
-    const diffDays = Math.ceil(MathAbs(diffSecs) / 86400);
-    return { text: `Overdue by ${diffDays} day${diffDays > 1 ? 's' : ''}`, isOverdue: true };
+    const absDiffSecs = MathAbs(diffSecs);
+    if (absDiffSecs < 3600) {
+      const diffMins = Math.floor(absDiffSecs / 60);
+      return { text: `Overdue by ${diffMins} min${diffMins !== 1 ? 's' : ''}`, isOverdue: true };
+    }
+    const diffHrs = Math.floor(absDiffSecs / 3600);
+    if (diffHrs < 24) {
+      return { text: `Overdue by ${diffHrs} hr${diffHrs !== 1 ? 's' : ''}`, isOverdue: true };
+    }
+    const diffDays = Math.floor(absDiffSecs / 86400);
+    return { text: `Overdue by ${diffDays} day${diffDays !== 1 ? 's' : ''}`, isOverdue: true };
   }
 
   // Within 24 hours
@@ -51,10 +60,10 @@ function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: st
 
 function getPriorityConfig(priority: string) {
   switch (priority) {
-    case 'urgent': return { color: 'text-rose-400', fill: 'fill-rose-500/30' };
-    case 'high': return { color: 'text-amber-400', fill: 'fill-amber-500/30' };
-    case 'normal': case 'medium': return { color: 'text-blue-400', fill: 'fill-blue-500/30' };
-    case 'low': return { color: 'text-zinc-400', fill: 'fill-zinc-400/30' };
+    case 'urgent': return { color: 'text-rose-500/70', fill: 'fill-rose-500/20' };
+    case 'high': return { color: 'text-amber-500/70', fill: 'fill-amber-500/20' };
+    case 'normal': case 'medium': return { color: 'text-blue-400/70', fill: 'fill-blue-500/20' };
+    case 'low': return { color: 'text-zinc-500', fill: 'fill-zinc-400/20' };
     default: return { color: 'text-zinc-500', fill: '' };
   }
 }
@@ -70,7 +79,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
     <div 
       onClick={() => onSelect(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 pl-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
         "bg-transparent border-white/10 hover:bg-white/[0.02]",
         isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
       )}
@@ -144,11 +153,6 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
         {task.description && (
           <AlignLeft className="w-3.5 h-3.5 text-white/30 shrink-0" />
         )}
-        {task.references && task.references.length > 0 && (
-          <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-400/70 text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
-             {task.references[0].type}
-          </span>
-        )}
       </div>
 
       {/* 4. Due Date */}
@@ -167,7 +171,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
         >
           <button className={cn(
             "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none whitespace-nowrap",
-            dueDateDisplay?.isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
+            dueDateDisplay?.isOverdue ? "text-rose-400/80 font-medium" : task.dueDate ? "text-white/40" : "text-white/20 hover:text-white/40"
           )}>
             {task.dueDate && dueDateDisplay ? (
               <span>{dueDateDisplay.text}</span>
@@ -196,14 +200,14 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
           <button className={cn(
             "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
             isDone 
-              ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25" 
+              ? "bg-emerald-500/10 text-emerald-500/70 hover:bg-emerald-500/15" 
               : task.status === 'in_progress'
-                ? "bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
+                ? "bg-blue-500/10 text-blue-400/70 hover:bg-blue-500/15"
                 : task.status === 'review'
-                  ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                  ? "bg-amber-500/10 text-amber-500/70 hover:bg-amber-500/15"
                   : task.status === 'blocked'
-                    ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
-                    : "bg-white/[0.05] text-white/40 hover:bg-white/10"
+                    ? "bg-rose-500/10 text-rose-500/70 hover:bg-rose-500/15"
+                    : "bg-white/[0.03] text-white/30 hover:bg-white/[0.06]"
           )}>
             {isDone ? 'COMPLETE' : task.status === 'in_progress' ? 'IN PROGRESS' : task.status === 'review' ? 'REVIEW' : task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
           </button>

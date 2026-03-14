@@ -147,8 +147,8 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
                 const isSelected = highlightedIndex === idx;
                 const Icon = isDoc ? FileText : LayoutTemplate;
                 const typeLabel = isDoc ? 'Doc' : 'Slide';
-                const accentColor = isDoc ? 'text-amber-400' : 'text-blue-400';
-                const accentBg = isDoc ? 'bg-amber-500/15' : 'bg-blue-500/15';
+                const accentColor = 'text-emerald-400';
+                const accentBg = 'bg-emerald-5  00/15';
 
                 return (
                   <button
