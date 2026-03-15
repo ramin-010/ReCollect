@@ -249,11 +249,11 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                 {isOwner ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
-                          ${doc.docType === 'meeting' ? 'bg-violet-500 border-violet-500/20 text-violet-600 dark:text-white' :
-                            doc.docType === 'project' ? 'bg-emerald-500 border-emerald-500/20 text-emerald-600 dark:text-white' :
-                            doc.docType === 'personal' ? 'bg-amber-500 border-amber-500/20 text-amber-600 dark:text-white' :
-                            'bg-blue-500 border-blue-500/20 text-blue-600 dark:text-white'
+                      <button className={`text-[10px] font-semibold px-2 py-1 rounded-sm border bg-opacity-10 backdrop-blur-sm cursor-pointer hover:bg-opacity-20 transition-all
+                          ${doc.docType === 'meeting' ? 'bg-violet-500 border-violet-500/20  dark:text-white' :
+                            doc.docType === 'project' ? 'bg-emerald-500 border-emerald-500/20  dark:text-white' :
+                            doc.docType === 'personal' ? 'bg-amber-500 border-amber-500/20  dark:text-white' :
+                            'bg-blue-500 border-blue-500/20  dark:text-white'
                           }`}>
                         {tag?.label || 'Notes'}
                       </button>

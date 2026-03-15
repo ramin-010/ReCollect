@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
-import { useViewStore } from '@/lib/store/viewStore';
 import { 
   getAllDrawingMetadata, 
   getDrawingMetadata,
@@ -34,8 +33,6 @@ export function useDrawingDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetDrawing, setDeleteTargetDrawing] = useState<Drawing | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  const { setCurrentView } = useViewStore();
   
   /* Local state for UI indicators */
   const [isSaving, setIsSaving] = useState(false);
@@ -377,7 +374,6 @@ export function useDrawingDashboard() {
     setCurrentDrawing,
     setHasUnsavedChanges,
     setIsSaving,
-    setCurrentView,
     
     // Actions
     createNewDrawing,

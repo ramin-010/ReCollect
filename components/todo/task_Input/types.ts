@@ -1,5 +1,5 @@
 export interface TaskReference {
-  type: 'doc' | 'content';
+  type: 'doc' | 'content' | 'slide';
   refId: string;
   title?: string;
 }
@@ -7,8 +7,8 @@ export interface TaskReference {
 export interface TaskData {
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'complete';
+  priority: 'low' | 'normal' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   dueDate?: string;
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
@@ -16,6 +16,9 @@ export interface TaskData {
   tags?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
+  workspace?: string;
+  spaceId?: string;
+  visibility?: 'private' | 'workspace' | 'public';
 }
 
 export interface TaskInputProps {
@@ -27,12 +30,16 @@ export interface TaskInputProps {
   initialReferences?: TaskReference[];
   initialTitle?: string;
   initialDescription?: string;
-  /** When true, disables API calls and shows mock success - for landing page demos */
   demoMode?: boolean;
+  workspaceId?: string;
+  spaceId?: string;
+  visibility?: 'private' | 'workspace' | 'public';
+  workspaceMembers?: { _id: string; name: string; email: string; avatar?: string }[];
 }
 
 export const PRIORITIES = [
-  { value: 'low', label: 'Low', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { value: 'medium', label: 'Medium', color: 'text-amber-400', bg: 'bg-amber-500/10' },
-  { value: 'high', label: 'High', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  { value: 'urgent', label: 'Urgent', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  { value: 'high', label: 'High', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  { value: 'normal', label: 'Normal', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { value: 'low', label: 'Low', color: 'text-zinc-400', bg: 'bg-zinc-500/10' },
 ] as const;

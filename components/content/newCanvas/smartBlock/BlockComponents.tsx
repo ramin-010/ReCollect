@@ -46,74 +46,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({ isVisible, onD
   </div>
 );
 
-interface ColorControlProps {
-    isVisible: boolean;
-    onUpdateColor?: (color: string) => void;
-    currentColor?: string;
-}
 
-export const ColorControl: React.FC<ColorControlProps> = ({ isVisible, onUpdateColor, currentColor }) => {
-    const [showPalette, setShowPalette] = useState(false);
-  
-    const COLORS = [
-      { name: 'Default', value: '' }, // Default (Transparent)
-      { name: 'Blue', value: 'bg-blue-500/10 border-blue-500/20' },
-      { name: 'Green', value: 'bg-green-500/10 border-green-500/20' },
-      { name: 'Amber', value: 'bg-amber-500/10 border-amber-500/20' },
-      { name: 'Red', value: 'bg-red-500/10 border-red-500/20' },
-      { name: 'Violet', value: 'bg-violet-500/10 border-violet-500/20' },
-    ];
-  
-    return (
-      <div className={cn(
-        "absolute top-0 left-0 flex items-start gap-1 transition-opacity z-[100] pointer-events-auto",
-        isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}>
-        <div className="flex items-center gap-1">
-            {/* Color Palette Toggle - Inside Top Right */}
-            <button 
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={(e) => { e.stopPropagation(); setShowPalette(!showPalette); }}
-              className={cn(
-                  "p-1 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors border border-transparent backdrop-blur-sm bg-background/30",
-                  showPalette && "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
-              )}
-              title="Change Background Color"
-            >
-              <Palette className="w-3 h-3" />
-            </button>
-        </div>
-  
-        {/* Expanded Color Swatches - Slide Right */}
-        {showPalette && (
-            <div className="absolute top-0 left-8 flex items-center gap-1 p-1.5 bg-background/90 backdrop-blur-md rounded-full border border-border/50 shadow-sm animate-in fade-in slide-in-from-left-2 w-max ml-1 z-50">
-                {COLORS.map((c) => (
-                   <button
-                     key={c.name}
-                     className={cn(
-                        "w-3 h-3 rounded-full border border-transparent transition-all hover:scale-110",
-                        "focus:outline-none focus:ring-1 focus:ring-[hsl(var(--foreground))]",
-                        c.name === 'Default' ? 'bg-[hsl(var(--muted-foreground))]/20' : '',
-                        c.name === 'Blue' ? 'bg-blue-400' : '',
-                        c.name === 'Green' ? 'bg-green-400' : '',
-                        c.name === 'Amber' ? 'bg-amber-400' : '',
-                        c.name === 'Red' ? 'bg-red-400' : '',
-                        c.name === 'Violet' ? 'bg-violet-400' : '',
-                        currentColor === c.value && "ring-2 ring-[hsl(var(--foreground))] ring-offset-1"
-                     )}
-                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                     onClick={(e) => { 
-                         e.stopPropagation(); 
-                         onUpdateColor?.(c.value); 
-                     }}
-                     title={c.name}
-                   />
-                ))}
-            </div>
-        )}
-      </div>
-    );
-};
 
 interface AnchorPointsProps {
   isVisible: boolean;
@@ -133,10 +66,9 @@ export const AnchorPoints: React.FC<AnchorPointsProps> = ({
   if (readOnly) return null;
 
   const anchorClassName = cn(
-    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[50] cursor-crosshair transition-all duration-200",
-    // Standard size: w-3 h-3. Dragging size: w-4 h-4 with ring.
+    "rounded-full border border-[hsl(var(--brand-primary))]/30 bg-[hsl(var(--card))] z-[999] cursor-crosshair transition-all duration-200",
     isDragging ? "w-4 h-4 ring-2 ring-[hsl(var(--brand-primary))]/10 shadow-[0_0_10px_hsl(var(--brand-primary))/20]" : "w-3 h-3",
-    isVisible ? "opacity-100" : "opacity-0 hover:opacity-100"
+    isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
   );
 
   return (
@@ -223,21 +155,37 @@ export const BlockContent: React.FC<BlockContentProps> = ({
     }
     return (
       <>
-      <div className="notion-editor h-full w-full">
+      <div className="notion-editor h-full w-full" style={{ color: 'inherit', fontSize: 'inherit' }}>
         <div 
-          className="ProseMirror select-none pointer-events-none h-full w-full"
+          className="ProseMirror preview-prosemirror select-none pointer-events-none h-full w-full"
           style={{ 
             maxWidth: '100%', 
             margin: 0, 
             paddingLeft: '4px', 
             paddingRight: '4px',
+            paddingTop: '2px',
+            paddingBottom: '2px',
             lineHeight: '1.7',
             whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            color: 'inherit',
+            fontSize: 'inherit',
           }}
-          dangerouslySetInnerHTML={{ __html: content || '<span class="opacity-50 italic">Empty note...</span>' }}
+          dangerouslySetInnerHTML={{ __html: content || '' }}
         />
       </div>
+      {/* Force color inheritance only on elements without inline styles (so TipTap color spans are preserved) */}
+      <style>{`
+        .notion-editor .preview-prosemirror *:not([style]) {
+          color: inherit;
+        }
+        .notion-editor .preview-prosemirror > *:first-child {
+          margin-top: 0;
+        }
+        .notion-editor .preview-prosemirror > *:last-child {
+          margin-bottom: 0;
+        }
+      `}</style>
       {/* Callout styles for read-only rendering */}
       <style>{CALLOUT_READ_STYLES}</style>
       </>
@@ -245,9 +193,18 @@ export const BlockContent: React.FC<BlockContentProps> = ({
   }
 
   if (type === 'image') {
+    const imgSrc = url || content;
+    if (!imgSrc) {
+      // Image not yet restored from IndexedDB or cloud — show placeholder
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-[hsl(var(--muted))]/20 rounded-lg">
+          <span className="text-xs text-[hsl(var(--muted-foreground))]/50">Loading image...</span>
+        </div>
+      );
+    }
     return (
       <img 
-        src={url || content} 
+        src={imgSrc} 
         alt="Note attachment"
         className="w-full h-full object-cover pointer-events-none select-none"
         draggable="false"

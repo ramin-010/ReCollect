@@ -9,7 +9,7 @@ export interface Subtask {
 
 // Reference to doc or content
 export interface TaskReference {
-  type: 'doc' | 'content';
+  type: 'doc' | 'content' | 'slide';
   refId: string;
   title?: string;
 }
@@ -27,7 +27,7 @@ export interface Todo {
   description?: string;
   
   // Status & Priority
-  status: 'pending' | 'complete';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
   priority: 'low' | 'medium' | 'high';
   
   // Dates
@@ -45,7 +45,8 @@ export interface Todo {
   
   // New Fields
   labels?: { id: string; name: string; color: string }[];
-  assignee?: string;
+  assignees?: { _id: string; name: string; email: string; avatar?: string }[];
+  assignedAt?: string;
 
   // Recurrence
   recurrence?: TaskRecurrence;

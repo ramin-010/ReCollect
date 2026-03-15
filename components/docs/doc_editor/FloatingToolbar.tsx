@@ -4,11 +4,11 @@ import { useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { 
   Bold, Italic, List, ListOrdered, Quote, Code, 
-  Heading1, Heading2, Link as LinkIcon, Highlighter, 
+  Heading1, Heading2, Link as LinkIcon, Palette, Highlighter,
   Underline as UnderlineIcon, Type
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
-import { HIGHLIGHT_COLORS } from './constants';
+import { HIGHLIGHT_COLORS, TEXT_COLORS } from './constants';
 import { ToolbarPosition } from './types';
 
 interface FloatingToolbarProps {
@@ -19,6 +19,7 @@ interface FloatingToolbarProps {
 
 export function FloatingToolbar({ editor, show, position }: FloatingToolbarProps) {
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
 
   const addLink = () => {
@@ -55,17 +56,69 @@ export function FloatingToolbar({ editor, show, position }: FloatingToolbarProps
       <div className="relative">
         <Button 
           type="button" 
+          variant={showTextColorPicker ? 'primary' : 'ghost'} 
+          size="sm" 
+          onClick={() => {
+            setShowTextColorPicker(!showTextColorPicker);
+            setShowHighlightPicker(false);
+          }} 
+          className="h-7 w-7 p-0"
+        >
+          <Palette className="h-3.5 w-3.5" />
+        </Button>
+        {showTextColorPicker && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 min-w-[200px]">
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mb-2 text-center uppercase tracking-wider font-semibold">Text Color</p>
+            <div className="grid grid-cols-4 gap-2">
+              {TEXT_COLORS.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    if (item.color) {
+                      editor.chain().focus().setColor(item.color).run();
+                    } else {
+                      editor.chain().focus().unsetColor().run();
+                    }
+                    setShowTextColorPicker(false);
+                  }}
+                  className="w-10 h-10 rounded-lg border-2 border-[hsl(var(--border))] hover:scale-105 hover:border-white/50 transition-all flex items-center justify-center font-serif text-lg font-bold"
+                  style={{ backgroundColor: item.color || item.preview, color: item.color === '#f8fafc' || item.color === undefined ? '#000' : '#fff' }}
+                  title={item.label}
+                >
+                  A
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetColor().run();
+                setShowTextColorPicker(false);
+              }}
+              className="w-full mt-2 px-3 py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+            >
+              Default text color
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div className="relative">
+        <Button 
+          type="button" 
           variant={editor.isActive('highlight') ? 'primary' : 'ghost'} 
           size="sm" 
-          onClick={() => setShowHighlightPicker(!showHighlightPicker)} 
+          onClick={() => {
+            setShowHighlightPicker(!showHighlightPicker);
+            setShowTextColorPicker(false);
+          }} 
           className="h-7 w-7 p-0"
         >
           <Highlighter className="h-3.5 w-3.5" />
         </Button>
         {showHighlightPicker && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 min-w-[160px]">
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mb-2 text-center">Highlight Color</p>
-            <div className="grid grid-cols-3 gap-2">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 min-w-[200px]">
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mb-2 text-center uppercase tracking-wider font-semibold">Highlight Color</p>
+            <div className="grid grid-cols-4 gap-2">
               {HIGHLIGHT_COLORS.map((item) => (
                 <button
                   key={item.color}
@@ -84,7 +137,7 @@ export function FloatingToolbar({ editor, show, position }: FloatingToolbarProps
                 editor.chain().focus().unsetHighlight().run();
                 setShowHighlightPicker(false);
               }}
-              className="w-full mt-3 px-3 py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+              className="w-full mt-2 px-3 py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
             >
               Remove highlight
             </button>

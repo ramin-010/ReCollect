@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { ExcalidrawYjsEditorProps } from './types';
 import { useExcalidrawYjs } from './hooks';
 import { Button } from '@/components/ui-base/Button';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Share2, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Share2, MoreVertical, Sparkles, Loader2, X } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuTrigger, 
@@ -14,6 +14,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@/components/ui-base/DropdownMenu';
+import '@excalidraw/excalidraw/index.css';
+import { drawingApi } from '@/lib/api/drawingApi';
+import { toast } from 'sonner';
 
 const Excalidraw = dynamic(
   () => import('@excalidraw/excalidraw').then((mod) => mod.Excalidraw),
@@ -94,6 +97,88 @@ export function ExcalidrawYjsEditor({
 
   const { resolvedTheme } = useTheme();
 
+  // ========== AI Drawing Generation ==========    comming soon for now !
+  // const [showAIPrompt, setShowAIPrompt] = useState(false);
+  // const [aiPrompt, setAiPrompt] = useState('');
+  // const [aiLoading, setAiLoading] = useState(false);
+  // const [aiError, setAiError] = useState<string | null>(null);
+  // const aiInputRef = useRef<HTMLInputElement>(null);
+
+  // const handleAIGenerate = useCallback(async () => {
+  //   if (!aiPrompt.trim() || aiLoading || !excalidrawAPIRef.current) return;
+
+  //   setAiLoading(true);
+  //   setAiError(null);
+
+  //   try {
+  //     // 1. Call backend to get Mermaid syntax
+  //     const result = await drawingApi.generateAIDrawing(aiPrompt.trim());
+
+  //     if (!result.success || !result.mermaidSyntax) {
+  //       setAiError('AI returned an empty response. Try a different prompt.');
+  //       return;
+  //     }
+
+  //     console.log(`[AI Drawing] Got Mermaid from ${result.provider}:`, result.mermaidSyntax.slice(0, 200));
+
+  //     // 2. Convert Mermaid → Excalidraw elements (dynamic import to keep bundle small)
+  //     const { parseMermaidToExcalidraw } = await import('@excalidraw/mermaid-to-excalidraw');
+  //     const { convertToExcalidrawElements } = await import('@excalidraw/excalidraw');
+
+  //     const { elements: skeletonElements, files } = await parseMermaidToExcalidraw(
+  //       result.mermaidSyntax,
+  //       { themeVariables: { fontSize: '16px' } }
+  //     );
+
+  //     const excalidrawElements = convertToExcalidrawElements(skeletonElements);
+
+  //     console.log(`[AI Drawing] Converted to ${excalidrawElements.length} Excalidraw elements`);
+
+  //     // 3. Get existing elements and merge
+  //     const api = excalidrawAPIRef.current;
+  //     const existingElements = api.getSceneElements() || [];
+
+  //     // Offset new elements to avoid overlapping with existing content
+  //     const offsetX = existingElements.length > 0 ? 100 : 0;
+  //     const offsetY = existingElements.length > 0 ? 100 : 0;
+
+  //     const offsetElements = excalidrawElements.map((el: any) => ({
+  //       ...el,
+  //       x: (el.x || 0) + offsetX,
+  //       y: (el.y || 0) + offsetY,
+  //     }));
+
+  //     // 4. Inject into the canvas
+  //     api.updateScene({
+  //       elements: [...existingElements, ...offsetElements],
+  //     });
+
+  //     // Select the new elements so the user can move them
+  //     const newElementIds = offsetElements.reduce((acc: Record<string, boolean>, el: any) => {
+  //       acc[el.id] = true;
+  //       return acc;
+  //     }, {} as Record<string, boolean>);
+
+  //     api.updateScene({
+  //       appState: { selectedElementIds: newElementIds },
+  //     });
+
+  //     // Scroll to fit the new elements
+  //     api.scrollToContent(offsetElements, { fitToContent: true, animate: true });
+
+  //     // Close the prompt bar on success
+  //     setShowAIPrompt(false);
+  //     setAiPrompt('');
+
+  //     console.log('[AI Drawing] Successfully injected elements into canvas!');
+  //   } catch (err: any) {
+  //     console.error('[AI Drawing] Error:', err);
+  //     setAiError(err?.response?.data?.message || err?.message || 'Failed to generate diagram. Try again.');
+  //   } finally {
+  //     setAiLoading(false);
+  //   }
+  // }, [aiPrompt, aiLoading, excalidrawAPIRef]);
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -157,6 +242,20 @@ export function ExcalidrawYjsEditor({
                  <span>Share</span>
                </Button>
              )}
+
+              {/* AI Generate Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  toast.info('✨ AI layout and architecture generation is coming soon!');
+                }}
+                className="h-7 gap-2 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-md px-3 transition-colors"
+                title="Generate diagram with AI (Coming Soon)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI</span>
+              </Button>
           </div>
         </div>
 
@@ -224,6 +323,8 @@ export function ExcalidrawYjsEditor({
           }
         }}
       />
+
+
       
       {/* Conflict Dialog */}
       {showConflictDialog && conflictData && (

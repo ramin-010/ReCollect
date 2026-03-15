@@ -2,7 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useDocStore } from '@/lib/store/docStore';
@@ -20,20 +21,24 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuthStore();
   const { setDashboards, setCurrentDashboard } = useDashboardStore();
-  const currentView = useViewStore((state) => state.currentView);
   const isSlideFullscreen = useViewStore((state) => state.isSlideFullscreen);
   const currentDoc = useDocStore((state) => state.currentDoc);
   
   // Quick Task Add modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   
-  // Hide navbar when editing a document (docs view with editor open) or viewing tasks
-  // For slides: only hide if in fullscreen mode (editing a slide)
-  const isDocEditorOpen = currentView === 'docs' && currentDoc !== null;
-  const hideNavbar = isDocEditorOpen || currentView === 'todo' || (currentView === 'slides' && isSlideFullscreen);
-  const hideSidebar = (currentView === 'slides' && isSlideFullscreen);
+  const isTodoInputExpanded = useViewStore((state) => state.isTodoInputExpanded);
+  const todoFilter = useViewStore((state) => state.todoFilter);
+
+  // Hide navbar/sidebar based on pathname
+  const isDocEditorOpen = pathname === '/docs' && currentDoc !== null;
+  const INBOX_FILTERS = ['inbox', 'today', 'upcoming', 'completed', 'docs', 'notes'];
+  const isTodoInboxScreen = pathname === '/todo' && INBOX_FILTERS.includes(todoFilter);
+  const hideNavbar = isDocEditorOpen || (pathname === '/slides' && isSlideFullscreen) || pathname === '/workspace' || pathname?.startsWith('/todo');
+  const hideSidebar = (pathname === '/slides' && isSlideFullscreen);
   
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)
@@ -104,11 +109,22 @@ export default function AppLayout({
 
   return (
     <CreateNoteProvider>
-      <div className="min-h-screen flex bg-pattern">
+      <div className="h-screen overflow-hidden flex bg-pattern">
         {!hideSidebar && <Sidebar />}
-        <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
-          {!hideNavbar && <Navbar />}
-          <main className="flex-1 overflow-y-auto bg-[hsl(var(--background))] relative">
+        <div className="flex-1 flex flex-col bg-[hsl(var(--background))] overflow-hidden">
+          <AnimatePresence>
+            {!hideNavbar && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -20, height: 0 }}
+                className="overflow-hidden shrink-0"
+              >
+                <Navbar />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <main className="flex-1 overflow-y-auto custom-scrollbar bg-[hsl(var(--background))] relative">
             {children}
           </main>
         </div>

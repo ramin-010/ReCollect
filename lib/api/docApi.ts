@@ -193,5 +193,22 @@ export const docApi = {
     const response = await axiosInstance.delete(`/api/docs/${id}`);
     return { success: response.data.success };
   },
+
+  /**
+   * Generate AI content for docs editor
+   * @param prompt - The user's writing request
+   * @param context - Optional surrounding text for better context
+   * @returns TipTap JSON content array
+   */
+  async generateAIContent(prompt: string, context?: string): Promise<{
+    success: boolean;
+    data?: { content: any[] };
+    provider?: string;
+    nodeCount?: number;
+  }> {
+    console.log('[docApi] Generating AI content:', prompt.slice(0, 80));
+    const response = await axiosInstance.post('/api/docs/ai/generate', { prompt, context });
+    return response.data;
+  },
 };
 

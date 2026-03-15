@@ -2,15 +2,18 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, Plus, ChevronDown, Briefcase } from 'lucide-react';
+import { Loader2, CheckCircle2, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown, LayoutTemplate } from 'lucide-react';
 import { TaskInput } from './task_Input';
+import { BulkActionBar } from './workspace/modals/BulkActionBar';
 import { TodoHeader } from './TodoHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';
 import { useTodoStore } from '@/lib/store/todoStore';
+import type { Todo } from '@/lib/store/todoStore';
 import { useViewStore } from '@/lib/store/viewStore';
-import { isToday, isTomorrow, isPast, parseISO, format } from 'date-fns';
+import type { TodoFilterType } from '@/lib/store/viewStore';
+import { isToday, isPast, parseISO } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,7 +21,10 @@ import {
   DropdownMenuItem,
 } from '@/components/ui-base/DropdownMenu';
 import { RichTaskItem } from './RichTaskItem';
-import { TaskDetailView } from './TaskDetailView';
+import { PersonalTableView } from './PersonalTableView';
+import type { TaskData } from './task_Input/types';
+import { PersonalTaskDetailModal } from './PersonalTaskDetailModal';
+
 
 export function TodoView() {
   const {
@@ -32,13 +38,15 @@ export function TodoView() {
     removeTodo
   } = useTodoStore();
 
-  // Get filter from viewStore (controlled by sidebar)
   const activeFilter = useViewStore((state) => state.todoFilter);
 
   // UI State
-  const [isInputExpanded, setIsInputExpanded] = useState(false);
-  const [priorityFilter, setPriorityFilter] = useState<'' | 'high' | 'medium' | 'low'>('');
-  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const isInputExpanded = useViewStore((state) => state.isTodoInputExpanded);
+  const setIsInputExpanded = useViewStore((state) => state.setTodoInputExpanded);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
+  const [sortBy, setSortBy] = useState<'priority' | 'dueDate' | 'recent'>('priority');
+  const [currentView, setCurrentView] = useState<'list' | 'table'>('list');
 
   // Fetch todos
   const fetchTodos = useCallback(async () => {
@@ -47,7 +55,7 @@ export function TodoView() {
       setLoading(true);
       const response = await axiosInstance.get('/api/todos');
       if (response.data.success) setTodos(response.data.data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load tasks');
       setLoading(false);
     }
@@ -55,7 +63,7 @@ export function TodoView() {
 
   useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
-  // Stats
+  // Stats (only used for inbox header)
   const stats = useMemo(() => {
     const total = todos.length;
     const completed = todos.filter(t => t.status === 'complete').length;
@@ -64,13 +72,13 @@ export function TodoView() {
     return { total, completed, pending, progress };
   }, [todos]);
 
-  // Filtered Tasks
+  // Filtered Tasks (only for inbox-type filters)
   const filteredTasks = useMemo(() => {
     let result = [...todos];
     
     switch (activeFilter) {
       case 'inbox':
-        result = result.filter(t => t.status !== 'complete');
+        result = result.filter(t => t.status !== 'complete' && (!t.references || t.references.length === 0));
         break;
       case 'today':
         result = result.filter(t => {
@@ -96,37 +104,36 @@ export function TodoView() {
           t.references?.some(ref => ref.type === 'doc')
         );
         break;
-      case 'notes':
+      case 'slides':
         result = result.filter(t => 
           t.status !== 'complete' && 
-          t.references?.some(ref => ref.type === 'content')
+          t.references?.some(ref => ref.type === 'slide')
         );
         break;
     }
 
-    // Sort by priority then date
-    // High > Medium > Low
+    // Sort by Priority (High > Medium > Low)
     const pMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
-    result.sort((a, b) => {
-        const pDiff = (pMap[b.priority || 'medium'] || 1) - (pMap[a.priority || 'medium'] || 1);
-        if (pDiff !== 0) return pDiff;
-        // Secondary sort by date
-        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        return dateA - dateB;
-    });
-
-    // Filter by priority if selected
-    if (priorityFilter) {
-      result = result.filter(t => t.priority === priorityFilter);
+    
+    if (sortBy === 'priority') {
+      result.sort((a, b) => (pMap[b.priority || 'low'] || 1) - (pMap[a.priority || 'low'] || 1));
+    } else if (sortBy === 'dueDate') {
+      result.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
+    } else if (sortBy === 'recent') {
+      result.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
     }
 
     return result;
-  }, [todos, activeFilter, priorityFilter]);
+  }, [todos, activeFilter, sortBy]);
 
   // Handlers
-  const handleCreateTask = async (data: any) => {
-    if (data._id) addTodo(data);
+  const handleCreateTask = async (data: TaskData & { _id?: string }) => {
+    if (data._id) addTodo(data as unknown as Todo);
   };
     
   const handleDeleteTask = async (id: string) => {
@@ -134,33 +141,72 @@ export function TodoView() {
       await axiosInstance.delete(`/api/todos/${id}`);
       removeTodo(id);
       if (selectedTask?._id === id) setSelectedTask(null);
+      
+      // Remove from selection if deleted
+      setSelectedTasks(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        return next;
+      });
+
       toast.success('Task deleted');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete task');
     }
   };
 
-  const toggleComplete = async (id: string, currentlyCompleted: boolean) => {
-    const newStatus = currentlyCompleted ? 'pending' : 'complete';
-    updateTodo(id, { status: newStatus as 'pending' | 'complete' });
-    axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
-        updateTodo(id, { status: currentlyCompleted ? 'complete' : 'pending' });
-        toast.error('Failed to update status');
-    });
+  const handleBulkDelete = async (taskIds: string[]) => {
+    try {
+      await Promise.all(taskIds.map(id => axiosInstance.delete(`/api/todos/${id}`)));
+      taskIds.forEach(id => removeTodo(id));
+      toast.success(`${taskIds.length} tasks deleted`);
+    } catch {
+      toast.error('Failed to delete some tasks');
+    }
   };
 
-  const handleUpdateTask = useCallback(async (id: string, updates: any) => {
-      // Synchronize local store
+  const handleBulkUpdate = async (taskIds: string[], updates: Partial<Todo>) => {
+    try {
+      await Promise.all(taskIds.map(id => axiosInstance.patch(`/api/todos/${id}`, updates)));
+      taskIds.forEach(id => updateTodo(id, updates));
+      toast.success(`${taskIds.length} tasks updated`);
+    } catch {
+      toast.error('Failed to update some tasks');
+    }
+  };
+
+
+  const handleUpdateTask = useCallback(async (id: string, updates: Partial<Todo>) => {
       updateTodo(id, updates);
-      
-      // Update local selection if needed
-      setSelectedTask((prev: any) => {
+      setSelectedTask((prev) => {
           if (prev && prev._id === id) {
-              return { ...prev, ...updates };
+              return { ...prev, ...updates } as Todo;
+          }
+          return prev;
+      });
+      // Persist to backend
+      await axiosInstance.patch(`/api/todos/${id}`, updates).catch(() => {});
+  }, [updateTodo, setSelectedTask]);
+
+  // State-only sync (no API call) — used by PersonalTaskDetailModal
+  // which saves via todoApi.updateTodo() internally to handle cloud image uploads
+  const handleModalTaskSync = useCallback(async (id: string, updates: Partial<Todo>) => {
+      updateTodo(id, updates);
+      setSelectedTask((prev) => {
+          if (prev && prev._id === id) {
+              return { ...prev, ...updates } as Todo;
           }
           return prev;
       });
   }, [updateTodo, setSelectedTask]);
+
+  // Adapter for workspace-style components (onStatusChange(id, newStatus))
+  const handleStatusChange = useCallback((id: string, newStatus: string) => {
+    updateTodo(id, { status: newStatus as 'pending' | 'complete' | 'in_progress' | 'review' | 'blocked' });
+    axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
+      toast.error('Failed to update status');
+    });
+  }, [updateTodo]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -177,206 +223,208 @@ export function TodoView() {
     );
   }
 
+  // ── Inbox-type view (with header, filters, task list) ──
   return (
-    <div className="min-h-screen  text-[hsl(var(--foreground))] font-sans pb-20 selection:bg-emerald-500/30">
+    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] font-sans pb-20 selection:bg-emerald-500/30">
       
-      {/* Header Area - Always visible */}
-      <AnimatePresence>
-        {!isInputExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-             <div className="pb-2">
-                <TodoHeader greeting={greeting} stats={stats} />
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className={cn(
-        "max-w-[1000px] mx-auto px-6 md:px-8 relative z-20 transition-all duration-500",
-        isInputExpanded ? "pt-12" : "mt-4"
-      )}>
-        
-        {/* VIEW SWITCHER: List vs Detail */}
-        <AnimatePresence mode="wait">
-            {selectedTask ? (
-                // DETAIL VIEW
-                <motion.div
-                    key="detail"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <TaskDetailView 
-                        task={selectedTask}
-                        onBack={() => setSelectedTask(null)}
-                        onUpdate={handleUpdateTask}
-                        onDelete={(id) => {
-                            handleDeleteTask(id);
-                            setSelectedTask(null);
-                        }}
-                    />
-                </motion.div>
-            ) : (
-                // LIST VIEW
-                <motion.div
-                    key="list"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                >
-                     {/* Unified Task Input */}
-                    <div className="max-w-[1000px] mx-auto mb-10">
-                        <TaskInput
-                        onSave={handleCreateTask}
-                        isExpanded={isInputExpanded}
-                        onExpandChange={setIsInputExpanded}
-                        />
-                    </div>
-
-                    {/* Filters & Toggles */}
-                    <div className="flex items-center gap-2 mt-4 mb-6 text-sm">
-                        <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5">
-                            <button
-                                onClick={() => useViewStore.getState().setTodoFilter('inbox')}
-                                className={cn(
-                                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'inbox' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                                )}
-                            >
-                                Inbox
-                            </button>
-
-                            <button
-                                onClick={() => useViewStore.getState().setTodoFilter('today')}
-                                className={cn(
-                                "hidden sm:block px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'today' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                                )}
-                            >
-                                Today
-                            </button>
-
-                            <button
-                                onClick={() => useViewStore.getState().setTodoFilter('docs')}
-                                className={cn(
-                                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'docs' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                                )}
-                            >
-                                Docs
-                            </button>
-
-                            <button
-                                onClick={() => useViewStore.getState().setTodoFilter('notes')}
-                                className={cn(
-                                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'notes' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                                )}
-                            >
-                                Notes
-                            </button>
-
-                            <button
-                                onClick={() => useViewStore.getState().setTodoFilter('completed')}
-                                className={cn(
-                                "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                                activeFilter === 'completed' ? "bg-emerald-500/10 text-emerald-400 shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                                )}
-                            >
-                                Completed
-                            </button>
-                        </div>
-
-                        <div className="flex-1" />
-
-                        {/* Priority filter */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                                "flex items-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold transition-all uppercase tracking-wide",
-                                priorityFilter 
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                                : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
-                            )}>
-                                {priorityFilter ? (
-                                    <>
-                                        <div className={cn("w-2 h-2 rounded-full", 
-                                            priorityFilter === 'high' ? "bg-rose-500" :
-                                            priorityFilter === 'medium' ? "bg-amber-500" : "bg-blue-400"
-                                        )} />
-                                        {priorityFilter}
-                                    </>
-                                ) : (
-                                    <>
-                                        Priority
-                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                    </>
-                                )}
-                            </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
-                            <DropdownMenuItem onClick={() => setPriorityFilter('')}>All</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('high')} className="text-rose-400">High</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('medium')} className="text-amber-400">Medium</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setPriorityFilter('low')} className="text-blue-400">Low</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-
-                    {/* Task List or Workspace Placeholder */}
-                    <div className="space-y-1">
-                        {activeFilter === 'workspace' ? (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex flex-col items-center justify-center py-20 text-center opacity-70"
-                            >
-                                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                                    <Briefcase className="w-8 h-8 text-indigo-400" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-2">Workspace</h3>
-                                <p className="text-sm text-white/50 max-w-md">
-                                    This feature is coming soon. Manage your projects and team collaboration in one place.
-                                </p>
-                            </motion.div>
-                        ) : (
-                            <AnimatePresence mode="popLayout">
-                            {filteredTasks.length === 0 ? (
-                                <motion.div 
-                                    initial={{ opacity: 0 }} 
-                                    animate={{ opacity: 1 }}
-                                    className="py-20 text-center opacity-30"
-                                >
-                                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3" />
-                                    <p>No tasks here</p>
-                                </motion.div>
-                            ) : (
-                                filteredTasks.map((task) => (
-                                    <RichTaskItem 
-                                        key={task._id}
-                                        task={task}
-                                        isComplete={task.status === 'complete'}
-                                        onDelete={handleDeleteTask}
-                                        onToggleComplete={toggleComplete}
-                                        onSelect={(t) => setSelectedTask(t)}
-                                    />
-                                ))
-                            )}
-                            </AnimatePresence>
-                        )}
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-
+      {/* Header Area - Always visible like in workspace */}
+      <div className="pb-8">
+        <TodoHeader greeting={greeting} stats={stats} />
       </div>
+
+      <div className="max-w-[1000px] mx-auto px-6 md:px-8 w-full">
+        {/* Unified Task Input */}
+        <div className="mb-5">
+            <TaskInput
+                onSave={handleCreateTask}
+                isExpanded={isInputExpanded}
+                onExpandChange={setIsInputExpanded}
+            />
+        </div>
+
+        {/* Filter Bar — left-aligned with count badges, View Switcher on right */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            {/* Core Tasks */}
+            {[
+              { key: 'inbox', label: 'Inbox', icon: <Inbox className="w-3.5 h-3.5" /> },
+              { key: 'today', label: 'Today', hideOnMobile: true, icon: <Calendar className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  f.hideOnMobile && "hidden sm:flex",
+                  activeFilter === f.key
+                    ? "text-white/80 bg-white/[0.06]"
+                    : "text-white/30 hover:text-white/50"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+
+            {/* App Integrations */}
+            {[
+              { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
+              { key: 'slides', label: 'Slides', icon: <LayoutTemplate className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  activeFilter === f.key
+                    ? "text-white/80 bg-white/[0.06]"
+                    : "text-white/30 hover:text-white/50"
+                )}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+
+            {/* Completed */}
+            {[
+              { key: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
+                  activeFilter === f.key
+                    ? "text-white/80 bg-white/[0.06]"
+                    : "text-white/30 hover:text-white/60"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Sort filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium border border-white/5 text-white/40 rounded-md hover:text-white hover:bg-white/5 transition-colors">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  {sortBy === 'priority' ? 'Priority' : sortBy === 'dueDate' ? 'Due Date' : 'Recent'}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
+                <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('dueDate')}>Due Date</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('recent')}>Recent</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* View Switcher */}
+            <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
+              <button
+                onClick={() => setCurrentView('list')}
+                className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+                title="List View"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentView('table')}
+                className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+                title="Table View"
+              >
+                <Table className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Views */}
+      <AnimatePresence mode="wait">
+        {currentView === 'list' ? (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-1 max-w-[1000px] mx-auto px-6 md:px-8 w-full"
+          >
+                          <AnimatePresence mode="popLayout">
+                            {filteredTasks.length === 0 ? (
+                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center opacity-30">
+                                <CheckCircle2 className="w-12 h-12 mx-auto mb-3" />
+                                <p>No tasks here</p>
+                              </motion.div>
+                            ) : (
+                              filteredTasks.map((task) => (
+                                <RichTaskItem
+                                  key={task._id}
+                                  task={task}
+                                  isComplete={task.status === 'complete'}
+                                  onSelect={(t) => setSelectedTask(t as unknown as Todo)}
+                                  onStatusChange={handleStatusChange}
+                                  onUpdateTask={handleUpdateTask}
+                                  isSelected={selectedTasks.has(task._id)}
+                                  onToggleSelect={(id) => setSelectedTasks(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(id)) next.delete(id);
+                                    else next.add(id);
+                                    return next;
+                                  })}
+                                />
+                              ))
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="table"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                           className="px-6 md:px-8 w-[1100px] mx-auto"
+                        >
+                          <PersonalTableView
+                            filteredTasks={filteredTasks}
+                            onStatusChange={handleStatusChange}
+                            onUpdateTask={handleUpdateTask}
+                            onClick={(t) => setSelectedTask(t as unknown as Todo)}
+                            selectedTasks={selectedTasks}
+                            onToggleSelect={(id) => setSelectedTasks(prev => {
+                              const next = new Set(prev);
+                              if (next.has(id)) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            })}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+      <BulkActionBar 
+        selectedTasks={selectedTasks}
+        onClearSelection={() => setSelectedTasks(new Set())}
+        onDelete={handleBulkDelete}
+        onUpdate={handleBulkUpdate}
+        workspaceMembers={[]}
+        hideAssignees={true}
+      />
+
+      {/* Personal Task Detail Modal */}
+      <PersonalTaskDetailModal
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdateTask={handleModalTaskSync}
+      />
     </div>
   );
 }

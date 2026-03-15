@@ -134,7 +134,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     editorElement.addEventListener('dragstart', hideToolbar);
     editorElement.addEventListener('drag', hideToolbar);
     
-    const scrollContainer = editorElement.closest('.overflow-y-auto');
+    const scrollContainer = editorElement.closest('.overflow-y-auto ');
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', hideToolbar);
     }
@@ -236,7 +236,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--background))] ">
+    <div className="h-full flex flex-col bg-[hsl(var(--background))]  ">
       {persistence.conflictData && (
         <SyncConflictDialog
           open={persistence.showConflictDialog}
@@ -376,7 +376,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pt-0">
+      <div className="flex-1 overflow-y-auto custom-scrollbar pt-0">
         <ImageUploadDialog
           open={showImageDialog}
           onOpenChange={setShowImageDialog}
@@ -432,8 +432,8 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
           onSelect={handleCoverSelect}
         />
 
-        <div className={`max-w-7xl mx-auto px-8 ${state.coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
-          <div className="mb-0 pl-4">
+        <div className={`max-w-[1100px]  mx-auto px-8 ${state.coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
+          <div className="mb-0 ">
             <input
               type="text"
               value={state.title}

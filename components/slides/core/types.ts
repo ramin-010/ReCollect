@@ -9,6 +9,9 @@ export type { BlockDims } from '@/types/canvas';
 export interface SlideData {
   slideId: string;
   order: number;
+  title?: string;
+  showTitle?: boolean; // defaults to true; false hides the heading area
+  coverImage?: string | null;
   backgroundColor?: string;
   connections: Connection[];
 }
@@ -24,7 +27,8 @@ export interface SlideBlockData {
   height: number | 'auto';
   language?: string;
   color?: string;
-  fontSize?: number; // Custom font size (default 14)
+  textColor?: string; // Custom text color (CSS color value)
+  fontSize?: number; // Custom font size (default DEFAULT_FONT_SIZE)
   // Legacy/Compatibility fields
   url?: string;
   imageId?: string;
@@ -36,14 +40,30 @@ export interface SlideCanvasData {
   blocks: SlideBlockData[];
 }
 
+export interface SelectedBlockInfo {
+  blockId: string;
+  type: string;
+  fontSize?: number;
+  textColor?: string;
+  color?: string;
+}
+
 export interface SlideCanvasProps {
   initialContent?: string; // JSON string of SlideCanvasData
   onChange?: (content: string) => void;
   readOnly?: boolean;
+  onSelectionChange?: (block: SelectedBlockInfo | null) => void;
+  isPresenting?: boolean;
+  onClosePresentation?: () => void;
+  deckId?: string;
+  isTasksPanelOpen?: boolean;
+  onFirstSlideTitleChange?: (newTitle: string) => void;
+  isInlineEditorOpen?: boolean;
 }
 
 // Constants
-export const SLIDE_WIDTH = 1230;
+export const DEFAULT_FONT_SIZE = 18;
+export const SLIDE_WIDTH = 1150;
 export const SLIDE_MIN_HEIGHT = 800;
 export const SLIDE_GAP = 24;
 export const MIN_ZOOM = 0.5;

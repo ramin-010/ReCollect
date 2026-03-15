@@ -243,4 +243,19 @@ export const drawingApi = {
       data: response.data.data,
     };
   },
+
+  // ========== AI Drawing Generation ==========
+
+  /**
+   * Generate Mermaid diagram syntax from a natural language prompt
+   */
+  async generateAIDrawing(prompt: string): Promise<{ success: boolean; mermaidSyntax: string; provider: string }> {
+    console.log('[drawingApi] AI Generate — Prompt:', prompt.slice(0, 80));
+    const response = await axiosInstance.post('/api/drawings/ai/generate', { prompt });
+    return {
+      success: response.data.success,
+      mermaidSyntax: response.data.mermaidSyntax,
+      provider: response.data.provider,
+    };
+  },
 };

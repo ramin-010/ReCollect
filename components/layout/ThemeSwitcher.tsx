@@ -12,9 +12,7 @@ export function ThemeSwitcher() {
 
   const themes = [
     { id: 'light' as const, label: 'Light', icon: Sun },
-    // { id: 'dark' as const, label: 'Dark', icon: Moon },
-    // { id: 'theme-gray' as const, label: 'Gray', icon: Palette },
-    { id: 'theme-dark-gray' as const, label: 'Dark Gray', icon: Palette },
+    { id: 'theme-dark-gray' as const, label: 'Dark', icon: Moon },
   ];
 
   return (
@@ -23,10 +21,9 @@ export function ThemeSwitcher() {
         variant="ghost"
         size="sm"
         onClick={() => setShowMenu(!showMenu)}
+        className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
       >
-        {theme === 'light' && <Sun className="h-5 w-5" />}
-        {theme === 'dark' && <Moon className="h-5 w-5" />}
-        {(theme === 'theme-gray' || theme === 'theme-dark-gray') && <Palette className="h-5 w-5" />}
+        {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </Button>
 
       {showMenu && (

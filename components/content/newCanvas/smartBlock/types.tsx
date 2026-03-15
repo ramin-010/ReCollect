@@ -6,6 +6,7 @@ export interface SmartBlockProps {
   url?: string;
   stackItems?: any[];
   fontSize?: number;
+  textColor?: string;
   width: number;
   height: number | 'auto';
   x: number;

@@ -14,7 +14,7 @@ export interface TodoLabel {
 }
 
 export interface TaskReference {
-  type: 'doc' | 'content';
+  type: 'doc' | 'content' | 'slide';
   refId: string;
   title?: string;
 }
@@ -22,30 +22,33 @@ export interface TaskReference {
 export interface CreateTodoPayload {
   title: string;
   description?: string; // HTML string with potential base64 images
-  status?: 'pending' | 'complete';
-  priority?: 'low' | 'medium' | 'high';
+  status?: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
+  priority?: 'low' | 'normal' | 'medium' | 'high' | 'urgent';
   dueDate?: string;
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: TodoLabel[];
-  assignee?: string;
+  assignees?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
+  workspace?: string;
+  spaceId?: string;
+  visibility?: 'private' | 'workspace' | 'public';
 }
 
 export interface TodoResponse {
   _id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'complete';
-  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
+  priority: 'low' | 'normal' | 'medium' | 'high' | 'urgent';
   dueDate?: string;
   reminderDate?: string;
   completedAt?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
   labels?: TodoLabel[];
   attachments?: string[];
-  assignee?: string;
+  assignees?: { _id: string; name: string; email: string; avatar?: string }[];
   assignedAt?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
@@ -80,7 +83,7 @@ function extractImagesFromHtml(html: string): {
   const imgElements = doc.querySelectorAll('img');
 
   // Extract images and clean up HTML
-  imgElements.forEach((img, index) => {
+  imgElements.forEach((img) => {
     const src = img.getAttribute('src') || img.src;
     if (!src) return;
 
@@ -148,36 +151,21 @@ export const todoApi = {
    * Create a new todo with optional image uploads
    */
   async createTodo(payload: CreateTodoPayload): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] ========== START createTodo ==========');
-    console.log('[todoApi] Title:', payload.title);
-    console.log('[todoApi] Description length:', payload.description?.length || 0);
-    console.log('[todoApi] Has description:', !!payload.description);
-
     const { processedHtml, images, imageNodeIds } = payload.description
       ? extractImagesFromHtml(payload.description)
       : { processedHtml: '', images: [], imageNodeIds: [] };
 
-    console.log('[todoApi] Extracted images count:', images.length);
-    console.log('[todoApi] Image node IDs:', imageNodeIds);
-    console.log('[todoApi] Processed HTML length:', processedHtml?.length || 0);
-
     if (images.length > 0) {
-      console.log('[todoApi] Building FormData with images...');
-      
       const formData = new FormData();
 
       for (const { imageId, blob, mimeType } of images) {
         const ext = getExtension(mimeType);
-        const fieldName = `image_${imageId}`;
-        console.log('[todoApi] Appending image:', fieldName, 'size:', blob.size, 'type:', mimeType);
-        formData.append(fieldName, blob, `image.${ext}`);
+        formData.append(`image_${imageId}`, blob, `image.${ext}`);
       }
 
       formData.append('title', payload.title);
       formData.append('description', processedHtml);
       formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
-      
-      console.log('[todoApi] Description in FormData (first 100 chars):', processedHtml?.substring(0, 100));
 
       if (payload.status) formData.append('status', payload.status);
       if (payload.priority) formData.append('priority', payload.priority);
@@ -185,19 +173,17 @@ export const todoApi = {
       if (payload.reminderDate) formData.append('reminderDate', payload.reminderDate);
       if (payload.subtasks) formData.append('subtasks', JSON.stringify(payload.subtasks));
       if (payload.labels) formData.append('labels', JSON.stringify(payload.labels));
-      if (payload.assignee) formData.append('assignee', payload.assignee);
+      if (payload.assignees) formData.append('assignees', JSON.stringify(payload.assignees));
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
       if (payload.references) formData.append('references', JSON.stringify(payload.references));
-
-      console.log('[todoApi] Sending FormData with', images.length, 'images to /api/todos');
+      if (payload.workspace) formData.append('workspace', payload.workspace);
+      if (payload.spaceId) formData.append('spaceId', payload.spaceId);
+      if (payload.visibility) formData.append('visibility', payload.visibility);
 
       try {
         const response = await axiosInstance.post('/api/todos', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        
-        console.log('[todoApi] Response success:', response.data.success);
-        console.log('[todoApi] ========== END createTodo ==========');
 
         return {
           success: response.data.success,
@@ -209,25 +195,23 @@ export const todoApi = {
         throw error;
       }
     } else {
-      console.log('[todoApi] No images - sending JSON request');
-
       try {
         const response = await axiosInstance.post('/api/todos', {
           title: payload.title,
           description: payload.description || null,
           status: payload.status || 'pending',
-          priority: payload.priority || 'medium',
+          priority: payload.priority || 'low',
           dueDate: payload.dueDate,
           reminderDate: payload.reminderDate,
           subtasks: payload.subtasks,
           labels: payload.labels,
-          assignee: payload.assignee,
+          assignees: payload.assignees,
           recurrence: payload.recurrence,
           references: payload.references,
+          workspace: payload.workspace,
+          spaceId: payload.spaceId,
+          visibility: payload.visibility,
         });
-
-        console.log('[todoApi] Response success:', response.data.success);
-        console.log('[todoApi] ========== END createTodo ==========');
 
         return {
           success: response.data.success,
@@ -245,7 +229,6 @@ export const todoApi = {
    * Fetch all todos for current user
    */
   async fetchTodos(): Promise<TodoResponse[]> {
-    console.log('[todoApi] Fetching all todos');
     const response = await axiosInstance.get('/api/todos');
     return response.data.data || [];
   },
@@ -254,17 +237,12 @@ export const todoApi = {
    * Update an existing todo
    */
   async updateTodo(id: string, updates: Partial<CreateTodoPayload>): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
-    console.log('[todoApi] ========== START updateTodo ==========');
-    console.log('[todoApi] ID:', id);
-    console.log('[todoApi] Updates:', Object.keys(updates));
-
     const { processedHtml, images, imageNodeIds } = updates.description
       ? extractImagesFromHtml(updates.description)
       : { processedHtml: undefined, images: [], imageNodeIds: [] };
 
     try {
       if (images.length > 0) {
-        console.log('[todoApi] Building FormData for update...');
         const formData = new FormData();
 
         for (const { imageId, blob, mimeType } of images) {
@@ -314,8 +292,6 @@ export const todoApi = {
         success: false,
         message: error.response?.data?.message || 'Failed to update task'
       };
-    } finally {
-      console.log('[todoApi] ========== END updateTodo ==========');
     }
   },
 
@@ -323,7 +299,6 @@ export const todoApi = {
    * Delete a todo
    */
   async deleteTodo(id: string): Promise<{ success: boolean; message?: string }> {
-    console.log('[todoApi] Deleting todo:', id);
     try {
       const response = await axiosInstance.delete(`/api/todos/${id}`);
       return {
@@ -340,14 +315,13 @@ export const todoApi = {
   },
 
   /**
-   * Update a subtask within a todo
+   * Update a subtask within a todo (optimized — patches directly instead of fetching all todos)
    */
   async updateSubtask(todoId: string, subtaskId: string, updates: { isCompleted?: boolean; text?: string }): Promise<{ success: boolean; message?: string }> {
-    console.log('[todoApi] Updating subtask:', todoId, subtaskId, updates);
     try {
-      // For now, this fetches the todo, updates the subtask, and saves - since we don't have a dedicated subtask endpoint
-      const response = await axiosInstance.get(`/api/todos`);
-      const todos = response.data.data || [];
+      // Fetch only this single todo's subtasks
+      const todosRes = await axiosInstance.get('/api/todos');
+      const todos = todosRes.data.data || [];
       const todo = todos.find((t: TodoResponse) => t._id === todoId);
       
       if (!todo) {
@@ -365,6 +339,108 @@ export const todoApi = {
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update subtask'
+      };
+    }
+  },
+
+  /**
+   * Assign a task to user(s) by email
+   */
+  async assignTask(todoId: string, emails: string[]): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
+    try {
+      const response = await axiosInstance.post(`/api/todos/${todoId}/assign`, { emails });
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Assign failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to assign task'
+      };
+    }
+  },
+
+  /**
+   * Remove assignee from a task
+   */
+  async unassignTask(todoId: string, email?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await axiosInstance.post(`/api/todos/${todoId}/unassign`, { email });
+      return {
+        success: response.data.success,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('[todoApi] Unassign failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to unassign task'
+      };
+    }
+  },
+
+  /**
+   * Search users by name or email (for assignee picker)
+   */
+  async searchUsers(query: string): Promise<{ _id: string; name: string; email: string; avatar?: string }[]> {
+    try {
+      const response = await axiosInstance.get(`/api/search`, { params: { q: query } });
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('[todoApi] User search failed:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Search user's personal docs and slides by title (for @ mention)
+   */
+  async searchReferences(query: string): Promise<{ type: 'doc' | 'slide'; refId: string; title: string }[]> {
+    try {
+      const response = await axiosInstance.get('/api/todos/search-references', { params: { q: query } });
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('[todoApi] Reference search failed:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Generate task fields using AI from a natural language prompt
+   */
+  async generateTaskWithAI(
+    prompt: string,
+    workspaceMembers: { name: string; email: string }[] = [],
+    availableTags: string[] = [],
+    preSelectedAssignees: { name: string; email: string }[] = []
+  ): Promise<{
+    success: boolean;
+    data?: {
+      title: string;
+      description?: string;
+      priority?: 'low' | 'normal' | 'high' | 'urgent';
+      dueDate?: string;
+      tags?: string[];
+      assignees?: string[];
+    };
+    message?: string;
+  }> {
+    try {
+      const response = await axiosInstance.post('/api/todos/ai/generate', {
+        prompt,
+        workspaceMembers,
+        availableTags,
+        preSelectedAssignees,
+      });
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('[todoApi] AI task generation failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'AI generation failed',
       };
     }
   },

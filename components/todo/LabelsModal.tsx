@@ -1,39 +1,18 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Tag, Plus, Check, Search } from 'lucide-react';
+import { Tag, Plus, Check, Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import axiosInstance from '@/lib/utils/axios';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 
 // Default label style (Simplification)
 const DEFAULT_LABEL_COLOR = { name: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-500' };
-
-
-const STORAGE_KEY = 'recollect-labels';
 
 export interface Label {
   id: string;
   name: string;
   color: string;
-}
-
-// LocalStorage helpers
-function getStoredLabels(): Label[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLabelsToStorage(labels: Label[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
-  } catch {
-    // Silent fail
-  }
 }
 
 interface LabelsModalProps {
@@ -50,34 +29,47 @@ export function LabelsModal({
   initialSearchQuery = ''
 }: LabelsModalProps) {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const [storedLabels, setStoredLabels] = useState<Label[]>([]);
+  const [fetchedLabels, setFetchedLabels] = useState<Label[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const debouncedSearch = useDebounce(searchQuery, 600);
 
   // Sync with parent's search query
   useEffect(() => {
     setSearchQuery(initialSearchQuery);
   }, [initialSearchQuery]);
 
-  // Load stored labels on mount
+  // Fetch labels from API
   useEffect(() => {
-    setStoredLabels(getStoredLabels());
-  }, []);
+    const fetchTags = async () => {
+        setIsLoading(true);
+        try {
+            const res = await axiosInstance.get(`/api/tagQuery/search?q=${encodeURIComponent(debouncedSearch)}`);
+            if (res.data.success) {
+                const tags = res.data.data || [];
+                const labels: Label[] = tags.map((t: any) => ({
+                    id: t._id || `tag-${t.name}`,
+                    name: t.name,
+                    color: DEFAULT_LABEL_COLOR.name
+                }));
+                setFetchedLabels(labels);
+            }
+        } catch (err) {
+            console.error("Failed to search tags", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  // Filter labels based on search (show max 3 recent when no search)
-  const filteredLabels = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return storedLabels.slice(0, 3); // Show max 3 recent
-    }
-    return storedLabels.filter(label => 
-      label.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery, storedLabels]);
+    fetchTags();
+  }, [debouncedSearch]);
 
   // Check if search query matches any existing label exactly
   const exactMatch = useMemo(() => {
-    return storedLabels.some(
-      label => label.name.toLowerCase() === searchQuery.toLowerCase()
+    return fetchedLabels.some(
+      label => label.name.toLowerCase() === searchQuery.trim().toLowerCase()
     );
-  }, [searchQuery, storedLabels]);
+  }, [searchQuery, fetchedLabels]);
 
   // Toggle label selection
   const toggleLabel = (label: Label) => {
@@ -99,11 +91,6 @@ export function LabelsModal({
       name: searchQuery.trim(),
       color: DEFAULT_LABEL_COLOR.name,
     };
-    
-    // Save to localStorage
-    const updatedLabels = [newLabel, ...storedLabels];
-    saveLabelsToStorage(updatedLabels);
-    setStoredLabels(updatedLabels);
     
     // Select the new label
     onLabelsChange([...selectedLabels, newLabel]);
@@ -127,6 +114,7 @@ export function LabelsModal({
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && searchQuery.trim() && !exactMatch) {
+                e.stopPropagation();
                 handleCreateLabel();
               }
             }}
@@ -137,12 +125,21 @@ export function LabelsModal({
         </div>
       </div>
 
-      {/* Recent Labels (max 3) or filtered results */}
-      {filteredLabels.length > 0 && (
-        <div className="py-1">
-          {filteredLabels.map((label) => {
-            const isSelected = selectedLabels.some(l => l.id === label.id);
-            const colorConfig = getColorConfig(label.color);
+      {/* Loading state or results */}
+      <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+          </div>
+        ) : (() => {
+            const lowerQuery = searchQuery.trim().toLowerCase();
+            const localMatches = selectedLabels.filter(sl => sl.name.toLowerCase().includes(lowerQuery));
+            const mergedLabels = [...localMatches, ...fetchedLabels.filter(fl => !localMatches.some(lm => lm.id === fl.id))];
+
+            if (mergedLabels.length > 0) {
+              return mergedLabels.map((label) => {
+                const isSelected = selectedLabels.some(l => l.id === label.id);
+                const colorConfig = getColorConfig(label.color);
             
             return (
               <button
@@ -160,27 +157,29 @@ export function LabelsModal({
                 )}
               </button>
             );
-          })}
-        </div>
-      )}
+          });
+        }
+        
+        return !searchQuery.trim() ? (
+          <div className="px-3 py-3 text-xs text-white/40 text-center">
+            Type to search or create your first label
+          </div>
+        ) : null;
+      })()}
+      </div>
 
       {/* Create Label Option */}
-      {searchQuery.trim() && !exactMatch && (
+      {!isLoading && searchQuery.trim() && !exactMatch && (
         <button
-          onClick={handleCreateLabel}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCreateLabel();
+          }}
           className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/60 hover:bg-white/5 border-t border-white/5 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Create label</span>
+          <span className="truncate">Create "{searchQuery.trim()}"</span>
         </button>
-      )}
-      
-
-      {/* Empty state - no labels yet */}
-      {storedLabels.length === 0 && !searchQuery.trim() && (
-        <div className="px-3 py-3 text-xs text-white/40 text-center">
-          Type to create your first label
-        </div>
       )}
     </div>
   );

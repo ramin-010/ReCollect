@@ -14,6 +14,7 @@ import Color from '@tiptap/extension-color';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SlashCommands } from '../SlashCommands';
 import { EmbedNode } from '@/lib/extensions/EmbedNode';
+import { InlineAINode } from '@/lib/extensions/InlineAINode';
 import { MediaRow } from '@/lib/extensions/MediaRow';
 import { MediaItem } from '@/lib/extensions/MediaItem';
 import { isEmbeddableUrl, getEmbedType } from '@/lib/utils/embedUtils';
@@ -86,6 +87,7 @@ export function useEditorSetup({ doc, onContentChange }: UseEditorSetupOptions) 
         elementsToJoin: ['bulletList', 'orderedList'],
       }),
       SlashCommands,
+      InlineAINode,
       EmbedNode,
       MediaRow,
       MediaItem,

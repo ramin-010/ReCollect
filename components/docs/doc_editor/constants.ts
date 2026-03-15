@@ -21,3 +21,15 @@ export const HIGHLIGHT_COLORS = [
   { color: 'rgba(94, 234, 212, 0.35)', name: 'Teal' },
   { color: 'rgba(148, 163, 184, 0.4)', name: 'Gray' },
 ];
+
+export const TEXT_COLORS = [
+  { color: '', label: 'Default', preview: 'hsl(var(--foreground))' },
+  { color: '#f8fafc', label: 'White', preview: '#f8fafc' },
+  { color: '#94a3b8', label: 'Slate', preview: '#94a3b8' },
+  { color: '#60a5fa', label: 'Blue', preview: '#60a5fa' },
+  { color: '#4ade80', label: 'Green', preview: '#4ade80' },
+  { color: '#fb923c', label: 'Orange', preview: '#fb923c' },
+  { color: '#f472b6', label: 'Pink', preview: '#f472b6' },
+  { color: '#a78bfa', label: 'Purple', preview: '#a78bfa' },
+  { color: '#fbbf24', label: 'Amber', preview: '#fbbf24' },
+];

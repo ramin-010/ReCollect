@@ -1,10 +1,11 @@
 'use client';
 
-import React, { memo, useCallback, useState, useRef , useEffect} from 'react';
+import React, { memo, useCallback, useMemo, useRef, useEffect} from 'react';
 import { Rnd } from 'react-rnd';
-import { SmartBlock } from '@/components/content/newCanvas/smartBlock/index';
-import { DragController } from '@/components/content/newCanvas/DragController';
-import { SlideBlockData, Connection } from '../core/types';
+import { SmartBlock } from '@/components/slides/blocks/SmartBlock';
+import { DragController } from '@/components/slides/rendering/DragController';
+import { SlideBlockData, Connection, SLIDE_WIDTH } from '../core/types';
+import { SIDE_PADDING } from '../core/SingleSlide';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -74,7 +75,7 @@ const BlockWrapperComponent = ({
   onEditRequest,
   editingBlockId,
 }: BlockWrapperProps & { editingBlockId?: string | null }) => {
-  const smartBlockRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
 
   const handleRndDragStop = useCallback((_e: any, d: any) => {
     onDragStop(block.blockId, d.x, d.y);
@@ -92,11 +93,24 @@ const BlockWrapperComponent = ({
     dragController?.update(block.blockId, d.x, d.y);
   }, [block.blockId, onDrag, dragController]);
 
+  const handleResizeStart = useCallback(() => {
+    isResizingRef.current = true;
+  }, []);
+
+  // Safety net: catch mouseup anywhere on the window to fix resize sticking
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
   const handleResizeStop = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
-    const isText = block.type === 'text';
+    isResizingRef.current = false;
     const newWidth = ref.offsetWidth;
-    // Always store the numeric height, even for text blocks (so parent can calculate slide height)
-    // Rnd will still render 'auto' for text due to the specific prop logic below, allowing flow.
     const newHeight = ref.offsetHeight;
 
     const updates: Partial<SlideBlockData> = {
@@ -106,68 +120,8 @@ const BlockWrapperComponent = ({
       y: position.y,
     };
 
-    // Scale font size if text block (Excalidraw style)
-    if (isText && block.width) {
-      const scale = newWidth / block.width;
-      const currentFontSize = block.fontSize || 14;
-      updates.fontSize = Math.round(currentFontSize * scale * 10) / 10;
-    }
-
     onUpdateBlock(block.blockId, updates);
-  }, [block.blockId, block.type, block.width, block.fontSize, onUpdateBlock]);
-
-  // Auto-measure content height (important for text blocks flow)
-  useEffect(() => {
-    if (!smartBlockRef.current || !onDimensionsChange) return;
-    
-    // Only auto-update if:
-    // 1. It's a text block (dynamic height)
-    // 2. OR explicit 'auto' height
-    // 3. OR stored height is missing
-    const shouldObserve = block.type === 'text' || block.height === 'auto' || !block.height;
-    if (!shouldObserve) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        // Check if cached height is significantly different to avoid loop/thrashing
-        // (Use a small threshold like 2px)
-        const currentHeight = typeof block.height === 'number' ? block.height : 0;
-        
-        // If stored is 'auto', we definitely update.
-        // If stored is number, update if diff > 5px (to allow small sub-pixel diffs without thrashing)
-        const diff = Math.abs(height - currentHeight);
-        
-        if (block.height === 'auto' || diff > 5) {
-          // Use onDimensionsChange if available, or direct update
-          // Note: using contentRect.height. offsetHeight includes border/padding? 
-          // Rnd uses offsetHeight usually. entry.contentRect is inner.
-          // Let's use smartBlockRef.current.offsetHeight for consistency with Rnd.
-          const offsetH = smartBlockRef.current?.offsetHeight || height;
-          
-          // Debounce? Maybe not needed if we have the threshold check.
-          // But 'block' prop changes will re-trigger effect.
-          // We need to be careful.
-          // If we update, 'block' changes. Effect runs.
-          // If 'block.height' matches now, we stop.
-          onDimensionsChange(block.blockId, block.width || entry.contentRect.width, offsetH);
-        }
-      }
-    });
-    
-    observer.observe(smartBlockRef.current);
-    return () => observer.disconnect();
-  }, [block.blockId, block.type, block.height, block.width, onDimensionsChange]);
-
-  const handleResize = useCallback((_e: any, _dir: any, ref: any, _delta: any, position: any) => {
-    const isText = block.type === 'text';
-    // Direct DOM manipulation for performance (avoids React render loop)
-    // For text blocks, only update width
-    if (isText && smartBlockRef.current) {
-      // No font size update, just ensure width is applied if needed
-      // The actual width update will happen in handleResizeStop
-    }
-  }, [block.type]); // Removed block.width, block.fontSize as they are no longer used here
+  }, [block.blockId, onUpdateBlock]);
 
   const zIndex = isSelected ? 20 : 10;
   const isText = block.type === 'text';
@@ -182,24 +136,29 @@ const BlockWrapperComponent = ({
         width: block.width,
         height: isText ? 'auto' : (block.height === 'auto' ? 'auto' : block.height),
       }}
+      maxWidth={SLIDE_WIDTH - block.x - SIDE_PADDING}
       onDragStop={handleRndDragStop}
       onDrag={handleRndDrag}
       onDragStart={handleRndDragStart}
       dragHandleClassName="smart-block-drag-handle"
-      bounds="parent"
       enableResizing={{
         top: false, right: isText, bottom: !isText, left: false,
         topRight: false, bottomRight: !isText, bottomLeft: false, topLeft: false,
       }}
-      onResize={handleResize}
+      onResizeStart={handleResizeStart}
       onResizeStop={handleResizeStop}
       className="z-100"
-      style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto' }}
+      style={{ zIndex, opacity: editingBlockId === block.blockId ? 0 : 1, pointerEvents: editingBlockId === block.blockId ? 'none' : 'auto', willChange: 'transform' }}
+      resizeHandleStyles={{
+        right: { zIndex: 5 },
+        bottom: { zIndex: 5 },
+        bottomRight: { zIndex: 5 },
+      }}
     >
       <SmartBlock
         id={block.blockId}
         type={block.type}
-        contentRef={smartBlockRef}
+
         content={block.content}
         language={block.language}
         url={block.url}
@@ -216,6 +175,7 @@ const BlockWrapperComponent = ({
         onAnchorMouseUp={onAnchorMouseUp}
         isConnectionDragging={isConnectionDragging}
         color={block.color}
+        textColor={block.textColor}
         fontSize={block.fontSize}
         onEditRequest={onEditRequest}
       />
@@ -261,14 +221,26 @@ function SlideBlockLayerComponent({
   onEditRequest,
   editingBlockId,
 }: SlideBlockLayerProps & { editingBlockId?: string | null }) {
+  // Pre-compute connected block IDs: O(M) once instead of O(N×M) per render
+  const connectedBlockIds = useMemo(() => {
+    const set = new Set<string>();
+    if (connections) {
+      for (const c of connections) {
+        set.add(c.fromBlock);
+        set.add(c.toBlock);
+      }
+    }
+    return set;
+  }, [connections]);
+
   return (
     <>
       {blocks.map(block => (
         <BlockWrapper
           key={block.blockId}
           block={block}
-          isSelected={block.blockId === selectedBlockId}
-          isConnected={connections?.some(c => c.fromBlock === block.blockId || c.toBlock === block.blockId)}
+          isSelected={block.blockId === selectedBlockId || selectedBlockId === 'ALL'}
+          isConnected={connectedBlockIds.has(block.blockId)}
           readOnly={readOnly}
           onDragStop={onDragStop}
           onDrag={onDrag}

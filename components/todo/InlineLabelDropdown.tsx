@@ -22,6 +22,7 @@ interface InlineLabelDropdownProps {
   onSelectLabel: (label: Label) => void;
   onCreateLabel: (label: Label) => void;
   onClose: () => void;
+  caretPosition?: { top: number; left: number; height: number } | null;
 }
 
 export interface InlineLabelDropdownHandle {
@@ -29,13 +30,13 @@ export interface InlineLabelDropdownHandle {
 }
 
 export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineLabelDropdownProps>(
-  ({ isOpen, searchQuery, onSelectLabel, onCreateLabel, onClose }, ref) => {
+  ({ isOpen, searchQuery, onSelectLabel, onCreateLabel, onClose, caretPosition }, ref) => {
     const [fetchedLabels, setFetchedLabels] = useState<Label[]>([]);
     const [highlightedIndex, setHighlightedIndex] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const debouncedSearch = useDebounce(searchQuery, 300);
+    const debouncedSearch = useDebounce(searchQuery, 700);
 
     // Fetch tags from API and map to Labels
     useEffect(() => {
@@ -134,6 +135,7 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
         }
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.stopPropagation(); // Prevent TaskInput from triggering save
           
           if (highlightedIndex < displayOptions.length) {
               handleSelectLabel(displayOptions[highlightedIndex]);
@@ -157,14 +159,17 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.1 }}
-            className="absolute left-0 top-full mt-2 z-50 min-w-[220px] bg-[#1e1e1e] border border-white/10 rounded-lg overflow-hidden shadow-2xl backdrop-blur-md"
+            initial={{ opacity: 0, y: -5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute w-64 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+            style={{
+              top: caretPosition ? caretPosition.top + caretPosition.height + 4 : '100%',
+              left: caretPosition ? caretPosition.left : 0,
+              marginTop: caretPosition ? 0 : '0.5rem'
+            }}
           >
-
             {/* Fetched labels */}
             {displayOptions.length > 0 && (
               <div className="py-1">
@@ -210,7 +215,7 @@ export const InlineLabelDropdown = forwardRef<InlineLabelDropdownHandle, InlineL
                 >
                   <div className="flex flex-col">
                       <span className="text-xs opacity-50">Create new tag</span>
-                      <span className="font-medium text-indigo-300">@{searchQuery.trim()}</span>
+                      <span className="font-medium text-indigo-300">#{searchQuery.trim()}</span>
                   </div>
                   {(highlightedIndex === displayOptions.length || !displayOptions.length) && (
                     <CornerDownLeft className="w-3 h-3 opacity-40" />

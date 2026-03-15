@@ -11,10 +11,11 @@ import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import { SlashCommands } from '@/components/content/newCanvas/SlashCommands';
-import { CalloutExtension } from '@/components/content/newCanvas/CalloutExtension';
+import { SlashCommands } from '@/components/slides/extensions/SlashCommands';
+import { CalloutExtension } from '@/components/slides/extensions/CalloutExtension';
 import { FloatingToolbar } from '@/components/docs/doc_editor/FloatingToolbar';
 import { cn } from '@/lib/utils';
+import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
 
 /**
  * InlineCursor — a "naked" TipTap editor that appears as just a blinking cursor.
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 interface InlineCursorProps {
   x: number;
   y: number;
+  id?: string | null;
   /** Pre-fill with existing content (for editing existing blocks) */
   initialContent?: string;
   /** Called when the user types content and blurs. Receives HTML string and dimensions. */
@@ -44,10 +46,14 @@ interface InlineCursorProps {
   fontSize?: number;
   /** Background color class */
   color?: string;
+  /** Text color (CSS color value) */
+  textColor?: string;
   /** Constrain width to match block width (auto-grow/shrink if not set) */
   maxWidth?: number;
-  /** Force a fixed width (for editing existing blocks that were resized) */
-  fixedWidth?: number;
+  /** Set a minimum width (for editing existing blocks — starts at stored width but can auto-grow) */
+  initialMinWidth?: number;
+  /** Fired when arrow keys are pressed while the editor is empty (to move the cursor across the canvas) */
+  onMoveCursor?: (direction: 'up' | 'down' | 'left' | 'right') => void;
 }
 
 interface ToolbarPosition {
@@ -55,7 +61,7 @@ interface ToolbarPosition {
   left: number;
 }
 
-export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, fixedWidth, color, fontSize }: InlineCursorProps) {
+export function InlineCursor({ x, y, id, initialContent, onCommit, onDiscard, onChange, onDimensionsChange, zoom = 1, maxWidth, initialMinWidth, color, textColor, fontSize, onMoveCursor }: InlineCursorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isToolbarClickRef = useRef(false);
 
@@ -76,6 +82,19 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     resizeObserver.observe(wrapperRef.current);
     return () => resizeObserver.disconnect();
   }, [onDimensionsChange]);
+
+  // Keep cursor in view when moving it with arrow keys
+  useEffect(() => {
+    if (wrapperRef.current) {
+      // Use smooth block: nearest so it only scrolls if it's actually out of bounds
+      wrapperRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [x, y]);
+
+  // Ref pattern: TipTap's useEditor captures onUpdate at init time
+  // Using a ref ensures the handler always calls the latest onChange prop
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -108,11 +127,50 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
     editorProps: {
       attributes: {
         class: 'outline-none max-w-none',
-        style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0;`,
+        style: `white-space: pre-wrap; word-break: break-word; max-width: 100%; margin: 0; padding-left: 4px; padding-right: 4px; padding-top: 2px; padding-bottom: 2px; line-height: 1.7;`,
       },
+      handleKeyDown: (view, event) => {
+        // Pre-emptive auto-expand: if caret is near right edge, grow BEFORE char is inserted
+        if (wrapperRef.current && event.key.length === 1) {
+          try {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const caretRect = sel.getRangeAt(0).getBoundingClientRect();
+              const wrapperRect = wrapperRef.current.getBoundingClientRect();
+              if (wrapperRect.right - caretRect.right < 15) {
+                wrapperRef.current.style.width = `${wrapperRef.current.offsetWidth + 20}px`;
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (!onMoveCursor) return false;
+        
+        // Only handle navigation if the editor is completely empty
+        const text = view.state.doc.textContent;
+        if (text.trim().length === 0) {
+          if (event.key === 'ArrowUp') {
+            onMoveCursor('up');
+            return true;
+          }
+          if (event.key === 'ArrowDown') {
+            onMoveCursor('down');
+            return true;
+          }
+          if (event.key === 'ArrowLeft') {
+            onMoveCursor('left');
+            return true;
+          }
+          if (event.key === 'ArrowRight') {
+            onMoveCursor('right');
+            return true;
+          }
+        }
+        return false;
+      }
     },
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML());
+      onChangeRef.current?.(editor.getHTML());
     },
     onBlur: () => {
       // CRITICAL: Capture dimensions synchronously BEFORE setTimeout.
@@ -187,19 +245,18 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       }
     };
 
-    const hideToolbar = () => {
-      setShowFloatingToolbar(false);
-    };
-
-    editor.on('selectionUpdate', updateToolbar);
-    editor.on('blur', () => {
+    const handleBlur = () => {
       setTimeout(() => {
         setShowFloatingToolbar(false);
       }, 200);
-    });
+    };
+
+    editor.on('selectionUpdate', updateToolbar);
+    editor.on('blur', handleBlur);
 
     return () => {
       editor.off('selectionUpdate', updateToolbar);
+      editor.off('blur', handleBlur);
     };
   }, [editor]);
 
@@ -208,13 +265,14 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
   return (
     <div
       ref={wrapperRef}
+      id={id || undefined}
       className="absolute"
       style={{
         left: x,
         top: y,
-        width: fixedWidth ? `${fixedWidth}px` : undefined,
-        minWidth: fixedWidth ? undefined : '2px',
-        maxWidth: fixedWidth ? undefined : (maxWidth ? `${maxWidth}px` : '80%'),
+        width: initialMinWidth ? `${initialMinWidth}px` : 'max-content',
+        minWidth: initialMinWidth ? `${initialMinWidth}px` : '2px',
+        maxWidth: maxWidth ? `${maxWidth}px` : '80%',
         background: 'transparent',
         border: 'none',
         padding: 0,
@@ -225,20 +283,12 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* ProseMirror overrides for slide context — let EditorStyles handle typography */}
-      <style>{`
-        .inline-cursor-editor .ProseMirror {
-          min-height: 0 !important;
-          border: none !important;
-          outline: none !important;
-          padding: 0 4px !important;
-          font-size: inherit !important;
-          max-width: none !important;
-          margin: 0 !important;
-        }
-      `}</style>
+      {/* ProseMirror overrides for slide context — now in globals.css */}
       <div
         className={cn("inline-cursor-editor notion-editor rounded-lg transition-colors duration-200", color)}
+        style={{
+          color: textColor || undefined,
+        }}
         onMouseDown={() => {
           // Guard: if clicking within the editor area, don't treat as toolbar
         }}
@@ -247,7 +297,7 @@ export function InlineCursor({ x, y, initialContent, onCommit, onDiscard, onChan
           editor={editor}
           style={{
             minHeight: '1.6em',
-            fontSize: fontSize ? `${fontSize}px` : undefined,
+            fontSize: `${fontSize || DEFAULT_FONT_SIZE}px`,
           }}
         />
       </div>

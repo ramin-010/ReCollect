@@ -1,20 +1,33 @@
 'use client';
 
-import React, { useCallback, useRef, useMemo } from 'react';
-import { SlideCanvasProps, SlideBlockData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
+import React, { useCallback, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { SlideCanvasProps, SlideBlockData, SlideData, SLIDE_WIDTH, SLIDE_GAP, MIN_ZOOM, MAX_ZOOM } from './types';
 import { Connection } from '@/types/canvas';
 import { useSlideState } from './useSlideState';
-import { SingleSlide } from './SingleSlide';
+import { SingleSlide, TITLE_HEIGHT, COVER_HEIGHT } from './SingleSlide';
+import { SlideNavPanel } from './SlideNavPanel';
+import { PresentationView } from '../presentation';
 import { Button } from '@/components/ui-base/Button';
 import { EditorStyles } from '@/components/docs/doc_editor/EditorStyles';
-import { usePasteHandler } from '@/components/content/newCanvas/smartCanvas/usePasteHandler';
-import { BlockData } from '@/components/content/newCanvas/smartCanvas/types';
+import { cn } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
+
+// ---------------------------------------------------------------------------
+// Public ref API exposed to parent
+// ---------------------------------------------------------------------------
+export interface SlideCanvasHandle {
+  updateSelectedBlock: (updates: Partial<SlideBlockData>) => void;
+  hydrate: (content: string) => Promise<void>;
+}
 
 // ---------------------------------------------------------------------------
 // SlideCanvas — Main Entry Point
 // ---------------------------------------------------------------------------
 
-export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasProps) {
+export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(function SlideCanvas(
+  { initialContent, onChange, readOnly, onSelectionChange, isPresenting, onClosePresentation, deckId, isTasksPanelOpen, onFirstSlideTitleChange },
+  ref
+) {
   const {
     slides,
     blocks,
@@ -33,54 +46,196 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     getConnectionsForSlide,
     setConnectionsForSlide,
     setBlocks,
+    shiftBlocksY,
+    addImageBlock,
+    updateSlide,
+    hydrate,
   } = useSlideState(initialContent, onChange);
 
+  // Watch for first slide title changes
+  const lastFirstSlideTitleRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (slides.length > 0 && onFirstSlideTitleChange) {
+      const firstSlide = slides.find(s => s.order === 0);
+      if (firstSlide && firstSlide.title !== lastFirstSlideTitleRef.current) {
+        lastFirstSlideTitleRef.current = firstSlide.title;
+        onFirstSlideTitleChange(firstSlide.title || '');
+      }
+    }
+  }, [slides, onFirstSlideTitleChange]);
+
+  // Report selection changes to parent (for navbar controls)
+  // Optimize: only fire when relevant fields change to prevent per-keystroke re-rendering of the entire SlidesView
+  const lastReportedSelectionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (selectedBlockId) {
+      const block = blocks.find(b => b.blockId === selectedBlockId);
+      if (block) {
+        const payload = {
+          blockId: block.blockId,
+          type: block.type,
+          fontSize: block.fontSize,
+          textColor: block.textColor,
+          color: block.color,
+        };
+        const payloadString = JSON.stringify(payload);
+        if (lastReportedSelectionRef.current !== payloadString) {
+          lastReportedSelectionRef.current = payloadString;
+          onSelectionChange?.(payload);
+        }
+      }
+    } else {
+      if (lastReportedSelectionRef.current !== null) {
+        lastReportedSelectionRef.current = null;
+        onSelectionChange?.(null);
+      }
+    }
+  }, [selectedBlockId, blocks, onSelectionChange]);
+
+  // Expose updateSelectedBlock and hydrate to parent via ref
+  useImperativeHandle(ref, () => ({
+    updateSelectedBlock: (updates: Partial<SlideBlockData>) => {
+      if (selectedBlockId) {
+        updateBlock(selectedBlockId, updates);
+      }
+    },
+    hydrate: async (content: string) => {
+      await hydrate(content);
+    },
+  }), [selectedBlockId, updateBlock, hydrate]);
+
   const viewportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(1);
 
-  // ---- Paste support (reuse SmartCanvas paste handler) ----
-  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 100, y: 100 });
+  // Auto-fit zoom when container width changes (e.g. sidebar opens)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width;
+        const requiredWidth = SLIDE_WIDTH + 80; // 40px padding on each side
+        
+        setZoom(currentZoom => {
+          const fitZoom = containerWidth / requiredWidth;
+          
+          if (containerWidth < requiredWidth && currentZoom > fitZoom) {
+            // Container is too small, and we are too zoomed in, scale down
+            return Number(fitZoom.toFixed(2));
+          } else if (containerWidth >= requiredWidth && currentZoom < 1 && Math.abs(currentZoom - fitZoom) > 0.1) {
+             // If we were scaled down because of a small container, but now have space
+             return 1;
+          }
+          return currentZoom;
+        });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // ---- Paste support — slide-specific (uses slideImageStorage via addImageBlock) ----
   const activeSlideIdRef = useRef(activeSlideId);
   activeSlideIdRef.current = activeSlideId;
 
-  // Wrap setBlocks so pasted BlockData objects get the active slideId injected
-  const pasteSetBlocks = useCallback<React.Dispatch<React.SetStateAction<BlockData[]>>>(
-    (action) => {
-      setBlocks((prev: SlideBlockData[]) => {
-        const currentSlideId = activeSlideIdRef.current;
-        if (!currentSlideId) return prev;
+  const absoluteMouseRef = useRef({ clientX: 0, clientY: 0 });
 
-        // Resolve the next value from the action (it could be a function or a value)
-        const nextBlocks = typeof action === 'function'
-          ? (action as (prev: BlockData[]) => BlockData[])(prev)
-          : action;
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      absoluteMouseRef.current = { clientX: e.clientX, clientY: e.clientY };
+    };
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
+  }, []);
 
-        // Find newly added blocks (not in prev) and inject slideId
-        const prevIds = new Set(prev.map(b => b.blockId));
-        return nextBlocks.map(b => {
-          if (!prevIds.has(b.blockId)) {
-            // New block from paste — inject slideId
-            return { ...b, slideId: currentSlideId } as SlideBlockData;
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Don't intercept paste inside native INPUT/TEXTAREA (e.g. slide title, search bars)
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // Check if the inline cursor editor (TipTap) is currently active anywhere on the canvas
+      // We check the document body because the paste target might misreport if focus was slightly lost
+      const isInsideEditor =
+        target.isContentEditable ||
+        target.closest('[contenteditable="true"]') !== null ||
+        document.querySelector('.inline-cursor-editor') !== null;
+
+      const slideId = activeSlideIdRef.current;
+      if (!slideId) return;
+      
+      const slideEl = document.getElementById(`slide-${slideId}`);
+      if (!slideEl) return;
+      
+      const rect = slideEl.getBoundingClientRect();
+      const { clientX, clientY } = absoluteMouseRef.current;
+      
+      // Check if mouse is hovering over the currently active slide
+      if (
+        clientX < rect.left || clientX > rect.right ||
+        clientY < rect.top || clientY > rect.bottom
+      ) {
+        return;
+      }
+      
+      // Compute slide-local snapped coordinates (accounting for zoom)
+      const rawX = (clientX - rect.left) / zoom;
+      const rawY = (clientY - rect.top) / zoom;
+      
+      const SIDE_PADDING = 40;
+      const VERTICAL_PADDING = 25;
+      
+      const x = Math.max(SIDE_PADDING, rawX);
+      const y = Math.max(VERTICAL_PADDING, rawY);
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      // --- 1. Handle image paste (always creates image block, even with inline editor open) ---
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            await addImageBlock(slideId, file, x, y);
           }
-          return b as SlideBlockData;
+          return;
+        }
+      }
+
+      // --- 2. If inline editor is active, let TipTap handle text/URL paste natively ---
+      if (isInsideEditor) return;
+
+      // --- 3. No inline editor → text creates text block, URL creates embed block ---
+      const textItem = Array.from(items).find(item => item.type === 'text/plain');
+      if (textItem) {
+        e.preventDefault();
+        textItem.getAsString((text) => {
+          const trimmed = text.trim();
+          if (!trimmed) return;
+
+          // Detect if the pasted text is a URL → create embed block
+          const isUrl = /^https?:\/\/\S+$/i.test(trimmed);
+          if (isUrl) {
+            const blockId = addBlock(slideId, 'embed', x, y);
+            if (blockId) {
+              updateBlock(blockId, { content: trimmed });
+            }
+          } else {
+            const blockId = addBlock(slideId, 'text', x, y);
+            if (blockId) {
+              updateBlock(blockId, { content: trimmed });
+            }
+          }
         });
-      });
-    },
-    [setBlocks]
-  );
+      }
+    };
 
-  usePasteHandler(pasteSetBlocks, mousePositionRef);
-
-  // Track mouse for paste-at-cursor
-  const handleViewportMouseMove = useCallback((e: React.MouseEvent) => {
-    if (viewportRef.current) {
-      const rect = viewportRef.current.getBoundingClientRect();
-      mousePositionRef.current = {
-        x: (e.clientX - rect.left) / zoom,
-        y: (e.clientY - rect.top) / zoom,
-      };
-    }
-  }, [zoom]);
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [addImageBlock, addBlock, updateBlock, zoom]);
 
   // ---- Zoom Handlers ----
   const handleZoom = useCallback((delta: number) => {
@@ -101,9 +256,12 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
   // ---- Block Operation Wrappers ----
   const handleSelectBlock = useCallback((id: string) => {
     setSelectedBlockId(id || null);
-    // Deselect connection when selecting a block
-    if (id) setSelectedConnectionId(null);
-  }, [setSelectedBlockId, setSelectedConnectionId]);
+    if (id) {
+      setSelectedConnectionId(null);
+      const block = blocks.find(b => b.blockId === id);
+      if (block) setActiveSlideId(block.slideId);
+    }
+  }, [setSelectedBlockId, setSelectedConnectionId, blocks, setActiveSlideId]);
 
   const handleUpdateBlock = useCallback((blockId: string, updates: Partial<SlideBlockData>) => {
     updateBlock(blockId, updates);
@@ -130,10 +288,32 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
     if (id) setSelectedBlockId(null);
   }, [setSelectedConnectionId, setSelectedBlockId]);
 
+  const handleUpdateSlide = useCallback((slideId: string, updates: Partial<SlideData>) => {
+    updateSlide(slideId, updates);
+  }, [updateSlide]);
+
+  const handleAddImage = useCallback(async (slideId: string, file: File) => {
+    await addImageBlock(slideId, file);
+  }, [addImageBlock]);
+
   // ---- Keyboard Shortcuts ----
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete selected block
+      // Select All blocks
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        const el = document.activeElement;
+        const isTyping = (el instanceof HTMLInputElement) || 
+                         (el instanceof HTMLTextAreaElement) || 
+                         (el as HTMLElement)?.isContentEditable;
+        
+        if (!isTyping && activeSlideIdRef.current) {
+          e.preventDefault();
+          setSelectedBlockId('ALL');
+          return;
+        }
+      }
+
+      // Delete selected block(s)
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId) {
         const el = document.activeElement;
         // More robust check for typing elements
@@ -143,7 +323,13 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
         
         if (!isTyping) {
           e.preventDefault();
-          deleteBlock(selectedBlockId);
+          if (selectedBlockId === 'ALL' && activeSlideIdRef.current) {
+            const slideBlocks = getBlocksForSlide(activeSlideIdRef.current);
+            slideBlocks.forEach(b => deleteBlock(b.blockId));
+            setSelectedBlockId(null);
+          } else {
+            deleteBlock(selectedBlockId);
+          }
         }
       }
 
@@ -186,18 +372,40 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
   }, [slides]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none">
+    <div className="w-full h-full relative overflow-hidden bg-background select-none touch-none flex flex-row">
       <style jsx global>{`
-       
+        #slide-canvas-viewport,
+        #slide-canvas-viewport input,
+        #slide-canvas-viewport button,
+        #slide-canvas-viewport textarea,
+        #slide-canvas-viewport .ProseMirror {
+          font-family: var(--font-inter), system-ui, sans-serif !important;
+        }
       `}</style>
       <EditorStyles />
+      
+      {/* Left Navigation Panel */}
+      <SlideNavPanel
+        slides={sortedSlides}
+        blocks={blocks}
+        activeSlideId={activeSlideId}
+        onSlideClick={(slideId) => {
+          setActiveSlideId(slideId);
+        }}
+      />
+      
+      <div 
+        ref={containerRef}
+        className={cn(
+        "flex-1 overflow-y-auto custom-scrollbar relative bg-[hsl(var(--background))]/50 pt-14 transition-[margin] duration-300 ease-in-out",
+        isTasksPanelOpen ? "ml-[168px]" : "ml-0"
+      )}>
       <div 
         ref={viewportRef}
-        className="flex flex-col items-center py-8 min-h-full transition-transform duration-75 ease-out origin-top overflow-auto bg-[hsl(var(--background))]/50"
+        className="flex flex-col items-center py-8 min-h-max transition-transform duration-75 ease-out origin-top"
         style={{ transform: `scale(${zoom})` }}
         id="slide-canvas-viewport"
         onWheel={handleWheel}
-        onMouseMove={handleViewportMouseMove}
         onClick={(e) => {
           if (e.target === viewportRef.current) {
             setSelectedBlockId(null);
@@ -210,13 +418,13 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
         {sortedSlides.map((slide, index) => {
           const slideBlocks = getBlocksForSlide(slide.slideId);
           const slideConnections = getConnectionsForSlide(slide.slideId);
-          const isPhantom = index === sortedSlides.length - 1 && slideBlocks.length === 0;
 
           return (
-            <div key={slide.slideId} className="relative" style={{ marginBottom: SLIDE_GAP }}>
+            <div key={slide.slideId} id={`slide-${slide.slideId}`} className="relative" style={{ marginBottom: SLIDE_GAP }}>
               <SingleSlide
                 slideId={slide.slideId}
                 slideOrder={slide.order}
+                
                 blocks={slideBlocks}
                 connections={slideConnections}
                 selectedBlockId={activeSlideId === slide.slideId ? selectedBlockId : null}
@@ -224,6 +432,34 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
                 isActive={activeSlideId === slide.slideId}
                 readOnly={readOnly}
                 backgroundColor={slide.backgroundColor}
+                title={slide.title}
+                showTitle={slide.showTitle}
+                coverImage={slide.coverImage}
+                onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
+                onToggleTitle={(show) => {
+                  const isCurrentlyShown = slide.showTitle !== false;
+                  const hasCover = !!slide.coverImage;
+                  // When cover is present, title has no mt-6 (24px), so shift is smaller
+                  const titleShift = hasCover ? TITLE_HEIGHT - 24 : TITLE_HEIGHT;
+                  if (show && !isCurrentlyShown) {
+                    shiftBlocksY(slide.slideId, titleShift);
+                  } else if (!show && isCurrentlyShown) {
+                    shiftBlocksY(slide.slideId, -titleShift);
+                  }
+                  handleUpdateSlide(slide.slideId, { showTitle: show });
+                }}
+                onCoverChange={(url) => {
+                  const hasTitle = slide.showTitle !== false;
+                  // When title is visible, adding cover removes title's mt-6 (24px)
+                  // so the net shift is COVER_HEIGHT - 24, not the full COVER_HEIGHT
+                  const coverShift = hasTitle ? COVER_HEIGHT - 24 : COVER_HEIGHT;
+                  if (!slide.coverImage && url) {
+                    shiftBlocksY(slide.slideId, coverShift);
+                  } else if (slide.coverImage && !url) {
+                    shiftBlocksY(slide.slideId, -coverShift);
+                  }
+                  handleUpdateSlide(slide.slideId, { coverImage: url });
+                }}
                 onSelectBlock={handleSelectBlock}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}
@@ -231,24 +467,17 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
                 onSlideClick={handleSlideClick}
                 onConnectionsChange={(conns) => handleConnectionsChange(slide.slideId, conns)}
                 onSelectConnection={handleSelectConnection}
+                onAddImage={handleAddImage}
                 zoom={zoom}
               />
 
-              {/* Phantom slide indicator */}
-              {isPhantom && (
-                <div className="absolute inset-0 rounded-lg border-2 border-dashed border-[hsl(var(--border))]/30 pointer-events-none flex items-center justify-center">
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]/20 font-medium">
-                    New slide — start typing here
-                  </p>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
       {/* Zoom Controls */}
-      <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">
+      <div className="fixed bottom-6 left-[164px] z-50 flex items-center gap-2 bg-background/80 backdrop-blur border border-border rounded-lg p-1.5 shadow-lg">
         <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleZoom(-0.05)}>
           <span className="text-xl pb-1">−</span>
         </Button>
@@ -259,6 +488,21 @@ export function SlideCanvas({ initialContent, onChange, readOnly }: SlideCanvasP
           <span className="text-xl pb-1">+</span>
         </Button>
       </div>
+      </div>
+
+      {isPresenting && onClosePresentation && (
+        <PresentationView
+          slides={slides.filter(slide => {
+            const blocks = getBlocksForSlide(slide.slideId);
+            const hasTitle = slide.title && slide.title.trim() !== '';
+            return blocks.length > 0 || hasTitle || !!slide.coverImage;
+          })}
+          getBlocksForSlide={getBlocksForSlide}
+          getConnectionsForSlide={getConnectionsForSlide}
+          onClose={onClosePresentation}
+          deckId={deckId || ''}
+        />
+      )}
     </div>
   );
-}
+});

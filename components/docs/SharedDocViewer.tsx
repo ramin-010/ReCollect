@@ -42,7 +42,6 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const { setCurrentView } = useViewStore();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRequestSentDialog, setShowRequestSentDialog] = useState(false);
   const [showAccessRevokedDialog, setShowAccessRevokedDialog] = useState(false);
@@ -74,7 +73,7 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
           // Somehow got approved directly? (shouldn't happen with new flow)
           toast.success('Document saved to your profile!');
           useDocStore.getState().fetchDocs();
-          setCurrentView('docs');
+          router.push('/docs');
           router.push('/');
         }
       }
@@ -89,7 +88,7 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
       } else if (msg.includes('already a collaborator')) {
         toast.success('You already have access to this document');
         useDocStore.getState().fetchDocs();
-        setCurrentView('docs');
+        router.push('/docs');
         router.push('/');
       } else if (msg.includes('denied')) {
         toast.error('Your access request was previously denied');

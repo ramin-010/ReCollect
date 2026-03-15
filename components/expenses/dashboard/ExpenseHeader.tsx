@@ -30,7 +30,7 @@ export function ExpenseHeader({ monthlyBudget, totalSpent }: ExpenseHeaderProps)
         <div className="absolute inset-0 z-0 overflow-hidden">
             <div className={`absolute inset-0 bg-gradient-to-r from-zinc-900 via-neutral-900 to-zinc-900`} />
              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-violet-500/5 to-purple-500/5 opacity-30 blur-3xl" />
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20" />
         </div>
 
       <div className="relative z-10 w-full h-full max-w-[1400px] mx-auto px-12 flex items-end justify-between pb-3">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut, Eye, ListTodo, ChevronDown } from 'lucide-react';
+import { ChevronLeft, Save, Users, User, Wifi, WifiOff, Loader2, X, ImagePlus, UserMinus, LogOut, Eye, ListTodo, ChevronDown, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Doc, useDocStore } from '@/lib/store/docStore';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -25,7 +25,7 @@ import { EditorStyles } from './EditorStyles';
 import { CoverPicker } from './CoverPicker';
 import { FloatingToolbar } from './FloatingToolbar';
 import { ImageUploadDialog } from '../ImageUploadDialog';
-import { DocTasksPanel } from '../DocTasksPanel';
+import { SharedTasksPanel, useSharedTasksRefetch } from '@/components/shared/SharedTasksPanel';
 import { TaskInput } from '@/components/todo/task_Input';
 import { 
   Popover, 
@@ -91,7 +91,8 @@ function CollaborativeEditorContent({
   const [isTasksPanelOpen, setIsTasksPanelOpen] = useState(false);
   const [isTaskInputPopoverOpen, setIsTaskInputPopoverOpen] = useState(false);
   const [isTaskInputExpanded, setIsTaskInputExpanded] = useState(true);
-  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { refreshKey: taskRefreshKey, refresh: setTaskRefreshKey } = useSharedTasksRefetch();
 
   // Ctrl+K shortcut - opens task input popover + sidebar (overrides global QuickTaskAdd on this page)
   useEffect(() => {
@@ -446,6 +447,30 @@ function CollaborativeEditorContent({
     };
   }, [editor]);
 
+  // Fullscreen effect & handler
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle fullscreen:', err);
+      toast.error('Could not toggle fullscreen mode');
+    }
+  }, []);
+
   // Image Upload Logic
   useEffect(() => {
     if (editor) {
@@ -523,6 +548,17 @@ function CollaborativeEditorContent({
                {provider.isSynced ? 'Live' : 'Connecting...'}
              </span>
            </div>
+
+           {/* Fullscreen Toggle */}
+           <Button
+             variant="ghost"
+             size="sm"
+             onClick={toggleFullscreen}
+             className="mr-2 h-8 px-2 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors"
+             title={isFullscreen ? "Exit Fullscreen (F11/Esc)" : "Fullscreen (F11)"}
+           >
+             {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+           </Button>
            
            {/* Tasks Button with Dropdown Input */}
            <Popover open={isTaskInputPopoverOpen} onOpenChange={(open) => {
@@ -549,7 +585,7 @@ function CollaborativeEditorContent({
                  isQuickAdd={true}
                  initialReferences={[{ type: 'doc', refId: doc._id, title: title }]}
                  onSave={() => {
-                   setTaskRefreshKey(k => k + 1);
+                   setTaskRefreshKey();
                    setIsTaskInputPopoverOpen(false);
                  }}
                />
@@ -664,7 +700,7 @@ function CollaborativeEditorContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto ">
+      <div className="flex-1 overflow-y-auto custom-scrollbar ">
         <ImageUploadDialog
           open={showImageDialog}
           onOpenChange={setShowImageDialog}
@@ -722,7 +758,7 @@ function CollaborativeEditorContent({
           onSelect={handleCoverSelect}
         />
 
-        <div className={`max-w-7xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
+        <div className={`max-w-6xl mx-auto px-8 ${coverImage ? '-mt-28 relative z-10' : ''} py-10 rounded-lg`}>
           <div className="mb-0 ">
             <input
               type="text"
@@ -730,10 +766,10 @@ function CollaborativeEditorContent({
               onChange={handleTitleChange}
               placeholder="New Page"
               readOnly={readOnly}
-              className={`w-full pl-8 text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
+              className={`w-full  text-[62px] font-bold bg-transparent border-none outline-none placeholder:text-[hsl(var(--muted-foreground))/50] mb-2 leading-tight ${readOnly ? 'cursor-default' : ''}`}
               style={{ fontFamily: '"Noto Sans", "Roboto", sans-serif' }}
             />
-            <div className="w-16 ml-8 h-1 bg-amber-500 rounded-full" />
+            <div className="w-16  h-1 bg-amber-500 rounded-full" />
           </div>
 
           <div className="notion-editor relative">
@@ -767,12 +803,13 @@ function CollaborativeEditorContent({
       <EditorStyles />
       
       {/* Doc Tasks Panel */}
-      <DocTasksPanel
+      <SharedTasksPanel
         key={taskRefreshKey}
         isOpen={isTasksPanelOpen}
         onClose={() => setIsTasksPanelOpen(false)}
-        docId={doc._id}
-        docTitle={title}
+        refId={doc._id}
+        refTitle={title}
+        refType="doc"
       />
     </div>
   );

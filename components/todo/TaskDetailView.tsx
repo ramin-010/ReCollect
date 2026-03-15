@@ -17,11 +17,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Subtask } from '@/lib/store/todoStore';
-import { TaskDescriptionEditor } from './TaskDescriptionEditor';
+import { TiptapTaskEditor } from './TiptapTaskEditor';
+import { AssigneePicker } from './AssigneePicker';
 import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date-fns';
 import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
 import { todoApi } from '@/lib/api/todoApi';
+import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -54,9 +56,10 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       if (title !== task.title) updates.title = title;
       if (description !== (task.description || '')) updates.description = description;
 
-      const result = await todoApi.updateTodo(task._id, updates);
+      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
+      const result = await api.updateTodo(task._id, updates as any);
       if (result.success && result.data) {
-        onUpdate(task._id, result.data);
+        onUpdate(task._id, result.data as unknown as Partial<Task>);
         toast.success('Task updated');
       } else {
         toast.error(result.message || 'Failed to update task');
@@ -106,8 +109,9 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
     updateLocalStore(task._id, { subtasks: newSubtasks });
     
     try {
-      if (todoApi.updateSubtask) {
-        await todoApi.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
+      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
+      if (api.updateSubtask) {
+        await api.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
       }
     } catch (e) {
       toast.error('Failed to update subtask');
@@ -135,7 +139,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       className="flex flex-col h-full"
     >
       {/* Minimal Top Bar */}
-      <div className="flex items-center justify-between pb-6 border-b border-white/5">
+      <div className="flex items-center justify-between pb-6 border-b border-white/5 ">
         <button 
           onClick={onBack}
           className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
@@ -184,7 +188,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       </div>
 
       {/* Main Content Area with Two Columns */}
-      <div className="flex-1 pt-8 flex gap-8">
+      <div className="flex-1 pt-8 flex gap-8 ">
         
         {/* LEFT: Main Content */}
         <div className="flex-1 min-w-0">
@@ -209,7 +213,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Description */}
           <div className="min-h-[200px] p-0">
-            <TaskDescriptionEditor 
+            <TiptapTaskEditor 
               content={description}
               onChange={setDescription}
               placeholder="Write a description..."
@@ -361,19 +365,24 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           {/* Assignee */}
           <div>
             <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Assignee</label>
-            {task.assignee ? (
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold border border-indigo-500/30">
-                  {task.assignee.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm text-white/70">{task.assignee}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-white/30">
-                <User className="w-3.5 h-3.5" />
-                <span className="text-sm italic">Unassigned</span>
-              </div>
-            )}
+            <AssigneePicker
+              taskId={task._id}
+              currentAssignees={task.assignees}
+              onAssigned={(updatedTask) => {
+                onUpdate(task._id, {
+                  assignees: updatedTask.assignees,
+                  assignedAt: updatedTask.assignedAt,
+                });
+                toast.success(updatedTask.message || 'Task assigned');
+              }}
+              onUnassigned={() => {
+                onUpdate(task._id, {
+                  assignees: [],
+                  assignedAt: undefined,
+                });
+                toast.success('Assignees removed');
+              }}
+            />
           </div>
 
           {/* Labels */}

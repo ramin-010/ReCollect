@@ -3,6 +3,8 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 import { ResizableImageComponent } from '@/components/docs/ResizableImageComponent';
 
 export const ResizableImage = Image.extend({
+  name: 'resizableImage',
+  
   addAttributes() {
     return {
       ...this.parent?.(),

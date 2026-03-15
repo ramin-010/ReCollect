@@ -17,14 +17,15 @@ interface LinkedTask {
   dueDate?: string;
 }
 
-interface DocTasksPanelProps {
+interface SharedTasksPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  docId: string;
-  docTitle: string;
+  refId: string;
+  refTitle: string;
+  refType: 'doc' | 'slide';
 }
 
-export function DocTasksPanel({ isOpen, onClose, docId, docTitle }: DocTasksPanelProps) {
+export function SharedTasksPanel({ isOpen, onClose, refId, refTitle, refType }: SharedTasksPanelProps) {
   const [tasks, setTasks] = useState<LinkedTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
@@ -32,20 +33,20 @@ export function DocTasksPanel({ isOpen, onClose, docId, docTitle }: DocTasksPane
 
   // Fetch linked tasks
   const fetchTasks = useCallback(async () => {
-    if (!docId) return;
+    if (!refId) return;
     
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get(`/api/todos?refType=doc&refId=${docId}`);
+      const response = await axiosInstance.get(`/api/todos?refType=${refType}&refId=${refId}`);
       if (response.data.success) {
         setTasks(response.data.data || []);
       }
     } catch (error) {
-      console.error('[DocTasksPanel] Failed to fetch tasks:', error);
+      console.error('[SharedTasksPanel] Failed to fetch tasks:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [docId]);
+  }, [refId, refType]);
 
   useEffect(() => {
     if (isOpen) {
@@ -93,15 +94,6 @@ export function DocTasksPanel({ isOpen, onClose, docId, docTitle }: DocTasksPane
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop - no close on click, just dim background */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/20 z-40 pointer-events-none"
-          />
-          
           {/* Panel - List Only */}
           <motion.div
             initial={{ x: '-100%', opacity: 0 }}
@@ -273,7 +265,7 @@ export function DocTasksPanel({ isOpen, onClose, docId, docTitle }: DocTasksPane
 }
 
 // Export refetch function for external use
-export function useDocTasksRefetch(docId: string) {
+export function useSharedTasksRefetch() {
   const [refreshKey, setRefreshKey] = useState(0);
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
   return { refreshKey, refresh };

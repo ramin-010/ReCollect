@@ -4,11 +4,11 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SmartBlockProps } from './types';
+import { DEFAULT_FONT_SIZE } from '@/components/slides/core/types';
 import { calculateTaskStats, handleStackDrop, handleStackItemDrop } from './utils';
 import {
   DragHandle,
   ControlsOverlay,
-  ColorControl,
   AnchorPoints,
   TaskProgressBar,
   BlockContent,
@@ -37,6 +37,7 @@ function SmartBlockComponent({
   readOnly,
   isConnectionDragging,
   color,
+  textColor,
   onEditRequest,
   fontSize,
   contentRef,
@@ -96,19 +97,8 @@ function SmartBlockComponent({
   };
 
   // ---- Font sizing ----
-  // Prioritize explicit fontSize. Fallback to legacy width-based scaling.
-  const BASE_FONT_SIZE = 14;
-  const BASE_WIDTH = 300;
-  
-  let currentFontSize = 14;
-  if (type === 'text') {
-    if (fontSize) {
-      currentFontSize = fontSize;
-    } else {
-      // Legacy scaling
-      currentFontSize = BASE_FONT_SIZE * Math.max(0.5, (width || BASE_WIDTH) / BASE_WIDTH);
-    }
-  }
+  // Use explicit fontSize prop, or default.
+  const currentFontSize = (type === 'text' && fontSize) ? fontSize : DEFAULT_FONT_SIZE;
 
   // ---- Minimal text preview (no box when not editing AND not connected AND no color) ----
   // If color is set, we treat it as a "card" regardless of connection or edit state
@@ -140,6 +130,7 @@ function SmartBlockComponent({
       style={{
         width: '100%',
         height: '100%',
+        color: textColor || undefined,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -161,23 +152,15 @@ function SmartBlockComponent({
       
 
 
-      {/* Anchor Points (Visible on Hover or dragging) */}
+      {/* Anchor Points (Visible on selection or connection dragging) */}
       <AnchorPoints 
-        isVisible={isHovered || !!isConnectionDragging}
+        isVisible={isSelected || !!isConnectionDragging}
         isDragging={!!isConnectionDragging}
         readOnly={readOnly}
         onAnchorMouseDown={(side, e) => onAnchorMouseDown?.(id, side, e)}
         onAnchorMouseUp={(side, e) => onAnchorMouseUp?.(id, side, e)}
       />
 
-      {/* Color Control - Visible on Selection or Editing */}
-      {(isSelected || isEditing) && type !== 'stack' && (
-            <ColorControl 
-            isVisible={true} 
-            currentColor={color}
-            onUpdateColor={(c) => onUpdateBlock?.(id, { color: c })}
-        />
-      )}
 
       {/* Content Area */}
       <div 
@@ -187,6 +170,10 @@ function SmartBlockComponent({
           // Removed inner color application to avoid double-stacking intensity
           // color is now handled exclusively by the outer container when !isMinimalText
         )}
+        style={{
+          fontSize: type === 'text' ? `${currentFontSize}px` : undefined,
+          color: textColor || undefined,
+        }}
       >
         {type !== 'stack' ? (
           <>
@@ -290,6 +277,7 @@ const arePropsEqual = (prev: SmartBlockProps, next: SmartBlockProps) => {
     prev.isConnectionDragging === next.isConnectionDragging &&
     prev.readOnly === next.readOnly &&
     prev.color === next.color &&
+    prev.textColor === next.textColor &&
     prev.fontSize === next.fontSize &&
     prev.stackItems === next.stackItems &&
     prev.onEditRequest === next.onEditRequest &&

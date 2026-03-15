@@ -7,8 +7,11 @@ import tippy, { Instance } from 'tippy.js';
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   Heading1, Heading2, Heading3, List, ListOrdered,
-  Quote, Code, Minus, Image as ImageIcon, Type, CheckSquare, LayoutGrid
+  Quote, Code, Minus, Image as ImageIcon, Type, CheckSquare, LayoutGrid,
+  Sparkles, Loader2,
 } from 'lucide-react';
+import { docApi } from '@/lib/api/docApi';
+import { toast } from 'sonner';
 
 interface CommandItem {
   title: string;
@@ -18,6 +21,18 @@ interface CommandItem {
 }
 
 const getSuggestionItems = (): CommandItem[] => [
+  {
+    title: 'AI Write',
+    description: 'Ask AI to write something for you',
+    icon: <Sparkles className="w-4 h-4 text-violet-500" />,
+    command: ({ editor, range }) => {
+      editor.chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: 'inlineAi' })
+        .run();
+    },
+  },
   {
     title: 'Text',
     description: 'Plain text',
@@ -118,14 +133,6 @@ const getSuggestionItems = (): CommandItem[] => [
       editor.storage.tasks?.openTaskDialog?.();
     },
   },
-  // {
-  //   title: 'Media Row',
-  //   description: 'Gallery of images & links',
-  //   icon: <LayoutGrid className="w-4 h-4" />,
-  //   command: ({ editor, range }) => {
-  //     editor.chain().focus().deleteRange(range).insertMediaRow().run();
-  //   },
-  // },
 ];
 
 interface CommandListRef {

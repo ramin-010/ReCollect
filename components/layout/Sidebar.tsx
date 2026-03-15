@@ -1,82 +1,84 @@
-// ReCollect - Refactored Sidebar Component
+// ReCollect - Redesigned Sidebar Component (Sleek & Funky)
 'use client';
 
-import { useEffect, useRef, useState, Fragment } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dashboard } from '@/lib/utils/types';
-import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useViewStore } from '@/lib/store/viewStore';
+import { useNotificationStore } from '@/lib/store/notificationStore';
 import { authApi } from '@/lib/api/auth';
-import { dashboardApi } from '@/lib/api/dashboard';
 import { Button } from '@/components/ui-base/Button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui-base/DropdownMenu';
 import { cn } from '@/lib/utils';
 import {
   PanelLeft,
-  Plus,
   LogOut,
   Home,
-  LayoutDashboard,
   Menu,
   X,
   Settings,
   PenTool,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Share2,
   CheckSquare,
-  Wallet,
   FileText,
-  Presentation,
+  Files,
+  Search,
+  CalendarDays,
+  Inbox,
+  Library,
+  Users,
+  ChevronDown,
+  Mail,
+  Briefcase
 } from 'lucide-react';
-import { CreateDashboardDialog } from '@/components/dashboard/CreateDashboardDialog';
-import { EditDashboardDialog } from '@/components/dashboard/EditDashboardDialog';
-import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
-import { DeleteConfirmDialog } from '../shared/DeleteConfirmDialog';
 import { toast } from 'sonner';
+import { NotificationsPopover } from './NotificationsPopover';
 
-const MotionButton = motion.create(Button);
+// ─── Nav Item Definition ────────────────────────────────────────────────────
+interface NavItem {
+  id: string;
+  route: string;
+  label: string;
+  icon: React.ReactNode;
+  badge?: number | string;
+  comingSoon?: boolean;
+  subItems?: { id: string; label: string; icon: React.ReactNode }[];
+}
 
-type DashboardAction = 'edit' | 'delete' | 'share';
+const primaryNav: NavItem[] = [
+  { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
+  { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" /> },
+  { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
+  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Users className="h-[18px] w-[18px] text-indigo-500/80" /> },
+  { 
+    id: 'todo', 
+    route: '/todo',
+    label: 'Tasks', 
+    icon: <CheckSquare className="h-[18px] w-[18px] text-emerald-500/80" />,
+    subItems: [
+      { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },
+    ]
+  },
+  { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
+  { id: 'presentations', route: '/slides', label: 'Presentations', icon: <Files className="h-[18px] w-[18px] " /> },
+  { id: 'email', route: '/email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
+];
 
+const secondaryNav: NavItem[] = [];
+
+// ─── Main Sidebar Wrapper ───────────────────────────────────────────────────
 export function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [dialogAction, setDialogAction] = useState<DashboardAction | null>(null);
-  const [contextDashboard, setContextDashboard] = useState<Dashboard | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const dashboards = useDashboardStore((state) => state.dashboards);
-  const currentDashboard = useDashboardStore((state) => state.currentDashboard);
-  const setCurrentDashboard = useDashboardStore((state) => state.setCurrentDashboard);
-  const removeDashboard = useDashboardStore((state) => state.removeDashboard);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const currentView = useViewStore((state) => state.currentView);
-  const setCurrentView = useViewStore((state) => state.setCurrentView);
   const todoFilter = useViewStore((state) => state.todoFilter);
   const setTodoFilter = useViewStore((state) => state.setTodoFilter);
 
-  const dashboardsInitialAnimationCompleted = useRef(false);
-
-  useEffect(() => {
-    dashboardsInitialAnimationCompleted.current = true;
-  }, []);
-
   const handleLogout = async () => {
     try {
-      // Clear auth_hint cookie immediately for instant routing on next visit
       document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
       document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
       await authApi.logout();
@@ -88,9 +90,8 @@ export function Sidebar() {
     }
   };
 
-  const handleDashboardClick = (dashboard: Dashboard) => {
-    setCurrentDashboard(dashboard);
-    setCurrentView('dashboard');
+  const handleNavClick = (route: string) => {
+    router.push(route);
     setIsMobileOpen(false);
   };
 
@@ -98,42 +99,7 @@ export function Sidebar() {
     if (!name || typeof name !== 'string') return 'U';
     const words = name.trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) return 'U';
-    const initials = words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
-    return initials || 'U';
-  };
-
-  const handleDashboardActionOpen = (dashboard: Dashboard, action: DashboardAction) => {
-    setContextDashboard(dashboard);
-    setDialogAction(action);
-  };
-
-  const handleDialogClose = () => {
-    setDialogAction(null);
-    setContextDashboard(null);
-  };
-
-  const handleDelete = async () => {
-    if (!contextDashboard) return;
-    setIsDeleting(true);
-    try {
-      const response = await dashboardApi.delete(contextDashboard._id);
-      if (response.success) {
-        removeDashboard(contextDashboard._id);
-        if (currentDashboard?._id === contextDashboard._id) {
-          setCurrentDashboard(null);
-        }
-      }
-      toast.success('Dashboard deleted', {
-        description: 'The dashboard and its contents have been deleted.',
-      });
-      handleDialogClose();
-    } catch (error: any) {
-      toast.error('Failed to delete', {
-        description: error.response?.data?.message || 'Something went wrong.',
-      });
-    } finally {
-      setIsDeleting(false);
-    }
+    return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('') || 'U';
   };
 
   return (
@@ -142,7 +108,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="sm"
-        className="lg:hidden fixed top-4 left-4 z-50"
+        className="lg:hidden fixed top-4 left-4 z-50 bg-[hsl(var(--sidebar-bg))]"
         onClick={() => setIsMobileOpen(true)}
       >
         <Menu className="h-5 w-5" />
@@ -157,7 +123,7 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
               onClick={() => setIsMobileOpen(false)}
             />
             <motion.aside
@@ -165,7 +131,7 @@ export function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 w-72 z-50 lg:hidden"
+              className="fixed inset-y-0 left-0 w-[260px] z-50 lg:hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <SidebarContent
@@ -174,46 +140,13 @@ export function Sidebar() {
                 onMobileClose={() => setIsMobileOpen(false)}
                 isMobile={true}
                 user={user}
-                dashboards={dashboards}
-                currentDashboard={currentDashboard}
-                currentView={currentView}
+                pathname={pathname}
                 todoFilter={todoFilter}
-                onDashboardClick={handleDashboardClick}
-                onDashboardAction={handleDashboardActionOpen}
-                onAllDashboardsClick={() => {
-                  setCurrentDashboard(null);
-                  setCurrentView('dashboard');
-                  setIsMobileOpen(false);
-                }}
-                onDrawingBoardClick={() => {
-                  setCurrentView('drawing');
-                  setIsMobileOpen(false);
-                }}
-                onSlidesClick={() => {
-                  setCurrentView('slides');
-                  setIsMobileOpen(false);
-                }}
-                onTodoClick={() => {
-                  setCurrentView('todo');
-                  setIsMobileOpen(false);
-                }}
-                onTodoFilterChange={(filter) => {
-                  setTodoFilter(filter);
-                  setIsMobileOpen(false);
-                }}
-                onExpensesClick={() => {
-                  setCurrentView('expenses');
-                  setIsMobileOpen(false);
-                }}
-                onDocsClick={() => {
-                  setCurrentView('docs');
-                  setIsMobileOpen(false);
-                }}
-                onNewDashboardClick={() => setIsCreateOpen(true)}
-                onSettingsClick={() => setCurrentView('settings')}
+                setTodoFilter={setTodoFilter}
+                onNavClick={handleNavClick}
+                onSettingsClick={() => handleNavClick('/settings')}
                 onLogout={handleLogout}
                 getInitials={getInitials}
-                dashboardsInitialAnimationCompleted={dashboardsInitialAnimationCompleted.current}
               />
             </motion.aside>
           </>
@@ -222,7 +155,7 @@ export function Sidebar() {
 
       {/* Desktop Sidebar */}
       <motion.aside
-        animate={{ width: isCollapsed ? 80 : 246 }}
+        animate={{ width: isCollapsed ? 72 : 256 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="hidden lg:block relative z-30"
       >
@@ -232,114 +165,33 @@ export function Sidebar() {
           onMobileClose={() => {}}
           isMobile={false}
           user={user}
-          dashboards={dashboards}
-          currentDashboard={currentDashboard}
-          currentView={currentView}
+          pathname={pathname}
           todoFilter={todoFilter}
-          onDashboardClick={handleDashboardClick}
-          onDashboardAction={handleDashboardActionOpen}
-          onAllDashboardsClick={() => {
-            setCurrentDashboard(null);
-            setCurrentView('dashboard');
-          }}
-          onDrawingBoardClick={() => {
-            setCurrentDashboard(null);
-            setCurrentView('drawing');
-          }}
-          onSlidesClick={() => {
-            setCurrentDashboard(null);
-            setCurrentView('slides');
-          }}
-          onTodoClick={() => {
-             setCurrentDashboard(null);
-            setCurrentView('todo');
-          }}
-          onTodoFilterChange={(filter) => {
-            setCurrentDashboard(null);
-            setTodoFilter(filter);
-          }}
-          onExpensesClick={() => {
-             setCurrentDashboard(null);
-             setCurrentView('expenses');
-          }}
-          onDocsClick={() => {
-             setCurrentDashboard(null);
-             setCurrentView('docs');
-          }}
-          onNewDashboardClick={() => setIsCreateOpen(true)}
-          onSettingsClick={() => setCurrentView('settings')}
+          setTodoFilter={setTodoFilter}
+          onNavClick={handleNavClick}
+          onSettingsClick={() => handleNavClick('/settings')}
           onLogout={handleLogout}
           getInitials={getInitials}
-          dashboardsInitialAnimationCompleted={dashboardsInitialAnimationCompleted.current}
         />
       </motion.aside>
-
-      {/* Dialogs */}
-      <CreateDashboardDialog 
-        isOpen={isCreateOpen} 
-        onClose={() => setIsCreateOpen(false)} 
-      />
-      
-
-
-      {contextDashboard && (
-        <>
-          <EditDashboardDialog
-            dashboard={contextDashboard}
-            open={dialogAction === 'edit'}
-            onOpenChange={(open) => {
-              if (!open) handleDialogClose();
-            }}
-          />
-
-          <ShareDashboardDialog
-            dashboard={contextDashboard}
-            open={dialogAction === 'share'}
-            onOpenChange={(open) => {
-              if (!open) handleDialogClose();
-            }}
-          />
-
-          <DeleteConfirmDialog
-            open={dialogAction === 'delete'}
-            onOpenChange={(open) => {
-              if (!open) handleDialogClose();
-            }}
-            onConfirm={handleDelete}
-            isLoading={isDeleting}
-            title="Delete Dashboard"
-            description={`Are you sure you want to delete "${contextDashboard.name}"? This will also delete all notes in this dashboard. This action cannot be undone.`}
-          />
-        </>
-      )}
     </>
   );
 }
 
+// ─── Sidebar Content (shared between mobile & desktop) ──────────────────────
 interface SidebarContentProps {
   isCollapsed: boolean;
   onCollapse: () => void;
   onMobileClose: () => void;
   isMobile: boolean;
   user: any;
-  dashboards: Dashboard[];
-  currentDashboard: Dashboard | null;
-  currentView: 'dashboard' | 'settings' | 'drawing' | 'todo' | 'expenses' | 'docs' | 'slides';
-  todoFilter?: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes';
-  onDashboardClick: (dashboard: Dashboard) => void;
-  onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
-  onAllDashboardsClick: () => void;
-  onDrawingBoardClick: () => void;
-  onSlidesClick: () => void;
-  onTodoClick: () => void;
-  onTodoFilterChange?: (filter: 'inbox' | 'today' | 'upcoming' | 'completed' | 'workspace' | 'docs' | 'notes') => void;
-  onExpensesClick: () => void;
-  onDocsClick: () => void;
-  onNewDashboardClick: () => void;
+  pathname: string;
+  todoFilter?: any;
+  setTodoFilter?: (filter: any) => void;
+  onNavClick: (route: string) => void;
   onSettingsClick: () => void;
   onLogout: () => void;
   getInitials: (name?: string) => string;
-  dashboardsInitialAnimationCompleted: boolean;
 }
 
 function SidebarContent({
@@ -348,50 +200,47 @@ function SidebarContent({
   onMobileClose,
   isMobile,
   user,
-  dashboards,
-  currentDashboard,
-  currentView,
+  pathname,
   todoFilter,
-  onDashboardClick,
-  onDashboardAction,
-  onAllDashboardsClick,
-  onDrawingBoardClick,
-  onSlidesClick,
-  onTodoClick,
-  onTodoFilterChange,
-  onExpensesClick,
-  onDocsClick,
-  onNewDashboardClick,
+  setTodoFilter,
+  onNavClick,
   onSettingsClick,
   onLogout,
   getInitials,
-  dashboardsInitialAnimationCompleted,
-}: SidebarContentProps) {
+}: SidebarContentProps & { currentView?: any }) {
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-[hsl(var(--divider))]">
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-[hsl(var(--divider))] shrink-0">
+    <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-white/5 text-white/90">
+      
+      {/* ── Header: Top User Profile & Toggle ────────────────────────────── */}
+      <div className="flex items-center justify-between px-3 pt-4 pb-3 shrink-0">
         {!isCollapsed && (
           <button
-            className="flex items-center gap-2 p-[6px] hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors flex-1 min-w-0"
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex-1 min-w-0 group"
             onClick={onSettingsClick}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-semibold shrink-0">
-              {user.avatar ? (
-                <img 
-                  src={user.avatar} 
-                  alt={user.name} 
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : getInitials(user?.name)}
-            </div>
-            {user && (
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium truncate">{user.name}</p>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">{user.email}</p>
+            <div className="w-7 h-7 rounded-sm bg-brand-primary p-[1px] shrink-0 group-hover:bg-brand-secondary transition-all">
+              <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center">
+                {user?.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={user?.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold text-white">{getInitials(user?.name)}</span>
+                )}
               </div>
-            )}
-            <Settings className="h-4 w-4 text-[hsl(var(--muted-foreground))] shrink-0" />
+            </div>
+            <div className="flex flex-col items-start min-w-0 flex-1">
+              <span className="text-[13px] font-semibold truncate text-white tracking-tight w-full text-left">
+                {user?.name || 'User'}
+              </span>
+              <span className="text-[10px] text-white/40 truncate w-full text-left group-hover:text-white/70 transition-colors">Workspace</span>
+            </div>
+            <ChevronDown className="h-3 w-3 text-white/30 shrink-0 ml-auto group-hover:text-white/70 transition-colors" />
           </button>
         )}
 
@@ -399,318 +248,246 @@ function SidebarContent({
           variant="ghost"
           size="sm"
           onClick={isMobile ? onMobileClose : onCollapse}
-          className="shrink-0"
+          className={cn(
+            "shrink-0 h-8 w-8 p-0 rounded-lg hover:bg-white/5",
+            isCollapsed && "mx-auto mt-1"
+          )}
         >
-          {isMobile ? <X className="h-5 w-5" /> : <PanelLeft className="h-6 w-6" />}
+          {isMobile ? <X className="h-[18px] w-[18px]" /> : <PanelLeft className="h-[18px] w-[18px] text-white/50" />}
         </Button>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 px-2 py-4 overflow-y-auto">
-        <nav className="space-y-1">
-          {/* PRIMARY: All Dashboards - Always at top */}
-          <motion.div className="relative">
-            {currentView === 'dashboard' && !currentDashboard && (
-              <motion.div
-                layoutId="viewActiveIndicator"
-                className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
-            <MotionButton
-              variant={currentView === 'dashboard' && !currentDashboard ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'dashboard' && !currentDashboard && "border-l-4 border-blue-600/100 pl-2 bg-black/1"
-              )}
-              onClick={onAllDashboardsClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<Home className="h-5 w-5" />}
-            >
-              {!isCollapsed && <span className="text-[15px] font-medium tracking-wide text-white">All Dashboards</span>}
-            </MotionButton>
-          </motion.div>
+      {/* ── Search Bar ────────────────────────── */}
+      {!isCollapsed && (
+        <div className="px-3 pb-3">
+          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 hover:border-white/10 transition-all duration-200 text-sm group">
+            <Search className="h-[15px] w-[15px] group-hover:text-white/80 transition-colors" />
+            <span className="text-[13px]">Search...</span>
+            <kbd className="ml-auto text-[10px] font-medium text-white/30 bg-white/5 px-1.5 py-0.5 rounded border border-white/5 group-hover:text-white/60 group-hover:border-white/10 transition-all">⌘K</kbd>
+          </button>
+        </div>
+      )}
 
-          {/* WORKSPACE: Features */}
-          <div className="space-y-1 pt-1">
-            {/* Docs */}
-            <MotionButton
-              variant={currentView === 'docs' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'docs' && "bg-amber-500/15 border-l-4 border-amber-500 pl-2"
-              )}
-              onClick={onDocsClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<FileText className="h-4 w-4 text-amber-500" />}
-            >
-              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Docs</span>}
-            </MotionButton>
+      {/* ── Primary Navigation ──────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-3 py-1 scrollbar-hide">
+        <nav className="space-y-0.5">
+          {primaryNav.map((item) => {
+            const currentItem = item.id === 'inbox-notif' && unreadCount > 0 
+              ? { ...item, badge: unreadCount > 99 ? '99+' : unreadCount } 
+              : item;
 
-            {/* To-Do List with Submenu */}
-            <div className="space-y-0.5">
-              <MotionButton
-                variant={currentView === 'todo' ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                  currentView === 'todo' && "bg-emerald-500/15 border-l-4 border-emerald-500 pl-2"
-                )}
-                onClick={onTodoClick}
-                whileTap={{ scale: 0.98 }}
-                leftIcon={<CheckSquare className="h-4 w-4 text-emerald-500" />}
-              >
-                {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">To-Do List</span>}
-              </MotionButton>
-              
-              {/* Submenu Items - Only show when todo is active and not collapsed */}
-              {currentView === 'todo' && !isCollapsed && (
-                <div className="ml-6 pl-2 border-l border-white/10 space-y-0.5">
-                  {[
-                    { key: 'inbox', label: 'Inbox' },
-                    { key: 'workspace', label: 'Workspace' },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      onClick={() => onTodoFilterChange?.(item.key as any)}
-                      className={cn(
-                        "w-full text-left px-3 py-1.5 text-[13px] rounded-md transition-colors",
-                        todoFilter === item.key
-                          ? "text-emerald-400 bg-emerald-500/10"
-                          : "text-white/50 hover:text-white/70 hover:bg-white/5"
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Drawing Board */}
-            <MotionButton
-              variant={currentView === 'drawing' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'drawing' && "bg-blue-500/15 border-l-4 border-blue-500 pl-2"
-              )}
-              onClick={onDrawingBoardClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<PenTool className="h-4 w-4 text-blue-500" />}
-            >
-              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Whiteboard</span>}
-            </MotionButton>
-
-            {/* Slides */}
-            <MotionButton
-              variant={currentView === 'slides' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'slides' && "bg-orange-500/15 border-l-4 border-orange-500 pl-2"
-              )}
-              onClick={onSlidesClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<Presentation className="h-4 w-4 text-orange-500" />}
-            >
-              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Slides</span>}
-            </MotionButton>
-
-            {/* Expenses */}
-            {/* Expenses - Hidden for now as per product decision
-            <MotionButton
-              variant={currentView === 'expenses' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-                currentView === 'expenses' && "bg-violet-500/15 border-l-4 border-violet-500 pl-2"
-              )}
-              onClick={onExpensesClick}
-              whileTap={{ scale: 0.98 }}
-              leftIcon={<Wallet className="h-4 w-4 text-violet-500" />}
-            >
-              {!isCollapsed && <span className="text-[14px] text-[hsl(var(--muted-foreground))]">Expenses</span>}
-            </MotionButton>
-            */}
-          </div>
-
-          {/* YOUR DASHBOARDS: List - can scroll */}
-          {!isCollapsed && (
-            <div className="pt-4 pb-2 border-t border-[hsl(var(--divider))]">
-              <p className="px-3 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
-                Your Dashboards
-              </p>
-            </div>
-          )}
-          {isCollapsed && <div className="pt-4 border-t border-[hsl(var(--divider))]" />}
-
-          {/* Dashboard List */}
-          <div className="space-y-0.5">
-            {dashboards.map((dashboard, index) => (
-              <DashboardItem
-                key={dashboard._id}
-                dashboard={dashboard}
-                isActive={currentDashboard?._id === dashboard._id}
+            const navItem = (
+              <SidebarNavItem
+                key={currentItem.id}
+                item={currentItem}
+                isActive={pathname === currentItem.route || (currentItem.route === '/' && pathname === '/')}
                 isCollapsed={isCollapsed}
-                onDashboardClick={onDashboardClick}
-                onDashboardAction={onDashboardAction}
-                index={index}
-                animationCompleted={dashboardsInitialAnimationCompleted}
+                onClick={() => onNavClick(currentItem.route)}
+                todoFilter={todoFilter}
+                onSubItemClick={(filterId) => {
+                  if (currentItem.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
+                  onNavClick('/todo');
+                }}
               />
-            ))}
-          </div>
+            );
 
-          {/* New Dashboard Button */}
-          <div className="pt-1">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-[hsl(var(--muted-foreground))] hover:text-white text-sm"
-              onClick={onNewDashboardClick}
-              leftIcon={<Plus className="h-3.5 w-3.5" />}
-            >
-              {!isCollapsed && <span className="text-[13px]">New Dashboard</span>}
-            </Button>
-          </div>
+            if (currentItem.id === 'inbox-notif') {
+              return (
+                <NotificationsPopover key={item.id}>
+                  <div className="w-full h-full relative z-10">
+                    {navItem}
+                  </div>
+                </NotificationsPopover>
+              );
+            }
+
+            return navItem;
+          })}
         </nav>
       </div>
 
-      {/* Collapsed User Avatar */}
+      {/* ── Collapsed User Avatar ──────────────────────────── */}
       {isCollapsed && (
-        <div className="p-4 shrink-0">
+        <div className="px-2 pb-2 shrink-0">
           <button
-            className="flex items-center justify-center w-full p-2 hover:bg-[hsl(var(--sidebar-hover))] rounded-lg transition-colors"
+            className="mx-auto flex items-center justify-center w-8 h-8 rounded-sm bg-brand-primary p-[1px] hover:bg-brand-secondary transition-all"
             onClick={onSettingsClick}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-semibold">
-              {getInitials(user?.name)}
+            <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center text-white text-[10px] font-bold">
+              {user?.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user?.name} 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : getInitials(user?.name)}
             </div>
           </button>
         </div>
       )}
 
-      {/* Logout */}
-      <div className="border-t border-[hsl(var(--divider))] p-4 shrink-0">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10"
-          onClick={onLogout}
-          leftIcon={<LogOut className="h-4 w-4" />}
-        >
-          {!isCollapsed && <span>Logout</span>}
-        </Button>
+      {/* ── Footer: Icons only / Settings & Logout ──────────────── */}
+      <div className="border-t border-white/5 px-2 py-2 shrink-0 flex items-center justify-between">
+        {!isCollapsed ? (
+          <>
+            <button
+              onClick={onSettingsClick}
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors text-[13px]"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-1" />
+            <button
+              onClick={onLogout}
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors text-[13px]"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Log out</span>
+            </button>
+          </>
+        ) : (
+          <div className="w-full flex flex-col items-center gap-1">
+            <button
+              onClick={onSettingsClick}
+              className="p-2 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-lg text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-interface DashboardItemProps {
-  dashboard: Dashboard;
+// ─── Individual Nav Item ────────────────────────────────────────────────────
+interface SidebarNavItemProps {
+  item: NavItem;
   isActive: boolean;
   isCollapsed: boolean;
-  onDashboardClick: (dashboard: Dashboard) => void;
-  onDashboardAction: (dashboard: Dashboard, action: DashboardAction) => void;
-  index: number;
-  animationCompleted: boolean;
+  onClick: () => void;
+  todoFilter?: string;
+  onSubItemClick?: (id: string) => void;
 }
 
-function DashboardItem({
-  dashboard,
-  isActive,
-  isCollapsed,
-  onDashboardClick,
-  onDashboardAction,
-  index,
-  animationCompleted,
-}: DashboardItemProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSubItemClick }: SidebarNavItemProps) {
+  const hasSubItems = item.subItems && item.subItems.length > 0;
+  const isExpanded = isActive && hasSubItems && !isCollapsed;
 
   return (
-    <motion.div
-      className="relative"
-      style={{ zIndex: isMenuOpen ? 100 : 'auto' }}
-      initial={animationCompleted ? false : { opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
+    <div className="flex flex-col space-y-0.5">
+      <button
+        onClick={onClick}
+        className={cn(
+        "w-full flex items-center gap-3 px-3 py-[9px] rounded-lg text-[13px] transition-all duration-200 group relative outline-none",
+        isActive
+          ? "text-white font-medium"
+          : "text-white/50 hover:text-white hover:bg-white/5",
+        item.comingSoon && "opacity-50 hover:opacity-100",
+        isCollapsed && "justify-center px-0 h-10 w-10 mx-auto"
+      )}
     >
-      {/* Active Indicator Background */}
+      {/* Sleek active state background mapping entirely inside the button */}
       {isActive && (
         <motion.div
-          layoutId="activeIndicator"
-          className="absolute inset-0 bg-secondary/20 rounded-lg pointer-events-none -z-10"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          layoutId="sidebar-active-bg"
+          className="absolute inset-0 rounded-lg bg-white/10"
+          initial={false}
+          transition={{ type: "spring", stiffness: 400, damping: 35 }}
         />
       )}
 
-      <div className="relative flex items-center">
-        {/* Dashboard Button */}
-        <MotionButton
-          variant={isActive ? "secondary" : "ghost"}
-          className={cn(
-            "w-full justify-start hover:bg-[hsl(var(--sidebar-hover))] transition-all duration-200",
-            isActive && "border-l-4 border-blue-600 pl-2 bg-black/1",
-            !isCollapsed && "pr-10"
-          )}
-          onClick={() => onDashboardClick(dashboard)}
-          whileTap={{ scale: 0.98 }}
-          leftIcon={<LayoutDashboard className="h-4 w-4" />}
-        >
-          {!isCollapsed && (
-            <span className="truncate text-[14px]  text-[hsl(var(--muted-foreground))] tracking-wide">{dashboard.name}</span>
-          )}
-        </MotionButton>
+      {/* Vertical Indicator Line */}
+      {isActive && (
+        <motion.div
+          layoutId="sidebar-active-line"
+          className="absolute left-[2px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full bg-brand-primary"
+          initial={false}
+          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        />
+      )}
 
-        {/* Dropdown Menu */}
-        {!isCollapsed && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full opacity-70 hover:opacity-100 transition-opacity relative z-[101]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(!isMenuOpen);
-                  }}
-                  onBlur={() => setTimeout(() => setIsMenuOpen(false), 200)}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-[102]">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDashboardAction(dashboard, 'edit');
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDashboardAction(dashboard, 'share');
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  destructive
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDashboardAction(dashboard, 'delete');
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      <span className={cn(
+        "shrink-0 transition-all duration-300 relative z-10",
+        isActive ? "text-white" : "group-hover:scale-110 group-hover:text-white"
+      )}>
+        {item.icon}
+        {item.badge && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full border border-[hsl(var(--sidebar-bg))]" />
         )}
-      </div>
-    </motion.div>
+      </span>
+
+      {!isCollapsed && (
+        <>
+          <span className="truncate relative z-10">{item.label}</span>
+          
+          {item.badge && typeof item.badge !== 'boolean' && (
+            <span className="ml-auto flex items-center justify-center min-w-[10px] h-[16px] px-1.5 text-[9px] font-bold text-white bg-rose-600/80 rounded-sm relative z-10 shadow-sm shadow-rose-500/20">
+              {item.badge}
+            </span>
+          )}
+
+          {hasSubItems && !isCollapsed && (
+            <ChevronDown className={cn("h-3.5 w-3.5 ml-auto text-white/30 transition-transform duration-200 relative z-10 shrink-0", isExpanded && "rotate-180")} />
+          )}
+
+          {item.comingSoon && (
+            <span className="ml-auto text-[9px] uppercase font-bold tracking-widest text-white/50 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 relative z-10 leading-none group-hover:bg-white/10 transition-colors">
+              Soon
+            </span>
+          )}
+        </>
+      )}
+      </button>
+
+      {/* ── Sub Items (e.g., Inbox, Today) ── */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-9 pr-2 py-1 space-y-0.5">
+              {item.subItems!.map((sub) => {
+                const isSubActive = todoFilter === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => {
+                      if (onSubItemClick) onSubItemClick(sub.id);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-all duration-200 group relative outline-none",
+                      isSubActive
+                        ? "text-white font-medium bg-white/10"
+                        : "text-white/40 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <span className={cn(
+                      "shrink-0 transition-colors",
+                      isSubActive ? "text-white" : "group-hover:text-white/80"
+                    )}>
+                      {sub.icon}
+                    </span>
+                    <span className="truncate">{sub.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
