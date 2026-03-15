@@ -76,7 +76,7 @@ const TASK_FILTERS: { key: TaskFilter; label: string }[] = [
 // ────────────────────────────────────────────────────────
 export function WorkspaceView() {
   const {
-    workspaces, selectedWorkspace, activeSpaceId, tasks, stats, activity, isLoading, isDataLoading,
+    workspaces, selectedWorkspace, activeSpaceId, tasks, stats, activity, isLoading, isDataLoading, dataVersion,
     setSelectedWorkspace, setActiveSpaceId, fetchWorkspaces, fetchWorkspaceData,
     updateTask, updateTaskImmediate, addTask, setWorkspaces, setStats, updateWorkspace, setActivity
   } = useWorkspaceStore();
@@ -179,7 +179,7 @@ export function WorkspaceView() {
       workspaceApi.getWorkspaceActivity(selectedWorkspace._id)
         .then(res => res.success && setActivity(res.data));
     }
-  }, [selectedWorkspace?._id, activeSpaceId, canViewOverview, fetchWorkspaceData]);
+  }, [selectedWorkspace?._id, activeSpaceId, canViewOverview, fetchWorkspaceData, dataVersion]);
 
   // ── Derived counts for actionable stats ──
   const overdueTasks = useMemo(() => tasks.filter(t => isOverdue(t)), [tasks]);

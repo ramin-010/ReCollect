@@ -48,7 +48,7 @@ export const notificationApi = {
     return res.data;
   },
 
-  async getUnreadCount(): Promise<{ success: boolean; data: { count: number } }> {
+  async getUnreadCount(): Promise<{ success: boolean; data: { count: number; workspaceRoleHash: string } }> {
     const res = await axiosInstance.get('/api/notifications/unread-count');
     return res.data;
   },

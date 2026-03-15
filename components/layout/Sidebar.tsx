@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useViewStore } from '@/lib/store/viewStore';
+import { useNotificationStore } from '@/lib/store/notificationStore';
 import { authApi } from '@/lib/api/auth';
 import { Button } from '@/components/ui-base/Button';
 import { cn } from '@/lib/utils';
@@ -207,6 +208,8 @@ function SidebarContent({
   onLogout,
   getInitials,
 }: SidebarContentProps & { currentView?: any }) {
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-white/5 text-white/90">
       
@@ -269,22 +272,26 @@ function SidebarContent({
       <div className="flex-1 overflow-y-auto px-3 py-1 scrollbar-hide">
         <nav className="space-y-0.5">
           {primaryNav.map((item) => {
+            const currentItem = item.id === 'inbox-notif' && unreadCount > 0 
+              ? { ...item, badge: unreadCount > 99 ? '99+' : unreadCount } 
+              : item;
+
             const navItem = (
               <SidebarNavItem
-                key={item.id}
-                item={item}
-                isActive={pathname === item.route || (item.route === '/' && pathname === '/')}
+                key={currentItem.id}
+                item={currentItem}
+                isActive={pathname === currentItem.route || (currentItem.route === '/' && pathname === '/')}
                 isCollapsed={isCollapsed}
-                onClick={() => onNavClick(item.route)}
+                onClick={() => onNavClick(currentItem.route)}
                 todoFilter={todoFilter}
                 onSubItemClick={(filterId) => {
-                  if (item.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
+                  if (currentItem.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
                   onNavClick('/todo');
                 }}
               />
             );
 
-            if (item.id === 'inbox-notif') {
+            if (currentItem.id === 'inbox-notif') {
               return (
                 <NotificationsPopover key={item.id}>
                   <div className="w-full h-full relative z-10">
@@ -413,14 +420,17 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
         isActive ? "text-white" : "group-hover:scale-110 group-hover:text-white"
       )}>
         {item.icon}
+        {item.badge && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full border border-[hsl(var(--sidebar-bg))]" />
+        )}
       </span>
 
       {!isCollapsed && (
         <>
           <span className="truncate relative z-10">{item.label}</span>
           
-          {item.badge && (
-            <span className="ml-auto text-[10px] bg-brand-primary text-white rounded-md px-1.5 py-0.5 font-bold shadow-sm relative z-10 leading-none">
+          {item.badge && typeof item.badge !== 'boolean' && (
+            <span className="ml-auto flex items-center justify-center min-w-[10px] h-[16px] px-1.5 text-[9px] font-bold text-white bg-rose-600/80 rounded-sm relative z-10 shadow-sm shadow-rose-500/20">
               {item.badge}
             </span>
           )}

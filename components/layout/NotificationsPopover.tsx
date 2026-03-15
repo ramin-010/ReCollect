@@ -6,9 +6,14 @@ import { Bell, Check, X, RefreshCw, CheckCheck, Users, ClipboardList, Megaphone,
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui-base/Popover';
 import { Button } from '@/components/ui-base/Button';
 import { notificationApi, AppNotification } from '@/lib/api/notificationApi';
+import { useWorkspaceStore } from '@/lib/store/workspaceStore';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { useNotificationStore } from '@/lib/store/notificationStore';
+import { useTodoStore } from '@/lib/store/todoStore';
+
+const POLL_INTERVAL_MS =  1 * 60 * 1000; // 2 minutes
 
 // ── Tab filter types ──
 type TabFilter = 'all' | 'unread' | 'actionable';
@@ -41,7 +46,7 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
   };
 
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount, setUnreadCount } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [page, setPage] = useState(1);
@@ -51,6 +56,9 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
+  const roleHashRef = useRef<string | null>(null);
+
+  const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
 
   // ── Fetch notifications ──
   const fetchNotifications = useCallback(async (pageNum = 1, filter: TabFilter = activeTab, append = false) => {
@@ -76,15 +84,28 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
     }
   }, [activeTab]);
 
-  // ── Fetch unread count ──
+  // ── Fetch unread count + role drift detection ──
   const fetchUnreadCount = useCallback(async () => {
     try {
       const res = await notificationApi.getUnreadCount();
-      if (res.success) setUnreadCount(res.data.count);
+      if (res.success) {
+        setUnreadCount(res.data.count);
+
+        // Role drift detection
+        const newHash = res.data.workspaceRoleHash;
+        if (roleHashRef.current !== null && roleHashRef.current !== newHash) {
+          // Role changed! Refresh workspace data silently
+          fetchWorkspaces();
+          toast.info('Your workspace permissions were updated', {
+            description: 'The page has been refreshed with your updated role.',
+          });
+        }
+        roleHashRef.current = newHash;
+      }
     } catch {
       // Silent fail
     }
-  }, []);
+  }, [fetchWorkspaces]);
 
   // ── Fetch on popover open ──
   useEffect(() => {
@@ -95,10 +116,12 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Initial unread count on mount ──
+  // ── Initial unread count on mount + 2min polling ──
   useEffect(() => {
     fetchUnreadCount();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const interval = setInterval(fetchUnreadCount, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
 
   // ── Tab change ──
   const handleTabChange = useCallback((tab: TabFilter) => {
@@ -126,6 +149,10 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
   const handleAccept = useCallback(async (id: string) => {
     try {
       setActionLoadingId(id);
+
+      // Find the notification type before accepting
+      const notification = notifications.find(n => n._id === id);
+
       const res = await notificationApi.accept(id);
       if (res.success) {
         setNotifications(prev =>
@@ -133,13 +160,20 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
         toast.success(res.message || 'Accepted!');
+
+        // Refresh relevant stores based on notification type
+        if (notification?.type === 'workspace_invite' || 
+            notification?.type === 'workspace_join_request' ||
+            notification?.type === 'task_assigned') {
+          fetchWorkspaces();
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to accept');
     } finally {
       setActionLoadingId(null);
     }
-  }, []);
+  }, [notifications, fetchWorkspaces]);
 
   // ── Decline notification ──
   const handleDecline = useCallback(async (id: string) => {

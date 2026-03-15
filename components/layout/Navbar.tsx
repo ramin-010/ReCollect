@@ -2,6 +2,7 @@
 'use client';
 
 import { useViewStore } from '@/lib/store/viewStore';
+import { usePathname } from 'next/navigation';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
@@ -13,26 +14,27 @@ import { Logo } from '@/components/brand/Logo';
 import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 
 export function Navbar() {
+  const pathname = usePathname();
   const currentDashboard = useDashboardStore((state) => state.currentDashboard);
-  const currentView = useViewStore((state) => state.currentView);
   const { triggerCreateNote } = useCreateNote();
   
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
 
-  // Determine title based on view state
+  // Determine title based on current pathname
   const getTitle = () => {
-    if (currentDashboard) return currentDashboard.name;
+    if (pathname === '/') return 'Home';
+    if (pathname.startsWith('/docs')) return 'Documents';
+    if (pathname.startsWith('/workspace')) return 'Workspace';
+    if (pathname.startsWith('/todo')) return 'Tasks';
+    if (pathname.startsWith('/drawing')) return 'Whiteboard';
+    if (pathname.startsWith('/slides')) return 'Presentations';
+    if (pathname.startsWith('/settings')) return 'Settings';
+    if (pathname.startsWith('/email')) return 'Email';
     
-    switch (currentView) {
-      case 'docs': return 'Documents';
-      case 'todo': return 'To-Do List';
-      case 'drawing': return 'Whiteboard';
-      case 'slides': return 'Slides';
-      case 'settings': return 'Settings';
-      default: return 'All Dashboards';
-    }
+    if (currentDashboard) return currentDashboard.name;
+    return 'Overview';
   };
 
   const title = getTitle();
@@ -58,6 +60,7 @@ export function Navbar() {
 
           {/* Actions */}
           <div className="flex items-center gap-1.5">
+            {/* 
             {!coverImage && (
               <Button
                 variant="ghost"
@@ -69,6 +72,7 @@ export function Navbar() {
                 <ImagePlus className="h-4 w-4" />
               </Button>
             )}
+            */}
 
             {currentDashboard && (
               <>
@@ -93,9 +97,8 @@ export function Navbar() {
               </>
             )}
 
-            <div className="mx-1 h-4 w-px bg-[hsl(var(--border))]"></div>
-            
-            <ThemeSwitcher />
+            {/* <div className="mx-1 h-4 w-px bg-[hsl(var(--border))]"></div> */}
+            {/* <ThemeSwitcher /> */}
           </div>
         </div>
       </nav>

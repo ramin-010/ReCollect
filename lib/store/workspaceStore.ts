@@ -17,6 +17,7 @@ interface WorkspaceStore {
   activity: any[];
   isLoading: boolean;
   isDataLoading: boolean;
+  dataVersion: number; // Incremented to signal components to re-fetch
 
  
   setWorkspaces: (workspaces: any[]) => void;
@@ -27,6 +28,7 @@ interface WorkspaceStore {
   setActivity: (activity: any[]) => void;
   setIsLoading: (loading: boolean) => void;
   setIsDataLoading: (loading: boolean) => void;
+  incrementDataVersion: () => void;
 
  
   fetchWorkspaces: () => Promise<void>;
@@ -53,6 +55,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   activity: [],
   isLoading: true,
   isDataLoading: false,
+  dataVersion: 0,
 
   setWorkspaces: (workspaces) => set({ workspaces }),
   setSelectedWorkspace: (workspace) => set({ selectedWorkspace: workspace }),
@@ -62,6 +65,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setActivity: (activity) => set({ activity }),
   setIsLoading: (loading) => set({ isLoading: loading }),
   setIsDataLoading: (loading) => set({ isDataLoading: loading }),
+  incrementDataVersion: () => set((state) => ({ dataVersion: state.dataVersion + 1 })),
 
   fetchWorkspaces: async () => {
     const { workspaces } = get();
@@ -72,7 +76,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       if (res.success) {
         set({ workspaces: res.data });
         
-        if (!get().selectedWorkspace && res.data.length > 0) {
+        const currentSelected = get().selectedWorkspace;
+        if (currentSelected) {
+          // Sync selectedWorkspace with fresh data (picks up role changes, new members, etc.)
+          const updated = res.data.find((w: any) => w._id === currentSelected._id);
+          if (updated) {
+            set({ selectedWorkspace: updated });
+          }
+          // Bump dataVersion so WorkspaceView re-fetches tasks/activity
+          set((state) => ({ dataVersion: state.dataVersion + 1 }));
+        } else if (res.data.length > 0) {
           const firstWorkspace = res.data[0];
           set({ selectedWorkspace: firstWorkspace });
           if (firstWorkspace.spaces && firstWorkspace.spaces.length > 0) {
