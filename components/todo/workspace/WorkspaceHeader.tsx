@@ -202,7 +202,7 @@ export function WorkspaceHeader({
                           transition={{ delay: 0.1 }}
                           className="text-2xl lg:text-3xl font-light tracking-tight text-white/90 font-serif leading-none"
                       >
-                          {selectedWorkspace?.name} <span className="opacity-20 ml-1">workspace</span>
+                          {selectedWorkspace?.name} <span className="opacity-20 ml-1">space</span>
                       </motion.h1>
                       <ChevronDown className="w-5 h-5 text-white/30 opacity-20 group-hover:text-white/60 group-hover:opacity-100 transition-colors mt-2" />
                     </button>
