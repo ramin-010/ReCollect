@@ -5,7 +5,13 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { Sparkles, Loader2, ArrowUp, Check, X, Wand2, RotateCcw } from 'lucide-react';
+import TextareaAutosize from 'react-textarea-autosize';
 import { docApi } from '@/lib/api/docApi';
 import { toast } from 'sonner';
 
@@ -13,7 +19,7 @@ export const AINodeView = (props: NodeViewProps) => {
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [generatedContent, setGeneratedContent] = useState<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const previewEditor = useEditor({
     extensions: [
@@ -22,6 +28,11 @@ export const AINodeView = (props: NodeViewProps) => {
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
       Underline,
+      TextStyle,
+      Color,
+      Link.configure({ openOnClick: false }),
+      Image,
+      ResizableImage,
     ],
     editable: false,
     content: '',
@@ -34,22 +45,49 @@ export const AINodeView = (props: NodeViewProps) => {
     }, 50);
   }, []);
 
+  // Sync generated content into the preview editor
+  // The EditorContent is always mounted (hidden when not success) so the editor is always DOM-attached
+  useEffect(() => {
+    if (generatedContent && previewEditor) {
+      console.log('[AI Preview] useEffect fired — setting content on previewEditor', {
+        contentType: typeof generatedContent,
+        isArray: Array.isArray(generatedContent),
+        length: Array.isArray(generatedContent) ? generatedContent.length : 'N/A',
+        firstNode: Array.isArray(generatedContent) ? generatedContent[0] : generatedContent,
+        editorIsDestroyed: previewEditor.isDestroyed,
+      });
+      queueMicrotask(() => {
+        if (!previewEditor.isDestroyed) {
+          previewEditor.commands.setContent(generatedContent);
+          console.log('[AI Preview] After setContent — editor HTML:', previewEditor.getHTML()?.slice(0, 200));
+        }
+      });
+    }
+  }, [generatedContent, previewEditor]);
+
   const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!prompt.trim() || status === 'generating') return;
 
     setStatus('generating');
     
-    // Attempt to get context from the document surrounding this node
+    // Attempt to get text context from the document surrounding this node
+    // NOTE: We skip image nodes to avoid sending image data/URLs as AI context (saves tokens)
     let context = '';
     try {
       const { editor, getPos } = props;
       const pos = getPos();
       if (typeof pos === 'number') {
         const docSize = editor.state.doc.content.size;
-        const start = Math.max(0, pos - 500);
-        const end = Math.min(docSize, pos + 500);
-        context = editor.state.doc.textBetween(start, end, ' ', '\n');
+        const start = Math.max(0, pos - 1000);
+        const end = Math.min(docSize, pos + 1000);
+        context = editor.state.doc.textBetween(start, end, ' ', (leafNode: any) => {
+          // Skip image nodes entirely — they just add URLs/alt text to the context
+          if (leafNode.type.name === 'resizableImage' || leafNode.type.name === 'image') {
+            return '';
+          }
+          return '\n';
+        });
       }
     } catch (err) {
       console.warn('Failed to extract context for AI', err);
@@ -57,13 +95,25 @@ export const AINodeView = (props: NodeViewProps) => {
 
     try {
       const result = await docApi.generateAIContent(prompt, context);
+      console.log('[AI Generate] Full API result:', {
+        success: result.success,
+        hasData: !!result.data,
+        hasContent: !!result.data?.content,
+        contentType: typeof result.data?.content,
+        isArray: Array.isArray(result.data?.content),
+        contentLength: Array.isArray(result.data?.content) ? result.data.content.length : 'N/A',
+        provider: result.provider,
+        nodeCount: result.nodeCount,
+      });
+      if (result.data?.content) {
+        console.log('[AI Generate] First 2 nodes:', JSON.stringify(result.data.content.slice(0, 2), null, 2));
+      }
       if (result.success && result.data?.content) {
-        setGeneratedContent(result.data.content);
-        if (previewEditor) {
-          previewEditor.commands.setContent(result.data.content);
-        }
+        const contentToSet = result.data.content;
+        setGeneratedContent(contentToSet);
         setStatus('success');
       } else {
+        console.error('[AI Generate] Invalid response structure:', result);
         throw new Error('Invalid AI response structure');
       }
     } catch (err: any) {
@@ -185,19 +235,30 @@ export const AINodeView = (props: NodeViewProps) => {
         </div>
 
         {status === 'idle' && (
-          <form onSubmit={handleGenerate} className="p-3 bg-[hsl(var(--background))] flex gap-3 relative">
-            <input
+          <div className="p-3 bg-[hsl(var(--background))] flex gap-3 items-end relative">
+            <TextareaAutosize
+              cacheMeasurements
               ref={inputRef}
-              type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleGenerate();
+                }
+                if (e.key === 'Escape') {
+                  handleDiscard();
+                }
+              }}
               placeholder="What do you want the AI to write?"
-              className="flex-1 bg-transparent text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] border-none outline-none focus:ring-0"
+              minRows={1}
+              maxRows={10}
+              className="flex-1 bg-transparent text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] border-none outline-none focus:ring-0 resize-none py-1.5"
             />
             <button
-              type="submit"
+              onClick={() => handleGenerate()}
               disabled={!prompt.trim()}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors mb-0.5 ${
                 prompt.trim() 
                   ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm' 
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
@@ -206,7 +267,7 @@ export const AINodeView = (props: NodeViewProps) => {
               <ArrowUp className="w-3.5 h-3.5" />
               Generate
             </button>
-          </form>
+          </div>
         )}
 
         {status === 'generating' && (
@@ -216,13 +277,16 @@ export const AINodeView = (props: NodeViewProps) => {
           </div>
         )}
 
-        {status === 'success' && (
-          <div className="bg-[hsl(var(--background))] max-h-96 overflow-y-auto w-full">
-            <div className="p-5 text-sm text-[hsl(var(--foreground))] prose prose-sm dark:prose-invert max-w-none">
-              <EditorContent editor={previewEditor} />
-            </div>
+        {/* Preview editor — always mounted so it stays DOM-attached, hidden when not success */}
+        <div 
+          className={`bg-[hsl(var(--background))] max-h-96 overflow-y-auto w-full ${
+            status === 'success' ? '' : 'hidden'
+          }`}
+        >
+          <div className="p-5 text-sm text-[hsl(var(--foreground))] prose prose-sm dark:prose-invert max-w-none">
+            <EditorContent editor={previewEditor} />
           </div>
-        )}
+        </div>
 
         {status === 'error' && (
           <div className="p-4 bg-[hsl(var(--background))] flex flex-col items-center justify-center gap-3">
