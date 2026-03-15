@@ -30,6 +30,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { NotificationsPopover } from './NotificationsPopover';
 
 // ─── Nav Item Definition ────────────────────────────────────────────────────
 interface NavItem {
@@ -44,6 +45,7 @@ interface NavItem {
 
 const primaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
+  { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
   { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Users className="h-[18px] w-[18px] text-indigo-500/80" /> },
   { 
@@ -60,12 +62,7 @@ const primaryNav: NavItem[] = [
   { id: 'email', route: '/email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
 ];
 
-const secondaryNav: NavItem[] = [
-  { id: 'meetings', route: '#', label: 'Meetings', icon: <CalendarDays className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'library', route: '#', label: 'Library', icon: <Library className="h-[18px] w-[18px]" />, comingSoon: true },
-  { id: 'collaboration', route: '#', label: 'Collaboration', icon: <Users className="h-[18px] w-[18px]" />, comingSoon: true },
-];
+const secondaryNav: NavItem[] = [];
 
 // ─── Main Sidebar Wrapper ───────────────────────────────────────────────────
 export function Sidebar() {
@@ -271,45 +268,34 @@ function SidebarContent({
       {/* ── Primary Navigation ──────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-3 py-1 scrollbar-hide">
         <nav className="space-y-0.5">
-          {primaryNav.map((item) => (
-            <SidebarNavItem
-              key={item.id}
-              item={item}
-              isActive={pathname === item.route || (item.route === '/' && pathname === '/')}
-              isCollapsed={isCollapsed}
-              onClick={() => onNavClick(item.route)}
-              todoFilter={todoFilter}
-              onSubItemClick={(filterId) => {
-                if (item.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
-                onNavClick('/todo');
-              }}
-            />
-          ))}
-        </nav>
+          {primaryNav.map((item) => {
+            const navItem = (
+              <SidebarNavItem
+                key={item.id}
+                item={item}
+                isActive={pathname === item.route || (item.route === '/' && pathname === '/')}
+                isCollapsed={isCollapsed}
+                onClick={() => onNavClick(item.route)}
+                todoFilter={todoFilter}
+                onSubItemClick={(filterId) => {
+                  if (item.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
+                  onNavClick('/todo');
+                }}
+              />
+            );
 
-        {/* ── Divider ──────────────────────────────────────── */}
-        <div className="my-4 mx-2 border-t border-white/5" />
+            if (item.id === 'inbox-notif') {
+              return (
+                <NotificationsPopover key={item.id}>
+                  <div className="w-full h-full relative z-10">
+                    {navItem}
+                  </div>
+                </NotificationsPopover>
+              );
+            }
 
-        {/* ── Secondary Navigation ─────────────────────────── */}
-        {!isCollapsed && (
-          <p className="px-3 mb-2 text-[10px] font-bold text-white/30 uppercase tracking-[0.1em] flex items-center">
-            Features
-          </p>
-        )}
-        <nav className="space-y-0.5">
-          {secondaryNav.map((item) => (
-            <SidebarNavItem
-              key={item.id}
-              item={item}
-              isActive={pathname === item.route}
-              isCollapsed={isCollapsed}
-              onClick={() => {
-                toast.info(`${item.label} is coming soon!`, {
-                  description: 'This feature is currently under development.',
-                });
-              }}
-            />
-          ))}
+            return navItem;
+          })}
         </nav>
       </div>
 

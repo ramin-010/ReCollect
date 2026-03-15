@@ -27,8 +27,19 @@ function getNotificationIcon(type: string, category: string) {
   }
 }
 
-export function NotificationsPopover() {
-  const [open, setOpen] = useState(false);
+export function NotificationsPopover({ children, open: externalOpen, onOpenChange: externalOnOpenChange }: { 
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    setInternalOpen(newOpen);
+    if (externalOnOpenChange) externalOnOpenChange(newOpen);
+  };
+
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -169,26 +180,29 @@ export function NotificationsPopover() {
   ];
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="relative text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] h-8 w-8 p-0"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-[10px] font-bold text-white leading-none">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </Button>
+        {children || (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] h-8 w-8 p-0"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-[10px] font-bold text-white leading-none">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </Button>
+        )}
       </PopoverTrigger>
-
       <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-[380px] p-0 bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-xl shadow-2xl overflow-hidden"
+        side="right"
+        align="start"
+        sideOffset={12}
+        alignOffset={-500}
+        className="w-[350px] h-[80vh] p-0 bg-[hsl(var(--card))] border border-[hsl(var(--border))] border-l-0 rounded-none shadow-[20px_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden z-50 flex flex-col"
       >
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))]">
@@ -235,7 +249,7 @@ export function NotificationsPopover() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="max-h-[420px] overflow-y-auto"
+          className="flex-1 overflow-y-auto"
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
