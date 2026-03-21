@@ -4,6 +4,9 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Caveat } from 'next/font/google';
+
+const caveat = Caveat({ subsets: ['latin'], weight: ['400', '700'] });
 import { motion, useScroll, useTransform } from "framer-motion";
 import { 
   Sparkles, 
@@ -12,13 +15,18 @@ import {
   FileText,
   CheckSquare,
   LayoutList,
-  Share2
+  Share2,
+  Maximize,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Logo } from '@/components/brand/Logo';
 import { cn } from '@/lib/utils';
 import { CinematicDocsViewer } from '@/components/brand/CinematicDocsViewer';
 import { LandingTaskDemo } from '@/components/brand/LandingTaskDemo';
+import { LandingSlideViewer } from '@/components/brand/LandingSlideViewer';
+import { LandingEmailViewer } from '@/components/brand/LandingEmailViewer';
+import { CRDT_SLIDE_PAYLOAD } from './SlideDemoPayload';
 
 // Lazy-load heavy below-the-fold components
 const CinematicWhiteboardViewer = dynamic(
@@ -193,12 +201,58 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 2. DOCS (The Editor) --- */}
-      <section className="py-14 pt-0 px-6 relative overflow-hidden bg-welcome-bg">
+      <section className="py-14 pt-0 px-6 relative  bg-welcome-bg">
+        
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="max-w-8xl mx-auto space-y-8 relative z-10">
+                {/* Minimal Excalidraw-style Callout */}
+                <div className="absolute top-[-58px] right-8 md:right-16 lg:right-18 z-50 flex items-center pointer-events-none">
+                <div className="flex items-center gap-2 rotate-[-4deg]">
+                    
+                    {/* Sleek curved arrow */}
+                    <svg className="w-[45px] h-[27px] text-indigo-400/90 " viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M 5 50 Q 40 5, 88 25"
+                    stroke="currentColor"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    fill="none"
+                />
+                <path
+                    d="M 75 12 L 92 26 L 73 37"
+                    stroke="currentColor"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                />
+                </svg>
+
+                    <span
+                    style={caveat.style}
+                    className="text-2xl tracking-wide text-indigo-400/90 font-semibold whitespace-nowrap"
+                    >
+                    AI-powered workflow
+                    </span>
+
+                    {/* Minimal heart */}
+                    <svg
+                    className="w-5 h-5 text-rose-400/80 mb-0.5"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    xmlns="http://www.w3.org/2000/svg"
+                    >
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+
+                </div>
+</div>
              <div className="relative w-full pb-10">
+
                  <CinematicDocsViewer />
                  
+             
+
                  <p className="text-center mt-8 text-lg font-lg text-muted-foreground max-w-3xl mx-auto">
                     Real-time collaboration, slash commands, and integrated tasks—all in one place.
                  </p>
@@ -306,8 +360,9 @@ export default function WelcomePage() {
         </div>
       </section>
       
+
       {/* --- WHITEBOARD (Infinite Canvas) --- */}
-      <section className="py-20 px-6 relative overflow-hidden bg-background">
+      <section className="py-20 pb-0 px-6 relative overflow-hidden bg-background">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
@@ -315,7 +370,7 @@ export default function WelcomePage() {
         <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
             
              <div className="w-full max-w-[1280px] text-left mb-8 space-y-4 px-4 xl:px-0">
-                 <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
+                 <h2 className="text-4xl md:text-[2.5rem] font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
                     Think bigger. Move faster.
                  </h2>
                  
@@ -333,44 +388,210 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* --- SMART NOTES (Visual Focus) --- */}
-      <section className="py-20 px-6 relative overflow-hidden">
+      {/* --- FEATURES GRID SECTION --- */}
+      <section className="py-20 px-6 relative overflow-hidden bg-background ">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
-        <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
-            
-             <div className="w-full max-w-[1300px] text-left mb-12 space-y-4 px-4 xl:px-0">
-                 <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
-                    Your knowledge, visualized.
-                 </h2>
+        <div className="max-w-[1280px] mx-auto relative z-10 flex flex-col items-center">
+             
+             {/* Section Header */}
+           
+             {/* Features Layout: Desktop Grid (lg and above) */}
+             <div className="w-full hidden lg:grid grid-cols-[45%_1fr] gap-16 xl:gap-20 items-start relative">
                  
-                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed max-w-2xl pl-1">
-                    Every thought is connected. Build a personal knowledge graph that grows stronger with every note you take. Bi-directional linking ensures you never lose a connection.
-                </p>
-             </div>
-
-            <div className="w-full relative flex justify-center max-w-[1300px]">
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.03)_0%,transparent_60%)] -z-10 pointer-events-none rounded-full blur-3xl" />
-                 
-                 <div className="w-full rounded-2xl overflow-hidden border border-border/80 shadow-2xl shadow-black/5 dark:shadow-black/20 bg-background/50 backdrop-blur-sm">
-                     <MediaPlaceholder 
-                        type="Abstract 3D Image" 
-                        prompt="3D visualization: A glowing note card expanding into a web of connected nodes. Blue/Amber lighting. Hyper-realistic." 
-                        height="h-[60vh] min-h-[400px] max-h-[800px] w-full"
-                    />
+                 {/* MINIMAL ZIG-ZAG BOUNDARY SEPARATOR */}
+                 {/* This line visually cleaves Section 1 (Slides) from Section 2 (Email) */}
+                 <div className="absolute inset-x-0 top-[45%] right-[3%] h-[220px] pointer-events-none z-20 overflow-visible">
+                     <svg className="w-full h-full overflow-visible" fill="none" viewBox="0 0 1000 300" preserveAspectRatio="none">
+                         <defs>
+                             <linearGradient id="separator-fade" x1="0%" y1="0%" x2="100%" y2="0%">
+                                 <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+                                 <stop offset="55%" stopColor="currentColor" stopOpacity="0.5" />
+                                 <stop offset="50%" stopColor="currentColor" stopOpacity="0.5" />
+                                 <stop offset="45%" stopColor="currentColor" stopOpacity="0.5" />
+                                 <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                             </linearGradient>
+                         </defs>
+                         {/* TAPERED FILLED PATH: Thick in the center (bezier area), razor-thin at both ends */}
+                         <path 
+                             d="M 0 51.1 
+                                L 440 51.5 
+                                Q 498 51.5 498 100 
+                                V 200 
+                                Q 498 248.5 550 248.5 
+                                L 1000 248.1
+                                L 1000 249.9 
+                                L 560 251.5 
+                                Q 502 251.5 502 210 
+                                V 110 
+                                Q 502 48.5 450 48.5 
+                                L 0 48.9 Z" 
+                             className="text-neutral-300 dark:text-neutral-700"
+                             fill="url(#separator-fade)"
+                         />
+                     </svg>
                  </div>
                  
-                 {/* Floating Context Card */}
-                 <div className="absolute bottom-8 left-8 text-left bg-background/95 backdrop-blur-xl p-5 rounded-xl border border-border max-w-xs hidden md:block shadow-lg">
-                    <div className="flex items-center gap-2 mb-2 text-amber-500">
-                        <Share2 className="w-4 h-4" />
-                        <span className="font-semibold uppercase tracking-wider text-[10px]">Graph View</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">Instantly visualize how your documents relate to your ongoing tasks and scattered notes.</p>
-                </div>
-            </div>
+                 {/* Left Column */}
+                 <div className="w-full flex flex-col gap-4 xl:gap-20">
+                     {/* Feature 1 Text (Slides) */}
+                     <div className="w-full flex flex-col items-start relative z-10  bt-[#242424]">
+                         <h3 className="text-3xl md:text-[2.5rem] font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
+                             Break free from strict rows.
+                         </h3>
+                         <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10">
+                             Slide apps trap you in linear boxes. Whiteboards leave you with unstructured chaos. We give you the ultimate spatial canvas: place powerful text editors anywhere without sacrificing structure.
+                         </p>
+                         
+                         {/* Value Propositions List */}
+                         <ul className="space-y-6">
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
+                                    <Network className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">Spatial Workflows</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Connect different blocks to create powerful workflows. Drop in dynamic embeds and rich images exactly where you want them.</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
+                                    <Maximize className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">Infinite Canvas & Slides</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Never hit a wall again. Enjoy unlimited space and endless slides, completely boundary-free.</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">AI-Powered Generation</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Hit a creative block? Our deeply integrated AI can perfectly generate and arrange structured slides for you in seconds.</p>
+                                </div>
+                            </li>
+                         </ul>
+                     </div>
+
+                     {/* Feature 2 Visual (Email) */}
+                     <div className="w-full relative flex justify-start">
+                         {/* Subtle Glow Behind the visual */}
+                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[90%] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08)_0%,transparent_70%)] -z-10 pointer-events-none rounded-full blur-3xl" />
+                         
+                         <div className="relative w-full max-w-[600px] h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-1 transition-transform duration-500 ease-out bg-[#262626] group">
+                             <div className="w-full h-full bg-[#262626]">
+                                <LandingEmailViewer />
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+                 {/* Right Column */}
+                 <div className="w-full flex flex-col gap-14 xl:gap-22">
+                     {/* Feature 1 Visual (Slides) */}
+                     <div className="w-full relative flex justify-end">
+                         {/* Subtle Glow Behind the visual */}
+                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.06)_0%,transparent_70%)] -z-10 pointer-events-none rounded-full blur-3xl" />
+                         
+                         <div className="relative w-full max-w-[800px]">
+                             <div className="relative w-full h-[450px] xl:h-[600px]  rounded-xl overflow-hidden">
+                                 <LandingSlideViewer content={CRDT_SLIDE_PAYLOAD} />
+                             </div>
+                         </div>
+                     </div>
+
+                     {/* Feature 2 Text (Email) */}
+                     <div className="w-full flex flex-col items-start relative z-10 px-4 xl:px-8 mt-12">
+                         <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
+                             AI-powered email, without switching apps.
+                         </h3>
+                         <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                             Get instant summaries of long email chains and never lose track of a conversation. Draft context-aware replies in seconds — AI reads the thread so you don&apos;t have to.
+                         </p>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Features Layout: Mobile Stack (hidden on lg and above) */}
+             <div className="w-full flex lg:hidden flex-col gap-24">
+                  {/* Feature 1 */}
+                  <div className="w-full flex flex-col gap-12">
+                     <div className="w-full flex flex-col items-start relative z-10">
+                         <h3 className="text-3xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
+                             Break free from strict rows.
+                         </h3>
+                         <p className="text-base text-muted-foreground leading-relaxed mb-8">
+                             Slide apps trap you in linear boxes. Whiteboards leave you with unstructured chaos. We give you the ultimate spatial canvas: place powerful text editors anywhere without sacrificing structure.
+                         </p>
+                         <ul className="space-y-6">
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
+                                    <Network className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">Spatial Workflows</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Connect different blocks to create powerful workflows. Drop in dynamic embeds and rich images exactly where you want them.</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
+                                    <Maximize className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">Infinite Canvas & Slides</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Enjoy unlimited space and endless slides, completely boundary-free.</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-4">
+                                <div className="mt-1 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-base font-semibold text-foreground">AI-Powered Generation</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">Let AI perfectly generate and arrange structured slides for you instantly.</p>
+                                </div>
+                            </li>
+                         </ul>
+                     </div>
+                     <div className="w-full relative flex justify-center">
+                         <div className="relative w-full h-[400px] overflow-visible">
+                             <LandingSlideViewer content={CRDT_SLIDE_PAYLOAD} />
+                         </div>
+                     </div>
+                  </div>
+
+                  {/* Feature 2 */}
+                  <div className="w-full flex flex-col-reverse gap-12">
+                     <div className="w-full relative flex justify-center">
+                         <div className="relative w-full max-w-[600px] h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] bg-[#262626] ">
+                             <div className="absolute top-0 left-0 w-full h-10 bg-[#333333] border-b border-white/5 flex items-center px-4 gap-2 z-10">
+                                <div className="flex gap-1.5">
+                                    <div className="w-3 h-3 rounded-full bg-white/20" />
+                                    <div className="w-3 h-3 rounded-full bg-white/20" />
+                                    <div className="w-3 h-3 rounded-full bg-white/20" />
+                                </div>
+                             </div>
+                             <div className="w-full h-full pt-10 bg-[#262626]">
+                                <LandingEmailViewer />
+                             </div>
+                             <div className="absolute bottom-0 left-0 w-full h-[80px] bg-gradient-to-t from-[#262626] via-[#262626]/80 to-transparent pointer-events-none" />
+                         </div>
+                     </div>
+                     <div className="w-full flex flex-col items-start relative z-10">
+                         <h3 className="text-3xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
+                             AI-powered email, without switching apps.
+                         </h3>
+                         <p className="text-base text-muted-foreground leading-relaxed">
+                             Get instant summaries of long email chains and never lose track of a conversation.
+                         </p>
+                     </div>
+                  </div>
+             </div>
         </div>
       </section>
+
 
       {/* --- PRIVACY & SECURITY --- */}
       <CinematicSecurity />

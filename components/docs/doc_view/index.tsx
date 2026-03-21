@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui-base/DropdownMenu';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
-import { mergeDocsWithOffline } from '@/lib/utils/docSyncHelpers';
 
 import { ViewMode, SortOption, OwnershipFilter } from './types';
 import { GalleryCard } from './GalleryCard';
@@ -50,7 +49,7 @@ export function DocsView() {
 
   const { fetchDocs } = useDocStore();
 
-  // Read tab from URL query param on mount
+  //tab switch
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab === 'requests') {
@@ -60,6 +59,7 @@ export function DocsView() {
     }
   }, [searchParams]);
 
+  //initial fetch
   useEffect(() => {
     if (!isInitialized) {
       fetchDocs();
@@ -70,7 +70,7 @@ export function DocsView() {
   const prevViewModeRef = useRef<ViewMode>(viewMode);
   // Throttle: track last sync time to prevent rapid requests
   const lastSyncTimeRef = useRef<number>(0);
-  const SYNC_THROTTLE_MS = 30000; // 15 seconds minimum between syncs
+  const SYNC_THROTTLE_MS = 30000; //  30 seconds minimum between syncs
 
 
   useEffect(() => {
@@ -114,7 +114,7 @@ export function DocsView() {
     }
   }, [viewMode, fetchSharedByMe]);
 
-  const handleCreateDoc = async () => {
+  const handleCreateDoc = async () => {   //# raw fetch - Initail create
     try {
       setIsCreating(true);
       const response = await axiosInstance.post('/api/docs', { title: '' });
@@ -310,21 +310,17 @@ export function DocsView() {
   }, [setCurrentDoc]);
 
   if (currentDoc) {
-    // Viewer role - read-only access with live updates
     if (currentDocRole === 'viewer') {
       return <CollaborativeDocEditor doc={currentDoc} onBack={handleCloseDoc} readOnly />;
     }
     
-    // Check if doc is shared (has collaborators or user is an editor collaborator)
     const isSharedDoc = (currentDoc.collaborators && currentDoc.collaborators.length > 0) || 
                         currentDocRole === 'editor';
     
     if (isSharedDoc) {
-      // Use CollaborativeDocEditor with real-time WebSocket sync
       return <CollaborativeDocEditor doc={currentDoc} onBack={handleCloseDoc} />;
     }
     
-    // Personal doc - use regular DocEditor with auto-save
     return <DocEditor doc={currentDoc} onBack={handleCloseDoc} />;
   }
 

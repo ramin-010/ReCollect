@@ -70,7 +70,7 @@ export function CinematicDocsViewer() {
   ];
 
   return (
-    <div className="w-full max-w-[1380px] mx-auto px-4">
+    <div className="w-full max-w-[1350px] mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
         className="relative aspect-video max-h-[99vh] w-full rounded-2xl border border-border/40 bg-[#111111] shadow-xl shadow-black/10 overflow-hidden group"
@@ -108,7 +108,7 @@ export function CinematicDocsViewer() {
              
                 {/* Title with Large Integrated Avatar */}
                 <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 flex items-center gap-4 font-[family-name:var(--font-inter)]">
-                    <div className="relative group/avatar cursor-pointer">
+                    {/* <div className="relative group/avatar cursor-pointer">
                         <div className={cn("absolute inset-0 rounded-full blur-md opacity-50 group-hover/avatar:opacity-100 transition-opacity", slides[activeTab].bg.replace('bg-', 'bg-'))} />
                         <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-white/20 bg-white shadow-2xl relative z-10 overflow-hidden">
                             <img 
@@ -117,7 +117,7 @@ export function CinematicDocsViewer() {
                                 className="w-full h-full object-cover scale-150 translate-y-1"
                             />
                         </div>
-                    </div>
+                    </div> */}
                     
                     <span>{slides[activeTab].title}</span>
                 </h3>

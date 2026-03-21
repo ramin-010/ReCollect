@@ -11,7 +11,7 @@ export function ThemeSwitcher() {
   const [showMenu, setShowMenu] = useState(false);
 
   const themes = [
-    { id: 'light' as const, label: 'Light', icon: Sun },
+    // { id: 'light' as const, label: 'Light', icon: Sun },
     { id: 'theme-dark-gray' as const, label: 'Dark', icon: Moon },
   ];
 

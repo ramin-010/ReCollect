@@ -111,7 +111,17 @@ export function PresentationSlide({
         <div ref={containerRef} className="relative w-full mt-4" style={{ height: contentHeight }}>
           {connectionsReady && (
             <NativeConnectionLayer
-              connections={connections}
+              connections={connections.map(c => ({
+                ...c,
+                controlPoint1: c.controlPoint1 ? {
+                  x: c.controlPoint1.x,
+                  y: c.controlPoint1.y - editorHeaderHeight
+                } : undefined,
+                controlPoint2: c.controlPoint2 ? {
+                  x: c.controlPoint2.x,
+                  y: c.controlPoint2.y - editorHeaderHeight
+                } : undefined,
+              }))}
               blocks={blocks.map(b => ({
                 id: b.blockId,
                 x: b.x,

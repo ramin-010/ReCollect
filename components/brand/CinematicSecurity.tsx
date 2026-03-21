@@ -45,10 +45,6 @@ export function CinematicSecurity() {
           
           {/* Left: Feature Text */}
           <div className="space-y-8 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs font-bold uppercase tracking-wider mb-2">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Privacy Archetype</span>
-            </div>
             
             <h2 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-foreground">
               What happens on your device,<br />
