@@ -1,91 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, WifiOff, FileText, CheckCircle2 } from 'lucide-react';
+import { Lock, Shield, WifiOff, CheckCircle2, Laptop, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Simulated sensitive data
-const PLAIN_TEXT = [
-  "Project Titan: Launch Protocols",
-  "Budget: $2.5M Q3 Allocation",
-  "User Data: zero_knowledge_proof.idx",
-  "Team Access Keys: [REDACTED]", 
-  "Client List: confidential_v2.csv"
-];
-
-const CIPHER_TEXT = [
-  "U2FsdGVkX19t7/3jK8Z1yQ==",
-  "0xd4f8a9b2c3d4e5f6...",
-  "eNRd8f9a2b3c4d5e6f7...",
-  "7f8a9b0c1d2e3f4a5b...",
-  "a1b2c3d4e5f6g7h8i9..."
-];
-
-type SecurityMode = 'local' | 'e2e' | 'open';
+type SecurityMode = 'e2e' | 'local' | 'open';
 
 export function CinematicSecurity() {
   const [activeMode, setActiveMode] = useState<SecurityMode>('e2e');
-  const [isEncrypted, setIsEncrypted] = useState(true);
 
-  // Auto-cycle encryption state for demo effect
   useEffect(() => {
+    const modes: SecurityMode[] = ['e2e', 'local', 'open'];
     const interval = setInterval(() => {
-      setIsEncrypted(prev => !prev);
-    }, 4000); // Toggle every 4 seconds
+      setActiveMode(prev => {
+        const nextIdx = (modes.indexOf(prev) + 1) % modes.length;
+        return modes[nextIdx];
+      });
+    }, 6000); 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <section className="py-24 px-6 relative bg-[#F4F4F2]">
-      {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+    <section className="py-32 pb-25 px-6 relative bg-[#F4F4F2] border-t border-black/[0.03]">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-16 lg:gap-24 items-center">
           
-          {/* Left: Feature Text */}
-          <div className="space-y-8 relative z-10">
+          {/* Left: Minimal Typographic Feature Text */}
+          <div className="space-y-8 relative z-10 lg:pl-4">
             
-            <h2 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-foreground">
+            <h2 className="text-4xl md:text-[2.5rem] font-bold leading-tight tracking-tight text-zinc-900 font-[family-name:var(--font-inter)]">
               What happens on your device,<br />
-              <span className="text-foreground/80">stays on your device.</span>
+              <span className="text-zinc-500">stays on your device.</span>
             </h2>
             
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              We don't sell your data because we can't see it. ReCollect is built on a Zero-Knowledge architecture that encrypts everything locally before sync.
+            <p className="text-lg text-zinc-700 leading-relaxed max-w-xl font-medium">
+              We don't sell your data because we literally can't see it. ReCollect is built on a strict zero-knowledge architecture.
             </p>
 
-            {/* Interactive Modes */}
+            {/* Clean Interactive List */}
             <div className="grid gap-3 pt-4">
-              <FeatureBtn 
-                isActive={activeMode === 'local'} 
-                onClick={() => setActiveMode('local')}
-                icon={WifiOff}
-                title="Local-First Mode"
-                desc="Works completely offline. No server required."
-              />
               <FeatureBtn 
                 isActive={activeMode === 'e2e'} 
                 onClick={() => setActiveMode('e2e')}
                 icon={Lock}
                 title="End-to-End Encryption"
-                desc="AES-256 encryption on every keystroke."
+                desc="Military-grade AES-256 encryption applied before sync."
+              />
+              <FeatureBtn 
+                isActive={activeMode === 'local'} 
+                onClick={() => setActiveMode('local')}
+                icon={WifiOff}
+                title="Local-First Operations"
+                desc="Work completely offline without waiting for central servers."
               />
               <FeatureBtn 
                 isActive={activeMode === 'open'} 
                 onClick={() => setActiveMode('open')}
                 icon={CheckCircle2}
-                title="Open Source & Auditable"
-                desc="Review our cryptography code yourself."
+                title="Open Cryptography"
+                desc="Publicly auditable security implementations. Trust but verify."
               />
             </div>
           </div>
 
-          {/* Right: Visualization */}
-          <div className="relative h-[500px] flex items-center justify-center -order-1 lg:order-1 perspective-1000">
-             <div className="relative w-full max-w-md aspect-[4/5]">
-                {/* Device Frame */}
-                <ScanningCard isEncrypted={isEncrypted} />
+          {/* Right: Ultra-Minimal White Card Visualization */}
+          <div className="relative h-[500px] flex items-center justify-center -order-1 lg:order-1">
+             <div className="w-full max-w-[420px] h-[440px] rounded-[32px] bg-white border border-black/[0.08] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col relative">
+                <VaultDiagram mode={activeMode} />
              </div>
           </div>
 
@@ -100,109 +80,137 @@ function FeatureBtn({ isActive, onClick, icon: Icon, title, desc }: any) {
     <button 
       onClick={onClick}
       className={cn(
-        "flex items-start gap-4 p-4 rounded-xl text-left transition-all duration-300 border group",
+        "flex items-start gap-4 p-5 rounded-2xl text-left transition-all duration-300",
         isActive 
-          ? "bg-white border-border/80 shadow-sm" 
-          : "bg-transparent border-transparent hover:bg-black/[0.02]"
+          ? "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/[0.08]" 
+          : "bg-transparent border border-transparent hover:bg-black/[0.03]"
       )}
     >
       <div className={cn(
-        "p-2 rounded-lg transition-colors group-hover:scale-110 duration-300",
-        isActive ? "bg-black/5 text-foreground" : "bg-black/5 text-muted-foreground group-hover:text-foreground"
+        "p-3 rounded-xl transition-all duration-300 flex shrink-0 border",
+        isActive ? "bg-zinc-900 text-white border-zinc-900 shadow-md" : "bg-zinc-200/50 text-zinc-600 border-transparent"
       )}>
-        <Icon size={20} />
+        <Icon className="w-5 h-5" strokeWidth={isActive ? 2 : 1.5} />
       </div>
-      <div>
-        <h3 className={cn("font-bold text-sm mb-1", isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground transition-colors")}>
+      <div className="pt-0.5">
+        <h3 className={cn("font-bold text-[15px] mb-1 transition-colors", isActive ? "text-zinc-900" : "text-zinc-700")}>
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground/80 leading-snug">{desc}</p>
+        <p className={cn("text-sm leading-snug transition-colors", isActive ? "text-zinc-600" : "text-zinc-500")}>{desc}</p>
       </div>
     </button>
   );
 }
 
-function ScanningCard({ isEncrypted }: { isEncrypted: boolean }) {
-  return (
-    <div className="relative w-full h-full group">
-      {/* Glow Effect - Subtle Dark */}
-      <div className="absolute -inset-1 bg-black/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-700" />
-      
-      <div 
-        className="relative w-full h-full bg-[#FBFBFA] rounded-2xl border border-border/80 overflow-hidden shadow-2xl transition-transform duration-700 hover:scale-[1.01]"
-      >
-        {/* Header */}
-        <div className="h-12 border-b border-border/60 flex items-center px-4 gap-2 bg-black/[0.02]">
-          <div className="w-2.5 h-2.5 rounded-full bg-border" />
-          <div className="w-2.5 h-2.5 rounded-full bg-border" />
-          <div className="w-2.5 h-2.5 rounded-full bg-border" />
+function VaultDiagram({ mode }: { mode: 'e2e' | 'local' | 'open' }) {
+    return (
+        <div className="w-full h-full p-8 flex flex-col justify-center items-center font-[family-name:var(--font-inter)]">
+            
+            {/* The Diagram */}
+            <div className="relative w-full max-w-[340px] flex items-center justify-between mt-4">
+                
+                {/* Background Lines */}
+                <div className="absolute left-8 right-8 top-8 h-[2px] -z-10 flex">
+                     {/* Left Line Segment (Device -> Crypto) */}
+                     <div className={cn(
+                         "h-full w-1/2 transition-all duration-700",
+                         mode === 'local' ? "bg-transparent border-t-[2px] border-dashed border-zinc-300" : 
+                         mode === 'open' ? "bg-blue-400" :
+                         "bg-zinc-900"
+                     )} />
+                     {/* Right Line Segment (Crypto -> Server) */}
+                     <div className={cn(
+                         "h-full w-1/2 transition-all duration-700",
+                         mode === 'local' ? "bg-transparent border-t-[2px] border-dashed border-zinc-200" : 
+                         mode === 'open' ? "bg-blue-400" :
+                         "bg-transparent border-t-[2px] border-dashed border-zinc-400"
+                     )} />
+                </div>
+
+                {/* Node 1: Device */}
+                <div className="flex flex-col items-center gap-4 bg-white px-2">
+                    <div className="w-16 h-16 rounded-[20px] bg-white border border-zinc-200 shadow-sm flex items-center justify-center relative z-10 transition-all duration-500">
+                        <Laptop className="w-6 h-6 text-zinc-800" strokeWidth={1.5} />
+                        
+                        {/* Status Check (Local Mode Animation) */}
+                        <AnimatePresence>
+                            {mode === 'local' && (
+                                <motion.div 
+                                    initial={{scale:0}} 
+                                    animate={{scale:1}} 
+                                    exit={{scale:0}}
+                                    transition={{type:"spring", duration: 0.5, delay:0.1}} 
+                                    className="absolute -bottom-2 -right-2 w-7 h-7 bg-zinc-900 rounded-full border-[2.5px] border-white flex items-center justify-center shadow-md"
+                                >
+                                    <CheckCircle2 className="w-4 h-4 text-white" strokeWidth={2} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                    <span className="text-[11px] font-bold text-zinc-700 uppercase tracking-widest">Device</span>
+                </div>
+
+                {/* Node 2: Crypto / Severed */}
+                <div className="flex flex-col items-center gap-4 bg-white px-4">
+                    <div className={cn(
+                        "w-12 h-12 rounded-full border flex items-center justify-center relative z-10 transition-all duration-700",
+                        mode === 'open' ? "bg-blue-50 border-blue-200 shadow-sm" : 
+                        mode === 'local' ? "bg-transparent border-transparent scale-110" : 
+                        "bg-zinc-900 border-zinc-800 shadow-md"
+                    )}>
+                        {mode === 'open' ? (
+                            <CheckCircle2 className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+                        ) : mode === 'local' ? (
+                            <motion.div initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.8}}>
+                                <WifiOff className="w-6 h-6 text-zinc-400" strokeWidth={2} />
+                            </motion.div>
+                        ) : (
+                            <Lock className="w-4 h-4 text-white transition-colors" strokeWidth={2} />
+                        )}
+                    </div>
+                    <span className={cn("text-[10px] font-bold uppercase tracking-widest transition-colors duration-700", 
+                        mode === 'open' ? "text-blue-600" : 
+                        mode === 'local' ? "text-zinc-400" : "text-zinc-900"
+                    )}>
+                        {mode === 'open' ? 'Verified' : mode === 'local' ? 'Airgapped' : 'AES-256'}
+                    </span>
+                </div>
+
+                {/* Node 3: Cloud */}
+                <div className="flex flex-col items-center gap-4 bg-white px-2">
+                    <div className={cn(
+                        "w-16 h-16 rounded-[20px] border flex items-center justify-center relative z-10 transition-all duration-700",
+                        mode === 'local' ? "bg-zinc-50 border-zinc-200 opacity-60 scale-95" : "bg-white border-zinc-200 shadow-sm scale-100"
+                    )}>
+                        <Cloud className={cn("w-6 h-6 transition-colors", mode === 'local' ? "text-zinc-400" : "text-zinc-800")} strokeWidth={1.5} />
+                    </div>
+                    <span className={cn("text-[11px] font-bold uppercase tracking-widest transition-colors duration-700", mode === 'local' ? "text-zinc-400" : "text-zinc-700")}>
+                        Servers
+                    </span>
+                </div>
+            </div>
+
+            {/* Explanation box */}
+            <div className="mt-14 w-full max-w-[320px] bg-zinc-50/80 border border-zinc-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[100px] shadow-sm">
+                <AnimatePresence mode="wait">
+                    {mode === 'e2e' && (
+                        <motion.p key="e2e" initial={{opacity:0, y:2}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-2}} transition={{duration:0.2}} className="text-[13px] text-zinc-700 leading-relaxed font-medium">
+                            Data is irreversibly encrypted before leaving your device. Servers only sync <span className="text-zinc-900 font-bold">zero-knowledge ciphertext</span>.
+                        </motion.p>
+                    )}
+                    {mode === 'local' && (
+                        <motion.p key="local" initial={{opacity:0, y:2}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-2}} transition={{duration:0.2}} className="text-[13px] text-zinc-700 leading-relaxed font-medium">
+                            Network severed. All operations and storage routed strictly to <span className="text-zinc-900 font-bold">local disk</span>.
+                        </motion.p>
+                    )}
+                    {mode === 'open' && (
+                        <motion.p key="open" initial={{opacity:0, y:2}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-2}} transition={{duration:0.2}} className="text-[13px] text-zinc-700 leading-relaxed font-medium">
+                            Our cryptography is fully public. <span className="text-zinc-900 font-bold">Audited, verified, and standard</span>. No proprietary black boxes.
+                        </motion.p>
+                    )}
+                </AnimatePresence>
+            </div>
+            
         </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-           {PLAIN_TEXT.map((text, i) => (
-             <div key={i} className="flex items-center gap-3 py-3 border-b border-border/40 last:border-0 relative group/row hover:bg-black/[0.02] -mx-2 px-2 rounded-lg transition-colors">
-               <div className="w-8 h-8 rounded bg-black/5 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-muted-foreground group-hover/row:text-foreground transition-colors" />
-               </div>
-               <div className="flex-1 min-w-0 text-sm relative h-5 overflow-hidden">
-                 {/* Plain Text Layer */}
-                 <motion.span 
-                   initial={false}
-                   animate={{ y: isEncrypted ? -25 : 0, opacity: isEncrypted ? 0 : 1 }}
-                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                   className="absolute inset-0 text-foreground font-medium truncate font-[family-name:var(--font-inter)] tracking-tight"
-                 >
-                   {text}
-                 </motion.span>
-                 
-                 {/* Cipher Text Layer - Keep Green for "Secure" Context but Desaturated */}
-                 <motion.span 
-                   initial={false}
-                   animate={{ y: isEncrypted ? 0 : 25, opacity: isEncrypted ? 1 : 0 }}
-                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                   className="absolute inset-0 text-emerald-600 font-mono text-[13px] truncate tracking-tight"
-                 >
-                    {CIPHER_TEXT[i]}
-                 </motion.span>
-               </div>
-             </div>
-           ))}
-        </div>
-
-        {/* Scanning Beam Overlay - Subtle Emerald */}
-        <AnimatePresence>
-            {isEncrypted && (
-                <motion.div
-                    initial={{ top: "-20%", opacity: 0 }}
-                    animate={{ top: "120%", opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 2, ease: "easeInOut", repeat: Infinity, repeatDelay: 2 }}
-                    className="absolute inset-x-0 h-32 bg-gradient-to-b from-transparent via-emerald-500/5 to-transparent pointer-events-none z-10"
-                >
-                    <div className="absolute bottom-0 inset-x-0 h-[1px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]" />
-                </motion.div>
-            )}
-        </AnimatePresence>
-
-        {/* Lock Overlay - Minimal */}
-        <AnimatePresence>
-          {isEncrypted && (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] z-20"
-            >
-              <div className="relative">
-                 <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse" />
-                 <Lock className="w-16 h-16 text-emerald-600 relative z-10 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-      </div>
-    </div>
-  );
+    );
 }

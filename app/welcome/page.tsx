@@ -597,7 +597,7 @@ export default function WelcomePage() {
       <CinematicSecurity />
 
       {/* --- CONSOLIDATION & SAVINGS --- */}
-      <section className="py-24 px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
+      <section className="py-24 pt-20 px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
         <div className="max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-12">
                 <div className="space-y-4 max-w-2xl">
@@ -663,7 +663,7 @@ export default function WelcomePage() {
                                 <p className="text-5xl md:text-6xl font-black font-[family-name:var(--font-inter)] tracking-tighter text-foreground">
                                     $0
                                 </p>
-                                <span className="text-lg font-bold text-muted-foreground">/ forever</span>
+                                <span className="text-lg font-bold text-muted-foreground">/ during beta</span>
                              </div>
                          </div>
                          <Button size="lg" variant="primary" onClick={() => router.push('/signup')} className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
