@@ -90,6 +90,7 @@ function SignupForm() {
       
       if (response.success && response.data) {
         setUser(response.data);
+        localStorage.setItem('auth_hint', '1');
 
         // Create default dashboard
         try {
@@ -144,6 +145,7 @@ function SignupForm() {
         const response = await authApi.googleAuth({ accessToken: tokenResponse.access_token });
         if (response.success && response.data) {
           setUser(response.data);
+          localStorage.setItem('auth_hint', '1');
 
           const isNewUser = new Date().getTime() - new Date(response.data.createdAt).getTime() < 60000;
 
