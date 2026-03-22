@@ -66,6 +66,7 @@ function LoginForm() {
       const response = await authApi.login(data);
       if (response.success && response.data) {
         setUser(response.data);
+        localStorage.setItem('auth_hint', '1');
         toast.success('Welcome back!', {
           description: 'You have successfully logged in.',
         });
@@ -154,6 +155,7 @@ function LoginForm() {
         const response = await authApi.googleAuth({ accessToken: tokenResponse.access_token });
         if (response.success && response.data) {
           setUser(response.data);
+          localStorage.setItem('auth_hint', '1');
           toast.success('Welcome!', {
             description: 'Signed in with Google successfully.',
           });

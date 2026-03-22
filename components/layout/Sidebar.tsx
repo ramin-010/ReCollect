@@ -82,6 +82,7 @@ export function Sidebar() {
     try {
       document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
       document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      localStorage.removeItem('auth_hint');
       await authApi.logout();
       logout();
       toast.success('Logged out successfully!');
@@ -385,10 +386,13 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
   const hasSubItems = item.subItems && item.subItems.length > 0;
   const isExpanded = isActive && hasSubItems && !isCollapsed;
 
+  const Component = item.route === '#' ? 'button' : Link;
+  const linkProps = item.route === '#' ? { type: 'button' as const } : { href: item.route };
+
   return (
     <div className="flex flex-col space-y-0.5">
-      <Link
-        href={item.route}
+      <Component
+        {...linkProps as any}
         onClick={onClick}
         className={cn(
         "w-full flex items-center gap-3 px-3 py-[9px] rounded-lg text-[13px] transition-all duration-200 group relative outline-none",
@@ -450,7 +454,7 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
           )}
         </>
       )}
-      </Link>
+      </Component>
 
       {/* ── Sub Items (e.g., Inbox, Today) ── */}
       <AnimatePresence>
