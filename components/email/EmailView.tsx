@@ -911,7 +911,7 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
 // SLIDE MOCKUPS — clean UI snapshots
 // ═════════════════════════════════════════════════════════════════════════════
 
-function SlideInbox() {
+export  function SlideInbox() {
   const emails = [
     { from: 'Sarah Chen', email: 'sarah@company.com', subject: 'Q4 Marketing Strategy Review', snippet: 'Hey, I\'ve attached the updated deck with the new campaign metrics. Can you review before our sync tomorrow?', time: '2m ago', unread: true, hasAttachment: true, avatar: 'SC', priority: 'high' as const },
     { from: 'Alex Rivera', email: 'alex.r@startup.io', subject: 'Re: Series A Term Sheet', snippet: 'Thanks for the quick turnaround. The investors are aligned on the valuation, just need final sign-off from legal.', time: '14m ago', unread: true, hasAttachment: false, avatar: 'AR', priority: 'high' as const },
@@ -985,7 +985,7 @@ function SlideInbox() {
   );
 }
 
-function SlideComposer() {
+export  function SlideComposer() {
   return (
     <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Compose header */}
@@ -1062,7 +1062,7 @@ function SlideComposer() {
   );
 }
 
-function SlideThread() {
+export function SlideThread() {
   return (
     <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Thread header */}

@@ -7,7 +7,7 @@ export function CinematicWhiteboardViewer() {
 
   return (
     <div className="w-full relative group perspective-1000">
-      <div className="relative w-full rounded-xl overflow-hidden bg-[#0A0A0A] shadow-[0_0_10px_-0px_rgba(0,0,0,0.25)] dark:shadow-[0_0_60px_-10px_rgba(0,0,0,0.6)] transition-transform duration-700 ease-out">
+      <div className="relative w-full rounded-xl overflow-hidden bg-[#0A0A0A] shadow-[0_0_10px_-0px_rgba(0,0,0,0.20)] dark:shadow-[0_0_60px_-10px_rgba(0,0,0,0.6)] transition-transform duration-700 ease-out">
         <video
           ref={videoRef}
           className="w-full h-auto block"

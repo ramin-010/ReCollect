@@ -4,6 +4,7 @@ import React from 'react';
 import { SlideBlockData, DEFAULT_FONT_SIZE } from '../core/types';
 import { Connection } from '@/types/canvas';
 import { BlockContent } from '../blocks/BlockComponents';
+import { cn } from '@/lib/utils';
 
 interface PresentationBlockLayerProps {
   blocks: SlideBlockData[];
@@ -29,15 +30,22 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
           c => c.fromBlock === block.blockId || c.toBlock === block.blockId
         );
 
+        const isMinimalText = block.type === 'text' && !hasConnections && !block.color;
+
         return (
           <div
             key={block.blockId}
             id={block.blockId}
-            className={`absolute flex flex-col group transition-all duration-200 ${
-              hasConnections 
-                ? 'rounded-md border border-[hsl(var(--border-light))] shadow-sm backdrop-blur-sm bg-[#303030]/50' 
-                : 'rounded-none border-transparent bg-transparent shadow-none'
-            }`}
+            className={cn(
+              "absolute flex flex-col group transition-all duration-200",
+              isMinimalText
+                ? "rounded-none border-transparent bg-transparent shadow-none"
+                : "rounded-md border backdrop-blur-sm shadow-none",
+              hasConnections && !isMinimalText
+                ? "border-[hsl(var(--border-light))]/30 bg-[#303030]/50" 
+                : !isMinimalText ? "border-white/50" : "",
+              !isMinimalText && block.color
+            )}
              style={{
               left: block.x,
               top: block.y - yOffset,
@@ -46,12 +54,6 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
               color: block.textColor || undefined,
             }}
           >
-            {/* Background color chip (for blocks that have an explicitly chosen color tint) */}
-            {block.color && (
-              <div
-                className={`absolute inset-0 rounded-md border pointer-events-none ${block.color}`}
-              />
-            )}
 
             {/* Actual visual content - Mirrors SmartBlock's inner div exact styling */}
             <div 
