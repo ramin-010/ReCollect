@@ -2,6 +2,8 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 
+import Link from 'next/link'
+
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger'
   size?: 'sm' | 'md' | 'lg'
@@ -9,9 +11,12 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   fullWidth?: boolean
+  href?: string
+  target?: string
+  rel?: string
 }
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+export const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
   ({ 
     className, 
     variant = 'primary', 
@@ -22,6 +27,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     fullWidth = false,
     disabled,
     children,
+    href,
+    target,
+    rel,
     ...props 
   }, ref) => {
     
@@ -40,20 +48,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       md: 'text-base h-[44px] px-6 gap-2',
       lg: 'text-lg h-[52px] px-8 gap-2.5'
     }
-    
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          baseStyles,
-          variants[variant],
-          sizes[size],
-          fullWidth && 'w-full',
-          className
-        )}
-        disabled={disabled || isLoading}
-        {...props}
-      >
+
+    const computedClass = cn(
+      baseStyles,
+      variants[variant],
+      sizes[size],
+      fullWidth && 'w-full',
+      className
+    )
+
+    const InnerContent = () => (
+      <>
         {isLoading ? (
           <>
             <span className="animate-spin">
@@ -71,6 +76,47 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             {rightIcon && <span className="flex-shrink-0">{rightIcon}</span>}
           </>
         )}
+      </>
+    )
+
+    if (href && !disabled && !isLoading) {
+      const isExternal = href.startsWith('http') || target === '_blank';
+      if (isExternal) {
+        return (
+          <a
+            ref={ref as React.Ref<HTMLAnchorElement>}
+            href={href}
+            target={target}
+            rel={rel || (target === '_blank' ? 'noopener noreferrer' : undefined)}
+            className={computedClass}
+            // Cannot spread all button props to anchor safely without filtering in TS, 
+            // but we selectively pass standard handlers if needed. 
+            onClick={props.onClick as any}
+          >
+            <InnerContent />
+          </a>
+        )
+      }
+      return (
+        <Link
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          href={href}
+          className={computedClass}
+          onClick={props.onClick as any}
+        >
+          <InnerContent />
+        </Link>
+      )
+    }
+    
+    return (
+      <button
+        ref={ref as React.Ref<HTMLButtonElement>}
+        className={computedClass}
+        disabled={disabled || isLoading}
+        {...props}
+      >
+        <InnerContent />
       </button>
     )
   }

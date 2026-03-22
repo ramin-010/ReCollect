@@ -75,7 +75,6 @@ function FeatureBadge({ icon: Icon, text, color = "blue" }: { icon: any, text: s
 }
 
 export default function WelcomePage() {
-  const router = useRouter();
   const { scrollYProgress } = useScroll();
 
   
@@ -122,7 +121,7 @@ export default function WelcomePage() {
                   <Link href="/login" className="whitespace-nowrap text-[13px] sm:text-[14px] font-medium text-foreground hover:opacity-70 transition-opacity px-1.5 sm:px-2">
                       Log in
                   </Link>
-                  <Button onClick={() => router.push('/signup')} className="whitespace-nowrap shrink-0 bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-full px-4 sm:px-5 py-1.5 sm:py-2 font-medium h-9 sm:h-10 text-[13px] sm:text-[14px] shadow-sm border-none transition-colors">
+                  <Button href="/signup" className="whitespace-nowrap shrink-0 bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-full px-4 sm:px-5 py-1.5 sm:py-2 font-medium h-9 sm:h-10 text-[13px] sm:text-[14px] shadow-sm border-none transition-colors">
                       <span className="hidden sm:inline">Get ReCollect free</span>
                       <span className="sm:hidden">Get Free</span>
                   </Button>
@@ -181,7 +180,7 @@ export default function WelcomePage() {
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10 mt-8">
                     <Button
                       size="lg"
-                      onClick={() => router.push('/signup')}
+                      href="/signup"
                       className="bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-md px-8 h-12 text-base font-semibold shadow-none border-none transition-colors w-full sm:w-auto"
                     >
                       Get ReCollect free
@@ -661,7 +660,7 @@ export default function WelcomePage() {
                                 <span className="text-lg font-bold text-muted-foreground">/ during beta</span>
                              </div>
                          </div>
-                         <Button size="lg" variant="primary" onClick={() => router.push('/signup')} className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
+                         <Button size="lg" variant="primary" href="/signup" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
                             Claim Free Account
                          </Button>
                      </div>
@@ -675,7 +674,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- FOOTER CTA --- */}
-      <section className="relative py-24 md:py-40 pb-10 px-6 border-t border-border overflow-hidden bg-background">
+      <section className="relative py-24 md:py-30 md:pb-20 pb-10 px-6 border-t border-border overflow-hidden bg-background">
          <div className="absolute inset-0 -z-10 bg-background">
              <div className="absolute inset-0 opacity-40 mix-blend-overlay">
                 <MediaPlaceholder type="Background" prompt="Deep space stars, subtle constellations, dark purple nebula. Atmospheric." height="h-full" />
@@ -691,10 +690,10 @@ export default function WelcomePage() {
                 Join thousands of thinkers, builders, and creators who have made ReCollect their digital home.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 pt-6 md:pt-8">
-                <Button size="lg" variant="primary" onClick={() => router.push('/signup')} className="h-16 px-12 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
+                <Button size="lg" variant="primary" href="/signup" className="h-16 px-12 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
                     Get Started Free
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => router.push('/login')} className="h-16 px-12 text-xl rounded-full bg-card/50 backdrop-blur-md border-border hover:bg-card text-foreground">
+                <Button size="lg" variant="outline" href="/login" className="h-16 px-12 text-xl rounded-full bg-card/50 backdrop-blur-md border-border hover:bg-card text-foreground">
                     Sign In
                 </Button>
             </div>
@@ -702,7 +701,7 @@ export default function WelcomePage() {
                 <span>© 2026 ReCollect Inc.</span>
                 <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-                <a href="#" className="hover:text-foreground transition-colors">Twitter</a>
+                <a href="https://www.linkedin.com/in/rinkal-kumar-46130a329" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
             </div>
          </div>
       </section>
