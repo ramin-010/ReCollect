@@ -20,24 +20,24 @@ export function CinematicSecurity() {
   }, []);
 
   return (
-    <section className="py-32 pb-25 px-6 relative bg-[#F4F4F2] border-t border-black/[0.03]">
+    <section className="py-10 pb-10 md:py-32  md:pb-25 px-6 relative bg-[#F4F4F2] border-t border-black/[0.03]">
       <div className="max-w-[1200px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-16 lg:gap-24 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-2 md:gap-16 lg:gap-24 items-center">
           
           {/* Left: Minimal Typographic Feature Text */}
-          <div className="space-y-8 relative z-10 lg:pl-4">
+          <div className="space-y-6 md:space-y-8 relative z-10 lg:pl-4">
             
-            <h2 className="text-4xl md:text-[2.5rem] font-bold leading-tight tracking-tight text-zinc-900 font-[family-name:var(--font-inter)]">
+            <h2 className="text-3xl md:text-4xl lg:text-[2.5rem] font-bold leading-tight tracking-tight text-zinc-900 font-[family-name:var(--font-inter)]">
               What happens on your device,<br />
               <span className="text-zinc-500">stays on your device.</span>
             </h2>
             
-            <p className="text-lg text-zinc-700 leading-relaxed max-w-xl font-medium">
+            <p className="text-base md:text-lg text-zinc-700 leading-relaxed max-w-xl font-medium">
               We don't sell your data because we literally can't see it. ReCollect is built on a strict zero-knowledge architecture.
             </p>
 
             {/* Clean Interactive List */}
-            <div className="grid gap-3 pt-4">
+            <div className="grid gap-2 md:gap-3 pt-2 md:pt-4">
               <FeatureBtn 
                 isActive={activeMode === 'e2e'} 
                 onClick={() => setActiveMode('e2e')}
@@ -63,8 +63,8 @@ export function CinematicSecurity() {
           </div>
 
           {/* Right: Ultra-Minimal White Card Visualization */}
-          <div className="relative h-[500px] flex items-center justify-center -order-1 lg:order-1">
-             <div className="w-full max-w-[420px] h-[440px] rounded-[32px] bg-white border border-black/[0.08] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col relative">
+          <div className="relative h-[400px] sm:h-[450px] md:h-[500px] flex items-center justify-center">
+             <div className="w-full max-w-[420px] h-full sm:h-[440px] rounded-[24px] md:rounded-[32px] bg-white border border-black/[0.08] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col relative transform scale-[0.85] sm:scale-100 origin-center">
                 <VaultDiagram mode={activeMode} />
              </div>
           </div>

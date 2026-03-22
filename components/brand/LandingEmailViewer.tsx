@@ -16,7 +16,7 @@ export function LandingEmailViewer() {
 
   return (
     <div 
-      className="w-full h-full flex flex-col overflow-hidden pointer-events-none select-none"
+      className="w-full  h-full flex flex-col overflow-hidden pointer-events-none select-none"
       // Force Tailwind CSS variables to an Apple-inspired Neutral Dark Mode (Strictly No Color Tint)
       style={{
         '--background': '0 0% 15%',       // #262626 (Slightly lighter neutral dark background)

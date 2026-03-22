@@ -73,7 +73,7 @@ export function CinematicDocsViewer() {
     <div className="w-full max-w-[1350px] mx-auto px-4">
       {/* --- Main Display Window --- */}
       <div 
-        className="relative aspect-video max-h-[99vh] w-full rounded-2xl border border-border/40 bg-[#111111] shadow-xl shadow-black/10 overflow-hidden group"
+        className="relative aspect-[3/4] sm:aspect-video md:max-h-[95vh] w-full rounded-2xl border border-border/40 bg-[#111111] shadow-xl shadow-black/10 overflow-hidden group"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
@@ -91,13 +91,13 @@ export function CinematicDocsViewer() {
                     src={slides[activeTab].image} 
                     alt={slides[activeTab].title} 
                     fetchPriority="high"
-                    className="w-full h-full object-contain object-top"
+                    className="w-full h-full object-cover  sm:object-contain object-top"
                 />
             </motion.div>
         </AnimatePresence>
 
         {/* Text Overlay (Bottom Left) */}
-        <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black via-black/50 to-transparent pt-32">
+        <div className="absolute bottom-0 left-0 w-full p-6 md:p-8 z-20 bg-gradient-to-t from-black via-black/70 to-transparent pt-32 sm:pt-48">
              <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 20 }}
@@ -106,32 +106,21 @@ export function CinematicDocsViewer() {
                 className="relative"
              >
              
-                {/* Title with Large Integrated Avatar */}
-                <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 flex items-center gap-4 font-[family-name:var(--font-inter)]">
-                    {/* <div className="relative group/avatar cursor-pointer">
-                        <div className={cn("absolute inset-0 rounded-full blur-md opacity-50 group-hover/avatar:opacity-100 transition-opacity", slides[activeTab].bg.replace('bg-', 'bg-'))} />
-                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-white/20 bg-white shadow-2xl relative z-10 overflow-hidden">
-                            <img 
-                                src={`https://api.dicebear.com/9.x/${slideComments[activeTab % slideComments.length].user.style}/svg?seed=${slideComments[activeTab % slideComments.length].user.seed}&backgroundColor=transparent`}
-                                alt="User"
-                                className="w-full h-full object-cover scale-150 translate-y-1"
-                            />
-                        </div>
-                    </div> */}
-                    
+                {/* Title */}
+                <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold tracking-tight text-white mb-2 md:mb-4 flex items-center gap-4 font-[family-name:var(--font-inter)] drop-shadow-lg">
                     <span>{slides[activeTab].title}</span>
                 </h3>
-                <p className="text-gray-300 max-w-xl text-lg leading-relaxed font-[family-name:var(--font-inter)]">{slides[activeTab].desc}</p>
+                <p className="text-gray-300 md:text-gray-300 max-w-xl text-base md:text-lg leading-relaxed font-[family-name:var(--font-inter)] drop-shadow-md">{slides[activeTab].desc}</p>
              </motion.div>
         </div>
         
         {/* Simple Progress Indicators (Dots) */}
-        <div className="absolute bottom-8 right-8 z-20 flex gap-2">
+        <div className="absolute top-4 right-4 md:top-auto md:bottom-8 md:right-8 z-20 flex gap-2">
             {slides.map((_, i) => (
                 <div 
                     key={i} 
                     className={cn(
-                        "w-2 h-2 rounded-full transition-all duration-300", 
+                        "w-2 h-2 rounded-full transition-all duration-300 shadow-sm", 
                         activeTab === i ? "bg-white w-6" : "bg-white/30"
                     )} 
                 />

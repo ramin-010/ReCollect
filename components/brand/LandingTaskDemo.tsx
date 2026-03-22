@@ -43,7 +43,7 @@ export function LandingTaskDemo() {
         </div>
 
         {/* Feature Text Nodes - "Integrated Feature Text" */}
-        <div className="absolute inset-0 z-10 pointer-events-none px-4" style={caveat.style}>
+        <div className="hidden md:block absolute inset-0 z-10 pointer-events-none px-4" style={caveat.style}>
              <div className="w-full h-full max-w-[1400px] mx-auto relative">
                 
                 {/* 1. Second Brain (Top Left) */}
@@ -82,19 +82,19 @@ export function LandingTaskDemo() {
         </div>
 
         {/* Mock TaskInput Component (Center) */}
-        <div className="relative z-20 w-full max-w-[680px] mx-6 transform shadow-2xl rounded-xl ring-1 ring-border group">
+        <div className="relative z-20 w-[95%] sm:w-full max-w-[680px] mx-auto transform shadow-2xl rounded-xl ring-1 ring-border group transition-all">
           
           {/* Subtle Glow Effect behind input */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none" />
           
-          <div className="relative bg-card rounded-xl overflow-hidden shadow-2xl">
+          <div className="relative rounded-xl overflow-hidden shadow-2xl">
              <MockTaskInput />
           </div>
 
           {/* Title Integrated Above Task Interface */}
-          <div className="absolute -top-25 left-1/2 -translate-x-1/2 w-full text-center pb-2">
+          <div className="absolute -top-[90px] sm:-top-25 left-1/2 -translate-x-1/2 w-full text-center pb-2 pointer-events-none">
                  <p className="text-2xl md:text-[1.5rem] text-muted-foreground leading-relaxed tracking-tight" style={{fontWeight: 500}}>
-                    Meet your <span className="bg-gradient-to-r text-2xl md:text-[2rem] from-emerald-600 to-teal-500 bg-clip-text text-transparent drop-shadow-[0_0_0.3px_rgba(16,185,129,0.3)]"  style={{ ...caveat.style, fontWeight: 900 }}>Second Brain.</span> 
+                    Meet your <span className="bg-gradient-to-r text-3xl md:text-[2rem] from-emerald-600 to-teal-500 bg-clip-text text-transparent drop-shadow-[0_0_0.3px_rgba(16,185,129,0.3)]"  style={{ ...caveat.style, fontWeight: 900 }}>Second Brain.</span> 
                  </p>
           </div>
         </div>

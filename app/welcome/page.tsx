@@ -87,13 +87,13 @@ export default function WelcomePage() {
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] selection:bg-indigo-500/30 font-sans overflow-x-hidden">
       
       {/* --- Navigation --- */}
-      <nav className="fixed top-3 inset-x-0 z-50 flex justify-center px-4">
-        <div className="flex items-center justify-between w-full max-w-5xl h-14 pr-2 pl-6 bg-background/80 backdrop-blur-xl border border-border/50 shadow-lg rounded-full">
-            <div className="flex items-center gap-2">
+      <nav className="fixed top-2 sm:top-3 inset-x-0 z-50 flex justify-center px-2 sm:px-4">
+        <div className="flex items-center justify-between w-full max-w-5xl h-12 sm:h-14 pr-1.5 sm:pr-2 pl-4 sm:pl-6 bg-background/80 backdrop-blur-xl border border-border/50 shadow-lg rounded-full">
+            <div className="flex items-center transform scale-90 sm:scale-100 origin-left transition-transform">
                 <Logo size="lg" className="text-foreground" />
             </div>
             
-            <div className="flex items-center gap-4 sm:gap-6 z-10">
+            <div className="flex items-center gap-2 sm:gap-6 z-10">
                 {/* Community Doodle Widget */}
                 <div className="hidden lg:flex items-center gap-3">
                     <div className="flex -space-x-2">
@@ -118,19 +118,20 @@ export default function WelcomePage() {
 
                 <div className="w-px h-6 bg-border/50 hidden lg:block" />
 
-                <div className="flex items-center gap-3">
-                  <Link href="/login" className="text-sm font-medium text-foreground hover:opacity-70 transition-opacity px-2">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <Link href="/login" className="whitespace-nowrap text-[13px] sm:text-[14px] font-medium text-foreground hover:opacity-70 transition-opacity px-1.5 sm:px-2">
                       Log in
                   </Link>
-                  <Button onClick={() => router.push('/signup')} className="bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-full px-5 py-2 font-medium h-10 text-sm shadow-sm border-none transition-colors">
-                      Get ReCollect free
+                  <Button onClick={() => router.push('/signup')} className="whitespace-nowrap shrink-0 bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-full px-4 sm:px-5 py-1.5 sm:py-2 font-medium h-9 sm:h-10 text-[13px] sm:text-[14px] shadow-sm border-none transition-colors">
+                      <span className="hidden sm:inline">Get ReCollect free</span>
+                      <span className="sm:hidden">Get Free</span>
                   </Button>
                 </div>
             </div>
         </div>
       </nav>
       {/* --- 1. HERO SECTION (Original Design + Video Overlay) --- */}
-      <section className="relative pt-28 pb-0 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[90vh] flex flex-col justify-center">
+      <section className="relative pt-18 md:pt-28 pb-0 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[90vh] flex flex-col justify-center">
         {/* Background Blobs */}
         <motion.div style={{ y: y1 }} className="absolute top-20 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -z-10" />
         <motion.div style={{ y: y2 }} className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl -z-10" />
@@ -201,12 +202,12 @@ export default function WelcomePage() {
       </section>
 
       {/* --- 2. DOCS (The Editor) --- */}
-      <section className="py-14 pt-0 px-6 relative  bg-welcome-bg">
+      <section className="py-14 pt-16 md:pt-0 px-4 sm:px-6 relative bg-welcome-bg mt-8 md:mt-0">
         
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="max-w-8xl mx-auto space-y-8 relative z-10">
                 {/* Minimal Excalidraw-style Callout */}
-                <div className="absolute top-[-58px] right-8 md:right-16 lg:right-18 z-50 flex items-center pointer-events-none">
+                <div className="absolute top-[-30px] sm:top-[-58px] right-2 sm:right-8 md:right-16 lg:right-18 z-50 flex items-center pointer-events-none scale-75 sm:scale-100 origin-right">
                 <div className="flex items-center gap-2 rotate-[-4deg]">
                     
                     {/* Sleek curved arrow */}
@@ -247,7 +248,7 @@ export default function WelcomePage() {
 
                 </div>
 </div>
-             <div className="relative w-full pb-10">
+             <div className="relative w-full  pb-10">
 
                  <CinematicDocsViewer />
                  
@@ -332,8 +333,8 @@ export default function WelcomePage() {
             </div>
 
             {/* Integrated Quick Capture Feature */}
-            <div className="max-w-5xl mx-auto mt-20 pt-12 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-12 text-left relative z-10">
-                <div className="flex-1 space-y-5">
+            <div className="max-w-5xl mx-auto mt-16 md:mt-20 pt-8 md:pt-12 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 text-left relative z-10">
+                <div className="flex-1 space-y-4 md:space-y-5">
                      <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-foreground/70 bg-muted/50 px-3 py-1.5 rounded-lg border border-border/50">
                         <Keyboard className="w-4 h-4" /> 
                         <span>Cmd + K</span>
@@ -362,14 +363,14 @@ export default function WelcomePage() {
       
 
       {/* --- WHITEBOARD (Infinite Canvas) --- */}
-      <section className="py-20 pb-0 px-6 relative overflow-hidden bg-background">
+      <section className="py-20 pb-0 pt-10 md:pt-20 px-6 relative overflow-hidden bg-background">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
         <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
             
-             <div className="w-full max-w-[1280px] text-left mb-8 space-y-4 px-4 xl:px-0">
+             <div className="w-full max-w-[1280px] text-left mb-8 space-y-4  xl:px-0">
                  <h2 className="text-4xl md:text-[2.5rem] font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
                     Think bigger. Move faster.
                  </h2>
@@ -389,7 +390,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- FEATURES GRID SECTION --- */}
-      <section className="py-20 px-6 relative overflow-hidden bg-background ">
+      <section className="py-20 pt-5 md:pt-20 px-6 relative overflow-hidden bg-background ">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         
         <div className="max-w-[1280px] mx-auto relative z-10 flex flex-col items-center">
@@ -515,9 +516,9 @@ export default function WelcomePage() {
              </div>
 
              {/* Features Layout: Mobile Stack (hidden on lg and above) */}
-             <div className="w-full flex lg:hidden flex-col gap-24">
+             <div className="w-full flex lg:hidden flex-col gap-16 md:gap-24">
                   {/* Feature 1 */}
-                  <div className="w-full flex flex-col gap-12">
+                  <div className="w-full flex flex-col gap-8 md:gap-12">
                      <div className="w-full flex flex-col items-start relative z-10">
                          <h3 className="text-3xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
                              Break free from strict rows.
@@ -556,24 +557,18 @@ export default function WelcomePage() {
                          </ul>
                      </div>
                      <div className="w-full relative flex justify-center">
-                         <div className="relative w-full h-[400px] overflow-visible">
+                         <div className="relative w-full h-auto sm:h-[400px] overflow-visible rounded-2xl sm:rounded-none">
                              <LandingSlideViewer content={CRDT_SLIDE_PAYLOAD} />
                          </div>
                      </div>
                   </div>
 
                   {/* Feature 2 */}
-                  <div className="w-full flex flex-col-reverse gap-12">
+                  <div className="w-full flex flex-col-reverse gap-8 md:gap-12">
                      <div className="w-full relative flex justify-center">
-                         <div className="relative w-full max-w-[600px] h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] bg-[#262626] ">
-                             <div className="absolute top-0 left-0 w-full h-10 bg-[#333333] border-b border-white/5 flex items-center px-4 gap-2 z-10">
-                                <div className="flex gap-1.5">
-                                    <div className="w-3 h-3 rounded-full bg-white/20" />
-                                    <div className="w-3 h-3 rounded-full bg-white/20" />
-                                    <div className="w-3 h-3 rounded-full bg-white/20" />
-                                </div>
-                             </div>
-                             <div className="w-full h-full pt-10 bg-[#262626]">
+                         <div className="relative w-full max-w-[600px] h-[400px] sm:h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] bg-[#262626] ">
+                            
+                             <div className="w-full h-full  bg-[#262626]">
                                 <LandingEmailViewer />
                              </div>
                              <div className="absolute bottom-0 left-0 w-full h-[80px] bg-gradient-to-t from-[#262626] via-[#262626]/80 to-transparent pointer-events-none" />
@@ -597,9 +592,9 @@ export default function WelcomePage() {
       <CinematicSecurity />
 
       {/* --- CONSOLIDATION & SAVINGS --- */}
-      <section className="py-24 pt-20 px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
+      <section className="py-16 md:py-24 pt-12 md:pt-20 px-4 md:px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
         <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-12">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-10 mb-8 md:mb-12">
                 <div className="space-y-4 max-w-2xl">
                     <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)]">
                         More workflow.<br/> Zero invoices.
@@ -610,8 +605,8 @@ export default function WelcomePage() {
                 </div>
             </div>
 
-            <div className="w-full bg-[#FBFBFA] dark:bg-black/40 border border-border/80 rounded-3xl p-8 shadow-sm">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 mb-10 pb-10 border-b border-border/60">
+            <div className="w-full bg-[#FBFBFA] dark:bg-black/40 border border-border/80 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 md:gap-y-6 gap-x-6 md:gap-x-8 mb-6 md:mb-10 pb-6 md:pb-10 border-b border-border/60">
                       {/* Col 1 */}
                       <div className="space-y-4 text-sm font-medium">
                            <label className="flex items-center gap-3 cursor-pointer group">
@@ -680,7 +675,7 @@ export default function WelcomePage() {
       </section>
 
       {/* --- FOOTER CTA --- */}
-      <section className="relative py-40 pb-10 px-6 border-t border-border overflow-hidden bg-background">
+      <section className="relative py-24 md:py-40 pb-10 px-6 border-t border-border overflow-hidden bg-background">
          <div className="absolute inset-0 -z-10 bg-background">
              <div className="absolute inset-0 opacity-40 mix-blend-overlay">
                 <MediaPlaceholder type="Background" prompt="Deep space stars, subtle constellations, dark purple nebula. Atmospheric." height="h-full" />
@@ -688,14 +683,14 @@ export default function WelcomePage() {
              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
          </div>
 
-         <div className="max-w-4xl mx-auto text-center space-y-10 relative z-10">
-            <h2 className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground drop-shadow-2xl font-[family-name:var(--font-inter)]">
+         <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-10 relative z-10">
+            <h2 className="text-4xl md:text-7xl font-bold tracking-tighter text-foreground drop-shadow-2xl font-[family-name:var(--font-inter)]">
                 Ready to organize <br/> your mind?
             </h2>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto drop-shadow-md">
+            <p className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto drop-shadow-md">
                 Join thousands of thinkers, builders, and creators who have made ReCollect their digital home.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 pt-6 md:pt-8">
                 <Button size="lg" variant="primary" onClick={() => router.push('/signup')} className="h-16 px-12 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
                     Get Started Free
                 </Button>

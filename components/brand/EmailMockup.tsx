@@ -42,9 +42,9 @@ export  function SlideInbox() {
   ];
 
   return (
-    <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
+    <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))]  p-1">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="flex items-center rounded-md justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
         <div className="flex items-center gap-2">
           <Inbox className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
           <span className="text-[12px] font-semibold">Inbox</span>
@@ -109,7 +109,7 @@ export  function SlideComposer() {
   return (
     <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Compose header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="flex items-center justify-between rounded-md px-4 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
         <span className="text-[12px] font-semibold">AI Composer</span>
         <div className="flex items-center gap-1.5">
           {/* <div className="text-[10px] px-2 py-0.5 rounded bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))] flex items-center gap-1 font-medium">
@@ -186,7 +186,7 @@ export function SlideThread() {
   return (
     <div className="h-full flex flex-col text-[hsl(var(--foreground))] bg-[hsl(var(--background))] p-1">
       {/* Thread header */}
-      <div className="px-4 py-2.5 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="px-4 py-2.5 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] rounded-md">
         <p className="text-[12px] font-bold">Re: Series A Term Sheet</p>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[9px] text-[hsl(var(--muted-foreground))]">Between</span>

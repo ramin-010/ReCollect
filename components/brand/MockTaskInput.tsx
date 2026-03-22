@@ -245,7 +245,7 @@ export function MockTaskInput() {
           </div>
 
           {/* Top Right Icons */}
-          <div className="flex gap-1 items-start shrink-0 ml-2">
+          <div className="hidden sm:flex gap-1 items-start shrink-0 ml-2">
             <button className="p-1.5 rounded-md transition-colors text-white/30 hover:text-white/50"><Calendar className="w-[18px] h-[18px]" strokeWidth={1.5} /></button>
             <button className="p-1.5 rounded-md transition-colors text-white/30 hover:text-white/50"><Bell className="w-[18px] h-[18px]" strokeWidth={1.5} /></button>
             {isDone ? (

@@ -36,16 +36,7 @@ export function LandingSlideViewer({ content }: LandingSlideViewerProps) {
         if (slides.length > 0) {
             const el = document.getElementById(`presentation-wrapper-${slides[0].slideId}`);
             if (el) {
-                // `offsetHeight` gets the raw unscaled height of the DOM node
-                const unscaledHeight = el.offsetHeight || 800;
-                
-                // 2. Zoom required to fit perfectly within 90vh vertically
-                const maxAllowedHeight = window.innerHeight * 0.90;
-                const heightZoom = maxAllowedHeight / unscaledHeight;
-                
-                // Apply whichever constraint is tighter
-                calcZoom = Math.min(calcZoom, heightZoom);
-                
+                const unscaledHeight = Math.max(el.scrollHeight, el.offsetHeight, 800) + 330;
                 setSlideHeight(unscaledHeight * calcZoom);
             } else {
                 setSlideHeight(800 * calcZoom);
@@ -57,14 +48,20 @@ export function LandingSlideViewer({ content }: LandingSlideViewerProps) {
     });
 
     observer.observe(containerRef.current);
-    
-    // Poll the height occasionally in case blocks expand or images load
+
+    // Actively poll for layout shifts (e.g. late font loading causing text wraps)
     const interval = setInterval(() => {
-        if (slides.length > 0) {
+        if (slides.length > 0 && containerRef.current) {
             const el = document.getElementById(`presentation-wrapper-${slides[0].slideId}`);
-            if (el) setSlideHeight(el.getBoundingClientRect().height);
+            if (el) {
+                const parentWidth = containerRef.current.parentElement?.clientWidth || containerRef.current.clientWidth;
+                const activeZoom = parentWidth / SLIDE_WIDTH;
+                const unscaledHeight = Math.max(el.scrollHeight, el.offsetHeight, 800) + 20;
+                setSlideHeight(unscaledHeight * activeZoom);
+                setZoom(activeZoom);
+            }
         }
-    }, 1000);
+    }, 500);
 
     return () => {
         observer.disconnect();
@@ -85,7 +82,7 @@ export function LandingSlideViewer({ content }: LandingSlideViewerProps) {
   return (
     <div 
         ref={containerRef} 
-        className={`relative flex items-start overflow-hidden rounded-[24px] border border-border/10 shadow-2xl  transition-all duration-300 ${TAILWIND_SAFELIST} hidden-safelist-trigger mx-auto max-w-full`} 
+        className={`relative flex items-start overflow-hidden rounded-[24px] border border-border/10 shadow-2xl transition-all duration-300 max-md:!bg-[#262626] max-md:!border-[#262626] ${TAILWIND_SAFELIST} hidden-safelist-trigger mx-auto max-w-full`} 
         style={{ 
             height: slideHeight > 0 ? slideHeight : 500,
             width: scaledWidth > 0 ? scaledWidth : '100%',
