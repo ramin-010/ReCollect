@@ -10,15 +10,15 @@ export default function PrivacyPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-500/30">
       
       {/* Navigation */}
-      <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-white/5 bg-[#0A0A0A]/20 backdrop-blur-lg">
+      <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
         <div className="max-w-[1400px] mx-auto px-6 h-full flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+            <div className="flex items-center gap-2 cursor-pointer text-slate-900" onClick={() => router.push('/')}>
                 <Logo size="lg" />
             </div>
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 text-gray-400 hover:text-white">
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 text-slate-500 hover:text-slate-900">
                 <ArrowLeft size={16} />
                 Back
             </Button>
@@ -32,12 +32,12 @@ export default function PrivacyPage() {
                 <Shield size={32} />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Privacy Policy</h1>
-            <p className="text-xl text-[hsl(var(--muted-foreground))]">Last updated: {new Date().toLocaleDateString()}</p>
+            <p className="text-xl text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
         </div>
 
-        <div className="prose prose-invert prose-lg max-w-none space-y-8 text-gray-300">
+        <div className="prose prose-slate prose-lg max-w-none space-y-8 text-slate-700">
             <section>
-                <h2 className="text-2xl font-bold text-white mb-4">1. Introduction</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">1. Introduction</h2>
                 <p>
                     Welcome to ReCollect ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy.
                     This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our application.
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-                <h2 className="text-2xl font-bold text-white mb-4">2. Information We Collect</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">2. Information We Collect</h2>
                 <p>
                     We collect personal information that you voluntarily provide to us when you register on the application, express an interest in obtaining information about us or our products and services, when you participate in activities on the application, or otherwise when you contact us.
                 </p>
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
             </section>
             
             <section>
-                <h2 className="text-2xl font-bold text-white mb-4">3. Local-First Architecture</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">3. Local-First Architecture</h2>
                 <p>
                     ReCollect is designed with a "Local-First" architecture. This means your notes, thoughts, and personal data are primarily stored on your local device. 
                     When you choose to sync your data, it is end-to-end encrypted before it leaves your device. We technically cannot see your private content.
@@ -64,16 +64,16 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-                <h2 className="text-2xl font-bold text-white mb-4">4. Contact Us</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">4. Contact Us</h2>
                 <p>
-                    If you have questions or comments about this policy, you may email us at privacy@recollect.app.
+                    If you have questions or comments about this policy, you may email us at recollect.support@gmail.com.
                 </p>
             </section>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 text-center text-sm text-gray-500">
+      <footer className="border-t border-slate-200 py-12 text-center text-sm text-slate-500">
         <p>&copy; {new Date().getFullYear()} ReCollect Inc. All rights reserved.</p>
       </footer>
     </div>

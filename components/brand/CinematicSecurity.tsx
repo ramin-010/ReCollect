@@ -20,14 +20,14 @@ export function CinematicSecurity() {
   }, []);
 
   return (
-    <section className="py-10 pb-10 md:py-32  md:pb-25 px-6 relative bg-[#F4F4F2] border-t border-black/[0.03]">
+    <section className="py-10 pb-10 md:py-22  md:pb-25 px-6 relative bg-[#F4F4F2] border-t border-black/[0.03]">
       <div className="max-w-[1200px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-2 md:gap-16 lg:gap-24 items-center">
           
           {/* Left: Minimal Typographic Feature Text */}
           <div className="space-y-6 md:space-y-8 relative z-10 lg:pl-4">
             
-            <h2 className="text-3xl md:text-4xl lg:text-[2.5rem] font-bold leading-tight tracking-tight text-zinc-900 font-[family-name:var(--font-inter)]">
+            <h2 className="text-3xl md:text-[2.5rem] lg:text-[2.5rem] font-bold leading-tight tracking-tight text-zinc-900 font-[family-name:var(--font-inter)]">
               What happens on your device,<br />
               <span className="text-zinc-500">stays on your device.</span>
             </h2>

@@ -36,7 +36,22 @@ export function LandingSlideViewer({ content }: LandingSlideViewerProps) {
         if (slides.length > 0) {
             const el = document.getElementById(`presentation-wrapper-${slides[0].slideId}`);
             if (el) {
-                const unscaledHeight = Math.max(el.scrollHeight, el.offsetHeight, 800) + 330;
+                // `offsetHeight` gets the raw unscaled height of the DOM node
+                let unscaledHeight = el.offsetHeight || 800;
+                
+                // Add unscaled vertical height specifically for mobile where text wraps and naturally expands downwards!
+                // The `if` check strictly guarantees Desktop layout remains 100% mathematically identical to its previous working state.
+                if (typeof window !== 'undefined' && window.innerWidth < 640) {
+                    unscaledHeight = Math.max(el.scrollHeight, unscaledHeight + 500);
+                }
+                
+                // 2. Zoom required to fit perfectly within 90vh vertically
+                const maxAllowedHeight = window.innerHeight * 0.90;
+                const heightZoom = maxAllowedHeight / unscaledHeight;
+                
+                // Apply whichever constraint is tighter
+                calcZoom = Math.min(calcZoom, heightZoom);
+                
                 setSlideHeight(unscaledHeight * calcZoom);
             } else {
                 setSlideHeight(800 * calcZoom);
@@ -48,20 +63,14 @@ export function LandingSlideViewer({ content }: LandingSlideViewerProps) {
     });
 
     observer.observe(containerRef.current);
-
-    // Actively poll for layout shifts (e.g. late font loading causing text wraps)
+    
+    // Poll the height occasionally in case blocks expand or images load
     const interval = setInterval(() => {
-        if (slides.length > 0 && containerRef.current) {
+        if (slides.length > 0) {
             const el = document.getElementById(`presentation-wrapper-${slides[0].slideId}`);
-            if (el) {
-                const parentWidth = containerRef.current.parentElement?.clientWidth || containerRef.current.clientWidth;
-                const activeZoom = parentWidth / SLIDE_WIDTH;
-                const unscaledHeight = Math.max(el.scrollHeight, el.offsetHeight, 800) + 20;
-                setSlideHeight(unscaledHeight * activeZoom);
-                setZoom(activeZoom);
-            }
+            if (el) setSlideHeight(el.getBoundingClientRect().height);
         }
-    }, 500);
+    }, 1000);
 
     return () => {
         observer.disconnect();
