@@ -85,19 +85,10 @@ export default function AppLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-pattern">
-        <div className="w-64 border-r border-[hsl(var(--divider))] p-4 space-y-4 bg-[hsl(var(--sidebar-bg))]">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </div>
-        <div className="flex-1 p-8 bg-[hsl(var(--background))]">
-          <Skeleton className="h-12 w-64 mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-40" />
-            <Skeleton className="h-40" />
-            <Skeleton className="h-40" />
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[2.5px] border-white/10 border-t-white/70 rounded-full animate-spin" />
+          <p className="text-[13px] text-white/30 font-medium tracking-wide animate-pulse">Loading...</p>
         </div>
       </div>
     );
