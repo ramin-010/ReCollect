@@ -4,16 +4,25 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { authApi } from '@/lib/api/auth';
 
-function hasAuthHintCookie(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.cookie.includes('auth_hint=1');
+function hasAuthHint(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check both cookie (legacy) and localStorage (modern cross-domain reliable)
+  const cookieHint = document.cookie.includes('auth_hint=1');
+  const lsHint = localStorage.getItem('auth_hint') === '1';
+  
+  return cookieHint || lsHint;
 }
 
-function clearAuthHintCookie() {
-  if (typeof document !== 'undefined') {
-    document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
-    document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-  }
+function clearAuthHint() {
+  if (typeof window === 'undefined') return;
+  
+  // Clear Cookie
+  document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
+  document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  
+  // Clear LocalStorage
+  localStorage.removeItem('auth_hint');
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -21,9 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // FAST PATH: No auth_hint cookie means no token exists.
+      // FAST PATH: No auth_hint means no token exists.
       // Skip the API call entirely — instant redirect to welcome.
-      if (!hasAuthHintCookie()) {
+      if (!hasAuthHint()) {
         setUser(null);
         setIsLoading(false);
         return;
@@ -36,12 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(response.data.user);
         } else {
           setUser(null);
-          clearAuthHintCookie();
+          clearAuthHint();
         }
       } catch (error) {
         // Token was invalid/expired — clear the stale hint
         setUser(null);
-        clearAuthHintCookie();
+        clearAuthHint();
       } finally {
         setIsLoading(false);
       }
