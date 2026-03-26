@@ -8,12 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useViewStore } from '@/lib/store/viewStore';
 import { useNotificationStore } from '@/lib/store/notificationStore';
+import { useSettingsStore } from '@/lib/store/settingsStore';
 import { authApi } from '@/lib/api/auth';
 import { Button } from '@/components/ui-base/Button';
 import { cn } from '@/lib/utils';
 import {
   PanelLeft,
-  LogOut,
   Home,
   Menu,
   X,
@@ -74,23 +74,9 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
   const todoFilter = useViewStore((state) => state.todoFilter);
   const setTodoFilter = useViewStore((state) => state.setTodoFilter);
-
-  const handleLogout = async () => {
-    try {
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-      localStorage.removeItem('auth_hint');
-      await authApi.logout();
-      logout();
-      toast.success('Logged out successfully!');
-      router.push('/login');
-    } catch (error) {
-      toast.error('Failed to logout. Please try again.');
-    }
-  };
+  const setSettingsOpen = useSettingsStore((state) => state.setIsOpen);
 
   const handleNavClick = (route: string) => {
     setIsMobileOpen(false);
@@ -145,8 +131,7 @@ export function Sidebar() {
                 todoFilter={todoFilter}
                 setTodoFilter={setTodoFilter}
                 onNavClick={handleNavClick}
-                onSettingsClick={() => handleNavClick('/settings')}
-                onLogout={handleLogout}
+                onSettingsClick={() => setSettingsOpen(true)}
                 getInitials={getInitials}
               />
             </motion.aside>
@@ -170,8 +155,7 @@ export function Sidebar() {
           todoFilter={todoFilter}
           setTodoFilter={setTodoFilter}
           onNavClick={handleNavClick}
-          onSettingsClick={() => handleNavClick('/settings')}
-          onLogout={handleLogout}
+          onSettingsClick={() => setSettingsOpen(true)}
           getInitials={getInitials}
         />
       </motion.aside>
@@ -191,7 +175,6 @@ interface SidebarContentProps {
   setTodoFilter?: (filter: any) => void;
   onNavClick: (route: string) => void;
   onSettingsClick: () => void;
-  onLogout: () => void;
   getInitials: (name?: string) => string;
 }
 
@@ -206,7 +189,6 @@ function SidebarContent({
   setTodoFilter,
   onNavClick,
   onSettingsClick,
-  onLogout,
   getInitials,
 }: SidebarContentProps & { currentView?: any }) {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -217,10 +199,12 @@ function SidebarContent({
       {/* ── Header: Top User Profile & Toggle ────────────────────────────── */}
       <div className="flex items-center justify-between px-3 pt-4 pb-3 shrink-0">
         {!isCollapsed && (
-          <Link
-            href="/settings"
-            onClick={isMobile ? onMobileClose : undefined}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex-1 min-w-0 group"
+          <button
+            onClick={() => {
+              if (isMobile) onMobileClose();
+              onSettingsClick();
+            }}
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex-1 min-w-0 group cursor-pointer text-left"
           >
             <div className="w-7 h-7 rounded-sm bg-brand-primary p-[1px] shrink-0 group-hover:bg-brand-secondary transition-all">
               <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center">
@@ -243,7 +227,7 @@ function SidebarContent({
               <span className="text-[10px] text-white/40 truncate w-full text-left group-hover:text-white/70 transition-colors">Workspace</span>
             </div>
             <ChevronDown className="h-3 w-3 text-white/30 shrink-0 ml-auto group-hover:text-white/70 transition-colors" />
-          </Link>
+          </button>
         )}
 
         <Button
@@ -311,9 +295,11 @@ function SidebarContent({
       {/* ── Collapsed User Avatar ──────────────────────────── */}
       {isCollapsed && (
         <div className="px-2 pb-2 shrink-0">
-          <Link
-            href="/settings"
-            className="mx-auto flex items-center justify-center w-8 h-8 rounded-sm bg-brand-primary p-[1px] hover:bg-brand-secondary transition-all"
+          <button
+            onClick={() => {
+              onSettingsClick();
+            }}
+            className="mx-auto flex items-center justify-center w-8 h-8 rounded-sm bg-brand-primary p-[1px] hover:bg-brand-secondary transition-all cursor-pointer"
           >
             <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center text-white text-[10px] font-bold">
               {user?.avatar ? (
@@ -325,47 +311,33 @@ function SidebarContent({
                 />
               ) : getInitials(user?.name)}
             </div>
-          </Link>
+          </button>
         </div>
       )}
 
-      {/* ── Footer: Icons only / Settings & Logout ──────────────── */}
-      <div className="border-t border-white/5 px-2 py-2 shrink-0 flex items-center justify-between">
+      {/* ── Footer: Settings ──────────────── */}
+      <div className="border-t border-white/5 px-2 py-2 shrink-0 flex items-center justify-center">
         {!isCollapsed ? (
-          <>
-            <Link
-              href="/settings"
-              onClick={isMobile ? onMobileClose : undefined}
-              className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors text-[13px]"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </Link>
-            <div className="w-px h-4 bg-white/10 mx-1" />
-            <button
-              onClick={onLogout}
-              className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors text-[13px]"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Log out</span>
-            </button>
-          </>
+          <button
+            onClick={() => {
+              if (isMobile) onMobileClose();
+              onSettingsClick();
+            }}
+            className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors text-[13px] cursor-pointer"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
+          </button>
         ) : (
-          <div className="w-full flex flex-col items-center gap-1">
-            <Link
-              href="/settings"
-              onClick={isMobile ? onMobileClose : undefined}
-              className="p-2 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={onLogout}
-              className="p-2 rounded-lg text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              if (isMobile) onMobileClose();
+              onSettingsClick();
+            }}
+            className="p-2 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
         )}
       </div>
     </div>

@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateNoteProvider } from '@/lib/context/CreateNoteContext';
 import { useViewStore } from '@/lib/store/viewStore';
 import { QuickTaskAdd } from '@/components/todo/QuickTaskAdd';
+import { UserSettings } from '@/components/settings/UserSettings';
 
 export default function AppLayout({
   children,
@@ -126,6 +127,9 @@ export default function AppLayout({
         isOpen={isQuickAddOpen} 
         onClose={() => setIsQuickAddOpen(false)} 
       />
+
+      {/* Global Settings Modal */}
+      <UserSettings />
     </CreateNoteProvider>
   );
 }

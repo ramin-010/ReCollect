@@ -13,16 +13,20 @@ interface AuthSplitLayoutProps {
 
 const SLIDES = [
   {
-    tagline: 'Take notes and transform thoughts into actions',
-    description: 'A single place for your tasks, meetings, and ideas.',
+    tagline: 'Your intelligent second brain',
+    description: 'A unified workspace where your documents, tasks, and ideas seamlessly connect.',
   },
   {
-    tagline: 'Your infinite canvas for thinking freely',
-    description: 'Draw, sketch, and visualize your ideas on a whiteboard.',
+    tagline: 'Real-time multiplayer collaboration',
+    description: 'Co-write documents with your team using live cursors and instant cloud sync.',
   },
   {
-    tagline: 'Share and collaborate, instantly',
-    description: 'Generate shareable links for your docs and drawings.',
+    tagline: 'Work offline, sync effortlessly',
+    description: 'Keep typing even when the internet drops. Changes are saved locally and synced automatically.',
+  },
+  {
+    tagline: 'Deeply integrated AI assistance',
+    description: 'Generate, rewrite, and summarize content instantly with intelligent inline AI.',
   },
 ];
 

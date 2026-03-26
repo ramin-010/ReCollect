@@ -41,10 +41,7 @@ function extractAllImageIds(content: any): string[] {
   return allIds;
 }
 
-/**
- * Extract pending image nodes that need uploading
- * Returns array of { imageId, path } for images with blob URLs
- */
+
 function extractPendingImages(content: any): { imageId: string; path: number[] }[] {
   const pending: { imageId: string; path: number[] }[] = [];
   
@@ -67,9 +64,7 @@ function extractPendingImages(content: any): { imageId: string; path: number[] }
 }
 
 export const docApi = {
-  /**
-   * Create a new doc (lets MongoDB generate valid ID)
-   */
+
   async createDoc(data: { title: string }): Promise<{ success: boolean; data?: ServerDoc }> {
     console.log('[docApi] Creating new doc:', data.title);
     const response = await axiosInstance.post('/api/docs', data);
@@ -79,18 +74,13 @@ export const docApi = {
     };
   },
 
-  /**
-   * Fetch all docs for current user
-   */
+
   async fetchAllDocs(): Promise<ServerDoc[]> {
     console.log('[docApi] Fetching all docs');
     const response = await axiosInstance.get('/api/docs');
     return response.data.data || [];
   },
 
-  /**
-   * Fetch single document from server
-   */
   async fetchDoc(id: string): Promise<ServerDoc | null> {
     console.log('[docApi] Fetching doc:', id);
     try {
@@ -104,10 +94,6 @@ export const docApi = {
     }
   },
 
-  /**
-   * Save document to server
-   * Always sends JSON content - backend handles yjsState conversion
-   */
   async saveDoc(id: string, data: {
     content: any;
     title: string;
@@ -185,9 +171,6 @@ export const docApi = {
     }
   },
 
-  /**
-   * Delete document from server
-   */
   async deleteDoc(id: string): Promise<{ success: boolean }> {
     console.log('[docApi] Deleting doc:', id);
     const response = await axiosInstance.delete(`/api/docs/${id}`);

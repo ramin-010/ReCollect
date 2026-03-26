@@ -31,7 +31,6 @@ export function useDocNotifications({
       const message = JSON.parse(payload.payload);
       
       if (message.type === 'COLLABORATOR_JOINED') {
-        console.log('[DocNotifications] Received COLLABORATOR_JOINED event');
         
         // Capture current editor content BEFORE switching (Case 1 fix)
         const currentContent = getEditorContent?.() || null;
@@ -45,7 +44,6 @@ export function useDocNotifications({
             // Pass pending content so CollaborativeDocEditor can restore it
             pendingLocalContent: currentContent || undefined
           });
-          console.log('[DocNotifications] Switching to collab mode with pending content:', !!currentContent);
           // Store update will cause parent to switch to CollaborativeDocEditor
         }
       }

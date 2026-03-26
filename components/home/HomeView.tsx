@@ -4,111 +4,123 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
-import { useViewStore } from '@/lib/store/viewStore';
 import { useDocStore } from '@/lib/store/docStore';
-import { docApi } from '@/lib/api/docApi';
-import { drawingApi } from '@/lib/api/drawingApi';
 import { todoApi } from '@/lib/api/todoApi';
-import { Card } from '@/components/ui-base/Card';
-import { Button } from '@/components/ui-base/Button';
+import {
+  getRecentVisitsFromCache,
+  syncRecentVisits,
+  RecentVisit,
+} from '@/lib/services/recentVisits';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock, Plus, FileText, PenTool, CheckSquare, Files, CalendarDays, ChevronRight, LayoutTemplate } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Clock, FileText, PenTool, CheckSquare, Files,
+  CalendarDays, ChevronRight, Mail,
+  LayoutDashboard, Presentation, ArrowRight, Inbox
+} from 'lucide-react';
 
-interface RecentItem {
-  id: string;
-  title: string;
-  type: 'doc' | 'drawing' | 'slide';
-  updatedAt: number;
-}
 
+
+
+
+// ─── Helper Functions ─────────────────────────────────────
+const TYPE_CONFIG = {
+  doc: { icon: FileText, color: 'emerald', label: 'Document' },
+  drawing: { icon: PenTool, color: 'purple', label: 'Whiteboard' },
+  slide: { icon: Files, color: 'orange', label: 'Presentation' },
+  workspace: { icon: LayoutDashboard, color: 'blue', label: 'Workspace' },
+} as const;
+
+const getTimeAgo = (timestamp: number) => {
+  const diffMs = Date.now() - timestamp;
+  const diffMins = diffMs / (1000 * 60);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${Math.floor(diffMins)}m ago`;
+  const diffHours = diffMins / 60;
+  if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
+  const diffDays = diffHours / 24;
+  if (diffDays < 7) return `${Math.floor(diffDays)}d ago`;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(timestamp));
+};
+
+const getSmartDueDate = (dateStr: string) => {
+  const due = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { label: 'Overdue', className: 'text-red-400 bg-red-400/10' };
+  if (diffDays === 0) return { label: 'Today', className: 'text-amber-400 bg-amber-400/10' };
+  if (diffDays === 1) return { label: 'Tomorrow', className: 'text-blue-400 bg-blue-400/10' };
+  return {
+    label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(due),
+    className: 'text-white/40 bg-white/5'
+  };
+};
+
+// ─── Main HomeView ────────────────────────────────────────
 export function HomeView() {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const setCurrentDoc = useDocStore((state) => state.setCurrentDoc);
-  
-  const [recents, setRecents] = useState<RecentItem[]>([]);
+
+  const [recents, setRecents] = useState<RecentVisit[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [greeting, setGreeting] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [currentTime, setCurrentTime] = useState('');
 
-  // Setup clock and greeting
+  // ── Clock & Greeting ──
   useEffect(() => {
     const updateTime = () => {
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       if (hour < 12) setGreeting('Good morning');
       else if (hour < 18) setGreeting('Good afternoon');
       else setGreeting('Good evening');
 
       setCurrentDate(new Intl.DateTimeFormat('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      }).format(new Date()));
+        weekday: 'long', month: 'long', day: 'numeric'
+      }).format(now));
+
+      setCurrentTime(new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true
+      }).format(now));
     };
 
     updateTime();
-    // No need for interval since it just sets the initial greeting, but okay to refresh hourly
-    const interval = setInterval(updateTime, 60 * 60 * 1000);
+    const interval = setInterval(updateTime, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch data
+  // ── Fetch Data ──
   useEffect(() => {
     let mounted = true;
 
     const loadData = async () => {
       setIsLoading(true);
+
+      // 1. Read from localStorage cache instantly (no spinner)
+      const cached = getRecentVisitsFromCache();
+      if (cached.length > 0 && mounted) {
+        setRecents(cached);
+        setIsLoading(false); // show cached data immediately
+      }
+
       try {
-        const [docsRes, drawingsRes, tasksRes] = await Promise.allSettled([
-          docApi.fetchAllDocs(),
-          drawingApi.fetchAllDrawings(),
-          todoApi.fetchTodos()
+        // 2. Fetch tasks + sync recent visits from server in parallel
+        const [tasksRes, freshRecents] = await Promise.allSettled([
+          todoApi.fetchTodos(),
+          syncRecentVisits(),
         ]);
 
         if (!mounted) return;
 
-        // Process Docs
-        const docs = docsRes.status === 'fulfilled' ? docsRes.value : [];
-        const normDocs: RecentItem[] = docs.map(d => ({
-          id: d._id,
-          title: d.title || 'Untitled Doc',
-          type: 'doc',
-          updatedAt: new Date(d.updatedAt).getTime()
-        }));
+        // Recent visits (server-synced)
+        if (freshRecents.status === 'fulfilled') {
+          setRecents(freshRecents.value);
+        }
 
-        // Process Drawings
-        const drawings = drawingsRes.status === 'fulfilled' ? drawingsRes.value : [];
-        const normDrawings: RecentItem[] = drawings.map(d => ({
-          id: d._id,
-          title: d.name || 'Untitled Whiteboard',
-          type: 'drawing',
-          updatedAt: new Date(d.updatedAt).getTime()
-        }));
-
-        // Process Slides (from localStorage)
-        let slides: any[] = [];
-        try {
-          const storedSlides = localStorage.getItem('recollect_slide_decks');
-          if (storedSlides) slides = JSON.parse(storedSlides);
-        } catch (e) {}
-
-        const normSlides: RecentItem[] = slides.map(s => ({
-          id: s.id,
-          title: s.name || 'Untitled Presentation',
-          type: 'slide',
-          updatedAt: new Date(s.updatedAt).getTime()
-        }));
-
-        // Merge and sort recents
-        const allRecents = [...normDocs, ...normDrawings, ...normSlides]
-          .sort((a, b) => b.updatedAt - a.updatedAt)
-          .slice(0, 6); // Top 6 recents
-
-        setRecents(allRecents);
-
-        // Process Tasks
+        // Tasks
         const allTasks = tasksRes.status === 'fulfilled' ? tasksRes.value : [];
         const pendingTasks = allTasks
           .filter((t: any) => t.status !== 'complete')
@@ -118,8 +130,7 @@ export function HomeView() {
             if (b.dueDate) return 1;
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           })
-          .slice(0, 4); // Top 4 upcoming
-
+          .slice(0, 5);
         setTasks(pendingTasks);
       } catch (error) {
         console.error('Failed to load home data', error);
@@ -132,203 +143,207 @@ export function HomeView() {
     return () => { mounted = false; };
   }, []);
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'doc': return <FileText className="h-4 w-4 text-emerald-400" />;
-      case 'drawing': return <PenTool className="h-4 w-4 text-purple-400" />;
-      case 'slide': return <Files className="h-4 w-4 text-orange-400" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
+  // ── Click Handlers ──
+  const handleRecentClick = (item: RecentVisit) => {
+    router.push(item.route);
   };
 
-  const getTimeAgo = (timestamp: number) => {
-    const diffHours = (Date.now() - timestamp) / (1000 * 60 * 60);
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
-  };
+  // ── Skeleton State ──
+  if (isLoading) {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen overflow-y-auto custom-scrollbar pb-24">
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Hero Skeleton */}
+          <div className="flex flex-col items-center justify-center pt-8 pb-4">
+            <Skeleton className="h-10 w-64 rounded-xl bg-white/5 mb-2" />
+          </div>
 
-  const handleRecentClick = (item: RecentItem) => {
-    if (item.type === 'doc') {
-      // In a real flow, you'd set the current doc so `DocsView` knows what to open
-      // since `docStore` manages docs view state, we'd need to fetch it first.
-      // But for simplicity, we switch to docs view. The user will see their docs list.
-      router.push('/docs');
-    } else if (item.type === 'drawing') {
-      router.push('/drawing');
-    } else if (item.type === 'slide') {
-      router.push('/slides');
-    }
-  };
+          {/* Recents Skeleton */}
+          <div>
+            <Skeleton className="h-6 w-32 rounded bg-white/5 mb-4" />
+            <div className="flex gap-4 overflow-hidden">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-44 shrink-0 rounded-2xl bg-white/5" />)}
+            </div>
+          </div>
+
+          {/* Tasks Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 rounded-2xl bg-white/5" />
+            <Skeleton className="h-64 rounded-2xl bg-white/5" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 lg:p-8 min-h-screen bg-[#1A1A1A] overflow-y-auto custom-scrollbar pb-24">
-      <div className="max-w-6xl mx-auto space-y-10">
-        
-        {/* -- Greeting Header -- */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
+    <div className="p-4 lg:p-10 min-h-screen overflow-y-auto custom-scrollbar pb-24">
+      <div className="max-w-5xl mx-auto space-y-14">
+
+        {/* ─── 1. Hero Greeting ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-4"
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="flex flex-col items-center text-center pt-6 pb-2 relative"
         >
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-white mb-2">
-              {greeting}, {user?.name?.split(' ')[0] || 'User'}
-            </h1>
-            <p className="text-white/50 text-sm flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              {currentDate}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => router.push('/docs')} leftIcon={<Plus className="h-3.5 w-3.5" />}>New Doc</Button>
-            <Button variant="primary" size="sm" onClick={() => router.push('/todo')} leftIcon={<CheckSquare className="h-3.5 w-3.5" />}>Add Task</Button>
+          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-white mb-2">
+            {greeting},{' '}
+            <span className="text-white/90">
+              {user?.name?.split(' ')[0] || 'there'}
+            </span>
+          </h1>
+          
+          {/* Quick Actions (Absolute on Desktop, stacked on mobile) */}
+          <div className="mt-6 md:mt-0 flex gap-3 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
+            <Link
+              href="/docs"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+            >
+              <FileText className="h-4 w-4" /> New Doc
+            </Link>
+            <Link
+              href="/todo"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-white hover:bg-white/90 text-black transition-all duration-200"
+            >
+              <PenTool className="h-4 w-4" /> Add Task
+            </Link>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* -- Left Column: Recents & Templates -- */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Recents */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-brand-primary" />
-                  Jump back in
-                </h2>
-              </div>
-              
-              {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl bg-white/5" />)}
-                </div>
-              ) : recents.length === 0 ? (
-                <div className="text-center p-8 bg-white/5 border border-white/5 rounded-2xl">
-                  <p className="text-sm text-white/40">No recent activity yet.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recents.map((item, i) => (
-                    <motion.button
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      onClick={() => handleRecentClick(item)}
-                      className="flex items-center gap-4 p-3.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-left group"
-                    >
-                      <div className="h-10 w-10 shrink-0 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        {getIconForType(item.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-white/90 truncate">{item.title}</p>
-                        <p className="text-[11px] text-white/40 lowercase tracking-wide mt-0.5">
-                          {item.type} • {getTimeAgo(item.updatedAt)}
-                        </p>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Templates */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <LayoutTemplate className="h-5 w-5 text-brand-primary" />
-                  Start from a template
-                </h2>
-                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white group text-xs">
-                  View all <ChevronRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { name: 'Meeting Notes', icon: <FileText className="h-5 w-5 text-blue-400" />, color: 'from-blue-500/10 to-transparent' },
-                  { name: 'Project Plan', icon: <Files className="h-5 w-5 text-emerald-400" />, color: 'from-emerald-500/10 to-transparent' },
-                  { name: 'Daily Standup', icon: <CheckSquare className="h-5 w-5 text-orange-400" />, color: 'from-orange-500/10 to-transparent' },
-                  { name: 'Brainstorm', icon: <PenTool className="h-5 w-5 text-purple-400" />, color: 'from-purple-500/10 to-transparent' },
-                ].map((tpl, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{ scale: 1.05 }}
-                    className="aspect-square rounded-2xl border border-white/5 bg-white/[0.02] p-4 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-white/10 hover:bg-white/[0.05] transition-colors relative overflow-hidden"
-                  >
-                    <div className={`absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b ${tpl.color} opacity-50`} />
-                    <div className="relative z-10 p-3 rounded-full bg-white/5">
-                      {tpl.icon}
-                    </div>
-                    <span className="text-xs font-medium text-white/70 text-center relative z-10">{tpl.name}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
+        {/* ─── 2. Recently Visited (Horizontal Cards) ─── */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <div className="flex items-center gap-2 mb-4 px-1 text-white/70">
+            <Clock className="h-4 w-4" />
+            <h2 className="text-[14px] font-medium">Recently visited</h2>
           </div>
 
-          {/* -- Right Column: Upcoming Tasks -- */}
-          <div className="space-y-6">
-            <section className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5 text-brand-primary" />
-                  Upcoming Tasks
-                </h2>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => router.push('/todo')}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+          {recents.length === 0 ? (
+            <div className="text-center py-12 rounded-2xl border border-white/5 bg-white/[0.02]">
+              <Clock className="h-8 w-8 text-white/15 mx-auto mb-3" />
+              <p className="text-sm text-white/30">No recent activity yet</p>
+            </div>
+          ) : (
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 custom-scrollbar snap-x">
+              {recents.map((item, i) => {
+                const config = TYPE_CONFIG[item.itemType];
+                const Icon = config.icon;
+                
+                // Card backgrounds mapping
+                const bgColors: Record<string, string> = {
+                  emerald: 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20',
+                  purple: 'bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20',
+                  orange: 'bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20',
+                  blue: 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20',
+                };
+                
+                const cardGlow: Record<string, string> = {
+                  emerald: 'group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+                  purple: 'group-hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]',
+                  orange: 'group-hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]',
+                  blue: 'group-hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]',
+                };
 
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg bg-white/5" />)}
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-10 opacity-60">
-                  <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
-                    <CheckSquare className="h-6 w-6 text-emerald-500" />
-                  </div>
-                  <p className="text-sm font-medium text-white">All caught up!</p>
-                  <p className="text-xs text-white/40 mt-1">No pending tasks found.</p>
+                return (
+                  <motion.button
+                    key={item.itemId}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + i * 0.05 }}
+                    onClick={() => handleRecentClick(item)}
+                    className={`shrink-0 w-[180px] sm:w-[220px] snap-center flex flex-col items-start gap-4 p-4 rounded-2xl bg-[#2a2a2a]/60 hover:bg-[#323232] border border-white/5 hover:border-white/15 transition-all duration-300 group text-left ${cardGlow[config.color]}`}
+                  >
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${bgColors[config.color]}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    
+                    <div className="w-full">
+                      <p className="text-[14px] font-medium text-white/90 truncate mb-1 group-hover:text-white transition-colors">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-[12px] text-white/40">
+                        <span>{config.label}</span>
+                        <span>•</span>
+                        <span>{getTimeAgo(item.visitedAt)}</span>
+                      </div>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </motion.section>
+
+        {/* ─── 3. Learn & Tools Grid (Placeholder for Future Expansion) ─── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Upcoming Tasks */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2 text-white/70">
+                <CheckSquare className="h-4 w-4" />
+                <h2 className="text-[14px] font-medium">Upcoming Tasks</h2>
+              </div>
+              <Link href="/todo" className="text-[12px] text-white/40 hover:text-white/80 transition-colors flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            <div className="rounded-2xl bg-[#2a2a2a]/40 border border-white/5 p-2">
+              {tasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-10">
+                  <CheckSquare className="h-6 w-6 text-white/20 mb-2" />
+                  <p className="text-[13px] font-medium text-white/50">All caught up!</p>
                 </div>
               ) : (
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {tasks.map((task, i) => (
-                    <motion.div
-                      key={task._id}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
-                      onClick={() => router.push('/todo')}
-                    >
-                      <div className="mt-0.5 shrink-0 rounded border border-white/20 w-4 h-4 flex items-center justify-center text-white/20 group-hover:border-brand-primary" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white/90 truncate">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {task.dueDate && (
-                            <span className="text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium tracking-wide">
-                              <CalendarDays className="h-2.5 w-2.5" />
-                              {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(task.dueDate))}
-                            </span>
-                          )}
-                          {task.priority === 'high' && (
-                            <span className="text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded font-medium">High</span>
-                          )}
+                <div className="space-y-1">
+                  {tasks.map((task, i) => {
+                    const dueInfo = task.dueDate ? getSmartDueDate(task.dueDate) : null;
+                    const priorityColors: Record<string, string> = {
+                      high: 'text-red-400 bg-red-400/10',
+                      medium: 'text-amber-400 bg-amber-400/10',
+                      low: 'text-white/40 bg-white/5',
+                    };
+
+                    return (
+                      <div
+                        key={task._id}
+                        onClick={() => router.push('/todo')}
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                      >
+                        <div className="mt-0.5 shrink-0 w-[18px] h-[18px] rounded-[4px] border border-white/20 group-hover:border-white/40 transition-colors" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] text-white/80 group-hover:text-white transition-colors leading-relaxed">
+                            {task.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {dueInfo && (
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-medium ${dueInfo.className}`}>
+                                {dueInfo.label}
+                              </span>
+                            )}
+                            {task.priority && task.priority !== 'none' && (
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-medium capitalize ${priorityColors[task.priority] || ''}`}>
+                                {task.priority}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                  
-                  <Button variant="ghost" className="w-full text-xs text-white/40 hover:text-white mt-2" onClick={() => router.push('/todo')}>
-                    View all tasks
-                  </Button>
+                    );
+                  })}
                 </div>
               )}
-            </section>
-          </div>
+            </div>
+          </motion.section>
 
         </div>
       </div>

@@ -29,6 +29,7 @@ import { ListRow, NewPageCard } from './CardComponents';
 import { SharedByMeSection } from './SharedByMeSection';
 import { PendingRequestsPanel } from '../PendingRequestsPanel';
 import { useSearchParams } from 'next/navigation';
+import { trackVisit, removeVisit } from '@/lib/services/recentVisits';
 
 export function DocsView() {
   const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
@@ -137,12 +138,14 @@ export function DocsView() {
       if (doc._id.startsWith('local_')) {
         await offlineStorage.deleteDoc(doc._id);
         removeDoc(doc._id);
+        removeVisit(doc._id);
         toast.success('Document deleted');
         return;
       }
       const response = await axiosInstance.delete(`/api/docs/${doc._id}`);
       if (response.data.success) {
         removeDoc(doc._id);
+        removeVisit(doc._id);
         toast.success('Document deleted');
       }
     } catch (error: any) {
@@ -302,6 +305,13 @@ export function DocsView() {
     const role = doc._id.startsWith('local_') ? 'owner' : (doc.role || 'owner');
     setCurrentDocRole(role);
     setCurrentDoc(doc);
+    // Track this visit for "Recently visited" on the home page
+    trackVisit({
+      itemId: doc._id,
+      itemType: 'doc',
+      title: doc.title || 'Untitled Doc',
+      route: '/docs',
+    });
   }, [setCurrentDoc]);
 
   const handleCloseDoc = useCallback(() => {

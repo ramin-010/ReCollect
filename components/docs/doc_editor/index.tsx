@@ -72,7 +72,6 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
     getEditorContent: () => contentRef.current || null
   });
 
-  console.log('DocEditor state:', state.hasUnsavedChanges, state.isSaving);
   // 5. Effects
   useEffect(() => {
     setMounted(true);
@@ -108,7 +107,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         
         const toolbarWidth = 400;
         const left = Math.max(10, (start.left + end.left) / 2 - toolbarWidth / 2);
-        const top = Math.max(10, start.top - 50);
+        const top = Math.max(10, start.top - 55);
         
         setToolbarPosition({ top, left });
         setShowFloatingToolbar(true);
@@ -197,33 +196,7 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   // Get todoStore to add tasks
   const { addTodo } = useTodoStore();
 
-  // Quick task creation from slash command (auto-links to doc)
-  const handleQuickTaskSave = async (data: any) => {
-    try {
-      const response = await axiosInstance.post('/api/todos', {
-        text: data.text,
-        priority: data.priority || 'medium',
-        status: 'pending',
-        dueDate: data.dueDate,
-        reminderDate: data.reminderDate,
-        references: [{
-          type: 'doc',
-          refId: doc._id,
-          title: state.title
-        }]
-      });
-      
-      if (response.data.success) {
-        addTodo(response.data.data);
-        toast.success('Task created and linked to this doc');
-      }
-      setShowQuickTaskDialog(false);
-    } catch (error: any) {
-      console.error('Failed to create task:', error);
-      toast.error(error.response?.data?.message || 'Failed to create task');
-      throw error;
-    }
-  };
+
 
   const hasUnsyncedChanges = state.syncStatus === 'unsynced';
 
