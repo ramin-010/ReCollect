@@ -36,7 +36,7 @@ function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }:
   }, [onSlideClick]);
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col w-[140px] min-w-[140px] bg-[hsl(var(--card-bg))]/60 backdrop-blur-md border-r border-[hsl(var(--border))]/50 shrink-0 z-20">
+    <div className="sticky top-0 h-screen flex flex-col w-[140px] min-w-[140px] bg-[var(--surface-elevated)] backdrop-blur-md border-r border-[hsl(var(--border))]/50 shrink-0 z-20">
       
       {/* Brand Header & Back Button */}
       <div className="px-3 h-12 border-b border-[hsl(var(--border))]/30 flex items-center justify-between shrink-0">
@@ -68,7 +68,7 @@ function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }:
                 group relative w-full shrink-0 rounded-lg border transition-all duration-200 text-left overflow-hidden 
                 ${isActive
                   ? 'border-[hsl(var(--brand-primary))] ring-2 ring-[hsl(var(--brand-primary))]/20 bg-[hsl(var(--brand-primary))]/5'
-                  : 'border-[hsl(var(--border))]/40 hover:border-[hsl(var(--muted-foreground))]/40 bg-[hsl(var(--card-bg))]/80 hover:bg-[hsl(var(--card-bg))]'
+                  : 'border-[hsl(var(--border))]/40 hover:border-[hsl(var(--muted-foreground))]/40 bg-[var(--surface-raised)] hover:bg-[var(--surface-overlay)]'
                 }
               `}
             >

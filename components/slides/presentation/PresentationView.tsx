@@ -146,10 +146,10 @@ export function PresentationView({
   }, [onClose, printMode]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[1000] bg-[hsl(var(--background))] flex flex-col overflow-hidden">
       {/* Header Bar - Sleek Simple Style matching SlideEditor */}
       {!printMode && (
-        <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--sidebar-bg))] backdrop-blur-sm pointer-events-auto transition-opacity duration-300 opacity-0 hover:opacity-100">
+        <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--card))] backdrop-blur-sm pointer-events-auto transition-opacity duration-300 opacity-0 hover:opacity-100">
           {/* Left Section */}
           <div className="flex items-center gap-3 w-1/3">
             <button
@@ -194,7 +194,7 @@ export function PresentationView({
       {/* Scrollable slide list */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-[hsl(var(--background))] dark:bg-[hsl(var(--background))]"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-[hsl(var(--background))]"
         style={{ scrollSnapType: 'y proximity' }}
       >
         <div className="flex flex-col w-full" style={{ gap: SLIDE_GAP }}>

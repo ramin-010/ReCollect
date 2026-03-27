@@ -119,7 +119,7 @@ export function SingleSlide({
           width: SLIDE_WIDTH,
           minHeight: SLIDE_MIN_HEIGHT,
           height: h.computedHeight,
-          backgroundColor: backgroundColor || '#212121',
+          backgroundColor: backgroundColor || 'var(--slide-bg)',
           overflow: 'hidden',
         }}
       >

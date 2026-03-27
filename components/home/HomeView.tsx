@@ -52,7 +52,7 @@ const getSmartDueDate = (dateStr: string) => {
   if (diffDays === 1) return { label: 'Tomorrow', className: 'text-blue-400 bg-blue-400/10' };
   return {
     label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(due),
-    className: 'text-white/40 bg-white/5'
+    className: 'text-[hsl(var(--muted-foreground))] bg-[var(--surface-elevated)]'
   };
 };
 
@@ -155,21 +155,21 @@ export function HomeView() {
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Hero Skeleton */}
           <div className="flex flex-col items-center justify-center pt-8 pb-4">
-            <Skeleton className="h-10 w-64 rounded-xl bg-white/5 mb-2" />
+            <Skeleton className="h-10 w-64 rounded-xl bg-[var(--surface-elevated)] mb-2" />
           </div>
 
           {/* Recents Skeleton */}
           <div>
-            <Skeleton className="h-6 w-32 rounded bg-white/5 mb-4" />
+            <Skeleton className="h-6 w-32 rounded bg-[var(--surface-elevated)] mb-4" />
             <div className="flex gap-4 overflow-hidden">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-44 shrink-0 rounded-2xl bg-white/5" />)}
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-44 shrink-0 rounded-2xl bg-[var(--surface-elevated)]" />)}
             </div>
           </div>
 
           {/* Tasks Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Skeleton className="h-64 rounded-2xl bg-white/5" />
-            <Skeleton className="h-64 rounded-2xl bg-white/5" />
+            <Skeleton className="h-64 rounded-2xl bg-[var(--surface-elevated)]" />
+            <Skeleton className="h-64 rounded-2xl bg-[var(--surface-elevated)]" />
           </div>
         </div>
       </div>
@@ -187,9 +187,9 @@ export function HomeView() {
           transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           className="flex flex-col items-center text-center pt-6 pb-2 relative"
         >
-          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-white mb-2">
+          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-[hsl(var(--foreground))] mb-2">
             {greeting},{' '}
-            <span className="text-white/90">
+            <span className="text-[hsl(var(--foreground))]/90">
               {user?.name?.split(' ')[0] || 'there'}
             </span>
           </h1>
@@ -198,13 +198,13 @@ export function HomeView() {
           <div className="mt-6 md:mt-0 flex gap-3 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
             <Link
               href="/docs"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-[var(--surface-elevated)] border border-[var(--border-subtle)] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-all duration-200"
             >
               <FileText className="h-4 w-4" /> New Doc
             </Link>
             <Link
               href="/todo"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-white hover:bg-white/90 text-black transition-all duration-200"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-[hsl(var(--primary-foreground))] transition-all duration-200 shadow-sm"
             >
               <PenTool className="h-4 w-4" /> Add Task
             </Link>
@@ -223,9 +223,9 @@ export function HomeView() {
           </div>
 
           {recents.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl border border-white/5 bg-white/[0.02]">
-              <Clock className="h-8 w-8 text-white/15 mx-auto mb-3" />
-              <p className="text-sm text-white/30">No recent activity yet</p>
+            <div className="text-center py-12 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
+              <Clock className="h-8 w-8 text-[hsl(var(--muted-foreground))]/40 mx-auto mb-3" />
+              <p className="text-sm text-[hsl(var(--muted-foreground))]/60">No recent activity yet</p>
             </div>
           ) : (
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 custom-scrollbar snap-x">
@@ -255,17 +255,17 @@ export function HomeView() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 + i * 0.05 }}
                     onClick={() => handleRecentClick(item)}
-                    className={`shrink-0 w-[180px] sm:w-[220px] snap-center flex flex-col items-start gap-4 p-4 rounded-2xl bg-[#2a2a2a]/60 hover:bg-[#323232] border border-white/5 hover:border-white/15 transition-all duration-300 group text-left ${cardGlow[config.color]}`}
+                    className={`shrink-0 w-[180px] sm:w-[220px] snap-center flex flex-col items-start gap-4 p-4 rounded-2xl bg-[var(--surface-elevated)] hover:bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-300 group text-left ${cardGlow[config.color]}`}
                   >
                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${bgColors[config.color]}`}>
                       <Icon className="h-5 w-5" />
                     </div>
                     
                     <div className="w-full">
-                      <p className="text-[14px] font-medium text-white/90 truncate mb-1 group-hover:text-white transition-colors">
+                      <p className="text-[14px] font-medium text-[hsl(var(--foreground))] truncate mb-1 transition-colors">
                         {item.title}
                       </p>
-                      <div className="flex items-center gap-2 text-[12px] text-white/40">
+                      <div className="flex items-center gap-2 text-[12px] text-[hsl(var(--muted-foreground))]">
                         <span>{config.label}</span>
                         <span>•</span>
                         <span>{getTimeAgo(item.visitedAt)}</span>
@@ -297,7 +297,7 @@ export function HomeView() {
               </Link>
             </div>
 
-            <div className="rounded-2xl bg-[#2a2a2a]/40 border border-white/5 p-2">
+            <div className="rounded-2xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)] p-2">
               {tasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center py-10">
                   <CheckSquare className="h-6 w-6 text-white/20 mb-2" />
@@ -317,11 +317,11 @@ export function HomeView() {
                       <div
                         key={task._id}
                         onClick={() => router.push('/todo')}
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[var(--hover-bg)] transition-colors cursor-pointer group"
                       >
-                        <div className="mt-0.5 shrink-0 w-[18px] h-[18px] rounded-[4px] border border-white/20 group-hover:border-white/40 transition-colors" />
+                        <div className="mt-0.5 shrink-0 w-[18px] h-[18px] rounded-[4px] border border-[hsl(var(--border))] group-hover:border-[hsl(var(--primary))]/50 transition-colors" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] text-white/80 group-hover:text-white transition-colors leading-relaxed">
+                          <p className="text-[13px] text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors leading-relaxed">
                             {task.title}
                           </p>
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">

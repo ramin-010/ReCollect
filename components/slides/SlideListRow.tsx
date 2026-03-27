@@ -180,7 +180,7 @@ export const SlideListRow = React.memo(({
           )}
         </button>
         <button
-          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="p-1.5 rounded-md hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-400 transition-colors"
           onClick={(e) => { e.stopPropagation(); onDelete(deck.id); }}
           title="Delete Deck"
         >

@@ -20,9 +20,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="theme-dark-gray"
+      defaultTheme="dark"
       enableSystem
-      themes={['light', 'dark', 'theme-gray', 'theme-dark-gray']}
+      themes={['light', 'dark', 'theme-dark-gray']}
       disableTransitionOnChange
       forcedTheme={isLightForcedPath ? 'light' : undefined}
     >

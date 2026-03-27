@@ -76,7 +76,7 @@ export function PresentationSlide({
 
   return (
     <div
-      className="w-full relative flex flex-col items-center bg-[#212121]"
+      className="w-full relative flex flex-col items-center bg-[var(--slide-bg)]"
       style={{ backgroundColor: backgroundColor || undefined }}
     >
       {/* 1. Full-bleed cover image */}

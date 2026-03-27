@@ -34,11 +34,11 @@ const HydratingImage = ({ src, imageId }: { src?: string; imageId?: string }) =>
   }, [imageId, src]);
 
   return (
-    <div className="h-[150px] w-full bg-[rgba(242,241,238,0.6)] dark:bg-[rgba(47,52,55,0.6)] rounded-[3px] overflow-hidden relative my-[6px] border border-[rgba(55,53,47,0.09)] dark:border-[rgba(255,255,255,0.09)]">
+    <div className="h-[150px] w-full bg-[var(--surface-elevated)]/60 rounded-[3px] overflow-hidden relative my-[6px] border border-[var(--border-subtle)]">
       {displaySrc ? (
         <img src={displaySrc} alt="Preview" className="w-full h-full object-cover" />
       ) : (
-        <div className="flex items-center justify-center h-full text-[rgba(55,53,47,0.4)] dark:text-[rgba(255,255,255,0.4)] text-[12px] gap-2">
+        <div className="flex items-center justify-center h-full text-[hsl(var(--muted-foreground))]/40 text-[12px] gap-2">
           <span className="animate-pulse">Loading...</span>
         </div>
       )}
@@ -187,7 +187,7 @@ export const MiniDocRenderer = ({ previewState, yjsState, content }: MiniDocRend
             return (
               <div 
                 key={i} 
-                className="bg-[hsl(var(--muted))] px-3 py-2 rounded-md text-[11px] font-mono text-[hsl(var(--foreground))] line-clamp-2 my-1 border border-[hsl(var(--border))]/50"
+                className="bg-[var(--surface-elevated)] px-3 py-2 rounded-md text-[11px] font-mono text-[hsl(var(--foreground))] line-clamp-2 my-1 border border-[var(--border-subtle)]"
               >
                 {text || <span className="opacity-50 italic">Empty code block</span>}
               </div>

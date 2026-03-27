@@ -87,7 +87,7 @@ export function SlideBlockMenu({ onAddBlock, onAddImage }: SlideBlockMenuProps) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-14 right-0 bg-[hsl(var(--card-bg))] border border-[hsl(var(--border))] rounded-xl shadow-2xl p-2 min-w-[180px]"
+            className="absolute bottom-14 right-0 bg-[var(--surface-overlay)] backdrop-blur-xl border border-[hsl(var(--border))] rounded-xl shadow-2xl p-2 min-w-[180px]"
           >
             {BLOCK_TYPES.map(({ type, label, icon: Icon, color }) => (
               <button

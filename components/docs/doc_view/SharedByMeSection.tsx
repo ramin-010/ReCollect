@@ -105,11 +105,11 @@ export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: Shar
           className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden shadow-sm"
         >
           {/* Doc Header */}
-          <div className="px-5 py-4 bg-gradient-to-r from-[hsl(var(--muted))]/30 to-transparent border-b border-[hsl(var(--border))]">
+          <div className="px-5 py-4 bg-gradient-to-r from-[var(--surface-elevated)] to-transparent border-b border-[hsl(var(--border))]">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-amber-500" />
+                <div className="w-10 h-10 rounded-lg bg-[var(--surface-raised)] flex items-center justify-center border border-[var(--border-subtle)]">
+                  <FileText className="w-5 h-5 text-[hsl(var(--brand-primary))]" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-base">{doc.title || 'Untitled'}</h3>
@@ -149,7 +149,7 @@ export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: Shar
                 return (
                   <div 
                     key={userId} 
-                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[hsl(var(--muted))]/30 transition-colors group"
+                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--hover-bg)] transition-colors group"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {userAvatar ? (
@@ -198,7 +198,7 @@ export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: Shar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleUpdateRole(doc._id, userId, 'viewer')}>
                             <FileText className="w-4 h-4 mr-2 text-blue-500" /> View Only
-                            {collab.role === 'viewer' && <span className="ml-auto text-amber-500">✓</span>}
+                            {collab.role === 'viewer' && <span className="ml-auto text-blue-500">✓</span>}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -241,7 +241,7 @@ export const SharedByMeSection = ({ sharedByMeDocs, isLoading, onRefresh }: Shar
               <img 
                 src={avatarPreview.url} 
                 alt={avatarPreview.name} 
-                className="w-64 h-64 md:w-80 md:h-80 rounded-2xl object-cover shadow-2xl border-4 border-white/10"
+                className="w-64 h-64 md:w-80 md:h-80 rounded-2xl object-cover shadow-2xl border-4 border-[hsl(var(--border))]/20"
               />
               <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-center">
                 <p className="text-white font-medium text-lg">{avatarPreview.name}</p>

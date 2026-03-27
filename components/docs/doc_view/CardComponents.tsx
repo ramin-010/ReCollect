@@ -53,9 +53,9 @@ export const NewPageCard = ({ onClick, disabled }: { onClick: () => void, disabl
     animate={{ opacity: 1 }}
     onClick={onClick}
     disabled={disabled}
-    className="group flex items-center justify-center gap-2 p-4 min-h-[180px] bg-[hsl(var(--card-bg))]
+    className="group flex items-center justify-center gap-2 p-4 min-h-[180px] bg-[var(--surface-elevated)]
                border border-dashed border-[hsl(var(--border))] rounded-lg
-               hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[hsl(var(--card-bg))]
+               hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[var(--surface-raised)]
                transition-all duration-200 text-[hsl(var(--muted-foreground))]
                hover:text-[hsl(var(--foreground))]"
   >
@@ -116,7 +116,7 @@ export const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onToggle
       animate={{ opacity: 1 }}
       transition={{ duration: 0.1, delay: index * 0.02 }}
       onClick={() => onOpen(doc)}
-      className="group flex items-center gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))/50] 
+      className="group flex items-center gap-4 px-4 py-3 hover:bg-[var(--hover-bg)] 
                  cursor-pointer border-b border-[hsl(var(--border))]/50 transition-colors"
     >
       <FileText className="w-4 h-4 text-[hsl(var(--muted-foreground))] shrink-0" />
@@ -124,7 +124,7 @@ export const ListRow = React.memo(({ doc, index, currentUserId, onOpen, onToggle
         <div className="flex items-center gap-2">
           {!isEditingTitle ? (
             <h3 
-              className={`font-medium text-[hsl(var(--foreground))] truncate ${isOwner ? 'group-hover:text-amber-500 transition-colors cursor-text' : ''}`}
+              className={`font-medium text-[hsl(var(--foreground))] truncate ${isOwner ? 'group-hover:text-[hsl(var(--brand-primary))] transition-colors cursor-text' : ''}`}
               onDoubleClick={isOwner ? handleStartEdit : undefined}
               title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
             >
