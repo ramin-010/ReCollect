@@ -217,7 +217,10 @@ export function SlideEditor({
       )}
 
       {/* Header Bar - Offset Navbar Style */}
-      <div className="absolute top-0 left-[140px] right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--card))] backdrop-blur-sm pointer-events-auto">
+      <div className={cn(
+        "notion-navbar absolute top-0 right-0 flex items-center justify-between px-4 h-12 pointer-events-auto transition-[left] duration-300",
+        isTasksPanelOpen ? "left-72" : "left-[140px]"
+      )}>
         
         {/* Left Section */}
         <div className="flex items-center gap-3 w-1/3">

@@ -612,6 +612,14 @@ html::-webkit-scrollbar-thumb:hover {
   background-clip: content-box;
 }
 
+/* Notion-style Header/Navbar */
+.notion-navbar {
+  background-color: hsl(var(--sidebar-bg));
+  background-image: linear-gradient(color-mix(in srgb, var(--surface-elevated) 40%, transparent), color-mix(in srgb, var(--surface-elevated) 40%, transparent));
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
 /* Notion-style Card — with top-edge highlight */
 .notion-card {
   background-color: hsl(var(--card));

@@ -36,7 +36,7 @@ export function DrawingCard({
     return (
       <motion.div
         layoutId={drawing.id}
-        className="group relative h-48 bg-white/[0.02] border border-white/5 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-indigo-500/30 hover:bg-white/[0.04]"
+        className="group relative h-48 bg-[var(--surface-elevated)] border border-border-subtle rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-indigo-500/30 hover:bg-hover-bg"
         onClick={() => onOpen(drawing)}
       >
         {/* Thumbnail Background */}
@@ -50,20 +50,20 @@ export function DrawingCard({
           ) : (
              <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 pointer-events-none" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--background))] via-[hsl(var(--background))]/80 to-transparent" />
         </div>
 
         {/* Top Actions */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all backdrop-blur-md border border-white/5"
+            className="p-1.5 rounded-md bg-hover-bg hover:bg-[var(--surface-raised)] text-secondary hover:text-foreground transition-all backdrop-blur-md border border-border-subtle"
             onClick={(e) => onPin(drawing.id, e)}
             title="Unpin from Workbench"
           >
             <PinOff className="w-3.5 h-3.5" />
           </button>
           <button
-            className="p-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-all backdrop-blur-md border border-white/5"
+            className="p-1.5 rounded-md bg-hover-bg hover:bg-red-500/20 text-secondary hover:text-red-400 transition-all backdrop-blur-md border border-border-subtle"
             onClick={(e) => onDelete(drawing.id, e)}
             title="Delete Drawing"
           >
@@ -73,8 +73,8 @@ export function DrawingCard({
 
         {/* Info */}
         <div className="absolute bottom-4 left-5 right-5 z-20">
-          <h3 className="text-xl font-medium tracking-tight text-white/90 mb-1.5 font-serif group-hover:text-indigo-400 transition-colors">{drawing.name}</h3>
-          <div className="flex items-center gap-2 text-[10px] text-white/40 font-medium uppercase tracking-wider">
+          <h3 className="text-xl font-medium tracking-tight text-foreground mb-1.5 font-serif group-hover:text-indigo-400 transition-colors">{drawing.name}</h3>
+          <div className="flex items-center gap-2 text-[10px] text-secondary font-medium uppercase tracking-wider">
             <Clock className="w-3 h-3 opacity-70" />
             <span>Updated {formattedDate}</span>
           </div>
@@ -85,7 +85,7 @@ export function DrawingCard({
 
   return (
     <div
-      className="group relative aspect-[1.4] bg-white/[0.01] border border-white/5 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-white/10 hover:bg-white/[0.03] select-none"
+      className="group relative aspect-[1.4] bg-[var(--surface-elevated)] border border-border-subtle rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-border-strong select-none"
       onClick={() => onOpen(drawing)}
     >
       {/* Thumbnail */}
@@ -98,11 +98,11 @@ export function DrawingCard({
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center opacity-10 group-hover:opacity-20 transition-opacity">
-            <PenTool className="w-6 h-6 mb-2 text-white" />
+            <PenTool className="w-6 h-6 mb-2 text-foreground" />
           </div>
         )}
         
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#121212] via-[#121212]/90 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[hsl(var(--background))] via-[hsl(var(--background))]/90 to-transparent" />
       </div>
 
       {/* Active Badge */}
@@ -118,11 +118,11 @@ export function DrawingCard({
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="flex flex-col justify-end h-full">
           <div className="w-full pr-2 mb-2">
-            <h4 className="text-white/80 font-serif text-lg leading-tight truncate group-hover:text-white transition-colors">
+            <h4 className="text-foreground/80 font-serif text-lg leading-tight truncate group-hover:text-foreground transition-colors">
               {drawing.name}
             </h4>
             <div className="flex items-center gap-1.5 mt-1 opacity-40 group-hover:opacity-60 transition-opacity">
-              <span className="text-[9px] font-medium text-white uppercase tracking-wider line-clamp-1">
+              <span className="text-[9px] font-medium text-foreground uppercase tracking-wider line-clamp-1">
                 {formattedDate}
               </span>
             </div>
@@ -132,7 +132,7 @@ export function DrawingCard({
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
             <button
               className={cn(
-                "p-1.5 rounded text-white/40 hover:text-white hover:bg-white/5 transition-all",
+                "p-1.5 rounded text-secondary hover:text-foreground hover:bg-hover-bg transition-all",
                 drawing.isPinned && "text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20"
               )}
               onClick={(e) => onPin(drawing.id, e)}
@@ -142,21 +142,21 @@ export function DrawingCard({
             </button>
             
             <button
-              className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              className="p-1.5 rounded text-secondary hover:text-foreground hover:bg-hover-bg transition-all"
               onClick={(e) => onDuplicate(drawing, e)}
               title="Duplicate"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
             <button
-              className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              className="p-1.5 rounded text-secondary hover:text-foreground hover:bg-hover-bg transition-all"
               onClick={(e) => onRename(drawing, e)}
               title="Rename"
             >
               <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button
-              className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
+              className="p-1.5 rounded text-secondary hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
               onClick={(e) => onDelete(drawing.id, e)}
               title="Delete"
             >

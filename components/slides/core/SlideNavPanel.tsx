@@ -36,10 +36,13 @@ function SlideNavPanelComponent({ slides, blocks, activeSlideId, onSlideClick }:
   }, [onSlideClick]);
 
   return (
-    <div className="sticky top-0 h-screen flex flex-col w-[140px] min-w-[140px] bg-[var(--surface-elevated)] backdrop-blur-md border-r border-[hsl(var(--border))]/50 shrink-0 z-20">
+    <div 
+      className="sticky top-0 h-screen flex flex-col w-[140px] min-w-[140px] bg-[hsl(var(--sidebar-bg))] border-r border-border-subtle shrink-0 z-20"
+      style={{ backgroundImage: 'linear-gradient(color-mix(in srgb, var(--surface-elevated) 40%, transparent), color-mix(in srgb, var(--surface-elevated) 40%, transparent))' }}
+    >
       
       {/* Brand Header & Back Button */}
-      <div className="px-3 h-12 border-b border-[hsl(var(--border))]/30 flex items-center justify-between shrink-0">
+      <div className="px-3 h-12  flex items-center justify-between shrink-0">
         {/* Back Link */}
        
        

@@ -435,6 +435,7 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, SlideCanvasProps>(funct
                 title={slide.title}
                 showTitle={slide.showTitle}
                 coverImage={slide.coverImage}
+                isTasksPanelOpen={isTasksPanelOpen}
                 onTitleChange={(title) => handleUpdateSlide(slide.slideId, { title })}
                 onToggleTitle={(show) => {
                   const isCurrentlyShown = slide.showTitle !== false;

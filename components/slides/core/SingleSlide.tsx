@@ -42,6 +42,7 @@ interface SingleSlideProps {
   onConnectionsChange: (connections: Connection[]) => void;
   onSelectConnection: (id: string | null) => void;
   onAddImage?: (slideId: string, file: File) => void;
+  isTasksPanelOpen?: boolean;
 }
 
 export function SingleSlide({
@@ -69,6 +70,7 @@ export function SingleSlide({
   onConnectionsChange,
   onSelectConnection,
   onAddImage,
+  isTasksPanelOpen,
 }: SingleSlideProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -100,7 +102,7 @@ export function SingleSlide({
           ? 'ring-1 ring-[hsl(var(--foreground))]/30 '
           : ''
       }`}
-      style={{ width: SLIDE_WIDTH }}
+      style={{ width: SLIDE_WIDTH, marginLeft: isTasksPanelOpen ? '1px' : '30px' }}
     >
       {/* Slide Number Badge */}
       {!readOnly && (
