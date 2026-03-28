@@ -73,22 +73,22 @@ export function WorkspaceSettingsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative w-full max-w-6xl bg-[#1A1A1A] border border-white/5 shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] min-h-[600px] z-[101]"
+            className="relative w-full max-w-6xl bg-[hsl(var(--background))] border border-[var(--border-strong)] shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] min-h-[600px] z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button (Mobile Absolute) */}
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-full transition-colors z-10 md:hidden"
+              className="absolute top-4 right-4 p-2 bg-[hsl(var(--muted))]/30 hover:bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] rounded-full transition-colors z-10 md:hidden"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Sidebar */}
-            <div className="w-full md:w-64 bg-[#171717] border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-4 md:p-6 shrink-0">
+            <div className="w-full md:w-64 bg-[hsl(var(--muted))]/10 border-b md:border-b-0 md:border-r border-[var(--border-subtle)] flex flex-col p-4 md:p-6 shrink-0">
               <div className="mb-6 md:mb-8 hidden md:block">
-                <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-1">Settings</h2>
-                <h3 className="text-lg font-bold text-white truncate">{selectedWorkspace.name}</h3>
+                <h2 className="text-sm font-semibold text-[hsl(var(--muted-foreground))]/80 uppercase tracking-wider mb-1">Settings</h2>
+                <h3 className="text-lg font-bold text-[hsl(var(--foreground))] truncate">{selectedWorkspace.name}</h3>
               </div>
               
               <div className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
@@ -101,8 +101,8 @@ export function WorkspaceSettingsModal({
                       className={cn(
                         "px-3 py-2 text-left rounded-md text-[12px] transition-all whitespace-nowrap md:whitespace-normal outline-none border-l-2",
                         isActive 
-                          ? (tab.isDestructive ? "bg-rose-500/10 text-rose-400 border-rose-500 font-medium tracking-wide" : "bg-white/[0.08] text-white border-white/80 font-medium tracking-wide") 
-                          : (tab.isDestructive ? "text-rose-400/60 hover:bg-rose-500/5 hover:text-rose-400 border-transparent tracking-wide" : "text-white/40 hover:bg-white/5 hover:text-white/80 border-transparent tracking-wide")
+                          ? (tab.isDestructive ? "bg-rose-500/10 text-rose-400 border-rose-500 font-medium tracking-wide" : "bg-[hsl(var(--muted))]/30 text-[hsl(var(--foreground))] border-[hsl(var(--border))] font-medium tracking-wide") 
+                          : (tab.isDestructive ? "text-rose-400/60 hover:bg-rose-500/5 hover:text-rose-400 border-transparent tracking-wide" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/10 hover:text-[hsl(var(--foreground))] border-transparent tracking-wide")
                       )}
                     >
                       <span className="truncate">{tab.label}</span>
@@ -113,12 +113,12 @@ export function WorkspaceSettingsModal({
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col items-stretch overflow-hidden bg-[#1E1E1E]">
+            <div className="flex-1 flex flex-col items-stretch overflow-hidden bg-transparent">
               {/* Desktop Close Button Header */}
               <div className="hidden md:flex justify-end p-4 border-b border-transparent">
                 <button 
                   onClick={onClose}
-                  className="p-2 pb-0 text-white/40 hover:text-white rounded-full transition-colors"
+                  className="p-2 pb-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] rounded-full transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>

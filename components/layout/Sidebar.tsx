@@ -194,7 +194,7 @@ function SidebarContent({
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   return (
-    <div className="h-full flex flex-col bg-[hsl(var(--sidebar-bg))] border-r border-white/5 text-white/90">
+    <div className="h-full flex flex-col notion-navbar notion-font border-r border-[hsl(var(--foreground))]/5 text-[hsl(var(--foreground))]/90">
       
       {/* ── Header: Top User Profile & Toggle ────────────────────────────── */}
       <div className="flex items-center justify-between px-3 pt-4 pb-3 shrink-0">
@@ -204,7 +204,7 @@ function SidebarContent({
               if (isMobile) onMobileClose();
               onSettingsClick();
             }}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex-1 min-w-0 group cursor-pointer text-left"
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[hsl(var(--hover-bg))] transition-colors flex-1 min-w-0 group cursor-pointer text-left"
           >
             <div className="w-7 h-7 rounded-sm bg-brand-primary p-[1px] shrink-0 group-hover:bg-brand-secondary transition-all">
               <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center">
@@ -216,17 +216,17 @@ function SidebarContent({
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <span className="text-[10px] font-bold text-white">{getInitials(user?.name)}</span>
+                  <span className="text-[10px] font-bold text-[hsl(var(--foreground))]">{getInitials(user?.name)}</span>
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-start min-w-0 flex-1">
-              <span className="text-[13px] font-semibold truncate text-white tracking-tight w-full text-left">
+            <div className="flex flex-col items-start min-w-0 flex-1 ml-1.5">
+              <span className="text-[14px] font-medium truncate text-[hsl(var(--foreground))] tracking-tight w-full text-left">
                 {user?.name || 'User'}
               </span>
-              <span className="text-[10px] text-white/40 truncate w-full text-left group-hover:text-white/70 transition-colors">Workspace</span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))] truncate w-full text-left group-hover:text-[hsl(var(--foreground))]/80 transition-colors">Workspace</span>
             </div>
-            <ChevronDown className="h-3 w-3 text-white/30 shrink-0 ml-auto group-hover:text-white/70 transition-colors" />
+            <ChevronDown className="h-3 w-3 text-[hsl(var(--muted-foreground))]/70 shrink-0 ml-auto group-hover:text-[hsl(var(--foreground))]/80 transition-colors" />
           </button>
         )}
 
@@ -235,21 +235,21 @@ function SidebarContent({
           size="sm"
           onClick={isMobile ? onMobileClose : onCollapse}
           className={cn(
-            "shrink-0 h-8 w-8 p-0 rounded-lg hover:bg-white/5",
+            "shrink-0 h-8 w-8 p-0 rounded-lg hover:bg-[hsl(var(--hover-bg))]",
             isCollapsed && "mx-auto mt-1"
           )}
         >
-          {isMobile ? <X className="h-[18px] w-[18px]" /> : <PanelLeft className="h-[18px] w-[18px] text-white/50" />}
+          {isMobile ? <X className="h-[18px] w-[18px]" /> : <PanelLeft className="h-[18px] w-[18px] text-[hsl(var(--muted-foreground))]" />}
         </Button>
       </div>
 
       {/* ── Search Bar ────────────────────────── */}
       {!isCollapsed && (
         <div className="px-3 pb-3">
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 hover:border-white/10 transition-all duration-200 text-sm group">
-            <Search className="h-[15px] w-[15px] group-hover:text-white/80 transition-colors" />
-            <span className="text-[13px]">Search...</span>
-            <kbd className="ml-auto text-[10px] font-medium text-white/30 bg-white/5 px-1.5 py-0.5 rounded border border-white/5 group-hover:text-white/60 group-hover:border-white/10 transition-all">⌘K</kbd>
+          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[hsl(var(--card))]/50 border border-[hsl(var(--border))]/50 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--surface-overlay))] hover:text-[hsl(var(--foreground))]/80 hover:border-[hsl(var(--border-strong))] transition-all duration-200 text-[14px] font-medium group subpixel-antialiased">
+            <Search className="h-[15px] w-[15px] group-hover:text-[hsl(var(--foreground))]/80 transition-colors" />
+            <span className="truncate">Search...</span>
+            <kbd className="ml-auto text-[10px] font-medium text-[hsl(var(--muted-foreground))]/70 bg-[hsl(var(--surface-raised))] px-1.5 py-0.5 rounded border border-[hsl(var(--border-subtle))] group-hover:text-[hsl(var(--muted-foreground))] group-hover:border-[hsl(var(--border-strong))] transition-all">⌘K</kbd>
           </button>
         </div>
       )}
@@ -301,7 +301,7 @@ function SidebarContent({
             }}
             className="mx-auto flex items-center justify-center w-8 h-8 rounded-sm bg-brand-primary p-[1px] hover:bg-brand-secondary transition-all cursor-pointer"
           >
-            <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center text-white text-[10px] font-bold">
+            <div className="w-full h-full rounded-sm overflow-hidden bg-[hsl(var(--sidebar-bg))] flex items-center justify-center text-[hsl(var(--foreground))] text-[10px] font-bold">
               {user?.avatar ? (
                 <img 
                   src={user.avatar} 
@@ -316,14 +316,14 @@ function SidebarContent({
       )}
 
       {/* ── Footer: Settings ──────────────── */}
-      <div className="border-t border-white/5 px-2 py-2 shrink-0 flex items-center justify-center">
+      <div className="border-t border-[hsl(var(--foreground))]/5 px-2 py-2 shrink-0 flex items-center justify-center">
         {!isCollapsed ? (
           <button
             onClick={() => {
               if (isMobile) onMobileClose();
               onSettingsClick();
             }}
-            className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors text-[13px] cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--hover-bg))] hover:text-[hsl(var(--foreground))] transition-colors text-[13px] cursor-pointer"
           >
             <Settings className="h-4 w-4" />
             <span>Settings</span>
@@ -334,7 +334,7 @@ function SidebarContent({
               if (isMobile) onMobileClose();
               onSettingsClick();
             }}
-            className="p-2 rounded-lg text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--hover-bg))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
           >
             <Settings className="h-4 w-4" />
           </button>
@@ -367,10 +367,10 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
         {...linkProps as any}
         onClick={onClick}
         className={cn(
-        "w-full flex items-center gap-3 px-3 py-[9px] rounded-lg text-[13px] transition-all duration-200 group relative outline-none",
+        "w-full flex items-center gap-3 px-3 py-[9px] rounded-lg text-[14px] font-medium transition-all duration-200 group relative outline-none subpixel-antialiased",
         isActive
-          ? "text-white font-medium"
-          : "text-white/50 hover:text-white hover:bg-white/5",
+          ? "text-[hsl(var(--foreground))]"
+          : "text-[hsl(var(--foreground))]/70 hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]",
         item.comingSoon && "opacity-50 hover:opacity-100",
         isCollapsed && "justify-center px-0 h-10 w-10 mx-auto"
       )}
@@ -379,7 +379,7 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
       {isActive && (
         <motion.div
           layoutId="sidebar-active-bg"
-          className="absolute inset-0 rounded-lg bg-white/10"
+          className="absolute inset-0 rounded-lg bg-[var(--active-bg)]"
           initial={false}
           transition={{ type: "spring", stiffness: 400, damping: 35 }}
         />
@@ -397,7 +397,7 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
 
       <span className={cn(
         "shrink-0 transition-all duration-300 relative z-10",
-        isActive ? "text-white" : "group-hover:scale-110 group-hover:text-white"
+        isActive ? "text-[hsl(var(--foreground))]" : "group-hover:scale-110 group-hover:text-[hsl(var(--foreground))]"
       )}>
         {item.icon}
         {item.badge && (
@@ -416,11 +416,11 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
           )}
 
           {hasSubItems && !isCollapsed && (
-            <ChevronDown className={cn("h-3.5 w-3.5 ml-auto text-white/30 transition-transform duration-200 relative z-10 shrink-0", isExpanded && "rotate-180")} />
+            <ChevronDown className={cn("h-3.5 w-3.5 ml-auto text-[hsl(var(--muted-foreground))]/70 transition-transform duration-200 relative z-10 shrink-0", isExpanded && "rotate-180")} />
           )}
 
           {item.comingSoon && (
-            <span className="ml-auto text-[9px] uppercase font-bold tracking-widest text-white/50 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 relative z-10 leading-none group-hover:bg-white/10 transition-colors">
+            <span className="ml-auto text-[9px] uppercase font-bold tracking-widest text-[hsl(var(--muted-foreground))] bg-[hsl(var(--surface-raised))] px-1.5 py-0.5 rounded border border-[hsl(var(--border-subtle))] relative z-10 leading-none group-hover:bg-[hsl(var(--surface-overlay))] transition-colors">
               Soon
             </span>
           )}
@@ -449,15 +449,15 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
                       if (onSubItemClick) onSubItemClick(sub.id);
                     }}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-all duration-200 group relative outline-none",
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group relative outline-none subpixel-antialiased",
                       isSubActive
-                        ? "text-white font-medium bg-white/10"
-                        : "text-white/40 hover:text-white hover:bg-white/5"
+                        ? "text-[hsl(var(--foreground))] bg-[var(--active-bg)]"
+                        : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]"
                     )}
                   >
                     <span className={cn(
                       "shrink-0 transition-colors",
-                      isSubActive ? "text-white" : "group-hover:text-white/80"
+                      isSubActive ? "text-[hsl(var(--foreground))]" : "group-hover:text-[hsl(var(--foreground))]/80"
                     )}>
                       {sub.icon}
                     </span>

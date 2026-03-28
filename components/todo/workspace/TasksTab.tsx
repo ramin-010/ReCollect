@@ -121,14 +121,14 @@ export function TasksTab({
               className={cn(
                 "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                 taskFilter === f.key
-                  ? "text-white/80 bg-white/[0.06]"
-                  : "text-white/30 hover:text-white/50"
+                  ? "text-[hsl(var(--foreground))]/80 bg-[hsl(var(--muted))]/40"
+                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
               )}
             >
               {f.label}
               <span className={cn(
                 "text-[10px] tabular-nums leading-none",
-                taskFilter === f.key ? "text-white/50" : "text-white/20"
+                taskFilter === f.key ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--muted-foreground))]/40"
               )}>
                 {f.count}
               </span>
@@ -139,7 +139,7 @@ export function TasksTab({
         <div className="flex items-center gap-2">
           {/* Active Assignee Filter Badge */}
           {assigneeFilter !== 'all' && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 text-white text-xs font-medium rounded-md border border-white/10">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-[hsl(var(--muted))]/20 text-[hsl(var(--foreground))] text-xs font-medium rounded-md border border-[hsl(var(--border))]">
               {(() => {
                 const m = workspaceMembers.find(member => member._id === assigneeFilter);
                 if (!m) return null;
@@ -148,14 +148,14 @@ export function TasksTab({
                     {m.avatar ? (
                       <img src={m.avatar} alt="" className="w-3.5 h-3.5 rounded-full" />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full bg-indigo-500 flex items-center justify-center text-[7px] font-bold text-white">
+                      <div className="w-3.5 h-3.5 rounded-full bg-indigo-500 flex items-center justify-center text-[7px] font-bold text-[hsl(var(--background))]">
                         {m.name.charAt(0)}
                       </div>
                     )}
                     <span>{m.name}</span>
                     <button 
                       onClick={() => setAssigneeFilter('all')}
-                      className="ml-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full p-0.5 transition-colors"
+                      className="ml-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30 rounded-full p-0.5 transition-colors"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -171,39 +171,39 @@ export function TasksTab({
               <DropdownMenuTrigger asChild>
                 <button className={cn(
                   "px-3 py-1.5 flex items-center gap-2 text-xs font-medium border rounded-md transition-colors",
-                  "border-white/5 text-white/40 hover:text-white hover:bg-white/5"
+                  "border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30"
                 )}>
                   <ArrowDownUp className="w-3.5 h-3.5" />
                   Sort
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[180px]">
-                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('priority'); }} className={cn(sortBy === 'priority' ? "bg-white/5 font-medium" : "")}>
-                  Priority {sortBy === 'priority' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('priority'); }} className={cn(sortBy === 'priority' ? "bg-[hsl(var(--muted))]/20 font-medium" : "")}>
+                  Priority {sortBy === 'priority' && <span className="ml-auto text-[hsl(var(--muted-foreground))]/60 text-[10px]">Active</span>}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('dueDate'); }} className={cn(sortBy === 'dueDate' ? "bg-white/5 font-medium" : "")}>
-                  Due Date {sortBy === 'dueDate' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('dueDate'); }} className={cn(sortBy === 'dueDate' ? "bg-[hsl(var(--muted))]/20 font-medium" : "")}>
+                  Due Date {sortBy === 'dueDate' && <span className="ml-auto text-[hsl(var(--muted-foreground))]/60 text-[10px]">Active</span>}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('recent'); }} className={cn(sortBy === 'recent' ? "bg-white/5 font-medium" : "")}>
-                  Recently Added {sortBy === 'recent' && <span className="ml-auto text-white/40 text-[10px]">Active</span>}
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setSortBy('recent'); }} className={cn(sortBy === 'recent' ? "bg-[hsl(var(--muted))]/20 font-medium" : "")}>
+                  Recently Added {sortBy === 'recent' && <span className="ml-auto text-[hsl(var(--muted-foreground))]/60 text-[10px]">Active</span>}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-white/50" />
+                    <User className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/50" />
                     Filter by Assignee
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-[180px]">
-                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setAssigneeFilter('all'); }} className={cn(assigneeFilter === 'all' ? "bg-white/5 font-medium" : "")}>
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setAssigneeFilter('all'); }} className={cn(assigneeFilter === 'all' ? "bg-[hsl(var(--muted))]/20 font-medium" : "")}>
                       Anyone
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {workspaceMembers.map(m => (
-                      <DropdownMenuItem key={m._id} onClick={(e) => { e.preventDefault(); setAssigneeFilter(m._id); }} className={cn(assigneeFilter === m._id ? "bg-white/5 font-medium" : "")}>
+                      <DropdownMenuItem key={m._id} onClick={(e) => { e.preventDefault(); setAssigneeFilter(m._id); }} className={cn(assigneeFilter === m._id ? "bg-[hsl(var(--muted))]/20 font-medium" : "")}>
                         <div className="flex items-center gap-2">
-                          {m.avatar ? <img src={m.avatar} alt="" className="w-4 h-4 rounded-full" /> : <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] font-medium text-white">{m.name.charAt(0)}</div>}
+                          {m.avatar ? <img src={m.avatar} alt="" className="w-4 h-4 rounded-full" /> : <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] font-medium text-[hsl(var(--background))]">{m.name.charAt(0)}</div>}
                           {m.name}
                         </div>
                       </DropdownMenuItem>
@@ -215,24 +215,24 @@ export function TasksTab({
           </div>
 
           {/* View Switcher Controls */}
-          <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
+          <div className="flex items-center bg-[hsl(var(--muted))]/10 p-1 rounded-lg border border-[hsl(var(--border))]">
             <button 
               onClick={() => setCurrentView('list')}
-              className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
               title="List View"
             >
               <LayoutList className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setCurrentView('table')}
-              className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
               title="Table View"
             >
               <Table className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setCurrentView('calendar')}
-              className={cn("p-1.5 rounded-md transition-colors", currentView === 'calendar' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'calendar' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
               title="Calendar View"
             >
               <CalendarDays className="w-4 h-4" />
@@ -244,7 +244,7 @@ export function TasksTab({
       {/* Task Table */}
       {isDataLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="w-4 h-4 animate-spin text-white/20" />
+          <Loader2 className="w-4 h-4 animate-spin text-[hsl(var(--muted-foreground))]/30" />
         </div>
       ) : (
         <div className="flex flex-col">
@@ -260,7 +260,7 @@ export function TasksTab({
                 className="max-w-[1000px] mx-auto px-4 md:px-4 w-full"
               >
               {/* Table Header (List View Only) */}
-              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_50px] gap-4 px-4 py-2  text-[12px] font-medium text-white/50 items-center select-none">
+              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_130px_120px_50px] gap-4 px-4 py-2  text-[12px] font-medium text-[hsl(var(--muted-foreground))] items-center select-none">
                 <div className="flex justify-center"></div>
                 <div className="flex items-center">Tasks</div>
                 <div className="flex items-center">Assignee</div>
@@ -273,10 +273,10 @@ export function TasksTab({
               <div className="flex flex-col ">
                 {filteredTasks.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-3">
-                      <ListTodo className="w-4 h-4 text-white/20" />
+                    <div className="w-10 h-10 rounded-lg bg-[hsl(var(--muted))]/10 border border-[hsl(var(--border))] flex items-center justify-center mx-auto mb-3">
+                      <ListTodo className="w-4 h-4 text-[hsl(var(--muted-foreground))]/30" />
                     </div>
-                    <p className="text-sm text-white/35 mb-1">
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">
                       {taskFilter === 'all' ? 'No tasks yet' :
                        taskFilter === 'mine' ? 'No tasks assigned to you' :
                        taskFilter === 'unassigned' ? 'No unassigned tasks' :
@@ -342,7 +342,7 @@ export function TasksTab({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="px-6 md:px-8 w-[1200px] mx-auto h-[600px]"
+                className="px-6 md:px-8 w-[1200px] mx-auto h-[calc(100vh-210px)] min-h-[650px] overflow-hidden"
               >
               <CalendarView 
                 filteredTasks={filteredTasks}

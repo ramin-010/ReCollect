@@ -36,7 +36,7 @@ export function PriorityDropdown({ currentPriority, onPriorityChange, children }
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content 
-          className="w-[180px] bg-[#1a1a1a] rounded-xl shadow-xl border border-white/10 overflow-hidden text-white/90 z-50 text-[13px] outline-none font-sans"
+          className="w-[180px] bg-[hsl(var(--card))] rounded-xl shadow-xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-50 text-[13px] outline-none font-sans"
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}
@@ -52,18 +52,18 @@ export function PriorityDropdown({ currentPriority, onPriorityChange, children }
                     handleSelect(option.value);
                   }}
                   className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 hover:bg-white/5 transition-colors focus:bg-white/5 outline-none group",
-                    isSelected ? "bg-white/[0.04]" : ""
+                    "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 hover:bg-[hsl(var(--muted))]/40 transition-colors focus:bg-[hsl(var(--muted))]/40 outline-none group",
+                    isSelected ? "bg-[hsl(var(--muted))]/20" : ""
                   )}
                 >
                   <Flag className={cn("w-4 h-4", option.color, option.fill)} />
                   <span className={cn(
                     "font-medium text-[13px] flex-1",
-                    isSelected ? "text-white/90" : "text-white/60 group-hover:text-white/90 transition-colors"
+                    isSelected ? "text-[hsl(var(--foreground))]/90" : "text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]/90 transition-colors"
                   )}>
                     {option.label}
                   </span>
-                  {isSelected && <Check className="w-4 h-4 text-white/40 shrink-0" />}
+                  {isSelected && <Check className="w-4 h-4 text-[hsl(var(--muted-foreground))]/60 shrink-0" />}
                 </button>
               );
             })}

@@ -119,7 +119,7 @@ export function WorkspaceHeader({
       <div className="relative z-10 w-full h-full max-w-[1200px] mx-auto px-6 md:px-8 flex flex-col justify-end pb-3">
         
         {/* TOP ROW: Action Bar (Avatars, Invite, Settings) */}
-        <div className="absolute top-0 right-6 md:right-8 flex items-center justify-end pt-4 z-20">
+        <div className="absolute top-0 right-6 md:right-8 flex   items-center justify-end pt-4 z-20">
           <motion.div 
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -127,7 +127,7 @@ export function WorkspaceHeader({
             className="flex items-center gap-2"
           >
             {/* Member Avatar Strip */}
-            <div className="flex items-center mr-1">
+            <div className="flex items-center mr-1 ">
               {selectedWorkspace?.members?.slice(0, 4).map((member: any, index: number) => {
                 const mUser = member.user || member;
                 const zIndex = 10 - index;
@@ -135,7 +135,7 @@ export function WorkspaceHeader({
                   <div 
                     key={mUser._id || index}
                     className={cn(
-                      "w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 border-2 border-[#1E1E1E] flex items-center justify-center text-[10px] font-bold shadow-sm transition-transform hover:-translate-y-0.5 cursor-default",
+                      "w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-500 border-2 border-[hsl(var(--background))] flex items-center justify-center text-[10px] font-bold shadow-sm transition-transform hover:-translate-y-0.5 cursor-default",
                       index > 0 && "-ml-2"
                     )}
                     style={{ zIndex }}
@@ -151,7 +151,7 @@ export function WorkspaceHeader({
               })}
               {(selectedWorkspace?.members?.length || 0) > 4 && (
                 <div 
-                  className="w-7 h-7 rounded-full bg-white/10 text-white/50 border-2 border-[#1E1E1E] flex items-center justify-center text-[9px] font-bold shadow-sm -ml-2 cursor-default" 
+                  className="w-7 h-7 rounded-full bg-[hsl(var(--muted))]/30 text-[hsl(var(--muted-foreground))] border-2 border-[hsl(var(--card))] flex items-center justify-center text-[9px] font-bold shadow-sm -ml-2 cursor-default" 
                   style={{ zIndex: 0 }}
                   title={`${selectedWorkspace!.members!.length - 4} more`}
                 >
@@ -164,14 +164,14 @@ export function WorkspaceHeader({
               <>
               <button
                 onClick={() => { setShowSettingsModal(true); setIsInviting(true); }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/10 text-white/60 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-white/[0.06] hover:border-white/10"
+                className="flex items-center gap-1.5 px-2.5 py-1.5  hover:bg-[hsl(var(--muted))]/60 text-[hsl(var(--foreground))]/70 hover:text-[hsl(var(--foreground))] text-[11px] font-semibold rounded-lg transition-all border border-[hsl(var(--border))] hover:border-[hsl(var(--border))]"
               >
                 <UserPlus className="w-3 h-3" />
                 Invite
               </button>
               <button
                 onClick={() => setShowShareLinkModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/10 text-white/60 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-white/[0.06] hover:border-white/10"
+                className="flex items-center gap-1.5 px-2.5 py-1.5  hover:bg-[hsl(var(--muted))]/60 text-[hsl(var(--foreground))]/70 hover:text-[hsl(var(--foreground))] text-[11px] font-semibold rounded-lg transition-all border border-[hsl(var(--border))] hover:border-[hsl(var(--border))]"
               >
                 <Link2 className="w-3 h-3" />
                 Share
@@ -180,7 +180,7 @@ export function WorkspaceHeader({
             )}
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="p-1.5 text-white/30 hover:text-white/70 hover:bg-white/[0.06] rounded-lg transition-all"
+              className="p-1.5 text-[hsl(var(--foreground))]/70 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30 rounded-lg transition-all"
               title="Workspace Settings"
             >
               <Settings className="w-4 h-4" />
@@ -195,21 +195,21 @@ export function WorkspaceHeader({
                {/* Workspace Dropdown */}
                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-white/5 px-2 -ml-2">
+                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-[hsl(var(--foreground))]/90 hover:text-[hsl(var(--foreground))] transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-[hsl(var(--muted))]/30 px-2 -ml-2">
                       <motion.h1 
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 }}
-                          className="text-2xl lg:text-3xl font-light tracking-tight text-white/90 font-serif leading-none"
+                          className="text-2xl lg:text-3xl font-light tracking-tight text-[hsl(var(--foreground))]/90 font-serif leading-none"
                       >
                           {selectedWorkspace?.name} <span className="opacity-20 ml-1">space</span>
                       </motion.h1>
-                      <ChevronDown className="w-5 h-5 text-white/30 opacity-20 group-hover:text-white/60 group-hover:opacity-100 transition-colors mt-2" />
+                      <ChevronDown className="w-5 h-5 text-[hsl(var(--muted-foreground))]/40 opacity-20 group-hover:text-[hsl(var(--muted-foreground))] group-hover:opacity-100 transition-colors mt-2" />
                     </button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[300px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl p-1 z-50">
+                <DropdownMenuContent align="start" className="w-[300px] bg-[hsl(var(--card))] border-[hsl(var(--border))] shadow-xl rounded-xl p-1 z-50">
                   <div className="px-2 py-1.5 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Workspaces</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]/40">Workspaces</span>
                   </div>
                   {workspaces.map(ws => (
                     <DropdownMenuItem
@@ -217,48 +217,48 @@ export function WorkspaceHeader({
                       onClick={() => onWorkspaceSelect(ws)}
                       className={cn(
                         "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors !outline-none text-sm",
-                        selectedWorkspace?._id === ws._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
+                        selectedWorkspace?._id === ws._id ? "bg-[hsl(var(--muted))]/30 text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/20 hover:text-[hsl(var(--foreground))]/80"
                       )}
                     >
                       <div className={cn(
                         "w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold",
-                        selectedWorkspace?._id === ws._id ? "bg-white/10 text-white/70" : "bg-white/[0.04] text-white/40"
+                        selectedWorkspace?._id === ws._id ? "bg-[hsl(var(--muted))]/40 text-[hsl(var(--foreground))]/70" : "bg-[hsl(var(--muted))]/20 text-[hsl(var(--muted-foreground))]"
                       )}>
                         {ws.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="truncate">{ws.name}</span>
                     </DropdownMenuItem>
                   ))}
-                  <DropdownMenuSeparator className="bg-white/5 my-1" />
+                  <DropdownMenuSeparator className="bg-[hsl(var(--border))] my-1" />
                   
                   {showCreateForm ? (
-                    <div className="p-2 bg-white/[0.02] rounded-lg mt-1" onClick={e => e.stopPropagation()}>
+                    <div className="p-2 bg-[hsl(var(--muted))]/10 rounded-lg mt-1" onClick={e => e.stopPropagation()}>
                         <div className="flex flex-col gap-2">
-                          <input
-                            type="text"
-                            value={newWorkspaceName}
-                            onChange={(e) => setNewWorkspaceName(e.target.value)}
-                            placeholder="Workspace name…"
-                            className="w-full bg-white/[0.05] border border-white/10 rounded-md text-xs text-white placeholder-white/25 outline-none px-2 py-1.5 focus:border-white/20"
-                            autoFocus
-                          />
-                          <div className="flex items-center gap-2">
                             <input
                               type="text"
-                              value={newSpaceName}
-                              onChange={(e) => setNewSpaceName(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                              placeholder="First space (e.g. Team 1)"
-                              className="flex-1 bg-white/[0.05] border border-white/10 rounded-md text-xs text-white placeholder-white/25 outline-none px-2 py-1.5 focus:border-white/20"
+                              value={newWorkspaceName}
+                              onChange={(e) => setNewWorkspaceName(e.target.value)}
+                              placeholder="Workspace name…"
+                              className="w-full bg-[hsl(var(--muted))]/10 border border-[hsl(var(--border))] rounded-md text-xs text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40 outline-none px-2 py-1.5 focus:border-[hsl(var(--border))]"
+                              autoFocus
                             />
-                            <button
-                              onClick={handleCreate}
-                              disabled={!newWorkspaceName.trim() || isCreating}
-                              className="px-2 py-1.5 text-xs font-medium text-black bg-white hover:bg-white/90 rounded-md transition-colors disabled:opacity-40 whitespace-nowrap"
-                            >
-                              {isCreating ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Create'}
-                            </button>
-                            <button onClick={() => setShowCreateForm(false)} className="p-1.5 text-white/30 hover:text-white/60">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={newSpaceName}
+                                onChange={(e) => setNewSpaceName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                                placeholder="First space (e.g. Team 1)"
+                                className="flex-1 bg-[hsl(var(--muted))]/10 border border-[hsl(var(--border))] rounded-md text-xs text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40 outline-none px-2 py-1.5 focus:border-[hsl(var(--border))]"
+                              />
+                              <button
+                                onClick={handleCreate}
+                                disabled={!newWorkspaceName.trim() || isCreating}
+                                className="px-2 py-1.5 text-xs font-medium text-[hsl(var(--background))] bg-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/90 rounded-md transition-colors disabled:opacity-40 whitespace-nowrap"
+                              >
+                                {isCreating ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Create'}
+                              </button>
+                              <button onClick={() => setShowCreateForm(false)} className="p-1.5 text-[hsl(var(--muted-foreground))]/50 hover:text-[hsl(var(--muted-foreground))]">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -267,7 +267,7 @@ export function WorkspaceHeader({
                   ) : (
                     <DropdownMenuItem
                       onClick={(e) => { e.preventDefault(); setShowCreateForm(true); }}
-                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/70 !outline-none"
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm text-[hsl(var(--muted-foreground))]/60 hover:bg-[hsl(var(--muted))]/20 hover:text-[hsl(var(--foreground))]/70 !outline-none"
                     >
                       <Plus className="w-3.5 h-3.5" /> New Workspace
                     </DropdownMenuItem>
@@ -277,23 +277,23 @@ export function WorkspaceHeader({
                             {/* Space Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button onClick={() => setShowCreateSpace(false)} className="flex items-center gap-2 text-white hover:text-white transition-colors group outline-none focus:outline-none bg-transparent rounded-lg px-2 -ml-2">
+                  <button onClick={() => setShowCreateSpace(false)} className="flex items-center gap-2 text-[hsl(var(--foreground))]/90 hover:text-[hsl(var(--foreground))] transition-colors group outline-none focus:outline-none bg-transparent rounded-lg px-2 -ml-2">
                     <motion.div 
                        initial={{ opacity: 0, y: 10 }}
                        animate={{ opacity: 1, y: 0 }}
                        transition={{ delay: 0.15 }}
                        className="flex items-center gap-2"
                     >
-                      <span className="text-3xl lg:text-4xl font-bold tracking-tight font-sans text-white leading-none">
+                      <span className="text-3xl lg:text-4xl font-bold tracking-tight font-sans text-[hsl(var(--foreground))]/90 leading-none">
                         {activeSpaceId === 'all' ? 'All Spaces' : activeSpace?.name || 'Select Space'}
                       </span>
-                      <ChevronDown className="w-5 h-5 opacity-20 group-hover:opacity-100   text-white/30 group-hover:text-white/60 transition-colors mt-2" />
+                      <ChevronDown className="w-5 h-5 opacity-20 group-hover:opacity-100 text-[hsl(var(--muted-foreground))]/40 group-hover:text-[hsl(var(--muted-foreground))] transition-colors mt-2" />
                     </motion.div>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[200px] bg-[#1E1E1E] border-white/10 shadow-xl rounded-xl z-50 mt-1">
+                <DropdownMenuContent align="start" className="w-[200px] bg-[hsl(var(--card))] border-[hsl(var(--border))] shadow-xl rounded-xl z-50 mt-1">
                   <div className="px-2 py-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/25">Sub spaces of {selectedWorkspace?.name}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]/40">Sub spaces of {selectedWorkspace?.name}</span>
                   </div>
                   {selectedWorkspace?.spaces?.map((space: any) => (
                     <DropdownMenuItem
@@ -301,7 +301,7 @@ export function WorkspaceHeader({
                       onClick={() => onSpaceSelect(space._id)}
                       className={cn(
                         "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors !outline-none text-sm",
-                        activeSpaceId === space._id ? "bg-white/5 text-white" : "text-white/60 hover:bg-white/[0.04] hover:text-white/80"
+                        activeSpaceId === space._id ? "bg-[hsl(var(--muted))]/30 text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/20 hover:text-[hsl(var(--foreground))]/80"
                       )}
                     >
                       <span className="truncate">{space.name }</span>
@@ -309,7 +309,7 @@ export function WorkspaceHeader({
                   ))}
                   {isAdmin && (
                     <>
-                      <DropdownMenuSeparator className="bg-white/5 my-1" />
+                      <DropdownMenuSeparator className="bg-[hsl(var(--border))] my-1" />
                       {showCreateSpace ? (
                         <div className="flex items-center gap-1.5 px-2 py-1.5" onClick={e => e.stopPropagation()}>
                           <input
@@ -318,19 +318,19 @@ export function WorkspaceHeader({
                             onChange={(e) => setNewSpaceInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleCreateSpace()}
                             placeholder="Space name"
-                            className="flex-1 min-w-0 bg-white/[0.05] border border-white/10 rounded-md text-xs text-white placeholder-white/30 px-2 py-1 outline-none focus:border-white/20"
+                            className="flex-1 min-w-0 bg-[hsl(var(--muted))]/10 border border-[hsl(var(--border))] rounded-md text-xs text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40 px-2 py-1 outline-none focus:border-[hsl(var(--border))]"
                             autoFocus
                           />
                           <button
                             onClick={handleCreateSpace}
                             disabled={!newSpaceInput.trim() || isCreatingSpace}
-                            className="p-1 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+                            className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] bg-[hsl(var(--muted))]/20 hover:bg-[hsl(var(--muted))]/40 rounded transition-colors disabled:opacity-50"
                           >
                             {isCreatingSpace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                           </button>
                           <button
                             onClick={() => { setShowCreateSpace(false); setNewSpaceInput(''); }}
-                            className="p-1 text-white/40 hover:text-white/70 bg-transparent rounded transition-colors"
+                            className="p-1 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] bg-transparent rounded transition-colors"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -351,7 +351,7 @@ export function WorkspaceHeader({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-white/40 text-xs font-medium pl-1 mt-1 border-l-2 border-indigo-500/30"
+                className="text-[hsl(var(--muted-foreground))]/60 text-xs font-medium pl-1 mt-1 border-l-2 border-indigo-500/30"
             >
                 {pendingCount} active team tasks across this view.
             </motion.p>

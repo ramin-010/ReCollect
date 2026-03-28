@@ -75,7 +75,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"
+            className="fixed inset-0 bg-black/30 backdrop-blur-[4px] z-[100]"
           />
 
           {/* Modal Content */}

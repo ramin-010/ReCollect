@@ -73,8 +73,8 @@ export function MembersSettings({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white mb-2">Workspace Members</h2>
-        <p className="text-sm text-white/40">Manage who has access to this workspace and their permissions.</p>
+        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Workspace Members</h2>
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">Manage who has access to this workspace and their permissions.</p>
       </div>
 
       <AnimatePresence>
@@ -84,9 +84,9 @@ export function MembersSettings({
             animate={{ height: 'auto', opacity: 1, transitionEnd: { overflow: 'visible' } }}
             exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
           >
-            <div className="p-3 bg-white/[0.02] rounded-xl border border-white/5 mb-4 relative z-10" ref={dropdownRef}>
+            <div className="p-3 bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] mb-4 relative z-10 shadow-sm" ref={dropdownRef}>
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-white/25 shrink-0" />
+                <Mail className="w-4 h-4 text-[hsl(var(--muted-foreground))]/40 shrink-0" />
                 <input
                   type="text"
                   value={inviteEmail}
@@ -94,19 +94,19 @@ export function MembersSettings({
                   onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
                   onFocus={() => { if (inviteEmail.trim().length >= 2) setShowDropdown(true); }}
                   placeholder="Search name or type email address…"
-                  className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none focus:border-white/100 transition-colors"
+                  className="flex-1 bg-transparent text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40 outline-none transition-colors"
                   autoFocus
                 />
                 <button
                   onClick={handleInvite}
                   disabled={!inviteEmail.trim() || isInviteLoading}
-                  className="px-3.5 py-1.5 text-xs font-medium text-black bg-white hover:bg-white/90 rounded-lg transition-colors disabled:opacity-40"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[hsl(var(--background))] bg-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/90 rounded-lg transition-colors disabled:opacity-40"
                 >
                   {isInviteLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Invite'}
                 </button>
                 <button
                   onClick={() => { setIsInviting(false); setInviteEmail(''); }}
-                  className="p-1 text-white/30 hover:text-white/60"
+                  className="p-1 text-[hsl(var(--muted-foreground))]/50 hover:text-[hsl(var(--muted-foreground))]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -118,35 +118,35 @@ export function MembersSettings({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-[#171717] border border-white/5 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                  className="absolute top-full left-0 right-0 mt-2 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
                 >
                   <div className="max-h-64 overflow-y-auto py-2">
                     {isSearching ? (
                       <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-4 h-4 animate-spin text-white/30" />
+                        <Loader2 className="w-4 h-4 animate-spin text-[hsl(var(--muted-foreground))]/40" />
                       </div>
                     ) : searchResults.length > 0 ? (
                       searchResults.map((user) => (
                         <button
                           key={user._id}
                           onClick={() => handleSelectUser(user.email)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[hsl(var(--muted))]/30 transition-colors text-left"
                         >
                           {user.avatar ? (
-                            <img src={user.avatar} alt="" className="w-8 h-8 rounded-full border border-white/10 object-cover" />
+                            <img src={user.avatar} alt="" className="w-8 h-8 rounded-full border border-[hsl(var(--border))] object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-[10px] font-bold">
                               {getInitials(user.name)}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white/90 truncate">{user.name}</p>
-                            <p className="text-xs text-white/40 truncate">{user.email}</p>
+                            <p className="text-sm font-medium text-[hsl(var(--foreground))]/90 truncate">{user.name}</p>
+                            <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">{user.email}</p>
                           </div>
                         </button>
                       ))
                     ) : (
-                      <div className="px-4 py-3 text-sm text-white/40 text-center">
+                      <div className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] text-center">
                         No users found
                       </div>
                     )}
@@ -162,14 +162,14 @@ export function MembersSettings({
       {isAdmin && !isInviting && (
         <button
           onClick={() => setIsInviting(true)}
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm text-white/30 bg-white/[0.01] border border-dashed border-white/8 rounded-xl hover:bg-white/[0.03] hover:text-white/45 hover:border-white/15 transition-all mb-4"
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] bg-transparent border border-dashed border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))]/10 hover:text-[hsl(var(--foreground))] transition-all mb-4"
         >
           <UserPlus className="w-4 h-4" />
           Invite a team member
         </button>
       )}
 
-      <div className="bg-white/[0.01] border border-white/5 rounded-xl overflow-hidden divide-y divide-white/[0.03]">
+      <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden divide-y divide-[hsl(var(--border))]/50 shadow-sm">
         {selectedWorkspace.members.map((member: any) => {
           const isCurrentUser = member.user._id === currentUser?._id;
           const memberIsOwner = member.user._id === selectedWorkspace.owner._id;
@@ -177,7 +177,7 @@ export function MembersSettings({
           return (
             <div
               key={member.user._id}
-              className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.015] transition-colors group"
+              className="flex items-center gap-3 px-4 py-3.5 hover:bg-[hsl(var(--muted))]/10 transition-colors group"
             >
               <div className={cn(
                 "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
@@ -185,7 +185,7 @@ export function MembersSettings({
                   ? "bg-amber-500/12 text-amber-400"
                   : member.role === 'admin'
                   ? "bg-indigo-500/12 text-indigo-400"
-                  : "bg-white/[0.05] text-white/40"
+                  : "bg-[hsl(var(--muted))]/20 text-[hsl(var(--muted-foreground))]"
               )}>
                 {member.user.avatar ? (
                   <img src={member.user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
@@ -196,7 +196,7 @@ export function MembersSettings({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/70 font-medium truncate">{member.user.name}</span>
+                  <span className="text-sm text-[hsl(var(--foreground))]/70 font-medium truncate">{member.user.name}</span>
                   {memberIsOwner && (
                     <span className="flex items-center gap-0.5 text-[9px] text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
                       <Crown className="w-2.5 h-2.5" /> Owner
@@ -207,15 +207,15 @@ export function MembersSettings({
                       value={member.role}
                       onChange={(e) => handleUpdateRole(member.user._id, e.target.value)}
                       className={cn(
-                        "text-[10px] bg-transparent outline-none cursor-pointer border border-white/10 rounded px-1 flex appearance-none font-bold uppercase tracking-wider",
+                        "text-[10px] bg-transparent outline-none cursor-pointer border border-[hsl(var(--border))] rounded px-1 flex appearance-none font-bold uppercase tracking-wider",
                         member.role === 'admin' ? "text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10" 
                           : member.role === 'viewer' ? "text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10"
-                          : "text-white/40 hover:bg-white/5"
+                          : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/20"
                       )}
                     >
-                      <option className="bg-[#1E1E1E] text-white font-normal capitalize tracking-normal" value="admin">Admin</option>
-                      <option className="bg-[#1E1E1E] text-white font-normal capitalize tracking-normal" value="member">Member</option>
-                      <option className="bg-[#1E1E1E] text-white font-normal capitalize tracking-normal" value="viewer">Viewer</option>
+                      <option className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] font-normal capitalize tracking-normal" value="admin">Admin</option>
+                      <option className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] font-normal capitalize tracking-normal" value="member">Member</option>
+                      <option className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] font-normal capitalize tracking-normal" value="viewer">Viewer</option>
                     </select>
                   )}
                   {!memberIsOwner && !isAdmin && (
@@ -223,22 +223,22 @@ export function MembersSettings({
                       "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
                       member.role === 'admin' ? "text-indigo-400/80 bg-indigo-500/10"
                         : member.role === 'viewer' ? "text-emerald-400/80 bg-emerald-500/10"
-                        : "text-white/30 bg-white/5"
+                        : "text-[hsl(var(--muted-foreground))]/60 bg-[hsl(var(--muted))]/20"
                     )}>
                       {member.role}
                     </span>
                   )}
                   {isCurrentUser && (
-                    <span className="text-[10px] text-white/15">(you)</span>
+                    <span className="text-[10px] text-[hsl(var(--muted-foreground))]/30">(you)</span>
                   )}
                 </div>
-                <p className="text-xs text-white/20 truncate">{member.user.email}</p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]/40 truncate">{member.user.email}</p>
               </div>
 
               {isAdmin && !memberIsOwner && !isCurrentUser && (
                 <button
                   onClick={() => handleRemoveMember(member.user._id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-white/15 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-[hsl(var(--muted-foreground))]/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all"
                   title="Remove"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -247,7 +247,7 @@ export function MembersSettings({
               {isCurrentUser && !memberIsOwner && (
                 <button
                   onClick={() => handleRemoveMember(member.user._id)}
-                  className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-white/15 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all"
+                  className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[hsl(var(--muted-foreground))]/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all"
                 >
                   <LogOut className="w-3 h-3" /> Leave
                 </button>

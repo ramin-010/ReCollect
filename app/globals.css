@@ -32,7 +32,7 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 90%; /* Cooler, sharper border */
+    --border: 220 8% 82%;             /* Soft, barely-there structural border */
     --input: 0 0% 88%;
     --ring: 217 91% 50%;
 
@@ -50,22 +50,22 @@
     --success: 142 76% 36%;
     --warning: 38 72% 50%;
 
-    --sidebar-bg: 0 0% 90%; /* Neutral Grey to match BG family */
-    --sidebar-hover: 0 0% 87%;
-    --sidebar-active: 0 0% 85%;
-    --divider: 0 0% 85%;
+    --sidebar-bg: 60 6% 94%;         /* #F0F0EE — warm off-white secondary */
+    --sidebar-hover: 60 4% 91%;       /* slightly darker on hover */
+    --sidebar-active: 60 4% 88%;      /* actively selected */
+    --divider: 60 4% 90%;
     --sidebar-foreground: 0 0% 35%;
 
     /* Task Input - Light Mode */
     --task-input-bg: 0 0% 100%; /* White input on light bg */
-    --task-input-border: 0 0% 85%; /* Subtle border */
+    --task-input-border: 0 0% 75%; /* Subtle border */
     --task-input-text: 0 0% 20%; /* Dark text */
     --task-input-placeholder: 0 0% 60%;
     --task-key-bg: 0 0% 95%; /* Light key bg */
     --task-key-text: 0 0% 50%;
 
     --welcome-bg: 0 0% 98%;
-    --border-light: 0 0% 88%;
+    --border-light: 0 0% 78%;
 
     /* Text hierarchy */
     --text-tertiary: 220 8% 60%;
@@ -75,8 +75,8 @@
     --surface-raised: rgba(0, 0, 0, 0.045);
     --surface-overlay: rgba(0, 0, 0, 0.07);
     --surface-inset: rgba(0, 0, 0, 0.04);
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --border-strong: rgba(0, 0, 0, 0.15);
+    --border-subtle: rgba(0, 0, 0, 0.07);
+    --border-strong: rgba(0, 0, 0, 0.14);
     --hover-bg: rgba(0, 0, 0, 0.03);
     --active-bg: rgba(0, 0, 0, 0.06);
     --overlay-mask: rgba(0, 0, 0, 0.5);
@@ -258,7 +258,7 @@
   */
   html.dark {
     /* ── Core Surfaces ── */
-    --background: 0 0% 10%;           /* #191919 — Notion's exact page bg */
+    --background: 0 0% 9.5%;           /* #191919 — Notion's exact page bg */
     --foreground: 0 0% 90%;           /* rgba(255,255,255,0.9) approximate */
     --card: 0 0% 18%;                 /* #2d2d2d — BIG lift, this is the key */
     --card-bg: 0 0% 20%;             /* Inner card elements / raised surfaces */
@@ -285,7 +285,7 @@
     --destructive-foreground: 0 0% 100%;
 
     /* ── Borders / Input ── */
-    --border: 0 0% 22%;              /* rgba(255,255,255,0.08) approximated as solid */
+    --border: 0 0% 15%;              /* Subdued solid border */
     --input: 0 0% 18%;
     --ring: 0 0% 50%;
 
@@ -300,12 +300,12 @@
     /* ── Semantic ── */
     --success: 142 35% 50%;
     --warning: 38 85% 55%;
-    --divider: 0 0% 21%;
+    --divider: 0 0% 14%;
     --welcome-bg: 0 0% 12%;
-    --border-light: 0 0% 30%;
+    --border-light: 0 0% 20%;
 
     /* ── Sidebar (#202020, +3% from page bg) ── */
-    --sidebar-bg: 0 0% 13%;          /* #202020 */
+    --sidebar-bg: 0 0% 12.5%;          /* #202020 — Notion's exact sidebar bg */
     --sidebar-hover: 0 0% 18%;       /* match card bg for consistency */
     --sidebar-active: 0 0% 20%;
     --sidebar-foreground: 0 0% 62%;  /* slightly brighter than muted */
@@ -315,8 +315,8 @@
     --surface-raised:   rgba(255, 255, 255, 0.065);
     --surface-overlay:  rgba(255, 255, 255, 0.09);
     --surface-inset:    rgba(0, 0, 0, 0.25);
-    --border-subtle:    rgba(255, 255, 255, 0.08);   /* Notion exact border value */
-    --border-strong:    rgba(255, 255, 255, 0.15);
+    --border-subtle:    rgba(255, 255, 255, 0.05);   /* Subtler Notion-style border */
+    --border-strong:    rgba(255, 255, 255, 0.1);
     --hover-bg:         rgba(255, 255, 255, 0.05);
     --active-bg:        rgba(255, 255, 255, 0.08);
     --overlay-mask:     rgba(0, 0, 0, 0.8);
@@ -367,7 +367,7 @@
     --destructive-foreground: 0 0% 98%;
 
     /* ── Borders / Input ── */
-    --border: 228 8% 88%;
+    --border: 228 8% 78%;
     --input: 40 4% 90%;
     --ring: 217 91% 50%;
 
@@ -382,9 +382,9 @@
     /* ── Semantic ── */
     --success: 142 76% 36%;
     --warning: 38 72% 50%;
-    --divider: 40 4% 87%;
+    --divider: 40 4% 76%;
     --welcome-bg: 40 5% 97%;
-    --border-light: 40 4% 88%;
+    --border-light: 40 4% 78%;
 
     /* ── Sidebar (slightly darker than page bg) ── */
     --sidebar-bg: 40 4% 94.5%;
@@ -397,19 +397,19 @@
     --surface-raised:   rgba(0, 0, 0, 0.045);
     --surface-overlay:  rgba(0, 0, 0, 0.07);
     --surface-inset:    rgba(0, 0, 0, 0.04);
-    --border-subtle:    rgba(0, 0, 0, 0.08);
-    --border-strong:    rgba(0, 0, 0, 0.15);
+    --border-subtle:    rgba(0, 0, 0, 0.12);
+    --border-strong:    rgba(0, 0, 0, 0.22);
     --hover-bg:         rgba(0, 0, 0, 0.03);
     --active-bg:        rgba(0, 0, 0, 0.06);
     --overlay-mask:     rgba(0, 0, 0, 0.45);
     --slide-bg: #f4f3f0;
 
     /* ── Card Highlight (bottom shadow line for light mode) ── */
-    --card-highlight: 228 10% 0% / 0.06;
+    --card-highlight: 228 10% 0% / 0.10;
 
     /* ── Task Input ── */
     --task-input-bg: 40 6% 99.5%;
-    --task-input-border: 228 8% 88%;
+    --task-input-border: 228 8% 78%;
     --task-input-text: 228 15% 14%;
     --task-input-placeholder: 228 6% 58%;
     --task-key-bg: 40 5% 95%;
@@ -612,12 +612,20 @@ html::-webkit-scrollbar-thumb:hover {
   background-clip: content-box;
 }
 
+
+
 /* Notion-style Header/Navbar */
 .notion-navbar {
   background-color: hsl(var(--sidebar-bg));
   background-image: linear-gradient(color-mix(in srgb, var(--surface-elevated) 40%, transparent), color-mix(in srgb, var(--surface-elevated) 40%, transparent));
   transition: all 0.2s ease;
   z-index: 100;
+}
+
+/* Notion-style Typography */
+.notion-font {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: auto;
 }
 
 /* Notion-style Card — with top-edge highlight */

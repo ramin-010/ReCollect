@@ -119,28 +119,28 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(({ items, comma
 
   if (items.length === 0) {
     return (
-      <div className="w-[280px] bg-[#1E1E1E] border border-white/10 rounded-xl overflow-hidden shadow-2xl p-1">
-        <div className="px-3 py-2 text-sm text-gray-400">No results</div>
+      <div className="w-[280px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden shadow-2xl p-1">
+        <div className="px-3 py-2 text-sm text-[hsl(var(--muted-foreground))]">No results</div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="w-[280px] bg-[#1E1E1E] border border-white/10 rounded-xl overflow-hidden shadow-2xl p-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+    <div ref={containerRef} className="w-[280px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden shadow-2xl p-1 max-h-[300px] overflow-y-auto custom-scrollbar">
       {items.map((item, index) => (
         <button
           key={item.title}
           onClick={() => selectItem(index)}
           className={`flex items-center w-full px-2 py-1.5 text-left rounded-lg transition-colors ${
-            index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'
+            index === selectedIndex ? 'bg-[hsl(var(--muted))]/20 text-[hsl(var(--foreground))]' : 'hover:bg-[hsl(var(--muted))]/10'
           }`}
         >
-          <div className="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-white/5 mr-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-[hsl(var(--muted))]/20 mr-3">
             {item.icon}
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-white/90">{item.title}</span>
-            <span className="text-[11px] text-white/40">{item.description}</span>
+            <span className="text-sm font-medium text-[hsl(var(--foreground))]/90">{item.title}</span>
+            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{item.description}</span>
           </div>
         </button>
       ))}

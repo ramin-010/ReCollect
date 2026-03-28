@@ -43,7 +43,7 @@ export function TaskDescriptionEditor({
       const overlayHtml = `
       <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
         <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
             <polyline points="15 3 21 3 21 9"></polyline>
             <polyline points="9 21 3 21 3 15"></polyline>
             <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -51,7 +51,7 @@ export function TaskDescriptionEditor({
           </svg>
         </button>
         <button class="img-delete-btn" style="width: 20px; height: 20px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -133,10 +133,10 @@ export function TaskDescriptionEditor({
   // Create image HTML with expand and delete button overlays
   const createImageHtml = (src: string) => {
     return `<div class="img-container" contenteditable="false" style="position: relative; display: block; width: fit-content; margin: 8px 0;">
-      <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); display: block; cursor: default;">
+      <img src="${src}" style="max-width: 280px; max-height: 196px; border-radius: 6px; border: 1px solid hsl(var(--border)); display: block; cursor: default;">
       <div class="img-overlay" style="position: absolute; top: 0; right: 0; display: flex; gap: 4px; padding: 6px; opacity: 0; transition: opacity 0.2s;">
         <button class="img-expand-btn" style="width: 26px; height: 26px; border-radius: 6px; background: rgba(0,0,0,0.7); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
             <polyline points="15 3 21 3 21 9"></polyline>
             <polyline points="9 21 3 21 3 15"></polyline>
             <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -144,7 +144,7 @@ export function TaskDescriptionEditor({
           </svg>
         </button>
         <button class="img-delete-btn" style="width: 20px; height: 20px; border-radius: 6px; background: rgba(220,38,38,0.8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -207,7 +207,7 @@ export function TaskDescriptionEditor({
     <div className="relative ">
       {isEmpty && (
         <div 
-          className="absolute top-0  text-sm  text-white/30 pointer-events-none select-none"
+          className="absolute top-0  text-sm  text-[hsl(var(--muted-foreground))]/50 pointer-events-none select-none"
         >
           {placeholder}
         </div>
@@ -219,7 +219,7 @@ export function TaskDescriptionEditor({
         onInput={handleInput}
         onPaste={handlePaste}
         onClick={handleClick}
-        className="text-sm text-white/70 focus:outline-none max-h-[200px] overflow-y-auto min-h-[20px] empty:min-h-0 text-left"
+        className="text-sm text-[hsl(var(--foreground))]/80 focus:outline-none max-h-[200px] overflow-y-auto min-h-[20px] empty:min-h-0 text-left"
         style={{ 
           wordBreak: 'break-word',
         }}

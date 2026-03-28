@@ -103,11 +103,11 @@ export function LabelsModal({
   };
 
   return (
-    <div className="w-[220px] bg-[#2a2a2a] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+    <div className="w-[220px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-xl overflow-hidden">
       {/* Search Input */}
-      <div className="px-2 py-2 border-b border-white/5">
+      <div className="px-2 py-2 border-b border-[hsl(var(--border))]">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/40" />
           <input
             type="text"
             value={searchQuery}
@@ -119,7 +119,7 @@ export function LabelsModal({
               }
             }}
             placeholder="Search or create..."
-            className="w-full bg-transparent pl-7 pr-2 py-1 text-sm text-white placeholder:text-white/30 focus:outline-none"
+            className="w-full bg-transparent pl-7 pr-2 py-1 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/40 focus:outline-none"
             autoFocus
           />
         </div>
@@ -129,7 +129,7 @@ export function LabelsModal({
       <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+            <Loader2 className="w-4 h-4 text-[hsl(var(--muted-foreground))]/50 animate-spin" />
           </div>
         ) : (() => {
             const lowerQuery = searchQuery.trim().toLowerCase();
@@ -147,11 +147,11 @@ export function LabelsModal({
                 onClick={() => toggleLabel(label)}
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors",
-                  isSelected ? "bg-white/5" : "hover:bg-white/5"
+                  isSelected ? "bg-[hsl(var(--muted))]/20" : "hover:bg-[hsl(var(--muted))]/10"
                 )}
               >
                 <Tag className={cn("w-3.5 h-3.5", colorConfig.text)} />
-                <span className="flex-1 text-sm text-white/80">{label.name}</span>
+                <span className="flex-1 text-sm text-[hsl(var(--foreground))]/80">{label.name}</span>
                 {isSelected && (
                   <Check className="w-3.5 h-3.5 text-indigo-400" />
                 )}
@@ -161,7 +161,7 @@ export function LabelsModal({
         }
         
         return !searchQuery.trim() ? (
-          <div className="px-3 py-3 text-xs text-white/40 text-center">
+          <div className="px-3 py-3 text-xs text-[hsl(var(--muted-foreground))] text-center">
             Type to search or create your first label
           </div>
         ) : null;
@@ -175,7 +175,7 @@ export function LabelsModal({
             e.stopPropagation();
             handleCreateLabel();
           }}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/60 hover:bg-white/5 border-t border-white/5 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))]/60 hover:bg-[hsl(var(--muted))]/10 border-t border-[hsl(var(--border))] transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="truncate">Create "{searchQuery.trim()}"</span>

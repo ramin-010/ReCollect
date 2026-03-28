@@ -38,24 +38,24 @@ export function SmartReminderModal({
     currentReminder.getTime() === autoReminderTime.getTime());
 
   return (
-    <div className="w-[320px] bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden font-sans">
+    <div className="w-[320px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl overflow-hidden font-sans">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-[hsl(var(--border))] flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
           <Bell className="w-4 h-4 text-indigo-400" />
           Reminders
         </h3>
       </div>
 
       {/* Tabs */}
-      <div className="p-1 mx-4 mt-4 bg-white/5 rounded-lg grid grid-cols-2 gap-1">
+      <div className="p-1 mx-4 mt-4 bg-[hsl(var(--muted))]/30 rounded-lg grid grid-cols-2 gap-1">
         <button
           onClick={() => setActiveTab('auto')}
           className={cn(
             "text-xs font-medium py-1.5 px-3 rounded-md transition-all",
             activeTab === 'auto' 
-              ? "bg-[#2a2a2a] text-white shadow-sm" 
-              : "text-white/40 hover:text-white/60"
+              ? "bg-[hsl(var(--card-bg))] text-[hsl(var(--foreground))] shadow-sm" 
+              : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           )}
         >
           Before task
@@ -65,8 +65,8 @@ export function SmartReminderModal({
           className={cn(
             "text-xs font-medium py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-1.5",
             activeTab === 'custom' 
-              ? "bg-[#2a2a2a] text-white shadow-sm" 
-              : "text-white/40 hover:text-white/60"
+              ? "bg-[hsl(var(--card-bg))] text-[hsl(var(--foreground))] shadow-sm" 
+              : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           )}
         >
           Date & time
@@ -93,8 +93,8 @@ export function SmartReminderModal({
                       <Clock className="w-4 h-4 text-indigo-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">10 minutes before</p>
-                      <p className="text-xs text-white/50 mt-1">
+                      <p className="text-sm font-medium text-[hsl(var(--foreground))]">10 minutes before</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
                         We'll remind you at <span className="text-indigo-300 font-mono">{format(autoReminderTime!, 'EEEE, h:mm a')}</span>
                       </p>
                     </div>
@@ -104,7 +104,7 @@ export function SmartReminderModal({
                 <div className="bg-amber-500/50 border border-amber-500/20 rounded-lg p-3">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-                    <p className="text-xs text-white/70 leading-relaxed">
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] leading-relaxed">
                       Add a date and time to the task first to enable smart reminders.
                     </p>
                   </div>
@@ -150,13 +150,13 @@ export function SmartReminderModal({
                 <Crown className="w-6 h-6 text-amber-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Pro Feature</h4>
-                <p className="text-xs text-white/40 mt-1 px-4">
+                <h4 className="text-sm font-semibold text-[hsl(var(--foreground))]">Pro Feature</h4>
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 px-4">
                   Custom reminder times are available on the Pro plan.
                 </p>
               </div>
               <div className="pt-2">
-                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-full text-[10px] font-medium text-white/40 border border-white/5 uppercase tracking-wide">
+                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[hsl(var(--muted))]/30 rounded-full text-[10px] font-medium text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))] uppercase tracking-wide">
                     Coming Soon
                  </span>
               </div>

@@ -51,18 +51,18 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content 
-          className="w-[240px] bg-[hsl(var(--background))] rounded-xl shadow-2xl border border-[hsl(var(--border))] overflow-hidden text-white/90 z-50 flex flex-col outline-none font-sans"
+          className="w-[240px] bg-[hsl(var(--background))] rounded-xl shadow-2xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-50 flex flex-col outline-none font-sans"
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-2 border-b border-[hsl(var(--border))]">
              <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]/50" />
               <input 
                 type="text" 
                 placeholder="Search or enter email..." 
-                className="w-full pl-8 pr-2 py-1.5 bg-[hsl(var(--foreground))]/5 border border-[hsl(var(--border))] focus:border-indigo-500/50 rounded-md outline-none placeholder:text-white/30 text-[13px] text-[hsl(var(--foreground))] transition-colors"
+                className="w-full pl-8 pr-2 py-1.5 bg-[hsl(var(--foreground))]/5 border border-[hsl(var(--border))] focus:border-indigo-500/50 rounded-md outline-none placeholder:text-[hsl(var(--muted-foreground))]/50 text-[13px] text-[hsl(var(--foreground))] transition-colors"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -72,14 +72,14 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
 
           <div className="max-h-[250px] overflow-y-auto py-1">
             {isSearching && (
-               <div className="flex items-center justify-center py-3 text-white/40">
+               <div className="flex items-center justify-center py-3 text-[hsl(var(--muted-foreground))]">
                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
                  <span className="text-xs">Searching...</span>
                </div>
             )}
             {!search.trim() && workspaceMembers.length > 0 && (
               <>
-                 <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                 <p className="text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]/50 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
                  {workspaceMembers.map(member => {
                    const isAssigned = currentAssignees.some(a => a.email === member.email || a._id === member._id);
                    return (
@@ -91,8 +91,8 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                          else onAssign(member.email, member.name, member.avatar, member._id);
                        }}
                        className={cn(
-                         "w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-white/5 transition-colors focus:bg-white/5 outline-none group",
-                         isAssigned ? "bg-white/[0.03]" : ""
+                         "w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-[hsl(var(--muted))]/30 transition-colors focus:bg-[hsl(var(--muted))]/30 outline-none group",
+                         isAssigned ? "bg-[hsl(var(--muted))]/20" : ""
                        )}
                      >
                        {member.avatar ? (
@@ -102,7 +102,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                            {getInitials(member.name)}
                          </div>
                        )}
-                       <span className="font-medium text-[13px] text-white/80 group-hover:text-white flex-1 truncate">
+                       <span className="font-medium text-[13px] text-[hsl(var(--foreground))]/80 group-hover:text-[hsl(var(--foreground))] flex-1 truncate">
                          {member.name}
                        </span>
                        {isAssigned && <Check className="w-3.5 h-3.5 text-indigo-400" />}
@@ -112,7 +112,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
               </>
             )}
             {!search.trim() && workspaceMembers.length === 0 && (
-               <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+               <p className="text-xs text-[hsl(var(--muted-foreground))] text-center py-3">Type to search or enter email</p>
             )}
             
             {/* Search Results */}
@@ -128,7 +128,7 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                   }}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                    isAssigned ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                    isAssigned ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-[hsl(var(--muted))]/30"
                   )}
                 >
                   <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -139,8 +139,8 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm truncate", isAssigned ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
-                    <p className={cn("text-xs truncate", isAssigned ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
+                    <p className={cn("text-sm truncate", isAssigned ? "text-indigo-300" : "text-[hsl(var(--foreground))]/80")}>{user.name}</p>
+                    <p className={cn("text-xs truncate", isAssigned ? "text-indigo-400/70" : "text-[hsl(var(--muted-foreground))]")}>{user.email}</p>
                   </div>
                   {isAssigned && <Check className="w-4 h-4 text-indigo-400" />}
                 </button>
@@ -155,14 +155,14 @@ export function AssigneeDropdown({ currentAssignees, workspaceMembers, onAssign,
                    onAssign(search.trim(), search.trim().split('@')[0], undefined, undefined);
                    setSearch('');
                  }}
-                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[hsl(var(--muted))]/30 transition-colors text-left"
                >
                  <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                    <Mail className="w-3.5 h-3.5" />
                  </div>
                  <div className="flex-1 min-w-0">
                    <p className="text-sm text-emerald-400">Invite {search.trim()}</p>
-                   <p className="text-xs text-white/40">Will send invite + assign task</p>
+                   <p className="text-xs text-[hsl(var(--muted-foreground))]/70">Will send invite + assign task</p>
                  </div>
                </button>
             )}

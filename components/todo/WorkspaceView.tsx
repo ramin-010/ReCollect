@@ -438,7 +438,7 @@ export function WorkspaceView() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-62">
-        <Loader2 className="w-6 h-6 animate-spin text-white/20" />
+        <Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--muted-foreground))]/30" />
       </div>
     );
   }
@@ -452,11 +452,11 @@ export function WorkspaceView() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-indigo-500/10 flex items-center justify-center mx-auto mb-5">
+          <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))]/20 border border-indigo-500/10 flex items-center justify-center mx-auto mb-5">
             <Users className="w-7 h-7 text-indigo-500/80" />
           </div>
-          <h2 className="text-lg font-semibold text-white/80 mb-1.5">No workspaces yet</h2>
-          <p className="text-sm text-white/35 leading-relaxed mb-6">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]/80 mb-1.5">No workspaces yet</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed mb-6">
             Create a workspace to start collaborating on tasks with your teams.
           </p>
           <div className="space-y-3">
@@ -465,7 +465,7 @@ export function WorkspaceView() {
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
               placeholder="Workspace name…"
-              className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/8 rounded-xl text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
+              className="w-full px-4 py-2.5 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none focus:border-[hsl(var(--border-strong,var(--border)))] transition-colors"
               autoFocus
             />
             <input
@@ -474,12 +474,12 @@ export function WorkspaceView() {
               onChange={(e) => setNewSpaceName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               placeholder="Default Sub-Space Name (e.g. Dev Team, Marketing Team etc.)"
-              className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/8 rounded-xl text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
+              className="w-full px-4 py-2.5 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none focus:border-[hsl(var(--border))] transition-colors"
             />
             <button
               onClick={handleCreate}
               disabled={!newWorkspaceName.trim() || isCreating}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black text-sm font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-sm font-medium rounded-xl hover:bg-[hsl(var(--foreground))]/90 transition-colors disabled:opacity-40"
             >
               {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Workspace'}
             </button>
@@ -495,7 +495,7 @@ export function WorkspaceView() {
   const activeSpace = selectedWorkspace?.spaces?.find((s: any) => s._id === activeSpaceId);
 
   return (
-    <div className="min-h-screen text-white bg-[hsl(var(--background))] pb-20 selection:bg-indigo-500/30">
+    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] pb-20 selection:bg-indigo-500/30">
       
       {/* ── New Premium Header ── */}
       <WorkspaceHeader 
@@ -596,13 +596,13 @@ export function WorkspaceView() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mb-3"
             >
-              <div className="flex flex-col gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl mt-3">
+              <div className="flex flex-col gap-2 p-3 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl mt-3">
                 <input
                   type="text"
                   value={newWorkspaceName}
                   onChange={(e) => setNewWorkspaceName(e.target.value)}
                   placeholder="Workspace name…"
-                  className="w-full bg-white/[0.05] border border-white/10 rounded-lg text-sm text-white placeholder-white/25 outline-none px-3 py-2 focus:border-white/20"
+                  className="w-full bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))] rounded-lg text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none px-3 py-2 focus:border-[hsl(var(--border))]"
                   autoFocus
                 />
                 <div className="flex items-center gap-2">
@@ -612,16 +612,16 @@ export function WorkspaceView() {
                     onChange={(e) => setNewSpaceName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     placeholder="First space (e.g. Team 1)"
-                    className="flex-1 bg-white/[0.05] border border-white/10 rounded-lg text-sm text-white placeholder-white/25 outline-none px-3 py-2 focus:border-white/20"
+                    className="flex-1 bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))] rounded-lg text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none px-3 py-2 focus:border-[hsl(var(--border))]"
                   />
                   <button
                     onClick={handleCreate}
                     disabled={!newWorkspaceName.trim() || isCreating}
-                    className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-white/90 rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
+                    className="px-4 py-2 text-xs font-medium text-[hsl(var(--background))] bg-[hsl(var(--foreground))] hover:bg-[hsl(var(--foreground))]/90 rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
                   >
                     {isCreating ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Create'}
                   </button>
-                  <button onClick={() => setShowCreateForm(false)} className="p-2 text-white/30 hover:text-white/60">
+                  <button onClick={() => setShowCreateForm(false)} className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
