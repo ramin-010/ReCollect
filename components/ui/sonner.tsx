@@ -12,19 +12,20 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      richColors
+      richColors={false}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:shadow-2xl group-[.toaster]:backdrop-blur-sm !bg-[hsl(var(--card-bg))] !text-[hsl(var(--foreground))] !border-[hsl(var(--border))]/20 data-[type=success]:[&_[data-icon]]:!text-emerald-500 data-[type=error]:[&_[data-icon]]:!text-red-500",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:shadow-[0_8px_30px_rgb(0,0,0,0.12)] group-[.toaster]:backdrop-blur-xl !bg-[hsl(var(--card))]/95 !text-[hsl(var(--foreground))] !border-[hsl(var(--border))] !rounded-xl overflow-hidden",
+          description: "group-[.toast]:text-[hsl(var(--muted-foreground))] text-sm",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-[hsl(var(--primary))] group-[.toast]:text-[hsl(var(--primary-foreground))] !rounded-md font-medium transition-colors",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group-[.toast]:bg-[hsl(var(--muted))] group-[.toast]:text-[hsl(var(--muted-foreground))] !rounded-md font-medium transition-colors",
           closeButton:
-            "!bg-gray-800 !text-white hover:!bg-red-600 hover:!border-red-500",
-          title: "text-[15px] font-medium",
+            "!bg-transparent !text-[hsl(var(--muted-foreground))] hover:!bg-[hsl(var(--secondary))] hover:!text-[hsl(var(--foreground))] !border-none !transition-colors left-auto right-4",
+          title: "text-[14px] font-medium tracking-tight",
+          icon: "text-[hsl(var(--foreground))] opacity-60",
         },
       }}
       {...props}

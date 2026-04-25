@@ -76,7 +76,7 @@ export function PresentationSlide({
 
   return (
     <div
-      className="w-full relative flex flex-col items-center bg-[#212121]"
+      className="w-full relative flex flex-col items-center bg-[var(--slide-bg)]"
       style={{ backgroundColor: backgroundColor || undefined }}
     >
       {/* 1. Full-bleed cover image */}
@@ -99,7 +99,7 @@ export function PresentationSlide({
         {showTitle !== false && (
           <div className={`w-full px-10 ${previewMode ? 'pb-0' : 'pb-8'} ${coverImage ? 'pt-5' : previewMode ? 'mt-5' : 'mt-15'}`}>
             <h1
-              className="w-full text-[62px] font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight"
+              className="w-full text-[62px] font-bold tracking-tight text-foreground leading-tight"
               style={{ fontFamily: 'var(--font-inter), sans-serif' }}
             >
               {title || ''}

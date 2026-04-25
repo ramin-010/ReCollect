@@ -257,15 +257,15 @@ export function TodoView() {
                   "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                   f.hideOnMobile && "hidden sm:flex",
                   activeFilter === f.key
-                    ? "text-white/80 bg-white/[0.06]"
-                    : "text-white/30 hover:text-white/50"
+                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
+                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 )}
               >
                 {f.label}
               </button>
             ))}
 
-            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+            <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1 shrink-0" />
 
             {/* App Integrations */}
             {[
@@ -278,8 +278,8 @@ export function TodoView() {
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                   activeFilter === f.key
-                    ? "text-white/80 bg-white/[0.06]"
-                    : "text-white/30 hover:text-white/50"
+                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
+                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 )}
               >
                 {f.icon}
@@ -287,7 +287,7 @@ export function TodoView() {
               </button>
             ))}
 
-            <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
+            <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1 shrink-0" />
 
             {/* Completed */}
             {[
@@ -299,8 +299,8 @@ export function TodoView() {
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
                   activeFilter === f.key
-                    ? "text-white/80 bg-white/[0.06]"
-                    : "text-white/30 hover:text-white/60"
+                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
+                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 )}
               >
                 {f.label}
@@ -312,12 +312,12 @@ export function TodoView() {
             {/* Sort filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium border border-white/5 text-white/40 rounded-md hover:text-white hover:bg-white/5 transition-colors">
+                <button className="px-3 py-[8px] flex items-center gap-2 text-xs font-medium border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]/30 rounded-md hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors">
                   <ArrowUpDown className="w-3.5 h-3.5" />
                   {sortBy === 'priority' ? 'Priority' : sortBy === 'dueDate' ? 'Due Date' : 'Recent'}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10 min-w-[140px]">
+              <DropdownMenuContent align="end" className="min-w-[140px]">
                 <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('dueDate')}>Due Date</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('recent')}>Recent</DropdownMenuItem>
@@ -325,22 +325,23 @@ export function TodoView() {
             </DropdownMenu>
 
             {/* View Switcher */}
-            <div className="flex items-center bg-white/[0.03] p-1 rounded-lg border border-white/5">
-              <button
-                onClick={() => setCurrentView('list')}
-                className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-                title="List View"
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentView('table')}
-                className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5")}
-                title="Table View"
-              >
-                <Table className="w-4 h-4" />
-              </button>
-            </div>
+            <div className="flex items-center bg-[hsl(var(--muted))]/10 p-1 rounded-lg border border-[hsl(var(--border))]">
+            <button 
+              onClick={() => setCurrentView('list')}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
+              title="List View"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setCurrentView('table')}
+              className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
+              title="Table View"
+            >
+              <Table className="w-4 h-4" />
+            </button>
+            
+          </div>
           </div>
         </div>
       </div>

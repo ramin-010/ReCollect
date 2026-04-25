@@ -41,60 +41,70 @@ export default function LogoExporter() {
   const [bgTransparent, setBgTransparent] = useState(true);
   const [bgColor, setBgColor] = useState("#0f0f0f");
   const [status, setStatus] = useState("");
+  const [padding, setPadding] = useState(15);
 
   const exportPNG = () => {
     // The pure logo contents fit exactly within these bounds:
     // We add 1 unit to the Y-axis and Height so the top doesn't clip
-    const viewBoxX = 14.5;
-    const viewBoxY = 13.5;
-    const viewBoxWidth = 27;
-    const viewBoxHeight = 21;
+    const baseX = 14.5;
+    const baseY = 13.5;
+    const baseW = 27;
+    const baseH = 21;
 
-    // We scale the width proportionally based on the user-selected export height (exportSize)
-    const exportWidth = Math.round(exportSize * (viewBoxWidth / viewBoxHeight));
+    // Center of the logo content
+    const centerX = baseX + baseW / 2;  // 28
+    const centerY = baseY + baseH / 2;  // 24
+
+    // Use the larger dimension so the square fits the full logo
+    const maxDim = Math.max(baseW, baseH);
+
+    // Add padding on each side
+    const padFraction = padding / 100;
+    const squareSize = maxDim + maxDim * padFraction * 2;
+
+    // Position the square viewBox centered on the logo
+    const viewBoxX = centerX - squareSize / 2;
+    const viewBoxY = centerY - squareSize / 2;
+
+    // Export as a square canvas
+    const canvasSize = exportSize;
     
-    const svgString = `
-      <svg width="${exportWidth}" height="${exportSize}" viewBox="${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-        ${!bgTransparent ? `<rect x="${viewBoxX}" y="${viewBoxY}" width="${viewBoxWidth}" height="${viewBoxHeight}" fill="${bgColor}"/>` : ""}
-        <path d="M16 24C16 19 19 16 22 16C25 16 26.5 17.5 28 19.5C29.5 17.5 31 16 34 16C37 16 40 19 40 24C40 29 37 32 34 32C31 32 29.5 30.5 28 28.5C26.5 30.5 25 32 22 32C19 32 16 29 16 24Z" fill="${primaryColor}" opacity="0.15"/>
-        <path d="M16 24C16 19 19 16 22 16C25 16 26.5 17.5 28 19.5M28 19.5C29.5 17.5 31 16 34 16C37 16 40 19 40 24C40 29 37 32 34 32C31 32 29.5 30.5 28 28.5M28 28.5C26.5 30.5 25 32 22 32C19 32 16 29 16 24M28 19.5V28.5" stroke="${primaryColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="22" cy="16" r="2.5" fill="${secondaryColor}"/>
-        <circle cx="34" cy="16" r="2.5" fill="${secondaryColor}"/>
-        <circle cx="28" cy="24" r="3" fill="${primaryColor}"/>
-        <circle cx="22" cy="32" r="2.5" fill="${secondaryColor}"/>
-        <circle cx="34" cy="32" r="2.5" fill="${secondaryColor}"/>
-      </svg>`;
+    const svgString = `<svg width="${canvasSize}" height="${canvasSize}" viewBox="${viewBoxX} ${viewBoxY} ${squareSize} ${squareSize}" fill="none" xmlns="http://www.w3.org/2000/svg">${!bgTransparent ? `<rect x="${viewBoxX}" y="${viewBoxY}" width="${squareSize}" height="${squareSize}" fill="${bgColor}"/>` : ""}<path d="M16 24C16 19 19 16 22 16C25 16 26.5 17.5 28 19.5C29.5 17.5 31 16 34 16C37 16 40 19 40 24C40 29 37 32 34 32C31 32 29.5 30.5 28 28.5C26.5 30.5 25 32 22 32C19 32 16 29 16 24Z" fill="${primaryColor}" opacity="0.15"/><path d="M16 24C16 19 19 16 22 16C25 16 26.5 17.5 28 19.5M28 19.5C29.5 17.5 31 16 34 16C37 16 40 19 40 24C40 29 37 32 34 32C31 32 29.5 30.5 28 28.5M28 28.5C26.5 30.5 25 32 22 32C19 32 16 29 16 24M28 19.5V28.5" stroke="${primaryColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="16" r="2.5" fill="${secondaryColor}"/><circle cx="34" cy="16" r="2.5" fill="${secondaryColor}"/><circle cx="28" cy="24" r="3" fill="${primaryColor}"/><circle cx="22" cy="32" r="2.5" fill="${secondaryColor}"/><circle cx="34" cy="32" r="2.5" fill="${secondaryColor}"/></svg>`;
 
-    const blob = new Blob([svgString], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
+    // Use base64 data URI instead of Blob URL — browsers reliably
+    // rasterize SVGs at the correct dimensions with data URIs
+    const base64 = btoa(unescape(encodeURIComponent(svgString)));
+    const dataUrl = `data:image/svg+xml;base64,${base64}`;
     const img = new Image();
+    img.width = canvasSize;
+    img.height = canvasSize;
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = exportWidth;
-      canvas.height = exportSize;
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       
       if (!bgTransparent) {
         ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, exportWidth, exportSize);
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
       }
       
-      ctx.drawImage(img, 0, 0, exportWidth, exportSize);
-      URL.revokeObjectURL(url);
+      ctx.drawImage(img, 0, 0, canvasSize, canvasSize);
 
       canvas.toBlob((blob) => {
         if (!blob) return;
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `recollect-logo-${exportSize}px.png`;
+        a.download = `recollect-logo-${canvasSize}px.png`;
         a.click();
-        setStatus(`✓ Exported ${exportWidth}×${exportSize}px PNG`);
+        URL.revokeObjectURL(a.href);
+        setStatus(`✓ Exported ${canvasSize}×${canvasSize}px PNG`);
         setTimeout(() => setStatus(""), 3000);
       });
     };
-    img.src = url;
+    img.src = dataUrl;
   };
 
   return (
@@ -117,6 +127,15 @@ export default function LogoExporter() {
               <span style={{ color: "#eee", fontSize: 13, fontWeight: 600 }}>Transparent bg</span>
             </label>
           </div>
+
+          <label style={{ color: "#aaa", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+            Padding: {padding}%
+            <input type="range" min={0} max={40} value={padding} onChange={e => setPadding(Number(e.target.value))} style={{ width: '100%', marginTop: 6, accentColor: '#6366f1' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#555', textTransform: 'none', marginTop: 2 }}>
+              <span>0% (edge-to-edge)</span>
+              <span>40% (lots of space)</span>
+            </div>
+          </label>
 
           <label style={{ color: "#aaa", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
             Theme Presets (from globals.css)

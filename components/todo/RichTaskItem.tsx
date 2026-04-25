@@ -61,9 +61,9 @@ function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: st
 
 function getPriorityConfig(priority: string) {
   switch (priority) {
-    case 'urgent': return { color: 'text-rose-500/70', fill: 'fill-rose-500/20' };
-    case 'high': return { color: 'text-amber-500/70', fill: 'fill-amber-500/20' };
-    case 'normal': case 'medium': return { color: 'text-blue-400/70', fill: 'fill-blue-500/20' };
+    case 'urgent': return { color: 'text-rose-500/90', fill: 'fill-rose-500/20' };
+    case 'high': return { color: 'text-amber-500/90', fill: 'fill-amber-500/20' };
+    case 'normal': case 'medium': return { color: 'text-blue-400/90', fill: 'fill-blue-500/20' };
     case 'low': return { color: 'text-zinc-500', fill: 'fill-zinc-400/20' };
     default: return { color: 'text-zinc-500', fill: '' };
   }
@@ -80,8 +80,8 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
     <div 
       onClick={() => onSelect(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 py-2.5 items-center border-b rounded-lg border-white/5 transition-all cursor-pointer",
-        "bg-transparent border-white/10 hover:bg-white/[0.02]",
+        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 py-2.5 items-center border-b rounded-lg border-[hsl(var(--border))]/50 transition-all cursor-pointer",
+        "bg-transparent hover:bg-[hsl(var(--muted))]/30",
         isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
       )}
     >
@@ -99,7 +99,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
             "flex items-center justify-center w-[16px] h-[16px] rounded-[4px] border transition-colors shadow-sm",
             isSelected 
               ? "bg-indigo-500 border-indigo-500 text-white" 
-              : "border-white/30 hover:border-indigo-400 bg-[#1e1e1e]"
+              : "border-[hsl(var(--border))] hover:border-indigo-400 bg-[hsl(var(--card))]"
           )}>
             {isSelected && <Check className="w-3 h-3" strokeWidth={3} />}
           </button>
@@ -137,7 +137,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
                 <div className="w-[6px] h-[6px] rounded-full bg-rose-500" />
               </div>
             ) : (
-              <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-white/40 group-hover:border-solid group-hover:border-white/60 transition-all flex items-center justify-center" />
+              <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-[hsl(var(--muted-foreground))] group-hover:border-solid group-hover:border-[hsl(var(--foreground))]/100 transition-all flex items-center justify-center" />
             )}
           </button>
         </TaskStatusDropdown>
@@ -146,16 +146,16 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
       {/* 2. Task Name & Metadata */}
       <div className="flex items-center gap-2 min-w-0">
         <p className={cn(
-          "text-[13px] truncate font-medium",
-          isDone ? "text-white/40 line-through" : "text-white/90"
+          "text-[14px] truncate font-medium",
+          isDone ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))]"
         )}>
           {task.title}
         </p>
         {task.description && (
-          <AlignLeft className="w-3.5 h-3.5 text-white/30 shrink-0" />
+          <AlignLeft className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/50 shrink-0" />
         )}
         {isDone && task.references && task.references.length > 0 && (
-          <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-white/5 border border-white/5 text-white/40 text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
+          <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]/50 text-[hsl(var(--muted-foreground))] text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
              {task.references[0].type}
           </span>
         )}
@@ -177,7 +177,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
         >
           <button className={cn(
             "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none whitespace-nowrap",
-            dueDateDisplay?.isOverdue ? "text-rose-400/80 font-medium" : task.dueDate ? "text-white/40" : "text-white/20 hover:text-white/40"
+            dueDateDisplay?.isOverdue ? "text-rose-400/80 font-medium" : task.dueDate ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--muted-foreground))]"
           )}>
             {task.dueDate && dueDateDisplay ? (
               <span>{dueDateDisplay.text}</span>
@@ -206,13 +206,13 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
           <button className={cn(
             "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
             isDone 
-              ? "bg-emerald-500/10 text-emerald-500/70 hover:bg-emerald-500/15" 
+              ? "bg-emerald-500/10 text-emerald-400/70 hover:bg-emerald-500/15" 
               : task.status === 'in_progress'
                 ? "bg-blue-500/10 text-blue-400/70 hover:bg-blue-500/15"
                 : task.status === 'review'
-                  ? "bg-amber-500/10 text-amber-500/70 hover:bg-amber-500/15"
+                  ? "bg-amber-500/10 text-amber-400/70 hover:bg-amber-500/15"
                   : task.status === 'blocked'
-                    ? "bg-rose-500/10 text-rose-500/70 hover:bg-rose-500/15"
+                    ? "bg-rose-500/10 text-rose-400/70 hover:bg-rose-500/15"
                     : "bg-white/[0.03] text-white/30 hover:bg-white/[0.06]"
           )}>
             {isDone ? 'COMPLETE' : task.status === 'in_progress' ? 'IN PROGRESS' : task.status === 'review' ? 'REVIEW' : task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
@@ -228,7 +228,7 @@ export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpd
         >
           <button className={cn(
              "p-1 rounded hover:bg-white/[0.04] transition-colors focus:outline-none",
-             "font-medium uppercase tracking-wider text-[9px]", 
+           "font-medium uppercase tracking-wider text-[9px]", 
              priorityConfig.color
           )}>
             {task.priority || 'Normal'}

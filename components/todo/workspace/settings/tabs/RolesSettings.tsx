@@ -101,18 +101,12 @@ export function RolesSettings({
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 pb-18">
-      {/* Header */}
-      <div className="shrink-0">
-        <h2 className="text-[17px] font-medium text-white/90 mb-1">Manage Roles</h2>
-        <p className="text-[12px] text-white/40 tracking-wide">Configure workspace permissions and assign roles to your team.</p>
-      </div>
-      
       {/* Top Section: Interactive Role Dictionary */}
       <div className="shrink-0">
-        <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-[0.2em] ml-0.5 mb-3">Role Capabilities</h3>
+        <h3 className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.2em] ml-0.5 mb-3">Role Capabilities</h3>
         
         {/* Horizontal Role Selector */}
-        <div className="flex items-center p-1 bg-[#171717] rounded-lg border border-white/5 w-fit mb-4">
+        <div className="flex items-center p-1 bg-[hsl(var(--background))]/50 rounded-lg border border-[var(--border-subtle)] w-fit mb-4">
           {roles.map((role) => (
             <button
               key={role.id}
@@ -120,8 +114,8 @@ export function RolesSettings({
               className={cn(
                 "px-5 py-1.5 rounded-md text-[12px] font-medium transition-all tracking-wide",
                 activeRoleTab === role.id 
-                  ? "bg-white/[0.06] text-white shadow-sm" 
-                  : "text-white/40 hover:text-white/70 hover:bg-white/[0.02]"
+                  ? "bg-[hsl(var(--muted))]/30 text-[hsl(var(--foreground))] shadow-sm" 
+                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70 hover:bg-[hsl(var(--muted))]/20"
               )}
             >
               {role.title}
@@ -130,14 +124,14 @@ export function RolesSettings({
         </div>
 
         {/* Active Role Card */}
-        <div className="bg-[#171717]/50 border border-white/[0.03] rounded-xl p-6 md:p-8 transition-all">
+        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-6 md:p-8 transition-all shadow-sm">
           <div className="flex items-start gap-5 mb-6">
             <div className="p-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 shrink-0 shadow-lg shadow-indigo-500/5">
               <ActiveIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-white/90 tracking-tight mb-1.5">{activeRole.title}</h3>
-              <p className="text-[12px] text-white/40 tracking-wide leading-relaxed max-w-xl">{activeRole.description}</p>
+              <h3 className="text-[15px] font-semibold text-[hsl(var(--foreground))]/90 tracking-tight mb-1.5">{activeRole.title}</h3>
+              <p className="text-[12px] text-[hsl(var(--muted-foreground))] tracking-wide leading-relaxed max-w-xl">{activeRole.description}</p>
             </div>
           </div>
 
@@ -147,7 +141,7 @@ export function RolesSettings({
                 <div className="mt-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-indigo-500/10 text-indigo-400/70 border border-indigo-500/20 group-hover/perm:text-indigo-400 transition-colors">
                   <Check className="w-2.5 h-2.5" />
                 </div>
-                <span className="text-[12px] text-white/60 tracking-tight leading-relaxed group-hover/perm:text-white/80 transition-colors">{perm}</span>
+                <span className="text-[12px] text-[hsl(var(--foreground))]/60 tracking-tight leading-relaxed group-hover/perm:text-[hsl(var(--foreground))]/80 transition-colors">{perm}</span>
               </div>
             ))}
           </div>
@@ -155,18 +149,18 @@ export function RolesSettings({
       </div>
 
       {/* Bottom Section: Member Assignment */}
-      <div className="border-t border-white/5 pt-10">
+      <div className="border-t border-[hsl(var(--border))] pt-10">
         <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-[0.2em] ml-0.5">Assign Roles</h3>
+          <h3 className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.2em] ml-0.5">Assign Roles</h3>
           
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/40" />
             <input 
               type="text" 
               placeholder="Find member..."
               value={searchMember}
               onChange={(e) => setSearchMember(e.target.value)}
-              className="w-48 bg-white/[0.02] border border-white/5 rounded-lg py-1.5 pl-8 pr-3 text-[11px] text-white placeholder-white/20 focus:outline-none focus:border-white/20 transition-colors"
+              className="w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg py-1.5 pl-8 pr-3 text-[11px] text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40 focus:outline-none focus:border-indigo-500/50 transition-colors shadow-sm"
             />
           </div>
         </div>
@@ -182,11 +176,11 @@ export function RolesSettings({
             return (
               <div 
                 key={member.user?._id} 
-                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.01] border hover:bg-white/[0.02] border-transparent hover:border-white/5 transition-all group"
+                className="flex items-center justify-between p-3 rounded-xl bg-transparent border border-transparent hover:bg-[hsl(var(--muted))]/10 hover:border-[hsl(var(--border))] transition-all group cursor-default"
               >
                 <div className="flex items-center gap-3">
                   {member.user?.avatar ? (
-                    <img src={member.user.avatar} alt="" className="w-8 h-8 rounded-full border border-white/10 object-cover" />
+                    <img src={member.user.avatar} alt="" className="w-8 h-8 rounded-full border border-[hsl(var(--border))] object-cover" />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center text-[10px] font-bold">
                       {getInitials(member.user?.name || '?')}
@@ -194,12 +188,12 @@ export function RolesSettings({
                   )}
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-[13px] font-medium text-white/90">
+                      <p className="text-[13px] font-medium text-[hsl(var(--foreground))]/90">
                         {member.user?.name}
-                        {isCurrentUser && <span className="ml-2 text-[10px] text-white/30 border border-white/10 px-1.5 py-0.5 rounded tracking-wide font-normal">YOU</span>}
+                        {isCurrentUser && <span className="ml-2 text-[10px] text-[hsl(var(--muted-foreground))]/50 border border-[hsl(var(--border))] px-1.5 py-0.5 rounded tracking-wide font-normal">YOU</span>}
                       </p>
                     </div>
-                    <p className="text-[11px] text-white/40 mt-0.5">{member.user?.email}</p>
+                    <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-0.5">{member.user?.email}</p>
                   </div>
                 </div>
 
@@ -217,14 +211,14 @@ export function RolesSettings({
                       className={cn(
                         "px-2.5 py-1 text-[11px] font-medium rounded outline-none border transition-colors tracking-wide appearance-none cursor-pointer",
                         member.role === 'admin' && "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
-                        member.role === 'member' && "text-white/70 bg-white/5 border-white/10",
+                        member.role === 'member' && "text-[hsl(var(--foreground))]/70 bg-[hsl(var(--muted))]/20 border-[hsl(var(--border))]",
                         member.role === 'viewer' && "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
                         !isChangeable && "opacity-60 cursor-not-allowed"
                       )}
                     >
-                      <option value="admin" className="bg-[#1E1E1E] text-indigo-400">ADMIN</option>
-                      <option value="member" className="bg-[#1E1E1E] text-white/70">MEMBER</option>
-                      <option value="viewer" className="bg-[#1E1E1E] text-emerald-400">VIEWER</option>
+                      <option value="admin" className="bg-[hsl(var(--card))] text-indigo-400">ADMIN</option>
+                      <option value="member" className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))]/70">MEMBER</option>
+                      <option value="viewer" className="bg-[hsl(var(--card))] text-emerald-400">VIEWER</option>
                     </select>
                   )}
                 </div>
@@ -233,7 +227,7 @@ export function RolesSettings({
           })}
           
           {filteredMembers.length === 0 && (
-            <div className="text-center py-8 text-[12px] text-white/30 border border-dashed border-white/5 rounded-xl">
+            <div className="text-center py-8 text-[12px] text-[hsl(var(--muted-foreground))] border border-dashed border-[hsl(var(--border))] rounded-xl">
               No members found matching your search.
             </div>
           )}

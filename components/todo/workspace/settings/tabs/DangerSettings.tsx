@@ -20,7 +20,7 @@ export function DangerSettings({
         <h2 className="text-xl font-semibold text-rose-400 mb-2">
           {isOwner ? 'Delete Workspace' : 'Leave Workspace'}
         </h2>
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">
           {isOwner 
             ? 'Permanently delete this workspace and all its data. This action cannot be undone.'
             : 'Leave this workspace. You will lose access to all tasks and spaces within it.'}
@@ -44,7 +44,7 @@ export function DangerSettings({
              }
              onClose();
            }}
-           className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium rounded-lg transition-colors"
+           className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-[hsl(var(--background))] text-sm font-medium rounded-lg transition-colors"
         >
           {isOwner ? 'Yes, delete this workspace' : 'Yes, leave this workspace'}
         </button>

@@ -103,14 +103,14 @@ export default function AppLayout({
     <CreateNoteProvider>
       <div className="h-screen overflow-hidden flex bg-pattern">
         {!hideSidebar && <Sidebar />}
-        <div className="flex-1 flex flex-col bg-[hsl(var(--background))] overflow-hidden">
+        <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
           <AnimatePresence>
             {!hideNavbar && (
               <motion.div
                 initial={{ opacity: 0, y: -20, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -20, height: 0 }}
-                className="overflow-hidden shrink-0"
+                className="shrink-0 z-40 relative"
               >
                 <Navbar />
               </motion.div>

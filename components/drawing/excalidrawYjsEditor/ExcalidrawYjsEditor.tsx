@@ -199,7 +199,7 @@ export function ExcalidrawYjsEditor({
               variant="ghost"
               size="sm"
               onClick={onBack}
-              className="h-9 px-2 lg:px-3 gap-2 rounded-lg bg-[#232329] hover:bg-muted border border-border/40 hover:border-border/60 text-muted-foreground hover:text-foreground transition-all font-medium backdrop-blur-sm shadow-sm"
+              className="h-9 px-2 lg:px-3 gap-2 rounded-lg bg-[#1e1e1e]/80 hover:bg-[#2d2d2d] border border-white/10 hover:border-white/20 text-white/70 hover:text-white transition-all font-medium backdrop-blur-sm shadow-sm"
               title="Back to Dashboard"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function ExcalidrawYjsEditor({
             </Button>
           )}
           <div className="h-5 w-px bg-border/40 hidden lg:block" />
-          <span className="text-sm font-medium opacity-90 select-none text-foreground tracking-wide py-1.5 rounded-lg truncate max-w-[150px] lg:max-w-none">
+          <span className="text-sm font-medium select-none text-white/80 tracking-wide py-1.5 rounded-lg truncate max-w-[150px] lg:max-w-none">
             {drawingName}
           </span>
         </div>
@@ -236,7 +236,7 @@ export function ExcalidrawYjsEditor({
                  variant="ghost"
                  size="sm"
                  onClick={onShare}
-                 className="h-7 gap-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md px-3"
+                 className="h-7 gap-2 text-xs font-medium text-white/60 hover:text-white hover:bg-white/10 rounded-md px-3"
                >
                  <Share2 className="w-3.5 h-3.5" />
                  <span>Share</span>
@@ -263,7 +263,7 @@ export function ExcalidrawYjsEditor({
         <div className="lg:hidden pointer-events-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 w-9 bg-[#232329] border border-border/40">
+              <Button variant="ghost" className="h-9 w-9 bg-[#1e1e1e]/80 border border-white/10 text-white/70 hover:text-white hover:bg-[#2d2d2d]">
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>

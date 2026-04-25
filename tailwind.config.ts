@@ -60,7 +60,20 @@ const config: Config = {
         'sidebar-hover': 'hsl(var(--sidebar-hover))',
         'sidebar-active': 'hsl(var(--sidebar-active))',
         'welcome-bg': 'hsl(var(--welcome-bg))',
-        'border-light': 'hsl(var(--border-light))'
+        'border-light': 'hsl(var(--border-light))',
+        // Translucent surface tokens (Notion-like depth)
+        'surface-elevated': 'var(--surface-elevated)',
+        'surface-raised': 'var(--surface-raised)',
+        'surface-overlay': 'var(--surface-overlay)',
+        'surface-inset': 'var(--surface-inset)',
+        'border-subtle': 'var(--border-subtle)',
+        'border-strong': 'var(--border-strong)',
+        'hover-bg': 'var(--hover-bg)',
+        'active-bg': 'var(--active-bg)',
+        'overlay-mask': 'var(--overlay-mask)',
+        'slide-bg': 'var(--slide-bg)',
+        'text-tertiary': 'hsl(var(--text-tertiary))',
+        'card-highlight': 'hsl(var(--card-highlight))',
       },
       borderRadius: {
         lg: 'var(--radius)',

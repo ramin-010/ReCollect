@@ -45,15 +45,15 @@ export function BulkActionBar({
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[hsl(var(--background))] border-2 border-white/10 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex items-center px-4 py-2.5 z-[60] overflow-hidden backdrop-blur-md"
+        className="fixed bottom-8 left-1/3 bg-[hsl(var(--background))] border-2 border-[hsl(var(--border))] rounded-2xl shadow-[0_0px_40px_rgba(0,0,0,0.1)] flex items-center px-4 py-2.5 z-[60] overflow-hidden backdrop-blur-md"
       >
-        <div className="flex items-center gap-3 pr-4 border-r border-white/10">
-          <div className="flex items-center justify-center h-6 px-2 rounded-md bg-white/10 text-[12px] font-bold text-white">
+        <div className="flex items-center gap-3 pr-4 border-r border-[hsl(var(--border))]">
+          <div className="flex items-center justify-center h-6 px-2 rounded-md bg-[hsl(var(--muted))]/20 text-[12px] font-bold text-[hsl(var(--foreground))]">
             {selectedTasks.size} Tasks selected
           </div>
           <button 
             onClick={onClearSelection}
-            className="p-1 hover:bg-white/10 rounded ml-1 text-white/50 hover:text-white transition-colors"
+            className="p-1 hover:bg-[hsl(var(--muted))]/30 rounded ml-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -70,7 +70,7 @@ export function BulkActionBar({
                onClearSelection();
              }}
           >
-            <button disabled={isUpdatingStatus} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
+            <button disabled={isUpdatingStatus} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/10 rounded-lg transition-colors outline-none cursor-pointer">
               {isUpdatingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CircleDot className="w-3.5 h-3.5" />}
               Status
             </button>
@@ -92,7 +92,7 @@ export function BulkActionBar({
               }}
               onUnassign={() => {}}
             >
-              <button disabled={isUpdatingAssignee} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
+              <button disabled={isUpdatingAssignee} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/10 rounded-lg transition-colors outline-none cursor-pointer">
                  {isUpdatingAssignee ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
                  Assignees
               </button>
@@ -109,7 +109,7 @@ export function BulkActionBar({
                onClearSelection();
             }}
           >
-            <button disabled={isUpdatingDate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
+            <button disabled={isUpdatingDate} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/10 rounded-lg transition-colors outline-none cursor-pointer">
               {isUpdatingDate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calendar className="w-3.5 h-3.5" />}
               Dates
             </button>
@@ -125,13 +125,13 @@ export function BulkActionBar({
                onClearSelection();
             }}
           >
-            <button disabled={isUpdatingPriority} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors outline-none cursor-pointer">
+            <button disabled={isUpdatingPriority} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/10 rounded-lg transition-colors outline-none cursor-pointer">
               {isUpdatingPriority ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
               Priority
             </button>
           </PriorityDropdown>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+          <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1"></div>
 
           {/* Delete */}
           <button 

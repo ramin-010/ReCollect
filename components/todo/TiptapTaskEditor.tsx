@@ -103,7 +103,7 @@ export function TiptapTaskEditor({
     },
     editorProps: {
       attributes: {
-        class: 'tiptap-task-description focus:outline-none min-h-[20px] max-w-full text-sm text-white/70',
+        class: 'tiptap-task-description focus:outline-none min-h-[20px] max-w-full text-sm text-[hsl(var(--foreground))]/70',
       },
       handleClickOn: (view, pos, node, nodePos, event, direct) => {
         return false;
@@ -200,7 +200,8 @@ export function TiptapTaskEditor({
         .tiptap-task-description p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
-          color: rgba(255, 255, 255, 0.3);
+          color: hsl(var(--muted-foreground));
+          opacity: 0.8;
           pointer-events: none;
           height: 0;
         }
@@ -222,13 +223,13 @@ export function TiptapTaskEditor({
         /* Basic formatting */
         .tiptap-task-description strong {
           font-weight: 600;
-          color: rgba(255, 255, 255, 0.9);
+          color: hsl(var(--foreground));
         }
         .tiptap-task-description em {
           font-style: italic;
         }
         .tiptap-task-description code {
-          background-color: rgba(255, 255, 255, 0.1);
+          background-color: hsl(var(--muted));
           padding: 0.125rem 0.25rem;
           border-radius: 0.25rem;
           font-family: monospace;

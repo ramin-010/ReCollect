@@ -124,7 +124,7 @@ export function AiTestFeeder({ onClose }: { onClose: () => void }) {
     return (
       <div className="flex flex-col h-full w-full">
         {/* Top bar */}
-        <div className="shrink-0 flex items-center gap-3 px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--sidebar-bg))] backdrop-blur-sm">
+        <div className="shrink-0 flex items-center gap-3 px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--card))] backdrop-blur-sm">
           <Button
             variant="ghost"
             size="sm"

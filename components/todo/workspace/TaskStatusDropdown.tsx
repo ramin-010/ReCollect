@@ -29,7 +29,7 @@ export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: 
 
   const renderIcon = (option: any) => {
     if (option.value === 'pending') {
-      return <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-dashed border-white/40 shrink-0" />;
+      return <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-dashed border-[hsl(var(--muted))] shrink-0" />;
     }
     if (option.isCheck) {
       return <CheckCircle2 className={cn("w-[16px] h-[16px] shrink-0 fill-emerald-500/20 ml-[-1px]", option.colorClass)} />;
@@ -48,7 +48,7 @@ export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: 
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content 
-          className="w-[180px] bg-[#1a1a1a] rounded-xl shadow-xl border border-white/10 overflow-hidden text-white/90 z-50 text-[13px] outline-none font-sans"
+          className="w-[180px] bg-[hsl(var(--card))] rounded-xl shadow-xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-50 text-[13px] outline-none font-sans"
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}
@@ -61,8 +61,8 @@ export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: 
                   key={option.value}
                   onClick={() => handleSelect(option.value as TaskStatus)}
                   className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 hover:bg-white/5 transition-colors focus:bg-white/5 outline-none group",
-                    isSelected ? "bg-white/[0.04]" : ""
+                    "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 hover:bg-[hsl(var(--muted))]/10 transition-colors focus:bg-[hsl(var(--muted))]/10 outline-none group",
+                    isSelected ? "bg-[hsl(var(--muted))]/20" : ""
                   )}
                 >
                   <div className="flex items-center justify-center w-4 h-4">
@@ -70,11 +70,11 @@ export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: 
                   </div>
                   <span className={cn(
                     "font-medium text-[13px] flex-1",
-                    isSelected ? "text-white/90" : "text-white/60 group-hover:text-white/90 transition-colors"
+                    isSelected ? "text-[hsl(var(--foreground))]/90" : "text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]/90 transition-colors"
                   )}>
                     {option.label}
                   </span>
-                  {isSelected && <Check className="w-4 h-4 text-white/40 shrink-0" />}
+                  {isSelected && <Check className="w-4 h-4 text-[hsl(var(--muted-foreground))]/50 shrink-0" />}
                 </button>
               );
             })}

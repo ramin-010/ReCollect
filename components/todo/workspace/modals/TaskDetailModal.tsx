@@ -354,7 +354,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50"
+                className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50"
               />
             </Dialog.Overlay>
             <Dialog.Content 
@@ -371,17 +371,17 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                 animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
                 exit={{ opacity: 0, scale: 0.98, x: '-50%', y: '-48%' }}
                 transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                className="fixed top-[50%] left-[50%] w-full max-w-[1200px] h-[90vh] max-h-[900px] bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden outline-none font-sans"
+                className="fixed top-[50%] left-[50%] w-full max-w-[1200px] h-[90vh] max-h-[900px] bg-[hsl(var(--background))] border border-[var(--border-subtle)] rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden outline-none font-sans"
               >
                 <Dialog.Title className="sr-only">Task Details</Dialog.Title>
 
                 {/* ═══ Top Bar ═══ */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] shrink-0">
-                  <div className="flex items-center gap-2 text-[13px] font-medium text-white/50">
+                <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-subtle)] bg-[var(--surface-elevated)]/70 shrink-0">
+                  <div className="flex items-center gap-2 text-[13px] font-medium text-[hsl(var(--muted-foreground))]">
                     <Box className="w-4 h-4" /> Task
                   </div>
 
-                  <div className="flex items-center gap-3 text-[12px] text-white/50">
+                  <div className="flex items-center gap-3 text-[12px] text-[hsl(var(--muted-foreground))]">
                     <span>Created {createdDate}</span>
 
                     {/* ──── SAVE BUTTON (hidden for viewers) ──── */}
@@ -392,8 +392,8 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                         className={cn(
                           "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all",
                           isDirty
-                            ? "bg-indigo-500 text-white hover:bg-indigo-400 shadow-lg shadow-indigo-500/20"
-                            : "bg-white/5 text-white/25 cursor-not-allowed"
+                            ? "bg-indigo-500 text-[hsl(var(--background))] hover:bg-indigo-400 shadow-lg shadow-indigo-500/20"
+                            : "bg-[hsl(var(--muted))]/20 text-[hsl(var(--muted-foreground))]/40 cursor-not-allowed"
                         )}
                       >
                         {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -401,8 +401,8 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                       </button>
                     )}
 
-                    <button className="hover:text-white transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
-                    <button onClick={onClose} className="p-1 -mr-1 hover:text-white hover:bg-white/10 rounded transition-colors"><X className="w-5 h-5" /></button>
+                    <button className="hover:text-[hsl(var(--foreground))] transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                    <button onClick={onClose} className="p-1 -mr-1 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/20 rounded transition-colors"><X className="w-5 h-5" /></button>
                   </div>
                 </div>
 
@@ -422,7 +422,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                         readOnly={isViewer}
                         className={cn(
                           "w-full bg-transparent text-[28px] font-bold border-none outline-none focus:ring-0 p-0 transition-colors resize-none overflow-hidden",
-                          isComplete ? "text-white/40 line-through" : "text-white/90 placeholder-white/20",
+                          isComplete ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))]/90 placeholder-[hsl(var(--muted-foreground))]/40",
                           isViewer && "cursor-default select-text"
                         )}
                         placeholder="Task title"
@@ -451,7 +451,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Status */}
                       <div className="flex justify-between items-center group">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><CircleDot className="w-3.5 h-3.5" /> Status</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><CircleDot className="w-3.5 h-3.5" /> Status</div>
                         <div className="flex-1 flex items-center">
                           <TaskStatusDropdown
                             currentStatus={status as TaskStatus}
@@ -459,11 +459,11 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                           >
                             <button className={cn(
                               "flex items-center gap-2 px-2.5 py-1 rounded text-[11px] font-bold tracking-wide uppercase transition-colors outline-none",
-                              isComplete ? "bg-emerald-500 text-black hover:bg-emerald-400"
-                                : status === 'in_progress' ? "bg-blue-500 text-white hover:bg-blue-400"
-                                : status === 'review' ? "bg-amber-500 text-black hover:bg-amber-400"
-                                : status === 'blocked' ? "bg-rose-500 text-white hover:bg-rose-400"
-                                : "bg-white/10 text-white hover:bg-white/20"
+                              isComplete ? "bg-emerald-500 text-[hsl(var(--background))] hover:bg-emerald-400"
+                                : status === 'in_progress' ? "bg-blue-500 text-[hsl(var(--background))] hover:bg-blue-400"
+                                : status === 'review' ? "bg-amber-500 text-[hsl(var(--background))] hover:bg-amber-400"
+                                : status === 'blocked' ? "bg-rose-500 text-[hsl(var(--background))] hover:bg-rose-400"
+                                : "bg-[hsl(var(--muted))]/20 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30"
                             )}>
                               {isComplete ? 'Complete' : status === 'in_progress' ? 'In Progress' : status === 'review' ? 'Review' : status === 'blocked' ? 'Blocked' : 'To Do'}
                               <span className="opacity-50 ml-1 flex items-center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6"/></svg></span>
@@ -475,7 +475,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Assignees */}
                       <div className="flex justify-between items-center z-[51]">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><UserCircle2 className="w-3.5 h-3.5" /> Assignees</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><UserCircle2 className="w-3.5 h-3.5" /> Assignees</div>
                         <div className="flex-1 flex items-center">
                           <AssigneeDropdown
                             currentAssignees={assignees}
@@ -489,7 +489,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                               markDirty();
                             }}
                           >
-                            <button className="flex flex-wrap items-center gap-1.5 min-h-[28px] hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none">
+                            <button className="flex flex-wrap items-center gap-1.5 min-h-[28px] hover:bg-[var(--hover-bg)] rounded px-1 -ml-1 transition-colors text-left outline-none">
                               {assignees.length > 0 ? (
                                 assignees.map((a: any) => (
                                   <div key={a.email} className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 pr-2 rounded-full border border-indigo-500/20" title={a.name}>
@@ -500,7 +500,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                                   </div>
                                 ))
                               ) : (
-                                <span className="text-[13px] text-white/30 hover:text-white/50">Empty</span>
+                                <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>
                               )}
                             </button>
                           </AssigneeDropdown>
@@ -509,12 +509,12 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Due Date */}
                       <div className="flex justify-between items-center group z-50">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><Calendar className="w-3.5 h-3.5" /> Due Date</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Calendar className="w-3.5 h-3.5" /> Due Date</div>
                         <div className="flex-1 flex items-center text-[13px]">
                           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                             <PopoverTrigger asChild>
-                              <button className="flex items-center gap-2 hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
-                                {dueDate ? <span className="text-white/80 group-hover:text-white">{dateLabel}</span> : <span className="text-white/30 hover:text-white/50">Empty</span>}
+                              <button className="flex items-center gap-2 hover:bg-[var(--hover-bg)] rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
+                                {dueDate ? <span className="text-[hsl(var(--foreground))]/80 group-hover:text-[hsl(var(--foreground))]">{dateLabel}</span> : <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>}
                               </button>
                             </PopoverTrigger>
                             <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="start" side="bottom" sideOffset={8}>
@@ -530,13 +530,13 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Priority */}
                       <div className="flex justify-between items-center group z-40">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><Flag className="w-3.5 h-3.5" /> Priority</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Flag className="w-3.5 h-3.5" /> Priority</div>
                         <div className="flex-1 flex items-center text-[13px]">
                           <PriorityDropdown
                             currentPriority={priority}
                             onPriorityChange={(p) => { setPriority(p); markDirty(); }}
                           >
-                            <button className="flex items-center gap-1.5 hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
+                            <button className="flex items-center gap-1.5 hover:bg-[var(--hover-bg)] rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
                               {priority ? (
                                 <>
                                   <Flag className={cn("w-3.5 h-3.5",
@@ -544,12 +544,12 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                                     priority === 'medium' || priority === 'normal' ? "text-amber-400 fill-amber-500/20" :
                                     "text-blue-400 fill-blue-500/20"
                                   )} />
-                                  <span className="text-white/80 capitalize group-hover:text-white">
+                                  <span className="text-[hsl(var(--foreground))]/80 capitalize group-hover:text-[hsl(var(--foreground))]">
                                     {priority === 'medium' ? 'Normal' : priority}
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-white/30 hover:text-white/50">Empty</span>
+                                <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>
                               )}
                             </button>
                           </PriorityDropdown>
@@ -558,17 +558,17 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Tags */}
                       <div className="flex justify-between items-center z-30">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><Tag className="w-3.5 h-3.5" /> Tags</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Tag className="w-3.5 h-3.5" /> Tags</div>
                         <div className="flex-1 flex items-center text-[13px]">
                           <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
                             <PopoverTrigger asChild>
-                              <button className="flex flex-wrap items-center gap-1.5 min-h-[28px] hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none">
+                              <button className="flex flex-wrap items-center gap-1.5 min-h-[28px] hover:bg-[var(--hover-bg)] rounded px-1 -ml-1 transition-colors text-left outline-none">
                                 {selectedLabels.length > 0 ? (
                                   selectedLabels.map(l => (
                                     <span key={l.id} className="px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-500/30 bg-blue-500/10 text-blue-400">{l.name}</span>
                                   ))
                                 ) : (
-                                  <span className="text-white/30 hover:text-white/50">Empty</span>
+                                  <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>
                                 )}
                               </button>
                             </PopoverTrigger>
@@ -585,19 +585,19 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                       {/* Reminder */}
                       <div className="flex justify-between items-center z-20">
-                        <div className="flex items-center gap-2 text-[13px] text-white/40 w-[120px]"><Bell className="w-3.5 h-3.5" /> Reminder</div>
+                        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Bell className="w-3.5 h-3.5" /> Reminder</div>
                         <div className="flex-1 flex items-center text-[13px]">
                           <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
                             <PopoverTrigger asChild>
-                              <button className="flex items-center gap-2 hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
+                              <button className="flex items-center gap-2 hover:bg-[var(--hover-bg)] rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
                                 {currentReminder ? (
-                                  <span className="text-white/80">
+                                  <span className="text-[hsl(var(--foreground))]/80">
                                     {isToday(currentReminder) ? `Today at ${format(currentReminder, 'h:mm a')}` :
                                      isTomorrow(currentReminder) ? `Tomorrow at ${format(currentReminder, 'h:mm a')}` :
                                      format(currentReminder, 'MMM d, yyyy h:mm a')}
                                   </span>
                                 ) : (
-                                  <span className="text-white/30 hover:text-white/50">Empty</span>
+                                  <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>
                                 )}
                               </button>
                             </PopoverTrigger>
@@ -617,7 +617,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                     {/* Options Bar — hidden for viewers */}
                     {!isViewer && (
                     <div className="flex items-center gap-2 mb-4">
-                      <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5 transition-colors">
+                      <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-[var(--border-subtle)] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)] transition-colors">
                         <Paperclip className="w-3.5 h-3.5" /> Attachment
                       </button>
                       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
@@ -628,7 +628,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                           reader.onload = (ev) => {
                             if (ev.target?.result) {
                               const src = ev.target.result as string;
-                              setDescription(prev => prev + `<div style="margin:8px 0;"><img src="${src}" style="max-width:280px;max-height:196px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);display:block;"></div>`);
+                              setDescription(prev => prev + `<div style="margin:8px 0;"><img src="${src}" style="max-width:280px;max-height:196px;border-radius:6px;border:1px solid hsl(var(--border));display:block;"></div>`);
                               markDirty();
                             }
                           };
@@ -636,45 +636,45 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                         });
                       }} />
 
-                      <button onClick={addSubtask} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5 transition-colors">
+                      <button onClick={addSubtask} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-[var(--border-subtle)] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)] transition-colors">
                         <ListPlus className="w-3.5 h-3.5" /> Sub Task
                       </button>
 
                       <button onClick={() => { setIsRecurring(!isRecurring); markDirty(); }} className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
-                        isRecurring ? "border-indigo-500/30 text-indigo-400 bg-indigo-500/10" : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
+                        isRecurring ? "border-[var(--border-strong)] text-[hsl(var(--foreground))] bg-[var(--active-bg)]" : "border-dashed border-[var(--border-subtle)] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]"
                       )}>
                         <Repeat className="w-3.5 h-3.5" /> {isRecurring ? 'Recurring' : 'Recurrence'}
                       </button>
 
                       {isRecurring && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-white/10 text-xs">
-                          <span className="text-white/50">every</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--border-subtle)] text-xs">
+                          <span className="text-[hsl(var(--muted-foreground))]">every</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-white/80 bg-white/5 hover:bg-white/10 rounded transition-colors">
-                                {recurringInterval} <ChevronDown className="w-3 h-3 text-white/40" />
+                              <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-[hsl(var(--foreground))]/80 bg-[var(--surface-raised)] hover:bg-[var(--hover-bg)] rounded transition-colors">
+                                {recurringInterval} <ChevronDown className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10 min-w-[48px]">
+                            <DropdownMenuContent align="start" className="bg-[hsl(var(--card))] border-[hsl(var(--border))] min-w-[48px]">
                               {[1,2,3,4,5,6,7].map(n => (
-                                <DropdownMenuItem key={n} onClick={() => { setRecurringInterval(n); markDirty(); }} className={cn("focus:bg-white/10 text-xs", recurringInterval === n && "text-indigo-400")}>{n}</DropdownMenuItem>
+                                <DropdownMenuItem key={n} onClick={() => { setRecurringInterval(n); markDirty(); }} className={cn("focus:bg-[hsl(var(--muted))]/20 text-xs", recurringInterval === n && "text-indigo-400")}>{n}</DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-white/80 bg-white/5 hover:bg-white/10 rounded transition-colors">
-                                {recurringUnit} <ChevronDown className="w-3 h-3 text-white/40" />
+                              <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-[hsl(var(--foreground))]/80 bg-[var(--surface-raised)] hover:bg-[var(--hover-bg)] rounded transition-colors">
+                                {recurringUnit} <ChevronDown className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10 min-w-[64px]">
+                            <DropdownMenuContent align="start" className="bg-[hsl(var(--card))] border-[hsl(var(--border))] min-w-[64px]">
                               {(['day','week','month'] as const).map(u => (
-                                <DropdownMenuItem key={u} onClick={() => { setRecurringUnit(u); markDirty(); }} className={cn("focus:bg-white/10 text-xs", recurringUnit === u && "text-indigo-400")}>{u}</DropdownMenuItem>
+                                <DropdownMenuItem key={u} onClick={() => { setRecurringUnit(u); markDirty(); }} className={cn("focus:bg-[hsl(var(--muted))]/20 text-xs", recurringUnit === u && "text-indigo-400")}>{u}</DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                          <button onClick={() => { setIsRecurring(false); markDirty(); }} className="p-0.5 text-white/40 hover:text-white/60 rounded transition-colors ml-1"><X className="w-3 h-3" /></button>
+                          <button onClick={() => { setIsRecurring(false); markDirty(); }} className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70 rounded transition-colors ml-1"><X className="w-3 h-3" /></button>
                         </div>
                       )}
                     </div>
@@ -682,33 +682,33 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                     {/* Subtasks */}
                     {subtasks.length > 0 && (
-                      <div className="my-4">
-                        <div className="border border-white/10 rounded-lg bg-[#1e1e1e]/50 overflow-hidden">
-                          <div className="px-4 py-2 text-xs font-medium text-white/40 border-b border-white/5 bg-[#1e1e1e]">
+                      <div className="my-4 mt-6">
+                        <div className="border border-[var(--border-subtle)] rounded-lg bg-[var(--surface-raised)] overflow-hidden">
+                          <div className="px-4 py-2 text-xs font-medium text-[hsl(var(--muted-foreground))] border-b border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
                             Sub-issues ({subtasks.filter(s => s.isCompleted).length}/{subtasks.length})
                           </div>
                           <div className="p-0.5 space-y-0.5">
                             {subtasks.map((st, idx) => (
                               <div key={st.id} className="flex items-center gap-3 px-3 py-2 group">
-                                <CornerDownRight className="w-3.5 h-3.5 text-white/30" />
+                                <CornerDownRight className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
                                 <button onClick={() => toggleSubtask(st.id)} className={cn(
                                   "w-4 h-4 rounded-sm flex items-center justify-center shrink-0 border transition-colors cursor-pointer",
-                                  st.isCompleted ? "bg-emerald-500 border-emerald-500" : "border-white/20 hover:border-white/40"
+                                  st.isCompleted ? "bg-emerald-500 border-emerald-500" : "border-[hsl(var(--foreground))]/50 hover:border-[var(--border-subtle)]/80"
                                 )}>
-                                  {st.isCompleted && <CheckCircle className="w-3 h-3 text-white" />}
+                                  {st.isCompleted && <CheckCircle className="w-3 h-3 text-[hsl(var(--background))]" />}
                                 </button>
                                 <input
                                   type="text" value={st.text}
                                   onChange={(e) => { const u = [...subtasks]; u[idx] = { ...u[idx], text: e.target.value }; setSubtasks(u); markDirty(); }}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(); } if (e.key === 'Backspace' && st.text === '') { e.preventDefault(); removeSubtask(st.id); } }}
                                   placeholder="Issue title"
-                                  className={cn("flex-1 bg-transparent text-sm placeholder:text-white/30 focus:outline-none", st.isCompleted ? "text-white/40 line-through" : "text-white/80")}
+                                  className={cn("flex-1 bg-transparent text-sm placeholder:text-[hsl(var(--muted-foreground))]/50 focus:outline-none", st.isCompleted ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))]/80")}
                                   autoFocus={st.text === ''}
                                 />
-                                <button onClick={() => removeSubtask(st.id)} className="opacity-0 group-hover:opacity-100 p-1 text-white/20 hover:text-white/40 transition-all"><X className="w-3 h-3" /></button>
+                                <button onClick={() => removeSubtask(st.id)} className="opacity-0 group-hover:opacity-100 p-1 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] transition-all"><X className="w-3 h-3" /></button>
                               </div>
                             ))}
-                            <button onClick={addSubtask} className="flex items-center gap-2 px-3 py-2 w-full text-left text-xs font-medium text-indigo-400 hover:bg-white/5 transition-colors">
+                            <button onClick={addSubtask} className="flex items-center gap-2 px-3 py-2 w-full text-left text-xs font-medium text-indigo-400 hover:bg-[hsl(var(--muted))]/10 transition-colors">
                               <Plus className="w-3.5 h-3.5" /> Add sub-issue
                             </button>
                           </div>
@@ -718,7 +718,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
 
                     {/* ── Description (scrollable, spacious) ── */}
                     <div className="flex-1 min-h-[350px] flex flex-col pt-2 pb-4">
-                      <div className="flex-1 overflow-y-auto custom-scrollbar rounded-lg border border-white/5 bg-white/[0.02] p-4">
+                      <div className="flex-1 overflow-y-auto custom-scrollbar rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
                         <TiptapTaskEditor
                           content={description}
                           onChange={(val: string) => { setDescription(val); markDirty(); }}
@@ -736,14 +736,14 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                   </div>
 
                   {/* ═══ Activity Sidebar ═══ */}
-                  <div className="w-[340px] border-l border-[hsl(var(--border))] bg-transparent flex flex-col shrink-0">
-                    <div className="px-5 py-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-white/90">Activity</span>
-                      <button className="text-white/40 hover:text-white transition-colors" title="History"><History className="w-4 h-4" /></button>
+                  <div className="w-[340px] border-l border-[var(--border-subtle)] bg-[var(--surface-elevated)]/70 flex flex-col shrink-0">
+                    <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
+                      <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]/90">Activity</span>
+                      <button className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors" title="History"><History className="w-4 h-4" /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
                       {isLoadingActivities ? (
-                        <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                        <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[hsl(var(--muted-foreground))]" /></div>
                       ) : activities.length > 0 ? (
                         activities.map((activity, idx) => {
                           const actorName = activity.actor?.name || 'Someone';
@@ -765,11 +765,11 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                                 {actorAvatar ? <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(actorName) || 'S'}
                               </div>
                               <div className="flex-1">
-                                <p className="text-[13px] text-white/60 leading-snug">
-                                  <span className="font-semibold text-white/80 capitalize mr-1">{actorName}</span>
+                                <p className="text-[13px] text-[hsl(var(--muted-foreground))] leading-snug">
+                                  <span className="font-semibold text-[hsl(var(--foreground))]/80 capitalize mr-1">{actorName}</span>
                                   {actionText}
                                 </p>
-                                <p className="text-[11px] text-white/30 mt-1">
+                                <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-1">
                                   {format(new Date(activity.createdAt), 'MMM d, yyyy h:mm a')}
                                 </p>
                               </div>
@@ -777,7 +777,7 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                           );
                         })
                       ) : (
-                        <div className="text-[13px] text-white/40 text-center py-4">No activity yet</div>
+                        <div className="text-[13px] text-[hsl(var(--muted-foreground))] text-center py-4">No activity yet</div>
                       )}
                     </div>
                   </div>
@@ -788,10 +788,10 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
             {/* Image Preview — rendered INSIDE Dialog.Portal to escape body pointer-events block */}
             <AnimatePresence>
               {previewImage && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto" onClick={() => setPreviewImage(null)}>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-[hsl(var(--background))]/80 backdrop-blur-sm pointer-events-auto" onClick={() => setPreviewImage(null)}>
                   <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="relative max-w-[80vw] max-h-[80vh]" onClick={e => e.stopPropagation()}>
                     <img src={previewImage} alt="Preview" className="max-w-full max-h-[80vh] rounded-lg shadow-2xl" />
-                    <button onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors cursor-pointer"><X className="w-5 h-5 text-white" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} className="absolute -top-3 -right-3 w-8 h-8 bg-[hsl(var(--muted))]/30 hover:bg-[hsl(var(--muted))]/50 rounded-full flex items-center justify-center transition-colors cursor-pointer"><X className="w-5 h-5 text-[hsl(var(--foreground))]" /></button>
                   </motion.div>
                 </motion.div>
               )}

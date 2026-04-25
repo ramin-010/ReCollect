@@ -54,7 +54,7 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
   };
 
   return (
-    <div className="min-h-screen text-white bg-[#1A1A1A] pb-20">
+    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] pb-20">
       <div className=" px-6 md:px-8 w-full mx-auto">
         <AppNavbar title="Assigned to Me" description="Tasks others have assigned to you" />
       </div>
@@ -70,16 +70,16 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-4 mt-5"
             >
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/5 rounded-xl">
+              <div className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl">
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-semibold text-white/60">
-                  <span className="text-white">{stats.pending}</span> pending
+                <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">
+                  <span className="text-[hsl(var(--foreground))]">{stats.pending}</span> pending
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/5 rounded-xl">
+              <div className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-xs font-semibold text-white/60">
-                  <span className="text-white">{stats.completed}</span> done
+                <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">
+                  <span className="text-[hsl(var(--foreground))]">{stats.completed}</span> done
                 </span>
               </div>
               {stats.overdue > 0 && (
@@ -99,7 +99,7 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                 Pending ({pendingTasks.length})
               </h2>
             </div>
@@ -125,7 +125,7 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                 Completed ({completedTasks.length})
               </h2>
             </div>
@@ -156,8 +156,8 @@ export function AssignedView({ onSelectTask, onDeleteTask, onToggleComplete }: A
             <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-5">
               <UserCheck className="w-10 h-10 text-indigo-400/60" />
             </div>
-            <h3 className="text-lg font-semibold text-white/70 mb-2">No assigned tasks</h3>
-            <p className="text-sm text-white/35 max-w-sm leading-relaxed">
+            <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]/80 mb-2">No assigned tasks</h3>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] max-w-sm leading-relaxed">
               When someone assigns a task to you, it'll appear here. You can also assign tasks to yourself from the inbox.
             </p>
           </motion.div>
