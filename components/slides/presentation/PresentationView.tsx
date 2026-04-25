@@ -149,7 +149,7 @@ export function PresentationView({
     <div className="fixed inset-0 z-[1000] bg-background flex flex-col overflow-hidden">
       {/* Header Bar - Sleek Simple Style matching SlideEditor */}
       {!printMode && (
-        <div className="notion-navbar absolute top-0 left-0 right-0 flex items-center justify-between px-4 h-12 pointer-events-auto transition-opacity duration-300 opacity-0 hover:opacity-100">
+        <div className="notion-navbar absolute top-0 left-0 right-0 flex items-center justify-between px-4 h-12 pointer-events-auto transition-opacity duration-300 opacity-0 hover:opacity-100 z-50">
           {/* Left Section */}
           <div className="flex items-center gap-3 w-1/3">
             <button

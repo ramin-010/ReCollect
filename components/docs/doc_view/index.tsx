@@ -349,8 +349,8 @@ export function DocsView() {
 
       {/* View Tabs & Controls */}
       <div className="shrink-0 px-8 pb-3">
-        <div className="max-w-[1060px] mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1 p-1 bg-[var(--surface-elevated)] rounded-lg border border-[var(--border-subtle)]">
+        <div className="max-w-[1060px] mx-auto flex items-center justify-between gap-4 ">
+          <div className="flex items-center gap-1 p-1 bg-[hsl(var(--sidebar-bg))] rounded-lg border border-[var(--border-subtle)]/40">
              <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <LayoutGrid className="w-4 h-4" /> Gallery
              </button>

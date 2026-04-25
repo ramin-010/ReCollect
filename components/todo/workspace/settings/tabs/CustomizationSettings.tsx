@@ -37,12 +37,9 @@ export function CustomizationSettings({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Customization</h2>
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">Personalize your workspace appearance and details.</p>
-      </div>
+     
       
-      <div className="space-y-6">
+      <div className="space-y-6 mt-15">
         {/* Toggle: Members can view overview */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10">
           <div>

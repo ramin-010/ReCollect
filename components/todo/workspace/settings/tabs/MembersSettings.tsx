@@ -71,13 +71,7 @@ export function MembersSettings({
   if (!selectedWorkspace) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Workspace Members</h2>
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">Manage who has access to this workspace and their permissions.</p>
-      </div>
-
-      <AnimatePresence>
+    <div className="space-y-6">      <AnimatePresence>
         {isInviting && (
           <motion.div
             initial={{ height: 0, opacity: 0, overflow: 'hidden' }}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
@@ -15,13 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import {
   Clock, FileText, PenTool, CheckSquare, Files,
-  CalendarDays, ChevronRight, Mail,
+  CalendarDays, ChevronRight, ChevronLeft, Mail,
   LayoutDashboard, Presentation, ArrowRight, Inbox
 } from 'lucide-react';
-
-
-
-
 
 // ─── Helper Functions ─────────────────────────────────────
 const TYPE_CONFIG = {
@@ -61,6 +57,7 @@ export function HomeView() {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const setCurrentDoc = useDocStore((state) => state.setCurrentDoc);
+  const docs = useDocStore((state) => state.docs);
 
   const [recents, setRecents] = useState<RecentVisit[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -68,6 +65,26 @@ export function HomeView() {
   const [greeting, setGreeting] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [currentTime, setCurrentTime] = useState('');
+  const [dailyFocus, setDailyFocus] = useState('');
+
+  // ── Scroll State ──
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(Math.ceil(scrollLeft) < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [recents]);
 
   // ── Clock & Greeting ──
   useEffect(() => {
@@ -89,8 +106,18 @@ export function HomeView() {
 
     updateTime();
     const interval = setInterval(updateTime, 60 * 1000);
+
+    // Load daily focus
+    const savedFocus = localStorage.getItem('recollect_daily_focus');
+    if (savedFocus) setDailyFocus(savedFocus);
+
     return () => clearInterval(interval);
   }, []);
+
+  const handleFocusChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDailyFocus(e.target.value);
+    localStorage.setItem('recollect_daily_focus', e.target.value);
+  };
 
   // ── Fetch Data ──
   useEffect(() => {
@@ -178,7 +205,7 @@ export function HomeView() {
 
   return (
     <div className="p-4 lg:p-10 min-h-screen overflow-y-auto custom-scrollbar pb-24">
-      <div className="max-w-5xl mx-auto space-y-14">
+      <div className="max-w-[1050px] mx-auto space-y-14">
 
         {/* ─── 1. Hero Greeting ─── */}
         <motion.div
@@ -193,26 +220,17 @@ export function HomeView() {
               {user?.name?.split(' ')[0] || 'there'}
             </span>
           </h1>
-          
-          {/* Quick Actions (Absolute on Desktop, stacked on mobile) */}
-          <div className="mt-6 md:mt-0 flex gap-3 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
-            <Link
-              href="/docs"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-[var(--surface-elevated)] border border-[var(--border-subtle)] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)] transition-all duration-200"
-            >
-              <FileText className="h-4 w-4" /> New Doc
-            </Link>
-            <Link
-              href="/todo"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-medium bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-[hsl(var(--primary-foreground))] transition-all duration-200 shadow-sm"
-            >
-              <PenTool className="h-4 w-4" /> Add Task
-            </Link>
-          </div>
         </motion.div>
 
-        {/* ─── 2. Recently Visited (Horizontal Cards) ─── */}
-        <motion.section
+        {/* ─── 2. Main Content Grid ─── */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          
+          {/* ─── Left Column (Content) ─── */}
+          <div className="xl:col-span-8 space-y-8">
+
+            {/* Recently Visited */}
+            <motion.section
+
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -228,58 +246,123 @@ export function HomeView() {
               <p className="text-sm text-[hsl(var(--muted-foreground))]/60">No recent activity yet</p>
             </div>
           ) : (
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 custom-scrollbar snap-x">
-              {recents.map((item, i) => {
-                const config = TYPE_CONFIG[item.itemType];
-                const Icon = config.icon;
-                
-                // Card backgrounds mapping
-                const bgColors: Record<string, string> = {
-                  emerald: 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20',
-                  purple: 'bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20',
-                  orange: 'bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20',
-                  blue: 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20',
-                };
-                
-                const cardGlow: Record<string, string> = {
-                  emerald: 'group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]',
-                  purple: 'group-hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]',
-                  orange: 'group-hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]',
-                  blue: 'group-hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]',
-                };
+            <div className="relative group/scroll">
+              <div 
+                ref={scrollContainerRef}
+                onScroll={checkScroll}
+                className="flex overflow-x-auto gap-4 pb-4 -mx-1 px-1 custom-scrollbar snap-x no-scrollbar"
+              >
+                {recents.map((item, i) => {
+                  const config = TYPE_CONFIG[item.itemType];
+                  const Icon = config.icon;
+                  const doc = item.itemType === 'doc' ? docs.find(d => d._id === item.itemId) : null;
+                  const coverImg = doc?.coverImage || null;
 
-                return (
-                  <motion.button
-                    key={item.itemId}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 + i * 0.05 }}
-                    onClick={() => handleRecentClick(item)}
-                    className={`shrink-0 w-[180px] sm:w-[220px] snap-center flex flex-col items-start gap-4 p-4 rounded-2xl bg-[var(--surface-elevated)] hover:bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-300 group text-left ${cardGlow[config.color]}`}
-                  >
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${bgColors[config.color]}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    
-                    <div className="w-full">
-                      <p className="text-[14px] font-medium text-[hsl(var(--foreground))] truncate mb-1 transition-colors">
-                        {item.title}
-                      </p>
-                      <div className="flex items-center gap-2 text-[12px] text-[hsl(var(--muted-foreground))]">
-                        <span>{config.label}</span>
-                        <span>•</span>
-                        <span>{getTimeAgo(item.visitedAt)}</span>
+                  return (
+                    <motion.button
+                      key={item.itemId}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 + i * 0.05 }}
+                      onClick={() => handleRecentClick(item)}
+                      className="shrink-0 w-[180px] h-[150px] snap-center flex flex-col rounded-[14px] bg-[var(--surface-elevated)] hover:bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-300 group text-left overflow-hidden relative shadow-none"
+                    >
+                      {/* Top Half */}
+                      <div className="h-[45%] w-full bg-white/[0.02] border-b border-[hsl(var(--border))]/30 flex items-end px-4 pb-2 relative">
+                        {/* Cover Image */}
+                        {coverImg && (
+                          <div className="absolute inset-0 w-full h-full overflow-hidden">
+                            <img 
+                              src={coverImg}
+                              alt="Cover"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/20" /> {/* Subtle overlay for better icon visibility */}
+                          </div>
+                        )}
+                        <Icon className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors relative z-10" strokeWidth={1.5} />
                       </div>
+                      
+                      {/* Bottom Half */}
+                      <div className="h-[55%] w-full p-4 flex flex-col justify-between">
+                        <p className="text-[14px] font-medium text-[hsl(var(--foreground))] truncate leading-snug">
+                          {item.title}
+                        </p>
+                        
+                        <div className="flex items-center gap-2 mt-auto">
+                          {/* Mini Avatar */}
+                          <div className="h-[18px] w-[18px] rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center justify-center text-[10px] font-semibold border border-[hsl(var(--border))]/50">
+                            {user?.name?.charAt(0)?.toUpperCase() || 'R'}
+                          </div>
+                          <span className="text-[12px] text-[hsl(var(--muted-foreground))]/80">
+                            {getTimeAgo(item.visitedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Left Fade Overlay & Scroll Button */}
+              {canScrollLeft && (
+                <>
+                  <div className="absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-[hsl(var(--background))] to-transparent pointer-events-none z-10" />
+                  <div className="absolute left-0 top-0 bottom-4 w-32 pointer-events-none z-20 flex items-center justify-start pl-2 opacity-0 group-hover/scroll:opacity-100 transition-opacity">
+                    <div 
+                      className="h-8 w-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center shadow-md pointer-events-auto cursor-pointer hover:bg-[var(--surface-raised)] text-[hsl(var(--foreground))] transition-transform hover:scale-105 active:scale-95"
+                      onClick={() => {
+                        if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
                     </div>
-                  </motion.button>
-                );
-              })}
+                  </div>
+                </>
+              )}
+
+              {/* Right Fade Overlay & Scroll Button */}
+              {canScrollRight && (
+                <>
+                  <div className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-[hsl(var(--background))] to-transparent pointer-events-none z-10" />
+                  <div className="absolute right-0 top-0 bottom-4 w-32 pointer-events-none z-20 flex items-center justify-end pr-2 opacity-0 group-hover/scroll:opacity-100 transition-opacity">
+                    <div 
+                      className="h-8 w-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center shadow-md pointer-events-auto cursor-pointer hover:bg-[var(--surface-raised)] text-[hsl(var(--foreground))] transition-transform hover:scale-105 active:scale-95"
+                      onClick={() => {
+                        if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                      }}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </motion.section>
 
-        {/* ─── 3. Learn & Tools Grid (Placeholder for Future Expansion) ─── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Plan your day Widget */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="rounded-2xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)] p-5"
+            >
+              <h2 className="text-[14px] font-medium text-[hsl(var(--foreground))] mb-3">
+                Plan your day
+              </h2>
+              <textarea
+                value={dailyFocus}
+                onChange={handleFocusChange}
+                placeholder="Start typing..."
+                className="w-full bg-transparent border-none resize-none focus:ring-0 text-[15px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/40 min-h-[150px] outline-none custom-scrollbar"
+              />
+            </motion.section>
+
+          </div> {/* End Left Column */}
+
+          {/* ─── Right Column (Actionables) ─── */}
+          <div className="xl:col-span-4 space-y-8">
           
           {/* Upcoming Tasks */}
           <motion.section
@@ -317,9 +400,11 @@ export function HomeView() {
                       <div
                         key={task._id}
                         onClick={() => router.push('/todo')}
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[var(--hover-bg)] transition-colors cursor-pointer group"
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[var(--surface-raised)] border border-transparent hover:border-[var(--border-subtle)] transition-all cursor-pointer group"
                       >
-                        <div className="mt-0.5 shrink-0 w-[18px] h-[18px] rounded-[4px] border border-[hsl(var(--border))] group-hover:border-[hsl(var(--primary))]/50 transition-colors" />
+                        <div className="mt-1 shrink-0 text-[hsl(var(--muted-foreground))]/50 group-hover:text-[hsl(var(--primary))] transition-colors">
+                          <CheckSquare className="h-4 w-4" />
+                        </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors leading-relaxed">
                             {task.title}
@@ -345,7 +430,8 @@ export function HomeView() {
             </div>
           </motion.section>
 
-        </div>
+          </div> {/* End Right Column */}
+        </div> {/* End Main Content Grid */}
       </div>
     </div>
   );

@@ -694,7 +694,7 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
           </p>
 
           <div className="w-full space-y-2 mb-6">
-            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[var(--surface-elevated)]">
               <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
                 <Inbox className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
               </div>
@@ -704,7 +704,7 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
               </div>
             </div>
 
-            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[var(--surface-elevated)]">
               <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
                 <Sparkles className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
               </div>
@@ -714,7 +714,7 @@ function NotConnectedScreen({ onConnect }: { onConnect: () => void }) {
               </div>
             </div>
 
-            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--card))]/40">
+            <div className="flex items-start gap-3.5 p-3 rounded-xl border border-[hsl(var(--border))]/30 bg-[var(--surface-elevated)]">
               <div className="w-7 h-7 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] flex items-center justify-center shrink-0 mt-0.5">
                 <Archive className="w-3.5 h-3.5 text-[hsl(var(--foreground))]" />
               </div>

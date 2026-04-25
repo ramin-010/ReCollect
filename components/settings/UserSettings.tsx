@@ -484,7 +484,7 @@ export function UserSettings() {
                 <div className="p-4 pl-6 pt-6">
                   <h2 className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 px-2">Account</h2>
                 </div>
-                <nav className="flex-1 px-3 space-y-[2px] overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 px-3 space-y-[4px] overflow-y-auto custom-scrollbar">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;

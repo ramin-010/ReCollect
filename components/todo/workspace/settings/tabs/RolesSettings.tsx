@@ -101,12 +101,6 @@ export function RolesSettings({
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 pb-18">
-      {/* Header */}
-      <div className="shrink-0">
-        <h2 className="text-[17px] font-medium text-[hsl(var(--foreground))]/90 mb-1">Manage Roles</h2>
-        <p className="text-[12px] text-[hsl(var(--muted-foreground))] tracking-wide">Configure workspace permissions and assign roles to your team.</p>
-      </div>
-      
       {/* Top Section: Interactive Role Dictionary */}
       <div className="shrink-0">
         <h3 className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.2em] ml-0.5 mb-3">Role Capabilities</h3>

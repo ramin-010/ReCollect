@@ -1,6 +1,5 @@
 import React from 'react';
 import { Logo } from '@/components/brand/Logo';
-import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher';
 
 interface AppNavbarProps {
   title: string;
@@ -23,9 +22,8 @@ export function AppNavbar({ title, description }: AppNavbarProps) {
         </div>
       </div>
 
-      {/* Right Side: Theme Switcher */}
+      {/* Right Side */}
       <div className="flex items-center gap-4">
-        <ThemeSwitcher />
       </div>
     </div>
   );

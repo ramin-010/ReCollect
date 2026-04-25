@@ -452,11 +452,11 @@ export function WorkspaceView() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))]/20 border border-indigo-500/10 flex items-center justify-center mx-auto mb-5">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center mx-auto mb-5">
             <Users className="w-7 h-7 text-indigo-500/80" />
           </div>
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]/80 mb-1.5">No workspaces yet</h2>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed mb-6">
+          <p className="text-sm text-[hsl(var(--muted-foreground))]/80 leading-relaxed mb-6">
             Create a workspace to start collaborating on tasks with your teams.
           </p>
           <div className="space-y-3">
@@ -465,7 +465,7 @@ export function WorkspaceView() {
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
               placeholder="Workspace name…"
-              className="w-full px-4 py-2.5 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none focus:border-[hsl(var(--border-strong,var(--border)))] transition-colors"
+              className="w-full px-4 py-2.5 bg-[var(--surface-elevated)] border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/60 outline-none focus:border-[hsl(var(--foreground))]/20 transition-colors"
               autoFocus
             />
             <input
@@ -473,8 +473,8 @@ export function WorkspaceView() {
               value={newSpaceName}
               onChange={(e) => setNewSpaceName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              placeholder="Default Sub-Space Name (e.g. Dev Team, Marketing Team etc.)"
-              className="w-full px-4 py-2.5 bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] outline-none focus:border-[hsl(var(--border))] transition-colors"
+              placeholder="Sub-Space Name (e.g. Dev Team, Marketing Team etc.)"
+              className="w-full px-4 py-2.5 bg-[var(--surface-elevated)] border border-[hsl(var(--border))] rounded-xl text-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/60 outline-none focus:border-[hsl(var(--foreground))]/20 transition-colors"
             />
             <button
               onClick={handleCreate}

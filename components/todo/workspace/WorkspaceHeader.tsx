@@ -195,16 +195,17 @@ export function WorkspaceHeader({
                {/* Workspace Dropdown */}
                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-[hsl(var(--foreground))]/90 hover:text-[hsl(var(--foreground))] transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-[hsl(var(--muted))]/30 px-2 -ml-2">
+                    <button onClick={() => setShowCreateForm(false)} className="flex items-center gap-2 text-[hsl(var(--foreground))]/90 hover:text-[hsl(var(--foreground))] transition-colors group outline-none focus:outline-none bg-transparent rounded-lg hover:bg-[hsl(var(--muted))]/30 px-2 -ml-2 mb-0.5">
                       <motion.h1 
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 }}
-                          className="text-2xl lg:text-3xl font-light tracking-tight text-[hsl(var(--foreground))]/90 font-serif leading-none"
+                          className="text-[15px] md:text-[17px] font-medium tracking-tight text-[hsl(var(--foreground))]/80 font-sans leading-none flex items-center"
                       >
-                          {selectedWorkspace?.name} <span className="opacity-20 ml-1">space</span>
+                          <span className="uppercase">{selectedWorkspace?.name}</span>
+                          <span className="opacity-40 normal-case ml-2">Workspace</span>
                       </motion.h1>
-                      <ChevronDown className="w-5 h-5 text-[hsl(var(--muted-foreground))]/40 opacity-20 group-hover:text-[hsl(var(--muted-foreground))] group-hover:opacity-100 transition-colors mt-2" />
+                      <ChevronDown className="w-4 h-4 text-[hsl(var(--muted-foreground))]/40 opacity-20 group-hover:text-[hsl(var(--muted-foreground))] group-hover:opacity-100 transition-colors mt-[1px]" />
                     </button>
                   </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[300px] bg-[hsl(var(--card))] border-[hsl(var(--border))] shadow-xl rounded-xl p-1 z-50">
@@ -284,10 +285,10 @@ export function WorkspaceHeader({
                        transition={{ delay: 0.15 }}
                        className="flex items-center gap-2"
                     >
-                      <span className="text-3xl lg:text-4xl font-bold tracking-tight font-sans text-[hsl(var(--foreground))]/90 leading-none">
+                      <span className="text-[26px] md:text-[32px] font-bold tracking-tight font-sans text-[hsl(var(--foreground))] leading-none">
                         {activeSpaceId === 'all' ? 'All Spaces' : activeSpace?.name || 'Select Space'}
                       </span>
-                      <ChevronDown className="w-5 h-5 opacity-20 group-hover:opacity-100 text-[hsl(var(--muted-foreground))]/40 group-hover:text-[hsl(var(--muted-foreground))] transition-colors mt-2" />
+                      <ChevronDown className="w-5 h-5 opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))]/40 group-hover:text-[hsl(var(--muted-foreground))] transition-colors" />
                     </motion.div>
                   </button>
                 </DropdownMenuTrigger>

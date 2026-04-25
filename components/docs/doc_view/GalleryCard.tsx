@@ -71,9 +71,16 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
 
   return (
     <div className="relative group h-[280px]" onClick={() => onOpen(doc)}>
-      {/* Card Container — notion-card provides top-edge highlight + shadow */}
+      {/* Hover Lift & Container */}
       <div
-        className="notion-card cursor-pointer h-full flex flex-col overflow-hidden relative group-hover:-translate-y-[1px]"
+        className="cursor-pointer h-full
+                   bg-[hsl(var(--card))] 
+                   rounded-2xl border border-[hsl(var(--border))]/40
+                   shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)]
+                   group-hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)]
+                   group-hover:-translate-y-0
+                   group-hover:border-[hsl(var(--border))]/80
+                   transition-all duration-300 ease-out flex flex-col overflow-hidden relative"
       >
         
          {/* Pinned Indicator - Top Left */}
@@ -91,7 +98,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
              {isOwner && (
                <button
                   onClick={(e) => onTogglePin(doc, e)}
-                  className="p-1.5 rounded-full bg-[var(--surface-overlay)]/80 backdrop-blur-md hover:bg-[var(--surface-overlay)] text-[hsl(var(--foreground))] transition-colors shadow-sm ring-1 ring-[hsl(var(--border))]/20"
+                  className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
                   title={doc.isPinned ? 'Unpin' : 'Pin'}
                >
                  {doc.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5 " />}
@@ -100,7 +107,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
                  <button
-                   className="p-1.5 rounded-full bg-[var(--surface-overlay)]/80 backdrop-blur-md hover:bg-[var(--surface-overlay)] text-[hsl(var(--foreground))] transition-colors shadow-sm ring-1 ring-[hsl(var(--border))]/20"
+                   className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
                    onClick={(e) => e.stopPropagation()}
                  >
                    <MoreHorizontal className="w-3.5 h-3.5" />
@@ -150,11 +157,11 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
              </div>
           )}
           {/* Overlay Gradient for Text Contrast if needed, mostly for bottom edge */}
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--surface-elevated)] to-transparent opacity-50" />
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[hsl(var(--card))] to-transparent opacity-50" />
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 px-4 pt-1 pb-2 flex flex-col justify-between relative bg-[var(--surface-elevated)]">
+        <div className="flex-1 px-4 pt-1 pb-2 flex flex-col justify-between relative bg-gradient-to-b from-[hsl(var(--sidebar-bg))] to-[hsl(var(--sidebar-bg))]">
            
            <div className="flex flex-col gap-1.5">
              {/* Title */}
@@ -173,10 +180,10 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
                   <h3 
                     onDoubleClick={isOwner ? handleStartEdit : undefined}
                     title={isOwner ? "Double click to edit" : doc.title || 'Untitled'}
-                    className={`font-bold text-[18px] leading-tight truncate w-full ${isOwner ? 'cursor-text  p-1 pl-0 hover:text-[hsl(var(--brand-primary))] transition-colors' : ''}
+                    className={`font-bold text-[18px] leading-tight truncate w-full ${isOwner ? 'cursor-text  p-1 pl-0 hover:text-primary transition-colors' : ''}
                               ${doc.title ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] italic'}`}
                   >
-                    <span className={`${isOwner ? 'hover:bg-[var(--hover-bg)] rounded-sm p-0.5 pr-4' : ''} `}>{doc.title || 'Untitled'}</span>
+                    <span className={`${isOwner ? 'hover:bg-[hsl(var(--card-bg))] rounded-sm p-0.5 pr-4' : ''} `}>{doc.title || 'Untitled'}</span>
                   </h3>
                )}
              </div>
@@ -194,7 +201,7 @@ export const GalleryCard = React.memo(({ doc, index, currentUserId, onOpen, onTo
            </div>
 
            {/* Footer Meta */}
-            <div className="flex items-center justify-between pt-3 mt-1 border-t border-[var(--border-subtle)]">
+           <div className="flex items-center justify-between pt-3 mt-1 border-t border-[hsl(var(--border))]/100">
               <span className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] flex items-center gap-2">
                 {format(new Date(doc.updatedAt), 'MMM d')}
                 

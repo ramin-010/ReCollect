@@ -110,7 +110,7 @@ export default function AppLayout({
                 initial={{ opacity: 0, y: -20, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -20, height: 0 }}
-                className="shrink-0 z-[100]"
+                className="shrink-0 z-40 relative"
               >
                 <Navbar />
               </motion.div>

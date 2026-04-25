@@ -20,15 +20,72 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'ReCollect - Professional Knowledge Management',
-  description: 'Organize, connect, and recall your thoughts with ReCollect - Your professional knowledge companion',
-  keywords: 'knowledge management, notes, productivity, organization, dashboard',
+  metadataBase: new URL('https://re-collect.in'),
+  title: {
+    default: 'ReCollect',
+    template: '%s | ReCollect',
+  },
+  description:
+    'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion for notes, ideas, and productivity.',
+  keywords: [
+    'knowledge management',
+    'notes',
+    'productivity',
+    'organization',
+    'second brain',
+    'note taking',
+    'personal wiki',
+    'knowledge base',
+    'dashboard',
+  ],
   authors: [{ name: 'ReCollect' }],
+  creator: 'ReCollect',
+  publisher: 'ReCollect',
+  icons: {
+    icon: [
+      { url: '/logo3.webp', type: 'image/webp' },
+    ],
+    apple: [
+      { url: '/logo3.webp', type: 'image/webp' },
+    ],
+    shortcut: '/logo3.webp',
+  },
   openGraph: {
     title: 'ReCollect',
-    description: 'Professional Knowledge Management System',
+    description:
+      'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion.',
+    siteName: 'ReCollect',
     type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/logo3.webp',
+        width: 512,
+        height: 512,
+        alt: 'ReCollect Logo',
+      },
+    ],
   },
+  twitter: {
+    card: 'summary',
+    title: 'ReCollect',
+    description:
+      'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion.',
+    images: ['/logo3.webp'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  applicationName: 'ReCollect',
+  category: 'productivity',
 };
 
 export default function RootLayout({

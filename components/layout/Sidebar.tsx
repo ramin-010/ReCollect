@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotificationsPopover } from './NotificationsPopover';
+import { getRecentVisitsFromCache, RecentVisit } from '@/lib/services/recentVisits';
 
 // ─── Nav Item Definition ────────────────────────────────────────────────────
 interface NavItem {
@@ -47,20 +48,21 @@ interface NavItem {
 
 const primaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className="h-[18px] w-[18px]" /> },
-  { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className="h-[18px] w-[18px]" /> },
-  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Users className="h-[18px] w-[18px] text-indigo-500/80" /> },
+  { id: 'workspace', route: '/workspace', label: 'Workspace', icon: <Users className="h-[18px] w-[18px] text-indigo-500/60" /> },
   { 
     id: 'todo', 
     route: '/todo',
     label: 'Tasks', 
-    icon: <CheckSquare className="h-[18px] w-[18px] text-emerald-500/80" />,
+    icon: <CheckSquare className="h-[18px] w-[18px] text-emerald-500/60" />,
     subItems: [
       { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-3.5 w-3.5" /> },
     ]
   },
-  { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
   { id: 'presentations', route: '/slides', label: 'Presentations', icon: <Files className="h-[18px] w-[18px] " /> },
+    { id: 'inbox-notif', route: '#', label: 'Inbox', icon: <Inbox className="h-[18px] w-[18px]" /> },
+
+  { id: 'drawing', route: '/drawing', label: 'Whiteboard', icon: <PenTool className="h-[18px] w-[18px]" /> },
   { id: 'email', route: '/email', label: 'Email', icon: <Mail className="h-[18px] w-[18px]" /> },
 ];
 
@@ -70,7 +72,8 @@ const secondaryNav: NavItem[] = [];
 export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = useViewStore((state) => state.isSidebarCollapsed);
+  const setIsCollapsed = useViewStore((state) => state.setSidebarCollapsed);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const user = useAuthStore((state) => state.user);
@@ -192,6 +195,22 @@ function SidebarContent({
   getInitials,
 }: SidebarContentProps & { currentView?: any }) {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const [recentVisits, setRecentVisits] = useState<RecentVisit[]>([]);
+
+  useEffect(() => {
+    // Update recents whenever path changes (which implies navigation)
+    setRecentVisits(getRecentVisitsFromCache().slice(0, 15));
+  }, [pathname]);
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'doc': return <FileText className="h-[18px] w-[18px]" />;
+      case 'drawing': return <PenTool className="h-[18px] w-[18px]" />;
+      case 'slide': return <Files className="h-[18px] w-[18px]" />;
+      case 'workspace': return <Users className="h-[18px] w-[18px]" />;
+      default: return <FileText className="h-[18px] w-[18px]" />;
+    }
+  };
 
   return (
     <div className="h-full flex flex-col notion-navbar notion-font border-r border-[hsl(var(--foreground))]/5 text-[hsl(var(--foreground))]/90">
@@ -246,16 +265,15 @@ function SidebarContent({
       {/* ── Search Bar ────────────────────────── */}
       {!isCollapsed && (
         <div className="px-3 pb-3">
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[hsl(var(--card))]/50 border border-[hsl(var(--border))]/50 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--surface-overlay))] hover:text-[hsl(var(--foreground))]/80 hover:border-[hsl(var(--border-strong))] transition-all duration-200 text-[14px] font-medium group subpixel-antialiased">
+          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[hsl(var(--card))]/50 border  text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/80 border-[hsl(var(--border-light))] transition-all duration-200 text-[14px] font-medium group subpixel-antialiased">
             <Search className="h-[15px] w-[15px] group-hover:text-[hsl(var(--foreground))]/80 transition-colors" />
             <span className="truncate">Search...</span>
-            <kbd className="ml-auto text-[10px] font-medium text-[hsl(var(--muted-foreground))]/70 bg-[hsl(var(--surface-raised))] px-1.5 py-0.5 rounded border border-[hsl(var(--border-subtle))] group-hover:text-[hsl(var(--muted-foreground))] group-hover:border-[hsl(var(--border-strong))] transition-all">⌘K</kbd>
           </button>
         </div>
       )}
 
-      {/* ── Primary Navigation ──────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-3 py-1 scrollbar-hide">
+      {/* ── Primary Navigation (Fixed) ──────────────────────────────── */}
+      <div className="px-3 py-1 shrink-0">
         <nav className="space-y-0.5">
           {primaryNav.map((item) => {
             const currentItem = item.id === 'inbox-notif' && unreadCount > 0 
@@ -291,6 +309,36 @@ function SidebarContent({
           })}
         </nav>
       </div>
+
+      {/* ── Recently Visited (Scrollable) ───────────────────────── */}
+      {/* {!isCollapsed && recentVisits.length > 0 && (
+        <>
+          <div className="mx-4 my-1.5 h-[0.5px] bg-[hsl(var(--border-light))]/20 shrink-0" />
+          <div className="flex-1 overflow-y-auto px-3 pb-4 pt-1 custom-scrollbar">
+            <nav className="space-y-0.5">
+              {recentVisits.map((visit) => (
+                <Link
+                  key={`${visit.itemType}-${visit.itemId}`}
+                  href={visit.route}
+                  onClick={() => {
+                    if (isMobile) onMobileClose();
+                  }}
+                  className={cn(
+                    "block px-3 py-1.5 rounded-lg text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--hover-bg))] hover:text-[hsl(var(--foreground))] transition-colors group",
+                    pathname === visit.route && "bg-[hsl(var(--active-bg))] text-[hsl(var(--foreground))]"
+                  )}
+                  title={visit.title}
+                >
+                  <span className="truncate block">{visit.title}</span>
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </>
+      )} */}
+
+      {/* Always stretch space since recents are commented out */}
+      <div className="flex-1" />
 
       {/* ── Collapsed User Avatar ──────────────────────────── */}
       {isCollapsed && (
@@ -370,7 +418,7 @@ function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSu
         "w-full flex items-center gap-3 px-3 py-[9px] rounded-lg text-[14px] font-medium transition-all duration-200 group relative outline-none subpixel-antialiased",
         isActive
           ? "text-[hsl(var(--foreground))]"
-          : "text-[hsl(var(--foreground))]/70 hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]",
+          : "text-[hsl(var(--foreground))]/60 hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]",
         item.comingSoon && "opacity-50 hover:opacity-100",
         isCollapsed && "justify-center px-0 h-10 w-10 mx-auto"
       )}

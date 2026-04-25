@@ -3,14 +3,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { DragHandle } from '@tiptap/extension-drag-handle-react';
-import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw, Cloud, CheckSquare } from 'lucide-react';
+import { ChevronLeft, Save, ImagePlus, X, CloudOff, RotateCcw, Cloud, ListTodo, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { ImageUploadDialog } from '../ImageUploadDialog';
 import { SyncConflictDialog } from '../SyncConflictDialog';
-import { TaskSidebar } from './TaskSidebar';
-// import { TodoDialog } from '@/components/todo/TodoDialog';
-import axiosInstance from '@/lib/utils/axios';
-import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
 
 import { DocEditorProps, ToolbarPosition } from './types';
@@ -23,8 +19,14 @@ import { FloatingToolbar } from './FloatingToolbar';
 import { CoverPicker } from './CoverPicker';
 import { EditorStyles } from './EditorStyles';
 import { offlineStorage } from '@/lib/utils/offlineStorage';
+import { SharedTasksPanel, useSharedTasksRefetch } from '@/components/shared/SharedTasksPanel';
+import { TaskInput } from '@/components/todo/task_Input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-base/Popover';
+import { useViewStore } from '@/lib/store/viewStore';
 
 export function DocEditor({ doc, onBack }: DocEditorProps) {
+  const setSidebarCollapsed = useViewStore((state) => state.setSidebarCollapsed);
+  
   // 1. Unified State Management
   const { state, actions } = useDocState({ initialDoc: doc });
   
@@ -34,17 +36,21 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
   const [showRevertModal, setShowRevertModal] = useState(false);
-  const [showTaskSidebar, setShowTaskSidebar] = useState(false);
-  const [showQuickTaskDialog, setShowQuickTaskDialog] = useState(false);
+  const [isTasksPanelOpen, setIsTasksPanelOpen] = useState(false);
+  const [isTaskInputPopoverOpen, setIsTaskInputPopoverOpen] = useState(false);
+  const [isTaskInputExpanded, setIsTaskInputExpanded] = useState(true);
   const [mounted, setMounted] = useState(false);
   
   const contentRef = useRef<string>('{}');
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
 
   // 2. Editor Setup
   // We explicitly separate content changes from persistence triggers
   const handleContentChange = (jsonString: string) => {
     contentRef.current = jsonString;
+    // Skip marking dirty during the initial content hydration
+    if (isInitialLoadRef.current) return;
     actions.markDirty(); 
     persistence.debouncedSave();
   };
@@ -75,7 +81,18 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
   // 5. Effects
   useEffect(() => {
     setMounted(true);
-  }, []);
+    setSidebarCollapsed(true);
+    
+    // Release the initial load guard after content hydration settles
+    const timer = setTimeout(() => { isInitialLoadRef.current = false; }, 1500);
+    
+    return () => {
+      clearTimeout(timer);
+      setSidebarCollapsed(false);
+    };
+  }, [setSidebarCollapsed]);
+
+  const { refreshKey: taskRefreshKey, refresh: setTaskRefreshKey } = useSharedTasksRefetch();
 
   useEffect(() => {
     if (editor) {
@@ -85,7 +102,10 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
       };
       // @ts-ignore - Task creation from slash command
       editor.storage.tasks = {
-        openTaskDialog: () => setShowQuickTaskDialog(true)
+        openTaskDialog: () => {
+          setIsTaskInputPopoverOpen(true);
+          setIsTasksPanelOpen(true);
+        }
       };
     }
   }, [editor]);
@@ -166,10 +186,16 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         e.preventDefault();
         persistence.saveDocument();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsTaskInputPopoverOpen(true);
+        setIsTasksPanelOpen(true);
+      }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [persistence]);
 
 
@@ -190,11 +216,10 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
 
   const handleCoverSelect = (url: string | null) => {
     actions.setCoverImage(url);
+    actions.markDirty();
     persistence.debouncedSave();
   };
 
-  // Get todoStore to add tasks
-  const { addTodo } = useTodoStore();
 
 
 
@@ -286,16 +311,37 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
               title="Saving to local storage"
             />
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowTaskSidebar(true)}
-            className="text-[hsl(var(--muted-foreground))] hover:bg-emerald-500/10 hover:text-emerald-600 group-hover/header:text-[hsl(var(--foreground))]"
-            leftIcon={<CheckSquare className="w-4 h-4" />}
-            title="View linked tasks"
+          {/* Tasks popover */}
+          <Popover
+            open={isTaskInputPopoverOpen}
+            onOpenChange={(open) => {
+              setIsTaskInputPopoverOpen(open);
+              if (open) setIsTasksPanelOpen(true);
+            }}
           >
-            Tasks
-          </Button>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white/5 border border-[hsl(var(--muted-foreground))]/30 group-hover/header:border-[hsl(var(--foreground))]/50 hover:bg-white/10 transition-colors"
+                title="Add task linked to this doc"
+              >
+                <ListTodo className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-xs text-[hsl(var(--muted-foreground))] group-hover/header:text-[hsl(var(--foreground))]">Tasks</span>
+                <ChevronDown className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-110 p-3">
+              <TaskInput
+                isExpanded={isTaskInputExpanded}
+                onExpandChange={setIsTaskInputExpanded}
+                isQuickAdd
+                initialReferences={[{ type: 'doc', refId: doc._id, title: state.title }]}
+                onSave={() => {
+                  setTaskRefreshKey();
+                  setIsTaskInputPopoverOpen(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="sm"
@@ -442,19 +488,14 @@ export function DocEditor({ doc, onBack }: DocEditorProps) {
         <span>Type <kbd className="px-1 py-0.5 rounded bg-[hsl(var(--muted))] font-mono text-[10px]">/</kbd> for commands</span>
       </div>
 
-      <TaskSidebar
-        isOpen={showTaskSidebar}
-        onClose={() => setShowTaskSidebar(false)}
-        docId={doc._id}
-        docTitle={state.title}
+      <SharedTasksPanel
+        key={taskRefreshKey}
+        isOpen={isTasksPanelOpen}
+        onClose={() => setIsTasksPanelOpen(false)}
+        refId={doc._id}
+        refTitle={state.title}
+        refType="doc"
       />
-
-      {/* Quick Task Dialog from /task slash command */}
-      {/* <TodoDialog
-        isOpen={showQuickTaskDialog}
-        onClose={() => setShowQuickTaskDialog(false)}
-        onSave={handleQuickTaskSave}
-      /> */}
 
       <EditorStyles />
     </div>

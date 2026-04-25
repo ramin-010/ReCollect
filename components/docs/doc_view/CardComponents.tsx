@@ -53,9 +53,9 @@ export const NewPageCard = ({ onClick, disabled }: { onClick: () => void, disabl
     animate={{ opacity: 1 }}
     onClick={onClick}
     disabled={disabled}
-    className="group flex items-center justify-center gap-2 p-4 min-h-[180px] bg-[var(--surface-elevated)]
+    className="group flex items-center justify-center gap-2 p-4 min-h-[180px] bg-[var(--surface-raised)]
                border border-dashed border-[hsl(var(--border))] rounded-lg
-               hover:border-[hsl(var(--muted-foreground))]/50 hover:bg-[var(--surface-raised)]
+               hover:border-[hsl(var(--muted-foreground))]/20 hover:bg-[var(--surface-elevated)]
                transition-all duration-200 text-[hsl(var(--muted-foreground))]
                hover:text-[hsl(var(--foreground))]"
   >
