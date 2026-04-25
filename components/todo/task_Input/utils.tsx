@@ -62,11 +62,11 @@ export const getHighlightedContent = (
         if (segment?.type === 'tag') {
           return <span key={i} className="bg-blue-500/20 text-blue-300 rounded-sm">{part}</span>;
         } else if (segment?.type === 'assignee') {
-          return <span key={i} className="bg-indigo-500/20 text-indigo-300 rounded-sm">{part}</span>;
+          return <span key={i} className="bg-indigo-500/20 text-indigo-500 rounded-sm">{part}</span>;
         } else if (segment?.type === 'date') {
-          return <span key={i} className="bg-indigo-500/20 text-white rounded-sm">{part}</span>;
+          return <span key={i} className="bg-indigo-500/20 text-[hsl(var(--foreground))] rounded-sm">{part}</span>;
         }
-        return <span key={i} className="text-white">{part}</span>;
+        return <span key={i} className="text-[hsl(var(--foreground))]">{part}</span>;
       })}
     </div>
   );

@@ -47,6 +47,12 @@ export function useDocPersistence({
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const titleRef = useRef(title);
+  const coverImageRef = useRef(coverImage);
+
+  // Keep refs in sync with latest values
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { coverImageRef.current = coverImage; }, [coverImage]);
 
 
   useEffect(() => {
@@ -142,7 +148,8 @@ export function useDocPersistence({
             actions.setSyncStatus('synced');
           } else if (localUpdatedAt > serverUpdatedAt && isLocalDirty) {
             console.log('[SyncDebug] Local newer and dirty');
-            actions.markDirty();
+            // Only flag cloud sync status — content is already saved locally in IndexedDB
+            actions.setSyncStatus('unsynced');
           } else {
             console.log('[SyncDebug] Same timestamp or local synced');
             actions.setSyncStatus('synced');
@@ -210,6 +217,9 @@ export function useDocPersistence({
         return;
       }
       
+      const currentTitle = titleRef.current;
+      const currentCoverImage = coverImageRef.current;
+      
       console.log("Auto-saving to offline storage...");
       try {
         const content = JSON.parse(contentRef.current);
@@ -219,12 +229,12 @@ export function useDocPersistence({
         const existingOfflineDoc = await offlineStorage.loadDoc(doc._id);
         const serverUpdatedAt = existingOfflineDoc?.serverUpdatedAt;
         
-        await offlineStorage.saveDoc(doc._id, yjsState, title, coverImage, 'pending', serverUpdatedAt);
+        await offlineStorage.saveDoc(doc._id, yjsState, currentTitle, currentCoverImage, 'pending', serverUpdatedAt);
         
 
         updateDoc(doc._id, {
-          title, 
-          coverImage,
+          title: currentTitle, 
+          coverImage: currentCoverImage,
           yjsState,
           hasUnsyncedChanges: true
         });
@@ -234,7 +244,7 @@ export function useDocPersistence({
         console.error("Auto-save failed", e);
       }
     }, 700); 
-  }, [doc._id, title, coverImage, contentRef, actions]);
+  }, [doc._id, contentRef, actions, updateDoc]);
 
 
   const saveDocument = useCallback(async () => {

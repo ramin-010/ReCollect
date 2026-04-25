@@ -29,6 +29,7 @@ import { ListRow, NewPageCard } from './CardComponents';
 import { SharedByMeSection } from './SharedByMeSection';
 import { PendingRequestsPanel } from '../PendingRequestsPanel';
 import { useSearchParams } from 'next/navigation';
+import { trackVisit, removeVisit } from '@/lib/services/recentVisits';
 
 export function DocsView() {
   const { docs, currentDoc, isLoading, isInitialized, setDocs, addDoc, removeDoc, setCurrentDoc, setLoading, updateDoc } = useDocStore();
@@ -137,12 +138,14 @@ export function DocsView() {
       if (doc._id.startsWith('local_')) {
         await offlineStorage.deleteDoc(doc._id);
         removeDoc(doc._id);
+        removeVisit(doc._id);
         toast.success('Document deleted');
         return;
       }
       const response = await axiosInstance.delete(`/api/docs/${doc._id}`);
       if (response.data.success) {
         removeDoc(doc._id);
+        removeVisit(doc._id);
         toast.success('Document deleted');
       }
     } catch (error: any) {
@@ -302,6 +305,13 @@ export function DocsView() {
     const role = doc._id.startsWith('local_') ? 'owner' : (doc.role || 'owner');
     setCurrentDocRole(role);
     setCurrentDoc(doc);
+    // Track this visit for "Recently visited" on the home page
+    trackVisit({
+      itemId: doc._id,
+      itemType: 'doc',
+      title: doc.title || 'Untitled Doc',
+      route: '/docs',
+    });
   }, [setCurrentDoc]);
 
   const handleCloseDoc = useCallback(() => {
@@ -325,7 +335,7 @@ export function DocsView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#181818] overflow-hidden">
+    <div className="h-full flex flex-col bg-[hsl(var(--background))] overflow-hidden">
       {/* Header Section */}
       <div className="shrink-0 px-6 py-10 pb-4">
         <div className="max-w-[1060px] mx-auto flex items-center gap-3 mb-1">
@@ -339,29 +349,29 @@ export function DocsView() {
 
       {/* View Tabs & Controls */}
       <div className="shrink-0 px-8 pb-3">
-        <div className="max-w-[1060px] mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1 p-1 bg-[hsl(var(--card-bg))] rounded-lg">
-             <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+        <div className="max-w-[1060px] mx-auto flex items-center justify-between gap-4 ">
+          <div className="flex items-center gap-1 p-1 bg-[hsl(var(--sidebar-bg))] rounded-lg border border-[var(--border-subtle)]/40">
+             <button onClick={() => setViewMode('gallery')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'gallery' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <LayoutGrid className="w-4 h-4" /> Gallery
              </button>
-             <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+             <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <List className="w-4 h-4" /> List
              </button>
-             <button onClick={() => setViewMode('shared-by-me')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'shared-by-me' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+             <button onClick={() => setViewMode('shared-by-me')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'shared-by-me' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <Share2 className="w-4 h-4" /> Shared by Me
              </button>
-             <button onClick={() => setViewMode('requests')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'requests' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
+             <button onClick={() => setViewMode('requests')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'requests' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}>
                <Inbox className="w-4 h-4" /> Requests
              </button>
           </div>
           <div className="flex items-center gap-2">
              <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-               <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[hsl(var(--card-bg))] border border-transparent focus:border-[hsl(var(--border))] focus:bg-[hsl(var(--card-bg))]/50 text-sm outline-none transition-all placeholder:text-[hsl(var(--muted-foreground))]" />
+               <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-48 pl-9 pr-3 py-1.5 rounded-md bg-[var(--surface-elevated)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] focus:bg-[var(--surface-raised)] text-sm outline-none transition-all placeholder:text-[hsl(var(--muted-foreground))]" />
              </div>
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
-                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))] transition-colors">
+                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[var(--surface-elevated)] transition-colors">
                    <ArrowUpDown className="w-4 h-4" /> Sort
                  </button>
                </DropdownMenuTrigger>
@@ -382,7 +392,7 @@ export function DocsView() {
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--card-bg))] transition-colors">
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[hsl(var(--muted-foreground))] hover:bg-[var(--surface-elevated)] transition-colors">
                     <Filter className="w-4 h-4" /> {ownershipFilter === 'all' ? 'All' : ownershipFilter === 'mine' ? 'My Docs' : 'Shared'}
                   </button>
                 </DropdownMenuTrigger>
@@ -420,7 +430,7 @@ export function DocsView() {
               </div>
               <h2 className="text-lg font-semibold mb-2">No documents yet</h2>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6 max-w-sm mx-auto">Get started by creating your first document.</p>
-              <Button onClick={handleCreateDoc} className="bg-blue-600 text-white hover:bg-blue-700">
+              <Button onClick={handleCreateDoc} className="bg-[hsl(var(--brand-primary))] text-white hover:bg-[hsl(var(--brand-primary))]/90 border-0">
                 <Plus className="w-4 h-4 mr-2" /> Create Document
               </Button>
             </div>

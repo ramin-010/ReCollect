@@ -110,24 +110,24 @@ const LabelList = forwardRef<LabelListRef, any>((props, ref) => {
   }, [highlightedIndex]);
 
   return (
-    <div className="w-48 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col">
-      <div className="p-2 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center gap-2">
+    <div className="w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="p-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 backdrop-blur-md flex items-center gap-2">
         <Tag className="w-3.5 h-3.5 text-blue-400" />
-        <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+        <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
           Labels
         </span>
       </div>
       
       <div ref={dropdownRef} className="max-h-48 overflow-y-auto custom-scrollbar p-1">
         {isLoading && (
-          <div className="flex items-center justify-center p-3 text-white/30 text-xs gap-2">
+          <div className="flex items-center justify-center p-3 text-[hsl(var(--muted-foreground))]/60 text-xs gap-2">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Searching...
           </div>
         )}
         
         {!isLoading && totalOptions === 0 && (
-          <div className="p-3 text-center text-white/30 text-xs">
+          <div className="p-3 text-center text-[hsl(var(--muted-foreground))]/60 text-xs">
             {query.length === 0 ? "Type to search labels..." : "No matches"}
           </div>
         )}
@@ -138,7 +138,7 @@ const LabelList = forwardRef<LabelListRef, any>((props, ref) => {
             onClick={() => selectItem(index)}
             className={cn(
               "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
-              highlightedIndex === index ? "bg-indigo-500/20 text-indigo-100" : "text-white/70 hover:bg-white/5"
+              highlightedIndex === index ? "bg-indigo-500/20 text-indigo-500" : "text-[hsl(var(--foreground))]/70 hover:bg-[hsl(var(--muted))]/10"
             )}
             onMouseEnter={() => setHighlightedIndex(index)}
           >
@@ -155,8 +155,8 @@ const LabelList = forwardRef<LabelListRef, any>((props, ref) => {
             onClick={() => selectItem(fetchedLabels.length)}
             onMouseEnter={() => setHighlightedIndex(fetchedLabels.length)}
             className={cn(
-              "flex items-center w-full px-2 py-1.5 mt-1 border-t border-white/5 text-left rounded-lg transition-all",
-              highlightedIndex === fetchedLabels.length ? "bg-indigo-500/20 text-indigo-300" : "text-white/70 hover:bg-white/5"
+              "flex items-center w-full px-2 py-1.5 mt-1 border-t border-[hsl(var(--border))] text-left rounded-lg transition-all",
+              highlightedIndex === fetchedLabels.length ? "bg-indigo-500/20 text-indigo-500" : "text-[hsl(var(--foreground))]/70 hover:bg-[hsl(var(--muted))]/10"
             )}
           >
             <Plus className="w-3 h-3 mr-2" />

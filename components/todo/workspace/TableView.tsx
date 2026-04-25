@@ -140,8 +140,8 @@ export function TableView({
     <div 
       onClick={onClick}
       className={cn(
-        "relative flex items-center px-4 py-3 text-[13px] text-white/80 h-full",
-        borderRight && "border-r border-white/5",
+        "relative flex items-center px-4 py-3 text-[15px] text-[hsl(var(--foreground))]/80 h-full",
+        borderRight && "border-r border-[hsl(var(--border))]",
         className
       )}
     >
@@ -173,27 +173,27 @@ export function TableView({
         <div className="min-w-[900px]">
           {/* Table Header */}
           <div 
-             className="table-header grid border-b border-white/5 text-[12px] font-medium text-white/50 sticky top-0 z-10 w-full"
+             className="table-header grid border-b border-[hsl(var(--border))]/80 text-[12px] font-medium text-[hsl(var(--muted-foreground))] sticky top-0 z-10 w-full"
              style={gridStyle}
           >
-            <Cell borderRight={false} className="justify-center text-[10px] text-white/20 pl-4">#</Cell>
-          <Cell borderRight={false} className="justify-center px-1 border-r border-white/5">
+            <Cell borderRight={false} className="justify-center text-[10px] text-[hsl(var(--muted-foreground))]/40 pl-4">#</Cell>
+          <Cell borderRight={false} className="justify-center px-1 border-r border-[hsl(var(--border))]/70">
             <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />
           </Cell>
-          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'name')}>Name</Cell>
-          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'assignee')}>Assignee</Cell>
-          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'dueDate')}>Due date</Cell>
-          <Cell className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'status')}>Status</Cell>
-          <Cell borderRight={false} className="text-white/60" onMouseDownResizer={(e: any) => handleMouseDown(e, 'priority')}>Priority</Cell>
+          <Cell className="text-[hsl(var(--muted-foreground))]" onMouseDownResizer={(e: any) => handleMouseDown(e, 'name')}>Name</Cell>
+          <Cell className="text-[hsl(var(--muted-foreground))]" onMouseDownResizer={(e: any) => handleMouseDown(e, 'assignee')}>Assignee</Cell>
+          <Cell className="text-[hsl(var(--muted-foreground))]" onMouseDownResizer={(e: any) => handleMouseDown(e, 'dueDate')}>Due date</Cell>
+          <Cell className="text-[hsl(var(--muted-foreground))]" onMouseDownResizer={(e: any) => handleMouseDown(e, 'status')}>Status</Cell>
+          <Cell borderRight={false} className="text-[hsl(var(--muted-foreground))]" onMouseDownResizer={(e: any) => handleMouseDown(e, 'priority')}>Priority</Cell>
           {/* Dummy element to fill minmax(0, 1fr) */}
           <div className="w-full" />
         </div>
 
         {/* Table Body */}
-        <div className="flex flex-col flex-1 w-full bg-transparent">
+        <div className="flex flex-col flex-1 w-full bg-transparent border-t border-[hsl(var(--border))]/40">
           {filteredTasks.length === 0 ? (
-            <div className="text-center py-12 border-b border-white/[0.04]">
-               <p className="text-sm text-white/35">No tasks available in table view.</p>
+            <div className="text-center py-12 border-b border-[hsl(var(--border))]/70">
+               <p className="text-sm text-[hsl(var(--muted-foreground))]">No tasks available in table view.</p>
             </div>
           ) : (
             filteredTasks.map((task, index) => {
@@ -208,27 +208,27 @@ export function TableView({
                   key={task._id}
                   onClick={() => onClick(task)}
                   className={cn(
-                    "table-row group grid border-b border-white/[0.03] hover:bg-white/[0.02] transition-all cursor-pointer w-full bg-transparent last:border-b-0",
+                    "table-row group grid border-b border-[hsl(var(--border))]/100 hover:bg-[hsl(var(--muted))]/30 transition-all cursor-pointer w-full bg-transparent last:border-b-0",
                     isSelected && "bg-indigo-500/[0.06] hover:bg-indigo-500/[0.10]",
                     isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
                   )}
                   style={gridStyle}
                 >
                   {/* # Column / Hover Select */}
-                  <Cell borderRight={false} className="relative justify-center text-[10px] text-white/20 pl-4 select-none group-hover:text-white/40">
+                  <Cell borderRight={false} className="relative justify-center text-[10px] text-[hsl(var(--muted-foreground))]/40 pl-4 select-none group-hover:text-[hsl(var(--muted-foreground))]">
                      <div className={cn(
                           "absolute inset-0 flex items-center justify-center transition-opacity z-10",
                           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         )}
-                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.06)' : '#1D1D1D' }}>
+                        style={{ backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.06)' : '#222222ff' }}>
                         {/* We set hover background to a solid #232323 (slightly lighter than row base #1e1e1e) to fully hide the number behind it */}
                         <button 
                           onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
                           className={cn(
                              "w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors focus:outline-none",
                              isSelected 
-                               ? "bg-indigo-500 border-indigo-500 text-white" 
-                               : "bg-transparent border-white/30 hover:border-white/60 text-transparent"
+                               ? "bg-indigo-500 border-indigo-500 text-[hsl(var(--background))]" 
+                               : "bg-transparent border-[hsl(var(--foreground))]/20 hover:border-[hsl(var(--foreground))]/40 text-transparent"
                           )}
                         >
                           <Check className="w-3 h-3" />
@@ -238,7 +238,7 @@ export function TableView({
                   </Cell>
 
                   {/* Completion Toggle */}
-                  <Cell borderRight={false} className={cn("justify-center px-1 border-r border-white/5", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
+                  <Cell borderRight={false} className={cn("justify-center px-1 border-r border-[hsl(var(--border))]/70", isViewer && "pointer-events-none")} onClick={(e: any) => e.stopPropagation()}>
                     <TaskStatusDropdown 
                       currentStatus={(isCompleting ? 'complete' : task.status) as any}
                       onStatusChange={(newStatus) => {
@@ -275,7 +275,7 @@ export function TableView({
                             <div className="w-[6px] h-[6px] rounded-full bg-rose-500" />
                           </div>
                         ) : (
-                          <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-white/40 group-hover:border-solid group-hover:border-white/60 transition-all flex items-center justify-center" />
+                          <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-[hsl(var(--muted-foreground))] group-hover:border-solid group-hover:border-[hsl(var(--foreground))]/100 transition-all flex items-center justify-center" />
                         )}
                       </button>
                     </TaskStatusDropdown>
@@ -283,17 +283,17 @@ export function TableView({
 
                   {/* Name */}
                   <Cell className="font-medium">
-                    <span className={cn("truncate", isDone && "line-through text-white/30 decoration-white/20")}>
+                    <span className={cn("truncate", isDone && "line-through  text-[hsl(var(--muted-foreground))] decoration-[hsl(var(--muted-foreground))]/40")}>
                       {task.title}
                     </span>
                     {task.description && (
-                      <AlignLeft className="w-3.5 h-3.5 text-white/20 ml-2 shrink-0 group-hover:text-white/40" />
+                      <AlignLeft className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/40 ml-2 shrink-0 group-hover:text-[hsl(var(--muted-foreground))]" />
                     )}
                   </Cell>
 
                   {/* Assignee */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
+                    <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-[hsl(var(--muted))]/10")}>
                         <AssigneeDropdown 
                           currentAssignees={task.assignees || []}
                           workspaceMembers={workspaceMembers}
@@ -320,15 +320,15 @@ export function TableView({
                                   <span className="text-[11px] truncate">{assignee.name || assignee.email}</span>
                                 </div>
                                 {task.assignees?.length > 1 && (
-                                  <div className="text-[10px] text-white/40 font-medium shrink-0">+{task.assignees.length - 1}</div>
+                                  <div className="text-[10px] text-[hsl(var(--muted-foreground))] font-medium shrink-0">+{task.assignees.length - 1}</div>
                                 )}
                               </>
                             ) : (
                               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-5 h-5 rounded-full border border-dashed border-white/10 flex items-center justify-center">
-                                  <UserPlus className="w-3 h-3 text-white/20" />
+                                <div className="w-5 h-5 rounded-full border border-dashed border-[hsl(var(--border))] flex items-center justify-center">
+                                  <UserPlus className="w-3 h-3 text-[hsl(var(--muted-foreground))]/40" />
                                 </div>
-                                <span className="text-[11px] text-white/20">Set assignee</span>
+                                <span className="text-[11px] text-[hsl(var(--muted-foreground))]/50">Set assignee</span>
                               </div>
                             )}
                           </button>
@@ -338,7 +338,7 @@ export function TableView({
 
                   {/* Due Date */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
+                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-[hsl(var(--muted))]/10")}>
                          <DueDateDropdown 
                             currentDate={task.dueDate}
                             onDateChange={(date) => {
@@ -353,12 +353,12 @@ export function TableView({
                           >
                             <button className={cn(
                               "w-full h-full flex items-center px-3 cursor-pointer text-[11px] whitespace-nowrap focus:outline-none transition-colors",
-                              task.dueDate && formatSmartDate(task.dueDate).isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-white/70" : "text-white/20 hover:text-white/40"
+                              task.dueDate && formatSmartDate(task.dueDate).isOverdue ? "text-rose-400 font-semibold" : task.dueDate ? "text-[hsl(var(--foreground))]/70" : "text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--muted-foreground))]"
                             )}>
                               {task.dueDate ? (
                                 <span>{formatSmartDate(task.dueDate).text}</span>
                               ) : (
-                                <span className="opacity-0 group-hover:opacity-100 text-white/20 text-[11px] flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 shrink-0 opacity-40" /> Set date</span>
+                                <span className="opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))]/40 text-[11px] flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 shrink-0 opacity-40" /> Set date</span>
                               )}
                             </button>
                           </DueDateDropdown>
@@ -367,8 +367,7 @@ export function TableView({
 
                   {/* Status */}
                   <Cell onClick={(e: any) => e.stopPropagation()} className="p-0">
-                    <div className={cn("w-full h-full flex items-center px-3", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
-                         <TaskStatusDropdown
+                    <div className={cn("w-full h-full flex items-center px-3", isViewer ? "pointer-events-none" : "hover:bg-[hsl(var(--muted))]/30")}>                         <TaskStatusDropdown
                             currentStatus={(isCompleting ? 'complete' : task.status) as any}
                             onStatusChange={(status) => {
                               if (status === 'complete' && task.status !== 'complete') {
@@ -396,7 +395,7 @@ export function TableView({
                                     ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
                                     : task.status === 'blocked'
                                       ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
-                                      : "bg-white/[0.05] text-white/40 hover:bg-white/10"
+                                      : "bg-[hsl(var(--muted))]/20 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/30"
                             )}>
                                {isDone ? 'COMPLETE' :
                                 task.status === 'in_progress' ? 'IN PROGRESS' :
@@ -409,7 +408,7 @@ export function TableView({
 
                   {/* Priority */}
                   <Cell borderRight={false} onClick={(e: any) => e.stopPropagation()} className="p-0">
-                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-white/[0.04]")}>
+                     <div className={cn("w-full h-full", isViewer ? "pointer-events-none" : "hover:bg-[hsl(var(--muted))]/30")}>
                         <PriorityDropdown 
                           currentPriority={task.priority}
                           onPriorityChange={(priority) => onUpdateTask(task._id, { priority })}
@@ -419,23 +418,23 @@ export function TableView({
                                 <div className="flex items-center gap-2 focus:outline-none">
                                   <Flag className={cn(
                                     "w-3.5 h-3.5",
-                                    task.priority === 'urgent' ? 'text-rose-500' :
-                                    task.priority === 'high' ? 'text-amber-500' :
+                                    task.priority === 'urgent' ? 'text-rose-400' :
+                                    task.priority === 'high' ? 'text-amber-400' :
                                     task.priority === 'low' ? 'text-blue-400' :
-                                    'text-white/40' // normal priority
+                                    'text-[hsl(var(--muted-foreground))]' // normal priority
                                   )} />
                                   <span className={cn(
                                     "capitalize text-[13px]",
-                                    task.priority === 'urgent' ? 'text-rose-500' :
-                                    task.priority === 'high' ? 'text-amber-500' :
+                                    task.priority === 'urgent' ? 'text-rose-400' :
+                                    task.priority === 'high' ? 'text-amber-400' :
                                     task.priority === 'low' ? 'text-blue-400' :
-                                    'text-white/60'
+                                    'text-[hsl(var(--foreground))]/60'
                                   )}>
                                     {task.priority === 'normal' ? 'Normal' : task.priority}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-white/50 transition-opacity flex items-center gap-1.5 text-[12px]">
+                                <span className="opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))]/50 hover:text-[hsl(var(--muted-foreground))] transition-opacity flex items-center gap-1.5 text-[12px]">
                                   <Flag className="w-3.5 h-3.5" />
                                   Set priority
                                 </span>

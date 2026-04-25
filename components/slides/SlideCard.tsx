@@ -136,10 +136,10 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
 
   return (
     <Card 
-      className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-out rounded-2xl cursor-pointer"
+      className="group h-full p-3 flex flex-col min-h-[300px] gap-0 overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface-elevated)] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-out rounded-2xl cursor-pointer"
     >
       <div 
-        className="relative h-[210px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))]/60 border border-[hsl(var(--border))]/30 cursor-pointer"
+        className="relative h-[210px] w-full rounded-xl overflow-hidden bg-[var(--surface-inset)] border border-[var(--border-subtle)] cursor-pointer"
         onClick={() => onOpen(deck)}
       >
         <MiniSlideRenderer slide={previewData.slide} blocks={previewData.blocks} connections={previewData.connections} />
@@ -159,7 +159,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
              {onTogglePin && (
                <button
                   onClick={(e) => onTogglePin(deck.id, e)}
-                  className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5"
+                   className="p-1.5 rounded-full bg-[var(--surface-raised)] backdrop-blur-md hover:bg-[var(--surface-overlay)] text-[hsl(var(--foreground))] transition-colors shadow-sm ring-1 ring-[var(--border-subtle)]"
                   title={deck.isPinned ? 'Unpin' : 'Pin'}
                >
                  {deck.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5 " />}
@@ -167,7 +167,7 @@ export const SlideCard = ({ deck, onOpen, onDelete, onPresent, onTogglePin, onCh
              )}
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
-                 <button onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors shadow-sm ring-1 ring-black/5">
+                  <button onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-full bg-[var(--surface-raised)] backdrop-blur-md hover:bg-[var(--surface-overlay)] text-[hsl(var(--foreground))] transition-colors shadow-sm ring-1 ring-[var(--border-subtle)]">
                    <MoreVertical className="h-3.5 w-3.5" />
                  </button>
                </DropdownMenuTrigger>

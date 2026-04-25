@@ -109,7 +109,7 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute w-72 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute w-72 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl z-50 overflow-hidden"
             style={{
               top: caretPosition ? caretPosition.top + caretPosition.height + 4 : '100%',
               left: caretPosition ? caretPosition.left : 0,
@@ -117,9 +117,9 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
             }}
           >
             {/* Header */}
-            <div className="p-2 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+            <div className="p-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 backdrop-blur-md flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                 Link to Doc or Slide
               </span>
             </div>
@@ -130,14 +130,14 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
               className="max-h-56 overflow-y-auto custom-scrollbar p-1"
             >
               {isLoading && (
-                <div className="flex items-center justify-center p-3 text-white/30 text-xs gap-2">
+                <div className="flex items-center justify-center p-3 text-[hsl(var(--muted-foreground))]/60 text-xs gap-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Searching...
                 </div>
               )}
 
               {!isLoading && results.length === 0 && (
-                <div className="p-3 text-center text-white/30 text-xs">
+                <div className="p-3 text-center text-[hsl(var(--muted-foreground))]/60 text-xs">
                   {searchQuery.length > 0 ? 'No docs or slides found' : 'Type to search your docs & slides'}
                 </div>
               )}
@@ -157,7 +157,7 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={cn(
                       "w-full flex items-center gap-2.5 px-2 py-2 text-left rounded-lg transition-all",
-                      isSelected ? "bg-white/5 text-white" : "text-white/70 hover:bg-white/5"
+                      isSelected ? "bg-[hsl(var(--muted))]/20 text-[hsl(var(--foreground))]" : "text-[hsl(var(--foreground))]/70 hover:bg-[hsl(var(--muted))]/10"
                     )}
                   >
                     <div className={cn("w-7 h-7 shrink-0 rounded-md flex items-center justify-center", accentBg)}>
@@ -169,7 +169,7 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
                         <span className={cn("text-[10px] font-bold uppercase tracking-wide shrink-0", accentColor)}>
                           {typeLabel}
                         </span>
-                        <span className="text-white/20">—</span>
+                        <span className="text-[hsl(var(--muted-foreground))]/40">—</span>
                         <p className="text-sm truncate leading-snug font-medium">
                           {item.title}
                         </p>

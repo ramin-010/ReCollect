@@ -1,114 +1,153 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
-import { useViewStore } from '@/lib/store/viewStore';
 import { useDocStore } from '@/lib/store/docStore';
-import { docApi } from '@/lib/api/docApi';
-import { drawingApi } from '@/lib/api/drawingApi';
 import { todoApi } from '@/lib/api/todoApi';
-import { Card } from '@/components/ui-base/Card';
-import { Button } from '@/components/ui-base/Button';
+import {
+  getRecentVisitsFromCache,
+  syncRecentVisits,
+  RecentVisit,
+} from '@/lib/services/recentVisits';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock, Plus, FileText, PenTool, CheckSquare, Files, CalendarDays, ChevronRight, LayoutTemplate } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Clock, FileText, PenTool, CheckSquare, Files,
+  CalendarDays, ChevronRight, ChevronLeft, Mail,
+  LayoutDashboard, Presentation, ArrowRight, Inbox
+} from 'lucide-react';
 
-interface RecentItem {
-  id: string;
-  title: string;
-  type: 'doc' | 'drawing' | 'slide';
-  updatedAt: number;
-}
+// ─── Helper Functions ─────────────────────────────────────
+const TYPE_CONFIG = {
+  doc: { icon: FileText, color: 'emerald', label: 'Document' },
+  drawing: { icon: PenTool, color: 'purple', label: 'Whiteboard' },
+  slide: { icon: Files, color: 'orange', label: 'Presentation' },
+  workspace: { icon: LayoutDashboard, color: 'blue', label: 'Workspace' },
+} as const;
 
+const getTimeAgo = (timestamp: number) => {
+  const diffMs = Date.now() - timestamp;
+  const diffMins = diffMs / (1000 * 60);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${Math.floor(diffMins)}m ago`;
+  const diffHours = diffMins / 60;
+  if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
+  const diffDays = diffHours / 24;
+  if (diffDays < 7) return `${Math.floor(diffDays)}d ago`;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(timestamp));
+};
+
+const getSmartDueDate = (dateStr: string) => {
+  const due = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { label: 'Overdue', className: 'text-red-400 bg-red-400/10' };
+  if (diffDays === 0) return { label: 'Today', className: 'text-amber-400 bg-amber-400/10' };
+  if (diffDays === 1) return { label: 'Tomorrow', className: 'text-blue-400 bg-blue-400/10' };
+  return {
+    label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(due),
+    className: 'text-[hsl(var(--muted-foreground))] bg-[var(--surface-elevated)]'
+  };
+};
+
+// ─── Main HomeView ────────────────────────────────────────
 export function HomeView() {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const setCurrentDoc = useDocStore((state) => state.setCurrentDoc);
-  
-  const [recents, setRecents] = useState<RecentItem[]>([]);
+  const docs = useDocStore((state) => state.docs);
+
+  const [recents, setRecents] = useState<RecentVisit[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [greeting, setGreeting] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [currentTime, setCurrentTime] = useState('');
+  const [dailyFocus, setDailyFocus] = useState('');
 
-  // Setup clock and greeting
+  // ── Scroll State ──
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(Math.ceil(scrollLeft) < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [recents]);
+
+  // ── Clock & Greeting ──
   useEffect(() => {
     const updateTime = () => {
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       if (hour < 12) setGreeting('Good morning');
       else if (hour < 18) setGreeting('Good afternoon');
       else setGreeting('Good evening');
 
       setCurrentDate(new Intl.DateTimeFormat('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      }).format(new Date()));
+        weekday: 'long', month: 'long', day: 'numeric'
+      }).format(now));
+
+      setCurrentTime(new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true
+      }).format(now));
     };
 
     updateTime();
-    // No need for interval since it just sets the initial greeting, but okay to refresh hourly
-    const interval = setInterval(updateTime, 60 * 60 * 1000);
+    const interval = setInterval(updateTime, 60 * 1000);
+
+    // Load daily focus
+    const savedFocus = localStorage.getItem('recollect_daily_focus');
+    if (savedFocus) setDailyFocus(savedFocus);
+
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch data
+  const handleFocusChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDailyFocus(e.target.value);
+    localStorage.setItem('recollect_daily_focus', e.target.value);
+  };
+
+  // ── Fetch Data ──
   useEffect(() => {
     let mounted = true;
 
     const loadData = async () => {
       setIsLoading(true);
+
+      // 1. Read from localStorage cache instantly (no spinner)
+      const cached = getRecentVisitsFromCache();
+      if (cached.length > 0 && mounted) {
+        setRecents(cached);
+        setIsLoading(false); // show cached data immediately
+      }
+
       try {
-        const [docsRes, drawingsRes, tasksRes] = await Promise.allSettled([
-          docApi.fetchAllDocs(),
-          drawingApi.fetchAllDrawings(),
-          todoApi.fetchTodos()
+        // 2. Fetch tasks + sync recent visits from server in parallel
+        const [tasksRes, freshRecents] = await Promise.allSettled([
+          todoApi.fetchTodos(),
+          syncRecentVisits(),
         ]);
 
         if (!mounted) return;
 
-        // Process Docs
-        const docs = docsRes.status === 'fulfilled' ? docsRes.value : [];
-        const normDocs: RecentItem[] = docs.map(d => ({
-          id: d._id,
-          title: d.title || 'Untitled Doc',
-          type: 'doc',
-          updatedAt: new Date(d.updatedAt).getTime()
-        }));
+        // Recent visits (server-synced)
+        if (freshRecents.status === 'fulfilled') {
+          setRecents(freshRecents.value);
+        }
 
-        // Process Drawings
-        const drawings = drawingsRes.status === 'fulfilled' ? drawingsRes.value : [];
-        const normDrawings: RecentItem[] = drawings.map(d => ({
-          id: d._id,
-          title: d.name || 'Untitled Whiteboard',
-          type: 'drawing',
-          updatedAt: new Date(d.updatedAt).getTime()
-        }));
-
-        // Process Slides (from localStorage)
-        let slides: any[] = [];
-        try {
-          const storedSlides = localStorage.getItem('recollect_slide_decks');
-          if (storedSlides) slides = JSON.parse(storedSlides);
-        } catch (e) {}
-
-        const normSlides: RecentItem[] = slides.map(s => ({
-          id: s.id,
-          title: s.name || 'Untitled Presentation',
-          type: 'slide',
-          updatedAt: new Date(s.updatedAt).getTime()
-        }));
-
-        // Merge and sort recents
-        const allRecents = [...normDocs, ...normDrawings, ...normSlides]
-          .sort((a, b) => b.updatedAt - a.updatedAt)
-          .slice(0, 6); // Top 6 recents
-
-        setRecents(allRecents);
-
-        // Process Tasks
+        // Tasks
         const allTasks = tasksRes.status === 'fulfilled' ? tasksRes.value : [];
         const pendingTasks = allTasks
           .filter((t: any) => t.status !== 'complete')
@@ -118,8 +157,7 @@ export function HomeView() {
             if (b.dueDate) return 1;
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           })
-          .slice(0, 4); // Top 4 upcoming
-
+          .slice(0, 5);
         setTasks(pendingTasks);
       } catch (error) {
         console.error('Failed to load home data', error);
@@ -132,205 +170,268 @@ export function HomeView() {
     return () => { mounted = false; };
   }, []);
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'doc': return <FileText className="h-4 w-4 text-emerald-400" />;
-      case 'drawing': return <PenTool className="h-4 w-4 text-purple-400" />;
-      case 'slide': return <Files className="h-4 w-4 text-orange-400" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
+  // ── Click Handlers ──
+  const handleRecentClick = (item: RecentVisit) => {
+    router.push(item.route);
   };
 
-  const getTimeAgo = (timestamp: number) => {
-    const diffHours = (Date.now() - timestamp) / (1000 * 60 * 60);
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
-  };
+  // ── Skeleton State ──
+  if (isLoading) {
+    return (
+      <div className="p-4 lg:p-8 min-h-screen overflow-y-auto custom-scrollbar pb-24">
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Hero Skeleton */}
+          <div className="flex flex-col items-center justify-center pt-8 pb-4">
+            <Skeleton className="h-10 w-64 rounded-xl bg-[var(--surface-elevated)] mb-2" />
+          </div>
 
-  const handleRecentClick = (item: RecentItem) => {
-    if (item.type === 'doc') {
-      // In a real flow, you'd set the current doc so `DocsView` knows what to open
-      // since `docStore` manages docs view state, we'd need to fetch it first.
-      // But for simplicity, we switch to docs view. The user will see their docs list.
-      router.push('/docs');
-    } else if (item.type === 'drawing') {
-      router.push('/drawing');
-    } else if (item.type === 'slide') {
-      router.push('/slides');
-    }
-  };
+          {/* Recents Skeleton */}
+          <div>
+            <Skeleton className="h-6 w-32 rounded bg-[var(--surface-elevated)] mb-4" />
+            <div className="flex gap-4 overflow-hidden">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-44 shrink-0 rounded-2xl bg-[var(--surface-elevated)]" />)}
+            </div>
+          </div>
+
+          {/* Tasks Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 rounded-2xl bg-[var(--surface-elevated)]" />
+            <Skeleton className="h-64 rounded-2xl bg-[var(--surface-elevated)]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 lg:p-8 min-h-screen bg-[#1A1A1A] overflow-y-auto custom-scrollbar pb-24">
-      <div className="max-w-6xl mx-auto space-y-10">
-        
-        {/* -- Greeting Header -- */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
+    <div className="p-4 lg:p-10 min-h-screen overflow-y-auto custom-scrollbar pb-24">
+      <div className="max-w-[1050px] mx-auto space-y-14">
+
+        {/* ─── 1. Hero Greeting ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-4"
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="flex flex-col items-center text-center pt-6 pb-2 relative"
         >
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-white mb-2">
-              {greeting}, {user?.name?.split(' ')[0] || 'User'}
-            </h1>
-            <p className="text-white/50 text-sm flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              {currentDate}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => router.push('/docs')} leftIcon={<Plus className="h-3.5 w-3.5" />}>New Doc</Button>
-            <Button variant="primary" size="sm" onClick={() => router.push('/todo')} leftIcon={<CheckSquare className="h-3.5 w-3.5" />}>Add Task</Button>
-          </div>
+          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-[hsl(var(--foreground))] mb-2">
+            {greeting},{' '}
+            <span className="text-[hsl(var(--foreground))]/90">
+              {user?.name?.split(' ')[0] || 'there'}
+            </span>
+          </h1>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ─── 2. Main Content Grid ─── */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           
-          {/* -- Left Column: Recents & Templates -- */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Recents */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-brand-primary" />
-                  Jump back in
-                </h2>
-              </div>
-              
-              {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl bg-white/5" />)}
-                </div>
-              ) : recents.length === 0 ? (
-                <div className="text-center p-8 bg-white/5 border border-white/5 rounded-2xl">
-                  <p className="text-sm text-white/40">No recent activity yet.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recents.map((item, i) => (
-                    <motion.button
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      onClick={() => handleRecentClick(item)}
-                      className="flex items-center gap-4 p-3.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-left group"
-                    >
-                      <div className="h-10 w-10 shrink-0 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        {getIconForType(item.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-white/90 truncate">{item.title}</p>
-                        <p className="text-[11px] text-white/40 lowercase tracking-wide mt-0.5">
-                          {item.type} • {getTimeAgo(item.updatedAt)}
-                        </p>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-            </section>
+          {/* ─── Left Column (Content) ─── */}
+          <div className="xl:col-span-8 space-y-8">
 
-            {/* Templates */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <LayoutTemplate className="h-5 w-5 text-brand-primary" />
-                  Start from a template
-                </h2>
-                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white group text-xs">
-                  View all <ChevronRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { name: 'Meeting Notes', icon: <FileText className="h-5 w-5 text-blue-400" />, color: 'from-blue-500/10 to-transparent' },
-                  { name: 'Project Plan', icon: <Files className="h-5 w-5 text-emerald-400" />, color: 'from-emerald-500/10 to-transparent' },
-                  { name: 'Daily Standup', icon: <CheckSquare className="h-5 w-5 text-orange-400" />, color: 'from-orange-500/10 to-transparent' },
-                  { name: 'Brainstorm', icon: <PenTool className="h-5 w-5 text-purple-400" />, color: 'from-purple-500/10 to-transparent' },
-                ].map((tpl, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{ scale: 1.05 }}
-                    className="aspect-square rounded-2xl border border-white/5 bg-white/[0.02] p-4 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-white/10 hover:bg-white/[0.05] transition-colors relative overflow-hidden"
-                  >
-                    <div className={`absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b ${tpl.color} opacity-50`} />
-                    <div className="relative z-10 p-3 rounded-full bg-white/5">
-                      {tpl.icon}
-                    </div>
-                    <span className="text-xs font-medium text-white/70 text-center relative z-10">{tpl.name}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
+            {/* Recently Visited */}
+            <motion.section
+
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <div className="flex items-center gap-2 mb-4 px-1 text-white/70">
+            <Clock className="h-4 w-4" />
+            <h2 className="text-[14px] font-medium">Recently visited</h2>
           </div>
 
-          {/* -- Right Column: Upcoming Tasks -- */}
-          <div className="space-y-6">
-            <section className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5 text-brand-primary" />
-                  Upcoming Tasks
-                </h2>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => router.push('/todo')}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+          {recents.length === 0 ? (
+            <div className="text-center py-12 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
+              <Clock className="h-8 w-8 text-[hsl(var(--muted-foreground))]/40 mx-auto mb-3" />
+              <p className="text-sm text-[hsl(var(--muted-foreground))]/60">No recent activity yet</p>
+            </div>
+          ) : (
+            <div className="relative group/scroll">
+              <div 
+                ref={scrollContainerRef}
+                onScroll={checkScroll}
+                className="flex overflow-x-auto gap-4 pb-4 -mx-1 px-1 custom-scrollbar snap-x no-scrollbar"
+              >
+                {recents.map((item, i) => {
+                  const config = TYPE_CONFIG[item.itemType];
+                  const Icon = config.icon;
+                  const doc = item.itemType === 'doc' ? docs.find(d => d._id === item.itemId) : null;
+                  const coverImg = doc?.coverImage || null;
 
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg bg-white/5" />)}
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-10 opacity-60">
-                  <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
-                    <CheckSquare className="h-6 w-6 text-emerald-500" />
-                  </div>
-                  <p className="text-sm font-medium text-white">All caught up!</p>
-                  <p className="text-xs text-white/40 mt-1">No pending tasks found.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {tasks.map((task, i) => (
-                    <motion.div
-                      key={task._id}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
-                      onClick={() => router.push('/todo')}
+                  return (
+                    <motion.button
+                      key={item.itemId}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 + i * 0.05 }}
+                      onClick={() => handleRecentClick(item)}
+                      className="shrink-0 w-[180px] h-[150px] snap-center flex flex-col rounded-[14px] bg-[var(--surface-elevated)] hover:bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-300 group text-left overflow-hidden relative shadow-none"
                     >
-                      <div className="mt-0.5 shrink-0 rounded border border-white/20 w-4 h-4 flex items-center justify-center text-white/20 group-hover:border-brand-primary" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white/90 truncate">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {task.dueDate && (
-                            <span className="text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium tracking-wide">
-                              <CalendarDays className="h-2.5 w-2.5" />
-                              {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(task.dueDate))}
-                            </span>
-                          )}
-                          {task.priority === 'high' && (
-                            <span className="text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded font-medium">High</span>
-                          )}
+                      {/* Top Half */}
+                      <div className="h-[45%] w-full bg-white/[0.02] border-b border-[hsl(var(--border))]/30 flex items-end px-4 pb-2 relative">
+                        {/* Cover Image */}
+                        {coverImg && (
+                          <div className="absolute inset-0 w-full h-full overflow-hidden">
+                            <img 
+                              src={coverImg}
+                              alt="Cover"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/20" /> {/* Subtle overlay for better icon visibility */}
+                          </div>
+                        )}
+                        <Icon className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors relative z-10" strokeWidth={1.5} />
+                      </div>
+                      
+                      {/* Bottom Half */}
+                      <div className="h-[55%] w-full p-4 flex flex-col justify-between">
+                        <p className="text-[14px] font-medium text-[hsl(var(--foreground))] truncate leading-snug">
+                          {item.title}
+                        </p>
+                        
+                        <div className="flex items-center gap-2 mt-auto">
+                          {/* Mini Avatar */}
+                          <div className="h-[18px] w-[18px] rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] flex items-center justify-center text-[10px] font-semibold border border-[hsl(var(--border))]/50">
+                            {user?.name?.charAt(0)?.toUpperCase() || 'R'}
+                          </div>
+                          <span className="text-[12px] text-[hsl(var(--muted-foreground))]/80">
+                            {getTimeAgo(item.visitedAt)}
+                          </span>
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                  
-                  <Button variant="ghost" className="w-full text-xs text-white/40 hover:text-white mt-2" onClick={() => router.push('/todo')}>
-                    View all tasks
-                  </Button>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Left Fade Overlay & Scroll Button */}
+              {canScrollLeft && (
+                <>
+                  <div className="absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-[hsl(var(--background))] to-transparent pointer-events-none z-10" />
+                  <div className="absolute left-0 top-0 bottom-4 w-32 pointer-events-none z-20 flex items-center justify-start pl-2 opacity-0 group-hover/scroll:opacity-100 transition-opacity">
+                    <div 
+                      className="h-8 w-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center shadow-md pointer-events-auto cursor-pointer hover:bg-[var(--surface-raised)] text-[hsl(var(--foreground))] transition-transform hover:scale-105 active:scale-95"
+                      onClick={() => {
+                        if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Right Fade Overlay & Scroll Button */}
+              {canScrollRight && (
+                <>
+                  <div className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-[hsl(var(--background))] to-transparent pointer-events-none z-10" />
+                  <div className="absolute right-0 top-0 bottom-4 w-32 pointer-events-none z-20 flex items-center justify-end pr-2 opacity-0 group-hover/scroll:opacity-100 transition-opacity">
+                    <div 
+                      className="h-8 w-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center shadow-md pointer-events-auto cursor-pointer hover:bg-[var(--surface-raised)] text-[hsl(var(--foreground))] transition-transform hover:scale-105 active:scale-95"
+                      onClick={() => {
+                        if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                      }}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </motion.section>
+
+            {/* Plan your day Widget */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="rounded-2xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)] p-5"
+            >
+              <h2 className="text-[14px] font-medium text-[hsl(var(--foreground))] mb-3">
+                Plan your day
+              </h2>
+              <textarea
+                value={dailyFocus}
+                onChange={handleFocusChange}
+                placeholder="Start typing..."
+                className="w-full bg-transparent border-none resize-none focus:ring-0 text-[15px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/40 min-h-[150px] outline-none custom-scrollbar"
+              />
+            </motion.section>
+
+          </div> {/* End Left Column */}
+
+          {/* ─── Right Column (Actionables) ─── */}
+          <div className="xl:col-span-4 space-y-8">
+          
+          {/* Upcoming Tasks */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2 text-white/70">
+                <CheckSquare className="h-4 w-4" />
+                <h2 className="text-[14px] font-medium">Upcoming Tasks</h2>
+              </div>
+              <Link href="/todo" className="text-[12px] text-white/40 hover:text-white/80 transition-colors flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            <div className="rounded-2xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)] p-2">
+              {tasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-10">
+                  <CheckSquare className="h-6 w-6 text-white/20 mb-2" />
+                  <p className="text-[13px] font-medium text-white/50">All caught up!</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {tasks.map((task, i) => {
+                    const dueInfo = task.dueDate ? getSmartDueDate(task.dueDate) : null;
+                    const priorityColors: Record<string, string> = {
+                      high: 'text-red-400 bg-red-400/10',
+                      medium: 'text-amber-400 bg-amber-400/10',
+                      low: 'text-white/40 bg-white/5',
+                    };
+
+                    return (
+                      <div
+                        key={task._id}
+                        onClick={() => router.push('/todo')}
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[var(--surface-raised)] border border-transparent hover:border-[var(--border-subtle)] transition-all cursor-pointer group"
+                      >
+                        <div className="mt-1 shrink-0 text-[hsl(var(--muted-foreground))]/50 group-hover:text-[hsl(var(--primary))] transition-colors">
+                          <CheckSquare className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors leading-relaxed">
+                            {task.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {dueInfo && (
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-medium ${dueInfo.className}`}>
+                                {dueInfo.label}
+                              </span>
+                            )}
+                            {task.priority && task.priority !== 'none' && (
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-medium capitalize ${priorityColors[task.priority] || ''}`}>
+                                {task.priority}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-            </section>
-          </div>
+            </div>
+          </motion.section>
 
-        </div>
+          </div> {/* End Right Column */}
+        </div> {/* End Main Content Grid */}
       </div>
     </div>
   );

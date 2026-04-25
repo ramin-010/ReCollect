@@ -186,17 +186,17 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
             transition={{ type: 'spring', damping: 25, stiffness: 400 }}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-lg px-4"
           >
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-zinc-800">
+            <div className="bg-[hsl(var(--card))] rounded-2xl shadow-2xl overflow-hidden border border-border-subtle">
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-1 right-5 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10"
+                className="absolute top-1 right-5 p-1.5 rounded-lg hover:bg-hover-bg text-secondary hover:text-foreground transition-colors z-10"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {/* Character Section */}
-              <div className="pt-8 pb-4 bg-gradient-to-b from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900">
+              <div className="pt-8 pb-4 bg-[hsl(var(--sidebar-bg))]" style={{ backgroundImage: 'linear-gradient(color-mix(in srgb, var(--surface-elevated) 40%, transparent), color-mix(in srgb, var(--surface-elevated) 40%, transparent))' }}>
                 <CloudCharacter />
               </div>
 
@@ -211,8 +211,8 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                 >
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors duration-300 ${
                     shareEnabled 
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
-                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                      : 'bg-[var(--surface-elevated)] text-secondary border border-border-subtle'
                   }`}>
                     {shareEnabled ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                     {shareEnabled ? 'Live on Web' : 'Private'}
@@ -226,10 +226,10 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
                 >
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  <h2 className="text-xl font-semibold text-foreground mb-2">
                     Collaborate with anyone 🌏
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
+                  <p className="text-secondary text-sm leading-relaxed max-w-sm mx-auto">
                     Share a live link to draw together in real-time. No sign-up required for guests!
                   </p>
                 </motion.div>
@@ -237,7 +237,7 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                 {/* Drawing preview card */}
                 {drawing && (
                   <motion.div
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 mb-6"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-elevated)] border border-border-subtle mb-6"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -249,13 +249,13 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                         className="w-10 h-10 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center">
                         <Cloud className="w-5 h-5 text-blue-500" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{drawing.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="font-medium text-foreground text-sm truncate">{drawing.name}</p>
+                      <p className="text-xs text-secondary">
                         {shareEnabled ? 'Ready to share' : 'Private drawing'}
                       </p>
                     </div>
@@ -284,7 +284,7 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                         leftIcon={shareEnabled ? <LinkIcon className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
                         className={`w-full transition-all duration-300 font-medium ${
                           shareEnabled 
-                            ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white' 
+                            ? 'bg-[var(--surface-elevated)] hover:bg-hover-bg text-foreground border border-border-subtle' 
                             : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20'
                         }`}
                       >
@@ -298,7 +298,7 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                             initial={{ opacity: 0, height: 0, marginTop: 0 }}
                             animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
                             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                            className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1"
+                            className="bg-[var(--surface-elevated)] rounded-xl p-1 border border-border-subtle flex items-center gap-1"
                           >
                             <div className="flex-1 px-3 py-2 overflow-hidden">
                               <p className="text-xs font-medium text-zinc-400 mb-0.5">Share this link</p>
@@ -308,7 +308,7 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                             <div className="flex gap-1">
                               <button
                                 onClick={handleCopy}
-                                className="p-2.5 rounded-lg bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 shadow-sm border border-zinc-200 dark:border-zinc-600 transition-colors"
+                                className="p-2.5 rounded-lg bg-[hsl(var(--card))] hover:bg-hover-bg text-secondary hover:text-foreground shadow-sm border border-border-subtle transition-colors"
                                 title="Copy link"
                               >
                                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -317,7 +317,7 @@ export function CloudSyncModal({ isOpen, onClose, drawing }: CloudSyncModalProps
                                 href={shareUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-2.5 rounded-lg bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 shadow-sm border border-zinc-200 dark:border-zinc-600 transition-colors"
+                                className="p-2.5 rounded-lg bg-[hsl(var(--card))] hover:bg-hover-bg text-secondary hover:text-foreground shadow-sm border border-border-subtle transition-colors"
                                 title="Open in new tab"
                               >
                                 <ExternalLink className="w-4 h-4" />

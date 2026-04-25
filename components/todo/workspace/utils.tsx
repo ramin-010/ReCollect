@@ -37,7 +37,7 @@ export function activityIcon(action: ActivityLogEntry['action']) {
     case 'member_joined': return <UserPlus className={cn(base, "text-indigo-400")} />;
     case 'member_removed': return <LogOut className={cn(base, "text-rose-400")} />;
     case 'workspace_created': return <Briefcase className={cn(base, "text-indigo-400")} />;
-    default: return <CircleDot className={cn(base, "text-white/40")} />;
+    default: return <CircleDot className={cn(base, "text-[hsl(var(--muted-foreground))]/50")} />;
   }
 }
 
@@ -64,12 +64,12 @@ export function isDueToday(task: any): boolean {
 }
 
 export function getPriorityTextConfig(priority: string | undefined | null) {
-  if (!priority) return 'text-white/10';
+  if (!priority) return 'text-[hsl(var(--muted-foreground))]/30';
   switch (priority) {
     case 'urgent': 
     case 'high': return 'text-rose-400/80';
     case 'medium': return 'text-amber-400/70';
     case 'low': return 'text-blue-400/70';
-    default: return 'text-white/10';
+    default: return 'text-[hsl(var(--muted-foreground))]/30';
   }
 }

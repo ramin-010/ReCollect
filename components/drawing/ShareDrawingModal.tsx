@@ -85,23 +85,23 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div 
-        className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-md mx-4 shadow-2xl"
+        className="bg-[hsl(var(--card))] border border-border-subtle rounded-xl w-full max-w-md mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700">
+        <div className="flex items-center justify-between p-4 border-b border-border-subtle">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 rounded-lg">
               <Users className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Share Drawing</h2>
-              <p className="text-sm text-zinc-400 truncate max-w-[200px]">{drawingName}</p>
+              <h2 className="text-lg font-semibold text-foreground">Share Drawing</h2>
+              <p className="text-sm text-secondary truncate max-w-[200px]">{drawingName}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white transition-colors p-1"
+            className="text-secondary hover:text-foreground transition-colors p-1"
           >
             ✕
           </button>
@@ -116,18 +116,18 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
           ) : (
             <>
               {/* Toggle */}
-              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-[var(--surface-elevated)] rounded-lg">
                 <div className="flex items-center gap-3">
                   {shareEnabled ? (
                     <Link className="w-5 h-5 text-green-400" />
                   ) : (
-                    <Link2Off className="w-5 h-5 text-zinc-500" />
+                    <Link2Off className="w-5 h-5 text-secondary" />
                   )}
                   <div>
-                    <p className="text-white font-medium">
+                    <p className="text-foreground font-medium">
                       {shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-secondary">
                       {shareEnabled 
                         ? 'Anyone with the link can collaborate'
                         : 'Only you can access this drawing'
@@ -140,7 +140,7 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
                   disabled={isToggling}
                   className={`
                     relative w-12 h-6 rounded-full transition-colors
-                    ${shareEnabled ? 'bg-green-500' : 'bg-zinc-600'}
+                    ${shareEnabled ? 'bg-green-500' : 'bg-[var(--surface-raised)]'}
                     ${isToggling ? 'opacity-50' : ''}
                   `}
                 >
@@ -156,13 +156,13 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
               {/* Share Link */}
               {shareEnabled && shareUrl && (
                 <div className="space-y-2">
-                  <label className="text-sm text-zinc-400">Share link</label>
+                  <label className="text-sm text-secondary">Share link</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
                       value={shareUrl}
                       readOnly
-                      className="flex-1 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white truncate"
+                      className="flex-1 bg-[var(--surface-elevated)] border border-border-subtle rounded-lg px-3 py-2 text-sm text-foreground font-mono truncate"
                     />
                     <button
                       onClick={handleCopy}
@@ -178,16 +178,16 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
                       href={shareUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+                      className="p-2 bg-[var(--surface-raised)] hover:bg-hover-bg rounded-lg transition-colors border border-border-subtle"
                     >
-                      <ExternalLink className="w-5 h-5 text-zinc-300" />
+                      <ExternalLink className="w-5 h-5 text-secondary" />
                     </a>
                   </div>
                 </div>
               )}
 
               {/* Info */}
-              <div className="text-xs text-zinc-500 space-y-1">
+              <div className="text-xs text-tertiary space-y-1">
                 <p>• Guests can edit in real-time without logging in</p>
                 <p>• All changes sync automatically to the cloud</p>
                 <p>• Only you (the owner) can manage this drawing</p>
@@ -197,10 +197,10 @@ export function ShareDrawingModal({ drawingId, drawingName, isOpen, onClose, onS
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-zinc-700">
+          <div className="p-4 border-t border-border-subtle">
           <button
             onClick={onClose}
-            className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors"
+            className="w-full py-2 bg-[var(--surface-raised)] hover:bg-hover-bg text-foreground rounded-lg transition-colors border border-border-subtle"
           >
             Done
           </button>

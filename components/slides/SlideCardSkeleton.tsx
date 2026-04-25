@@ -10,12 +10,12 @@ import { motion } from 'framer-motion';
 export const SlideCardSkeleton = ({ index = 0 }: { index?: number }) => {
   return (
     <motion.div 
-      className="group h-full p-3 flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[hsl(var(--border))]/60 bg-[hsl(var(--card-bg))]/50 rounded-2xl"
+       className="group h-full p-3 flex flex-col min-h-[400px] gap-0 overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface-elevated)] rounded-2xl"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
     >
-      <div className="relative h-[250px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))] border border-white/5 shadow-inner flex shrink-0">
+      <div className="relative h-[250px] w-full rounded-xl overflow-hidden bg-[hsl(var(--muted))] border border-[var(--border-subtle)] shadow-inner flex shrink-0">
         <div className="absolute inset-0 bg-[hsl(var(--muted-foreground))]/10 animate-pulse" />
       </div>
 

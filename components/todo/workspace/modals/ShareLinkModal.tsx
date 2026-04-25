@@ -134,7 +134,7 @@ export function ShareLinkModal({ isOpen, onClose, workspace }: ShareLinkModalPro
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+            className="absolute inset-0 bg-[hsl(var(--background))]/80 backdrop-blur-sm" 
             onClick={onClose}
           />
 
@@ -223,12 +223,12 @@ export function ShareLinkModal({ isOpen, onClose, workspace }: ShareLinkModalPro
                         </div>
                         <button
                           onClick={handleCopy}
-                          className={cn(
-                            'flex items-center justify-center w-12 shrink-0 rounded-xl transition-all shadow-sm border',
-                            copied
-                              ? 'bg-emerald-500 text-white border-emerald-600'
-                              : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 border-[hsl(var(--primary))]'
-                          )}
+                            className={cn(
+                              "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all",
+                              copied 
+                              ? 'bg-emerald-500 text-[hsl(var(--background))] border-emerald-600'
+                              : 'bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90'
+                            )}
                         >
                           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>

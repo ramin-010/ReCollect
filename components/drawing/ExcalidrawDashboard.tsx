@@ -180,9 +180,9 @@ export function ExcalidrawDashboard() {
       <div className="flex-1 flex overflow-hidden p-6 lg:p-12 xl:p-16 gap-6 lg:gap-8 max-w-[1200px] mx-auto w-full">
         
         {/* Left Pane: Index (Floating Panel) */}
-        <div className="w-[320px] xl:w-[380px] flex-shrink-0 bg-[hsl(var(--sidebar-bg))] border border-[hsl(var(--border))]/50 rounded-2xl flex flex-col shadow-sm overflow-hidden z-10 relative">
+        <div className="w-[320px] xl:w-[380px] flex-shrink-0 bg-[hsl(var(--sidebar-bg))] border border-border-subtle rounded-2xl flex flex-col shadow-lg overflow-hidden z-10 relative">
           
-          <div className="px-5 pt-6 pb-4 border-b border-[hsl(var(--border))]/40 bg-[hsl(var(--sidebar-bg))]/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="px-5 pt-6 pb-4 bg-[hsl(var(--sidebar-bg))] sticky top-0 z-20">
             <div className="flex items-center justify-between mb-5">
               <h1 className="text-xl font-semibold tracking-tight text-[hsl(var(--foreground))] flex items-center gap-2">
                 <PenTool className="w-5 h-5 text-indigo-400" />
@@ -223,19 +223,19 @@ export function ExcalidrawDashboard() {
                     "w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-start gap-3",
                     isSelected 
                       ? "bg-indigo-500/10 shadow-sm ring-1 ring-indigo-500/20" 
-                      : "hover:bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                      : "hover:bg-hover-bg text-secondary hover:text-foreground"
                   )}
                 >
                   <div className={cn(
                     "mt-0.5",
-                    isSelected ? "text-indigo-400" : (drawing.isPinned ? "text-indigo-400/60" : "text-[hsl(var(--muted-foreground))]/40")
+                    isSelected ? "text-indigo-400" : (drawing.isPinned ? "text-indigo-400/60" : "text-secondary")
                   )}>
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn(
                       "text-sm font-medium truncate",
-                      isSelected ? "text-indigo-100" : "text-[hsl(var(--foreground))]/80"
+                      isSelected ? "text-foreground" : "text-foreground/70"
                     )}>
                       {drawing.name}
                     </p>
@@ -256,7 +256,7 @@ export function ExcalidrawDashboard() {
         </div>
 
         {/* Right Pane: Staging Area (Floating Panel) */}
-        <div className="flex-1 relative bg-[hsl(var(--card-bg))]/30 border border-[hsl(var(--border))]/40 rounded-2xl flex items-center justify-center pointer-events-none shadow-inner overflow-hidden">
+        <div className="flex-1 relative bg-[hsl(var(--sidebar-bg))] border border-border-subtle rounded-2xl flex items-center justify-center pointer-events-none shadow-lg overflow-hidden">
            {/* Subtle background decoration */}
            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none opacity-50" />
@@ -269,7 +269,7 @@ export function ExcalidrawDashboard() {
                transition={{ duration: 0.3 }}
                className="w-full max-w-lg pointer-events-auto flex flex-col items-center text-center p-8"
              >
-               <div className="w-24 h-24 mb-8 rounded-[2rem] bg-[hsl(var(--card-bg))] border border-[hsl(var(--border))]/50 shadow-2xl flex items-center justify-center text-indigo-400 relative">
+               <div className="w-24 h-24 mb-8 rounded-[2rem] bg-[var(--surface-elevated)] border border-border-subtle shadow-2xl flex items-center justify-center text-indigo-400 relative">
                  <PenTool className="w-10 h-10" />
                  {selectedDrawing.isPinned && (
                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-[hsl(var(--background))] rounded-full flex items-center justify-center p-1">

@@ -42,8 +42,8 @@ export function PresentationBlockLayer({ blocks, connections, yOffset }: Present
                 ? "rounded-none border-transparent bg-transparent shadow-none"
                 : "rounded-md border backdrop-blur-sm shadow-none",
               hasConnections && !isMinimalText
-                ? "border-[hsl(var(--border-light))]/30 bg-[#303030]/50" 
-                : !isMinimalText ? "border-white/50" : "",
+                ? "border-[hsl(var(--border-light))]/50 bg-[var(--surface-raised)]/60" 
+                : !isMinimalText ? "border-[var(--border-strong)]" : "",
               !isMinimalText && block.color
             )}
              style={{

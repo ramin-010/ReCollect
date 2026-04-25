@@ -187,7 +187,7 @@ export function SlideEditor({
 
       {/* Revert Modal */}
       {showRevertModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--overlay-mask)] backdrop-blur-sm">
           <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-2xl p-6 max-w-md mx-4">
             <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-2">Discard Local Changes?</h3>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
@@ -217,7 +217,10 @@ export function SlideEditor({
       )}
 
       {/* Header Bar - Offset Navbar Style */}
-      <div className="absolute top-0 left-[140px] right-0 z-50 flex items-center justify-between px-4 h-12 border-b border-[hsl(var(--divider))]/40 bg-[hsl(var(--sidebar-bg))] backdrop-blur-sm pointer-events-auto">
+      <div className={cn(
+        "notion-navbar absolute top-0 right-0 flex items-center justify-between px-4 h-12 pointer-events-auto transition-[left] duration-300 z-50",
+        isTasksPanelOpen ? "left-72" : "left-[140px]"
+      )}>
         
         {/* Left Section */}
         <div className="flex items-center gap-3 w-1/3">
@@ -270,7 +273,7 @@ export function SlideEditor({
 
         {/* ---- Block Controls (Font Size + Background Color) ---- */}
         <div
-          className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[hsl(var(--card-bg))]/50 px-3 py-1 rounded-md transition-opacity duration-200 z-[100] ${isBlockSelected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--surface-elevated)] px-3 py-1 rounded-md transition-opacity duration-200 z-[100] ${isBlockSelected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
           onMouseDown={(e) => e.preventDefault()}
         >
           {/* Font Size */}
@@ -375,7 +378,7 @@ export function SlideEditor({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-white/10 transition-colors"
+                  className="h-8 px-2 text-xs font-medium hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)] transition-colors"
                   leftIcon={<ListTodo className="h-3.5 w-3.5 text-amber-500" />}
                   title="Add task linked to this deck"
                 >

@@ -139,10 +139,10 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
       className="flex flex-col h-full"
     >
       {/* Minimal Top Bar */}
-      <div className="flex items-center justify-between pb-6 border-b border-white/5 ">
+      <div className="flex items-center justify-between pb-6 border-b border-[var(--border-subtle)]">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
+          className="flex items-center gap-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span className="text-sm">Back</span>
@@ -171,8 +171,8 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
             className={cn(
               "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
               isComplete 
-                ? "bg-emerald-500/20 text-emerald-400" 
-                : "text-white/50 hover:bg-white/5 hover:text-white"
+                ? "bg-emerald-500/20 text-emerald-500" 
+                : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/20 hover:text-[hsl(var(--foreground))]"
             )}
           >
             <CheckCircle2 className="w-4 h-4" />
@@ -180,7 +180,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           </button>
           <button 
             onClick={() => onDelete(task._id)}
-            className="p-2 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+            className="p-2 text-[hsl(var(--muted-foreground))]/60 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -200,13 +200,13 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
             onChange={(e) => setTitle(e.target.value)}
             className={cn(
               "w-full bg-transparent text-2xl font-semibold border-none outline-none focus:ring-0 p-0 mb-1 transition-colors",
-              isComplete ? "text-white/40 line-through" : "text-white placeholder-white/20"
+              isComplete ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/40"
             )}
             placeholder="Task title"
           />
 
           {/* Created timestamp */}
-          <p className="text-xs text-white/30 mb-6 flex items-center gap-1.5">
+          <p className="text-xs text-[hsl(var(--muted-foreground))]/60 mb-6 flex items-center gap-1.5">
             <Clock className="w-3 h-3" />
             Created {createdAgo}
           </p>
@@ -222,13 +222,13 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Subtasks Section */}
           {(task.subtasks && task.subtasks.length > 0) || true ? (
-            <div className="mt-8 pt-6 border-t border-white/5">
+            <div className="mt-8 pt-6 border-t border-[var(--border-subtle)]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-white/60">Subtasks</span>
+                  <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Subtasks</span>
                   {totalSubtasks > 0 && (
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="w-20 h-1.5 bg-[hsl(var(--muted))]/40 rounded-full overflow-hidden">
                         <motion.div 
                           className="h-full bg-emerald-500"
                           initial={{ width: 0 }}
@@ -236,13 +236,13 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                           transition={{ duration: 0.3 }}
                         />
                       </div>
-                      <span className="text-xs text-white/40">{completedSubtasks}/{totalSubtasks}</span>
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">{completedSubtasks}/{totalSubtasks}</span>
                     </div>
                   )}
                 </div>
                 <button 
                   onClick={() => setIsAddingSubtask(true)}
-                  className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded transition-all"
+                  className="p-1.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/20 rounded transition-all"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -252,7 +252,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                 {task.subtasks?.map(st => (
                   <div 
                     key={st.id}
-                    className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg hover:bg-white/[0.02] transition-colors group"
+                    className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg hover:bg-[hsl(var(--muted))]/10 transition-colors group"
                   >
                     <button
                       onClick={() => toggleSubtask(st.id, st.isCompleted)}
@@ -260,18 +260,18 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                         "w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0",
                         st.isCompleted 
                           ? "bg-emerald-500 border-emerald-500" 
-                          : "border-white/20 hover:border-emerald-400"
+                          : "border-[hsl(var(--border))] hover:border-emerald-500"
                       )}
                     >
                       {st.isCompleted && (
-                        <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <svg className="w-2.5 h-2.5 text-[hsl(var(--background))]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
                     </button>
                     <span className={cn(
                       "text-sm transition-colors",
-                      st.isCompleted ? "text-white/30 line-through" : "text-white/80"
+                      st.isCompleted ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))]/90"
                     )}>
                       {st.text}
                     </span>
@@ -281,7 +281,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                 {/* Inline Add Subtask Input */}
                 {isAddingSubtask ? (
                   <div className="flex items-center gap-3 py-2 px-3 -mx-3">
-                    <div className="w-4 h-4 rounded border border-dashed border-white/20 shrink-0" />
+                    <div className="w-4 h-4 rounded border border-dashed border-[hsl(var(--border))] shrink-0" />
                     <input
                       type="text"
                       value={newSubtaskText}
@@ -293,12 +293,12 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                         }
                       }}
                       placeholder="Add subtask..."
-                      className="flex-1 bg-transparent text-sm text-white/80 placeholder-white/30 border-none outline-none"
+                      className="flex-1 bg-transparent text-sm text-[hsl(var(--foreground))]/90 placeholder-[hsl(var(--muted-foreground))]/50 border-none outline-none"
                       autoFocus
                     />
                     <button
                       onClick={handleAddSubtask}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+                      className="text-xs text-emerald-500 hover:text-emerald-400 font-medium"
                     >
                       Add
                     </button>
@@ -307,14 +307,14 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                         setNewSubtaskText('');
                         setIsAddingSubtask(false);
                       }}
-                      className="text-white/30 hover:text-white/60"
+                      className="text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))]"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
                   (!task.subtasks || task.subtasks.length === 0) && (
-                    <p className="text-sm text-white/20 italic py-2">No subtasks yet</p>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]/40 italic py-2">No subtasks yet</p>
                   )
                 )}
               </div>
@@ -327,10 +327,10 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           
           {/* Status */}
           <div>
-            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Status</label>
+            <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Status</label>
             <div className={cn(
               "flex items-center gap-2 text-sm font-medium",
-              isComplete ? "text-emerald-400" : "text-white/70"
+              isComplete ? "text-emerald-500" : "text-[hsl(var(--foreground))]/70"
             )}>
               <div className={cn(
                 "w-2 h-2 rounded-full",
@@ -342,11 +342,11 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Priority */}
           <div>
-            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Priority</label>
+            <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Priority</label>
             <div className={cn(
               "flex items-center gap-2 text-sm font-medium",
-              task.priority === 'high' ? "text-rose-400" :
-              task.priority === 'medium' ? "text-amber-400" : "text-blue-400"
+              task.priority === 'high' ? "text-rose-500" :
+              task.priority === 'medium' ? "text-amber-500" : "text-blue-500"
             )}>
               <Flag className="w-3.5 h-3.5" />
               <span className="capitalize">{task.priority || 'Normal'}</span>
@@ -355,16 +355,16 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Due Date */}
           <div>
-            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Due Date</label>
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Calendar className="w-3.5 h-3.5 text-white/40" />
-              <span>{dateLabel || <span className="text-white/30 italic">Not set</span>}</span>
+            <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Due Date</label>
+            <div className="flex items-center gap-2 text-sm text-[hsl(var(--foreground))]/70">
+              <Calendar className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+              <span>{dateLabel || <span className="text-[hsl(var(--muted-foreground))]/60 italic">Not set</span>}</span>
             </div>
           </div>
 
           {/* Assignee */}
           <div>
-            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Assignee</label>
+            <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Assignee</label>
             <AssigneePicker
               taskId={task._id}
               currentAssignees={task.assignees}
@@ -387,7 +387,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
           {/* Labels */}
           <div>
-            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2 block">Labels</label>
+            <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Labels</label>
             {task.labels && task.labels.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {task.labels.map(l => (
@@ -405,7 +405,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
                 ))}
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-white/30">
+              <div className="flex items-center gap-2 text-[hsl(var(--muted-foreground))]/60">
                 <Tag className="w-3.5 h-3.5" />
                 <span className="text-sm italic">No labels</span>
               </div>

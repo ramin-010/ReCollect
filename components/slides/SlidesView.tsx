@@ -34,6 +34,7 @@ import { SlideListRow } from './SlideListRow';
 import { SlideSkeletonGrid } from './SlideCardSkeleton';
 import { useSlideStore } from '@/lib/store/slideStore';
 import { toast } from 'sonner';
+import { trackVisit, removeVisit } from '@/lib/services/recentVisits';
 
 // =====================================================================
 // SlidesView — Grid + Editor orchestrator
@@ -107,6 +108,7 @@ export function SlidesView() {
     try { await slideApi.deleteDeck(deck?.serverId || deckId); } catch {}
     await slideOfflineStorage.deleteDeck(deckId).catch(() => {});
     removeDeck(deckId);
+    removeVisit(deckId);
     if (activeDeck?.id === deckId) {
       setActiveDeck(null);
       setSlideFullscreen(false);
@@ -261,6 +263,14 @@ export function SlidesView() {
     persistence.latestContentRef.current = localContent;
     persistence.latestNameRef.current = deck.name;
     setSlideFullscreen(true);
+
+    // Track this visit for "Recently visited" on the home page
+    trackVisit({
+      itemId: deck.id,
+      itemType: 'slide',
+      title: deck.name || 'Untitled Presentation',
+      route: '/slides',
+    });
 
     // 2. Fetch full content from server in background
     try {

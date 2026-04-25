@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useWhiteboardStore, Drawing } from '@/lib/store/whiteboardStore';
+import { trackVisit, removeVisit } from '@/lib/services/recentVisits';
 import { 
   getAllDrawingMetadata, 
   getDrawingMetadata,
@@ -177,6 +178,13 @@ export function useDrawingDashboard() {
   const openDrawing = (drawing: Drawing) => {
     setCurrentDrawing(drawing);
     setShowEditor(true);
+    // Track this visit for "Recently visited" on the home page
+    trackVisit({
+      itemId: drawing.id,
+      itemType: 'drawing',
+      title: drawing.name || 'Untitled Whiteboard',
+      route: '/drawing',
+    });
   };
 
   /* Save metadata on close - Yjs handles drawing data automatically */
@@ -284,6 +292,8 @@ export function useDrawingDashboard() {
       
       // 6. Remove from UI store
       removeDrawingFromStore(drawingId);
+      // 7. Remove from recently visited
+      removeVisit(drawingId);
       console.log(`[useDrawingDashboard] DELETE COMPLETE: ${drawingId}`);
       toast.success(`"${drawingName}" deleted`);
     } catch (err) {
