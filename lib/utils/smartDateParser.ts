@@ -27,6 +27,26 @@ export interface ParsedTaskInput {
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
+/** The time a due date gets when only a day is given (typed "friday", or an AI "YYYY-MM-DD"). */
+export const DEFAULT_DUE_HOUR = 18;
+
+/**
+ * A due date sent as a string (e.g. by the task AI). A bare "YYYY-MM-DD" is that day in the
+ * user's LOCAL time zone at DEFAULT_DUE_HOUR — `new Date("2026-10-22")` would be UTC midnight
+ * (05:30 in IST). Anything else goes through `new Date()`. Returns null when unparsable.
+ */
+export function parseDueDateString(value: string): Date | null {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (dateOnly) {
+    const month = Number(dateOnly[2]);
+    const day = Number(dateOnly[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return new Date(Number(dateOnly[1]), month - 1, day, DEFAULT_DUE_HOUR, 0, 0, 0);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Helper for partial day matching (e.g., "wed" -> "wednesday")
 // Scans all words in text for partial matches
 function findPartialDayMatch(text: string): { dayName: string; matched: string; dayIndex: number } | null {
@@ -394,7 +414,7 @@ export function parseTaskInput(text: string): ParsedTaskInput {
   
   // If we have a date but no time, default to 6 PM
   if (hasDate && !hasTime && dueDate) {
-    dueDate = setHours(dueDate, 18);
+    dueDate = setHours(dueDate, DEFAULT_DUE_HOUR);
     dueDate = setMinutes(dueDate, 0);
     dueDate.setSeconds(0, 0);
   }

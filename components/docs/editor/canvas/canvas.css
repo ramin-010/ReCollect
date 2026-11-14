@@ -1,0 +1,789 @@
+/*
+ * The canvas block (Phase E, 2026-11-14): boxes and arrows on a quiet board inside a doc.
+ * The board sits on surface 2, like a code block; boxes are paper on it with a hairline ring;
+ * colours are Notion's colour-family tints (the same tints as callouts and highlights), and
+ * text stays ink on every tint. Selection and connecting use the one blue (accent fill).
+ * React Flow's base.css gives structure only; every colour here is a `.rc` token.
+ */
+
+.rc {
+  --cv-board: var(--rc-surface-2);
+  --cv-edge: var(--rc-ink-3);
+  --cv-handle: var(--rc-ink-3);
+  --cv-default: #ffffff;
+  --cv-default-ring: #e3e2df;
+  --cv-gray: #f0efed;
+  --cv-gray-ring: #e6e5e3;
+  --cv-blue: var(--rc-accent-tint);
+  --cv-blue-ring: #cee3f7;
+  --cv-green: var(--rc-good-tint);
+  --cv-green-ring: #d7e6dd;
+  --cv-yellow: #f9f3dc;
+  --cv-yellow-ring: #f2e3b7;
+  --cv-red: var(--rc-danger-tint);
+  --cv-red-ring: #f7d9d5;
+}
+
+html:not(.light) .rc {
+  --cv-default: #2f2f2f;
+  --cv-default-ring: #3f3e3c;
+  --cv-gray: #383836;
+  --cv-gray-ring: #4a4947;
+  --cv-blue-ring: #2f4b6b;
+  --cv-green-ring: #33533f;
+  --cv-yellow: #504425;
+  --cv-yellow-ring: #6a5a30;
+  --cv-red-ring: #6b3b37;
+}
+
+/* ── The block in the doc ───────────────────────────────────────────────── */
+
+.doc-canvas {
+  position: relative;
+  margin: 4px 0;
+}
+
+.doc-canvas-surface {
+  position: relative;
+  border-radius: var(--rc-r-md);
+  background: var(--cv-board);
+  overflow: hidden;
+  transition: box-shadow var(--rc-fast) ease;
+}
+
+.rc .doc-prose .react-renderer.node-canvas.ProseMirror-selectednode {
+  background: transparent;
+}
+
+.doc-canvas[data-selected] .doc-canvas-surface {
+  box-shadow: 0 0 0 2px var(--rc-accent-fill);
+}
+
+/* Drag the bottom edge to change the height. */
+.doc-canvas-grip {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 64px;
+  height: 12px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+  touch-action: none;
+  z-index: 3;
+}
+
+.doc-canvas-grip::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rc-ink-3);
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.doc-canvas:hover .doc-canvas-grip::after,
+.doc-canvas-grip:active::after {
+  opacity: 0.55;
+}
+
+.doc-canvas-away {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--rc-ink-3);
+  font-size: 14px;
+}
+
+.doc-canvas-away p {
+  margin: 0;
+}
+
+.doc-canvas-away .rc-btn {
+  background: var(--rc-btn-bg);
+  box-shadow: var(--rc-btn-ring);
+  color: var(--rc-ink-1);
+}
+
+/* Full screen: the board on the float layer over the dimmed page. */
+.doc-canvas-full {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  padding: 16px;
+  background: var(--rc-overlay);
+}
+
+.doc-canvas-full-panel {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--rc-r-xl);
+  background: var(--cv-board);
+  box-shadow: var(--rc-shadow-float);
+  overflow: hidden;
+}
+
+/* ── The board ──────────────────────────────────────────────────────────── */
+
+.cv {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  font-family: var(--rc-font);
+  color: var(--rc-ink-1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cv .react-flow {
+  background: transparent;
+}
+
+.cv-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.cv .react-flow__pane.draggable {
+  cursor: default;
+}
+
+.cv[data-active] .react-flow__pane.draggable {
+  cursor: grab;
+}
+
+.cv .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+.cv-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--rc-ink-3);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Shift-drag selection */
+.cv .react-flow__selection,
+.cv .react-flow__nodesselection-rect {
+  background: color-mix(in srgb, var(--rc-accent-fill) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rc-accent-fill) 60%, transparent);
+  border-radius: 2px;
+}
+
+/* ── Boxes ─────────────────────────────────────────────────────────────── */
+
+.cv-node {
+  --fill: var(--cv-default);
+  --ring: var(--cv-default-ring);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--rc-r-md);
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--ring);
+  transition: box-shadow var(--rc-fast) ease, background-color var(--rc-fast) ease;
+}
+
+.cv-node[data-color='gray'] { --fill: var(--cv-gray); --ring: var(--cv-gray-ring); }
+.cv-node[data-color='blue'] { --fill: var(--cv-blue); --ring: var(--cv-blue-ring); }
+.cv-node[data-color='green'] { --fill: var(--cv-green); --ring: var(--cv-green-ring); }
+.cv-node[data-color='yellow'] { --fill: var(--cv-yellow); --ring: var(--cv-yellow-ring); }
+.cv-node[data-color='red'] { --fill: var(--cv-red); --ring: var(--cv-red-ring); }
+
+.cv-node[data-shape='pill'] {
+  border-radius: 999px;
+}
+
+.cv-node[data-shape='ellipse'],
+.cv-node[data-shape='diamond'],
+.cv-node[data-shape='cylinder'] {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 4px;
+}
+
+.cv-node[data-shape='sticky'] {
+  --fill: var(--cv-yellow);
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-radius: var(--rc-r-xs);
+  box-shadow: var(--rc-card-shadow);
+}
+
+.cv-node[data-shape='sticky'][data-color='gray'] { --fill: var(--cv-gray); }
+.cv-node[data-shape='sticky'][data-color='blue'] { --fill: var(--cv-blue); }
+.cv-node[data-shape='sticky'][data-color='green'] { --fill: var(--cv-green); }
+.cv-node[data-shape='sticky'][data-color='red'] { --fill: var(--cv-red); }
+
+.cv-node[data-shape='text'] {
+  justify-content: flex-start;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 4px;
+}
+
+.cv-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cv-outline ellipse,
+.cv-outline polygon,
+.cv-outline path {
+  fill: var(--fill);
+  stroke: var(--ring);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.cv-outline .cv-rim {
+  fill: none;
+}
+
+.cv-label {
+  position: relative;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--rc-ink-1);
+}
+
+.cv-node[data-shape='ellipse'] .cv-label { padding: 10px 18%; }
+.cv-node[data-shape='diamond'] .cv-label { padding: 14px 22%; }
+.cv-node[data-shape='cylinder'] .cv-label { padding: 22% 10px 10px; }
+.cv-node[data-shape='sticky'] .cv-label { padding: 14px 16px; text-align: left; line-height: 1.45; }
+.cv-node[data-shape='text'] .cv-label { padding: 4px 6px; text-align: left; font-size: 16px; line-height: 1.4; }
+.cv-node[data-shape='text'][data-size='s'] .cv-label { font-size: 14px; }
+.cv-node[data-shape='text'][data-size='l'] .cv-label { font-size: 20px; font-weight: 600; line-height: 1.3; }
+
+textarea.cv-label-edit {
+  display: block;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font: inherit;
+  font-size: inherit;
+  field-sizing: content;
+  min-height: 1lh;
+  overflow: hidden;
+  cursor: text;
+  user-select: text;
+  caret-color: var(--rc-accent-fill);
+}
+
+textarea.cv-label-edit::placeholder {
+  color: var(--rc-ink-3);
+}
+
+.cv .react-flow__node.selected .cv-node,
+.cv .react-flow__node:focus-visible .cv-node {
+  outline: 1.5px solid var(--rc-accent-fill);
+  outline-offset: 0;
+}
+
+.cv .react-flow__node:focus {
+  outline: none;
+}
+
+/* Side dots: drag to connect, click to add a box on that side. */
+.cv .cv-handle {
+  width: 10px;
+  height: 10px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--cv-handle);
+  background: var(--cv-board);
+  opacity: 0;
+  cursor: crosshair;
+  transition: opacity var(--rc-fast) ease, background-color var(--rc-fast) ease, border-color var(--rc-fast) ease;
+  z-index: 2;
+}
+
+.cv .cv-handle::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 999px;
+}
+
+.cv .react-flow__node:hover .cv-handle,
+.cv .react-flow__node.selected .cv-handle,
+.cv .react-flow__handle.connectingfrom {
+  opacity: 1;
+}
+
+.cv .cv-node[data-editing] .cv-handle,
+.cv .cv-handle:not(.connectable),
+.cv[data-multi] .cv-handle {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.cv .cv-handle:hover,
+.cv .react-flow__handle.connectingfrom,
+.cv .react-flow__handle.connectingto {
+  border-color: var(--rc-accent-fill);
+  background: var(--rc-accent-fill);
+}
+
+/* Resize: square corner handles on the selection, invisible edges you can drag. */
+.cv .react-flow__resize-control.handle.cv-resize-handle {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--rc-accent-fill);
+  border-radius: 2px;
+  background: var(--cv-board);
+  z-index: 3;
+}
+
+.cv .react-flow__resize-control.line.cv-resize-line {
+  border-color: transparent;
+}
+
+.cv .react-flow__resize-control.line.cv-resize-line.left,
+.cv .react-flow__resize-control.line.cv-resize-line.right {
+  width: 8px;
+  border-width: 0;
+}
+
+.cv .react-flow__resize-control.line.cv-resize-line.top,
+.cv .react-flow__resize-control.line.cv-resize-line.bottom {
+  height: 8px;
+  border-width: 0;
+}
+
+/* ── Arrows ─────────────────────────────────────────────────────────────── */
+
+.cv .react-flow__edge-path.cv-edge-path {
+  stroke: var(--cv-edge);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: stroke var(--rc-fast) ease;
+}
+
+.cv .react-flow__edge-path.cv-edge-dashed {
+  stroke-dasharray: 6 5;
+}
+
+.cv .react-flow__edge.selected .react-flow__edge-path.cv-edge-path,
+.cv .react-flow__edge:focus-visible .react-flow__edge-path.cv-edge-path {
+  stroke: var(--rc-accent-fill);
+  stroke-width: 2;
+}
+
+.cv .react-flow__edge:focus {
+  outline: none;
+}
+
+.cv-arrowhead {
+  fill: var(--cv-edge);
+}
+
+.cv-arrowhead--sel {
+  fill: var(--rc-accent-fill);
+}
+
+.cv-connection {
+  fill: none;
+  stroke: var(--rc-accent-fill);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.cv-edge-label {
+  position: absolute;
+  padding: 2px 6px;
+  border-radius: var(--rc-r-xs);
+  background: var(--cv-board);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--rc-ink-2);
+  white-space: pre-wrap;
+  max-width: 220px;
+  text-align: center;
+  pointer-events: all;
+  cursor: default;
+}
+
+.cv-edge-label[data-selected] {
+  color: var(--rc-ink-1);
+}
+
+.cv-edge-input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--rc-ink-1);
+  text-align: center;
+  padding: 0;
+  caret-color: var(--rc-accent-fill);
+}
+
+.cv-edge-input::placeholder {
+  color: var(--rc-ink-3);
+}
+
+/* ── Bars (floating pill groups) ───────────────────────────────────────── */
+
+.cv-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--rc-surface-float);
+  box-shadow: var(--rc-shadow-float);
+  color: var(--rc-icon);
+  pointer-events: all;
+}
+
+.cv-bar--node,
+.cv-bar--edge {
+  position: absolute;
+  z-index: 6;
+}
+
+.cv-bar[data-low] .cv-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.cv-bar--tools,
+.cv-bar--view {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.cv-bar--tools {
+  top: 10px;
+  left: 10px;
+}
+
+.cv-bar--view {
+  right: 10px;
+  bottom: 10px;
+}
+
+.cv:hover .cv-bar--tools,
+.cv:hover .cv-bar--view,
+.cv[data-active] .cv-bar--tools,
+.cv[data-active] .cv-bar--view,
+.cv[data-empty] .cv-bar--tools,
+.cv-bar--tools:focus-within,
+.cv-bar--view:focus-within {
+  opacity: 1;
+}
+
+.cv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rc-r-sm);
+  background: transparent;
+  color: var(--rc-icon);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+
+.cv-btn--wide {
+  padding: 0 6px;
+}
+
+.cv-btn:hover,
+.cv-btn[aria-expanded='true'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.cv-btn[aria-pressed='true'] {
+  background: var(--rc-selected);
+  color: var(--rc-ink-1);
+}
+
+.cv-btn:focus-visible,
+.cv-swatch:focus-visible,
+.cv-menu-item:focus-visible {
+  outline: 2px solid var(--rc-accent-fill);
+  outline-offset: -2px;
+}
+
+.cv-zoom {
+  min-width: 38px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--rc-ink-2);
+}
+
+.cv-size {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cv-size[data-size='s'] { font-size: 12px; }
+.cv-size[data-size='l'] { font-size: 16px; }
+
+.cv-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--rc-line-strong);
+}
+
+.cv-swatches {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.cv-swatch {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rc-r-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cv-swatch:hover {
+  background: var(--rc-hover);
+}
+
+.cv-swatch span {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.cv-swatch[aria-checked='true'] span {
+  box-shadow: inset 0 0 0 1px var(--ring), 0 0 0 1.5px var(--cv-board), 0 0 0 3px var(--rc-ink-2);
+}
+
+.cv-swatch[data-color='default'] { --fill: var(--cv-default); --ring: var(--cv-default-ring); }
+.cv-swatch[data-color='gray'] { --fill: var(--cv-gray); --ring: var(--cv-gray-ring); }
+.cv-swatch[data-color='blue'] { --fill: var(--cv-blue); --ring: var(--cv-blue-ring); }
+.cv-swatch[data-color='green'] { --fill: var(--cv-green); --ring: var(--cv-green-ring); }
+.cv-swatch[data-color='yellow'] { --fill: var(--cv-yellow); --ring: var(--cv-yellow-ring); }
+.cv-swatch[data-color='red'] { --fill: var(--cv-red); --ring: var(--cv-red-ring); }
+
+.cv-menu-anchor {
+  position: relative;
+}
+
+.cv-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -3px;
+  z-index: 10;
+  min-width: 180px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--rc-surface-float);
+  box-shadow: var(--rc-shadow-float);
+}
+
+.cv-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--rc-r-sm);
+  background: transparent;
+  color: var(--rc-ink-1);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cv-menu-item svg {
+  color: var(--rc-icon);
+}
+
+.cv-menu-item:hover {
+  background: var(--rc-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv *,
+  .doc-canvas * {
+    transition: none !important;
+  }
+}
+
+/* ── v2 (agent diagrams): rounded box, queue, kind icons, zones ─────────────── */
+
+.cv-node[data-shape='rounded'] {
+  border-radius: 14px;
+}
+
+.cv-node[data-shape='queue'] {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 4px;
+}
+
+/* The text stays clear of the pipe's ends. */
+.cv-node[data-shape='queue'] .cv-label { padding: 8px 16% 8px 9%; }
+
+/* A kind's icon sits left of the text, in the icon grey. */
+.cv-label--kind {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cv-label--kind > span {
+  min-width: 0;
+}
+
+.cv-node[data-shape='sticky'] .cv-label--kind,
+.cv-node[data-shape='text'] .cv-label--kind {
+  justify-content: flex-start;
+}
+
+.cv-kind {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--rc-ink-2);
+}
+
+/*
+ * Zones: a tinted frame behind the boxes it holds, its name at the top left. Only the name, the
+ * resize handles and the dots take the pointer; the inside lets it through to the board, so panning,
+ * selecting and double-click to add a box work in a zone as anywhere else.
+ */
+/* !important: React Flow sets the node's pointer-events inline. */
+.cv .react-flow__node.cv-zone-wrap {
+  pointer-events: none !important;
+}
+
+.cv-zone {
+  --fill: var(--cv-gray);
+  --ring: var(--cv-gray-ring);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--rc-r-lg, 12px);
+  background: color-mix(in srgb, var(--fill) 70%, transparent);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+/* The default zone is a shade darker than the board, so it reads as an area. */
+.cv-zone[data-color='default'],
+.cv-zone[data-color='gray'] {
+  background: var(--cv-gray);
+}
+
+.cv-zone[data-color='blue'] { --fill: var(--cv-blue); --ring: var(--cv-blue-ring); }
+.cv-zone[data-color='green'] { --fill: var(--cv-green); --ring: var(--cv-green-ring); }
+.cv-zone[data-color='yellow'] { --fill: var(--cv-yellow); --ring: var(--cv-yellow-ring); }
+.cv-zone[data-color='red'] { --fill: var(--cv-red); --ring: var(--cv-red-ring); }
+
+.cv .react-flow__node.selected .cv-zone {
+  box-shadow: inset 0 0 0 1.5px var(--rc-accent-fill);
+}
+
+.cv-zone-title {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  max-width: calc(100% - 20px);
+  padding: 1px 4px;
+  border-radius: var(--rc-r-xs);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--rc-ink-2);
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  cursor: grab;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.cv-zone-title:hover {
+  background: var(--rc-hover);
+}
+
+.cv[data-active] .react-flow__node.dragging .cv-zone-title {
+  cursor: grabbing;
+}
+
+input.cv-zone-title-edit {
+  min-width: 140px;
+  margin: 0;
+  border: 0;
+  background: var(--cv-default);
+  box-shadow: inset 0 0 0 1px var(--rc-accent-fill);
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rc-ink-1);
+  cursor: text;
+  user-select: text;
+}
+
+.cv-zone .react-flow__handle,
+.cv-zone .react-flow__resize-control {
+  pointer-events: auto;
+}
+
+/*
+ * Arrow labels above every arrow: React Flow lifts an arrow that touches a box in a zone into its
+ * own layer, which would otherwise draw that arrow across other arrows' labels.
+ */
+.cv .react-flow__edgelabel-renderer {
+  z-index: 1000;
+}

@@ -22,8 +22,12 @@ export const AINodeView = (props: NodeViewProps) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const previewEditor = useEditor({
+
+    // TipTap v3 no longer re-renders on every transaction; keep v2's behaviour here.
+
+    shouldRerenderOnTransaction: true,
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }) as any,
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false, underline: false, trailingNode: false }) as any,
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),

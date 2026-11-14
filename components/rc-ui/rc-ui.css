@@ -1,0 +1,1040 @@
+/* Same order as Tailwind's, declared here too so either stylesheet can load first: utilities win over parts. */
+@layer theme, base, components, utilities;
+
+/*
+ * Recollect UI v2: Notion-grade calm (2026-11-14). See DESIGN.md.
+ * The token values follow Notion's live design system, reverse-engineered from its CSS
+ * (context/research/design-v2/notion-tokens.md):
+ * - one warm-grey family
+ * - layered backgrounds (page, then cards, then floating)
+ * - three ink levels (nudged darker where Notion misses WCAG AA)
+ * - hairline rings instead of borders
+ * - one accent blue for what can be clicked
+ * - purple only for dates the system stamps
+ * The type is the OS face Notion uses (Segoe UI Variable on Windows, SF on a Mac).
+ *
+ * Scoped to `.rc` (Home and its portals). Dark is the default step; `html.light .rc` re-steps it.
+ */
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+
+.rc {
+  --rc-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica,
+    'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --rc-font-stamp: var(--rc-font);
+  --rc-font-code: ui-monospace, 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
+
+  --rc-r-xs: 4px;
+  --rc-r-sm: 6px;
+  --rc-r-md: 8px;
+  --rc-r-lg: 12px;
+  --rc-r-xl: 14px;
+
+  --rc-ease-out: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --rc-fast: 120ms;
+
+  /* Dark: page #191919, cards #202020, floating #252525 (Notion bacPri / bacEle / popBac) */
+  --rc-ground: hsl(var(--background));
+  --rc-surface: #202020;
+  --rc-surface-2: #262626;
+  --rc-surface-float: #252525;
+  --rc-hover: rgba(255, 255, 255, 0.055);
+  --rc-selected: rgba(255, 255, 255, 0.085);
+  --rc-line: #2c2c2b;
+  --rc-line-strong: #383836;
+  --rc-ink-1: #f0efed;
+  --rc-ink-2: #ada9a3;
+  --rc-ink-3: #8e8b86;
+  --rc-icon: #8e8b86;
+  --rc-ctl: #7d7a75;
+  --rc-field: rgba(255, 255, 255, 0.045);
+  --rc-field-ring: rgba(255, 255, 255, 0.085);
+  --rc-btn-bg: #252525;
+  --rc-btn-hover: #2f2f2f;
+  --rc-btn-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.075), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --rc-switch-off: #4a4947;
+  --rc-accent: #5b9bea;
+  --rc-accent-hover: #7db0f0;
+  --rc-accent-fill: #2383e2;
+  --rc-accent-tint: #233850;
+  --rc-on-accent: #ffffff;
+  --rc-stamp: #f3ebf9;
+  --rc-stamp-tint: #3c2d47;
+  --rc-stamp-mark: #ada9a3;
+  --rc-good: #6fb38c;
+  --rc-good-mark: #50946e;
+  --rc-good-tint: #263d30;
+  --rc-attn: #e09a52;
+  --rc-attn-mark: #cb9434;
+  --rc-attn-tint: #53361f;
+  --rc-danger: #e5786f;
+  --rc-danger-tint: #502c29;
+  --rc-main: #e6e5e3;
+  --rc-main-hover: #f0efed;
+  --rc-on-main: #191919;
+  --rc-card-shadow: 0 0 0 1px #2c2c2b, 0 2px 4px rgba(0, 0, 0, 0.12);
+  --rc-shadow-float: 0 0 0 1px #383836, 0 14px 28px -6px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --rc-overlay: rgba(0, 0, 0, 0.5);
+  --rc-selection: rgba(35, 131, 226, 0.32);
+  --rc-scroll-thumb: rgba(173, 169, 163, 0.25);
+
+  /* Type (phone first) */
+  --rc-fs-h1: 28px;
+  --rc-fs-h2: 15px;
+  --rc-fs-title: 15px;
+  --rc-fs-body: 15px;
+  --rc-fs-meta: 13px;
+  --rc-fs-stamp: 12.5px;
+}
+
+/* Light: page #FFFFFF, sidebar #F9F8F7, warm ink #2C2C2B (Notion bacPri / bacSec / texPri) */
+html.light .rc,
+.rc.rc-light {
+  --rc-surface: #ffffff;
+  --rc-surface-2: #f4f3f2;
+  --rc-surface-float: #ffffff;
+  --rc-hover: rgba(55, 53, 47, 0.055);
+  --rc-selected: rgba(55, 53, 47, 0.085);
+  --rc-line: #efeeec;
+  --rc-line-strong: #e3e2df;
+  --rc-ink-1: #2c2c2b;
+  --rc-ink-2: #5f5e59;
+  --rc-ink-3: #73706b;
+  --rc-icon: #8e8b86;
+  --rc-ctl: #8e8b86;
+  --rc-field: #f7f7f5;
+  --rc-field-ring: rgba(15, 15, 15, 0.09);
+  --rc-btn-bg: #ffffff;
+  --rc-btn-hover: #f4f3f2;
+  --rc-btn-ring: inset 0 0 0 1px rgba(15, 15, 15, 0.1), 0 1px 2px rgba(15, 15, 15, 0.08);
+  --rc-switch-off: #d4d3cf;
+  --rc-accent: #1f6fd1;
+  --rc-accent-hover: #1a5fb5;
+  --rc-accent-fill: #2383e2;
+  --rc-accent-tint: #e5f2fc;
+  --rc-on-accent: #ffffff;
+  --rc-stamp: #553b69;
+  --rc-stamp-tint: #f3ebf9;
+  --rc-stamp-mark: #7d7a75;
+  --rc-good: #2a6b47;
+  --rc-good-mark: #50946e;
+  --rc-good-tint: #e8f1ec;
+  --rc-attn: #8a4f1c;
+  --rc-attn-mark: #cb9434;
+  --rc-attn-tint: #fbebde;
+  --rc-danger: #b5443b;
+  --rc-danger-tint: #fce9e7;
+  --rc-main: #2c2c2b;
+  --rc-main-hover: #3f3e3c;
+  --rc-on-main: #ffffff;
+  --rc-card-shadow: 0 0 0 1px rgba(42, 28, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --rc-shadow-float: 0 0 0 1px rgba(42, 28, 0, 0.07), 0 14px 28px -6px rgba(25, 25, 25, 0.12), 0 2px 6px rgba(25, 25, 25, 0.05);
+  --rc-overlay: rgba(15, 15, 15, 0.3);
+  --rc-selection: rgba(35, 131, 226, 0.2);
+  --rc-scroll-thumb: rgba(125, 122, 117, 0.3);
+}
+
+@media (min-width: 1024px) {
+  .rc {
+    --rc-fs-h1: 32px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .rc {
+    --rc-fs-h1: 34px;
+  }
+}
+
+@layer components {
+/* ── Base and the browser's own parts ───────────────────────────────────── */
+
+.rc {
+  font-family: var(--rc-font);
+  color: var(--rc-ink-1);
+  font-size: var(--rc-fs-body);
+  line-height: 1.5;
+  caret-color: var(--rc-accent);
+  scrollbar-color: var(--rc-scroll-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+.rc ::selection,
+.rc::selection {
+  background-color: var(--rc-selection) !important;
+  color: var(--rc-ink-1) !important;
+}
+
+.rc :focus {
+  outline: none;
+}
+
+.rc :focus-visible {
+  outline: 2px solid var(--rc-accent-fill);
+  outline-offset: 2px;
+  border-radius: var(--rc-r-sm);
+}
+
+.rc a {
+  color: var(--rc-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.rc ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.rc ::-webkit-scrollbar-thumb {
+  background: var(--rc-scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.rc ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rc .rc-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Type: Notion's scale. Rank comes from weight and ink before size ───── */
+
+.rc-h1 {
+  font-size: var(--rc-fs-h1);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--rc-ink-1);
+}
+
+/* Section labels sit quietly (Notion Home: small, muted, never shouting) */
+.rc-h2 {
+  font-size: var(--rc-fs-h2);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--rc-ink-2);
+}
+
+.rc-title {
+  font-size: var(--rc-fs-title);
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--rc-ink-1);
+  text-wrap: pretty;
+}
+
+.rc-body {
+  font-size: var(--rc-fs-body);
+  line-height: 1.5;
+}
+
+.rc-meta {
+  font-size: var(--rc-fs-meta);
+  line-height: 1.4;
+  color: var(--rc-ink-3);
+}
+
+.rc-ink-2 {
+  color: var(--rc-ink-2);
+}
+
+.rc-ink-3 {
+  color: var(--rc-ink-3);
+}
+
+/* ── Surfaces: a card is a fill plus one hairline ring (Notion shaOutSm) ── */
+
+.rc-card {
+  background: var(--rc-surface);
+  border-radius: var(--rc-r-lg);
+  box-shadow: var(--rc-card-shadow);
+}
+
+.rc-rule-top {
+  border-top: 1px solid var(--rc-line);
+}
+
+/* A row that answers the pointer with a soft fill (Notion's list rows) */
+.rc-hoverable {
+  border-radius: var(--rc-r-sm);
+  transition: background-color var(--rc-fast) ease;
+}
+
+.rc-hoverable:hover {
+  background: var(--rc-hover);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.rc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--rc-r-md);
+  border: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--rc-fast) ease,
+    color var(--rc-fast) ease,
+    box-shadow var(--rc-fast) ease;
+}
+
+.rc-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rc-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rc-btn--sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13.5px;
+}
+
+.rc-btn--main {
+  background: var(--rc-main);
+  color: var(--rc-on-main);
+}
+
+.rc-btn--main:hover:not(:disabled) {
+  background: var(--rc-main-hover);
+}
+
+/* "Outlined" in Notion's language: a raised button with a 1px ring and a hairline of shadow */
+.rc-btn--outline {
+  background: var(--rc-btn-bg);
+  box-shadow: var(--rc-btn-ring);
+  color: var(--rc-ink-1);
+}
+
+.rc-btn--outline:hover:not(:disabled) {
+  background: var(--rc-btn-hover);
+}
+
+/* Quiet actions are grey and fill on hover; colour is not how a button announces itself */
+.rc-btn--quiet {
+  background: transparent;
+  color: var(--rc-ink-2);
+  padding: 0 8px;
+}
+
+.rc-btn--quiet:hover:not(:disabled) {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.rc-btn--quiet svg {
+  color: var(--rc-icon);
+}
+
+.rc-btn--danger {
+  background: var(--rc-btn-bg);
+  box-shadow: var(--rc-btn-ring);
+  color: var(--rc-danger);
+}
+
+.rc-btn--danger:hover:not(:disabled),
+.rc-btn--danger:focus-visible {
+  background: var(--rc-danger-tint);
+}
+
+.rc-btn--danger-solid {
+  background: var(--rc-danger);
+  color: #ffffff;
+}
+
+html:not(.light) .rc .rc-btn--danger-solid,
+html:not(.light) .rc.rc-btn--danger-solid {
+  color: #191919;
+}
+
+.rc-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--rc-r-sm);
+  border: 0;
+  background: transparent;
+  color: var(--rc-icon);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color var(--rc-fast) ease,
+    color var(--rc-fast) ease;
+}
+
+.rc-icon-btn:hover:not(:disabled),
+.rc-icon-btn[data-state='open'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.rc-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rc-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rc-icon-btn--sm {
+  width: 26px;
+  height: 26px;
+}
+
+.rc-icon-btn--sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Segmented (soft row; the chosen one dark, with its count) ──────────── */
+
+.rc-seg {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 32px;
+  padding: 3px;
+  border-radius: var(--rc-r-md);
+  background: var(--rc-surface-2);
+  max-width: 100%;
+}
+
+.rc-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rc-ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--rc-fast) ease,
+    color var(--rc-fast) ease;
+}
+
+.rc-seg button:hover {
+  color: var(--rc-ink-1);
+}
+
+.rc-seg button[aria-selected='true'],
+.rc-seg button[aria-pressed='true'] {
+  background: var(--rc-main);
+  color: var(--rc-on-main);
+}
+
+.rc-seg .rc-seg-count {
+  font-weight: 500;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Inputs: a soft field with a 1px inset ring; blue only on focus ─────── */
+
+.rc-input,
+.rc-textarea {
+  width: 100%;
+  border-radius: var(--rc-r-md);
+  border: 0;
+  background: var(--rc-field);
+  box-shadow: inset 0 0 0 1px var(--rc-field-ring);
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 14px;
+  transition: box-shadow var(--rc-fast) ease;
+}
+
+.rc-input {
+  height: 32px;
+  padding: 0 10px;
+}
+
+.rc-textarea {
+  padding: 7px 10px;
+  line-height: 1.5;
+  resize: none;
+}
+
+.rc-input::placeholder,
+.rc-textarea::placeholder {
+  color: var(--rc-ink-3);
+  opacity: 1;
+}
+
+.rc-input:hover,
+.rc-textarea:hover {
+  box-shadow: inset 0 0 0 1px var(--rc-line-strong);
+}
+
+.rc-input:focus-visible,
+.rc-textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px var(--rc-accent-fill),
+    0 0 0 3px color-mix(in srgb, var(--rc-accent-fill) 22%, transparent);
+}
+
+.rc-input[aria-invalid='true'],
+.rc-textarea[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1px var(--rc-danger);
+}
+
+.rc-field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rc-ink-1);
+  margin-bottom: 6px;
+}
+
+.rc-field-help {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.rc-field-error {
+  font-size: 13px;
+  color: var(--rc-danger);
+  margin-top: 6px;
+}
+
+/* ── Switch ─────────────────────────────────────────────────────────────── */
+
+.rc-switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rc-switch-off);
+  cursor: pointer;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.rc-switch[aria-checked='true'] {
+  background: var(--rc-accent-fill);
+}
+
+.rc-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 180ms var(--rc-ease-out);
+}
+
+.rc-switch[aria-checked='true']::after {
+  transform: translateX(14px);
+}
+
+.rc-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Check box (Notion's to-do: 18px, filled blue when done) ────────────── */
+
+.rc-check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: var(--rc-r-xs);
+  border: 1.5px solid var(--rc-ctl);
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--rc-ease-out),
+    border-color 120ms var(--rc-ease-out),
+    color 120ms var(--rc-ease-out);
+}
+
+.rc-check svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3.25;
+}
+
+.rc-check:hover:not([aria-checked='true']) {
+  border-color: var(--rc-ink-2);
+  background: var(--rc-hover);
+}
+
+.rc-check[aria-checked='true'] {
+  background: var(--rc-accent-fill);
+  border-color: var(--rc-accent-fill);
+  color: var(--rc-on-accent);
+}
+
+.rc-check[aria-checked='true']:hover {
+  background: #0077d4;
+  border-color: #0077d4;
+}
+
+.rc-check:disabled {
+  cursor: progress;
+}
+
+/* Touch: a 44px hit area around the box */
+.rc-hit {
+  position: relative;
+}
+
+.rc-hit::before {
+  content: '';
+  position: absolute;
+  inset: -13px;
+}
+
+/* ── Date tag: the one authored moment (a stamped date slides in on tick) ── */
+
+.rc-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--rc-r-xs);
+  background: var(--rc-stamp-tint);
+  color: var(--rc-stamp);
+  font-family: var(--rc-font);
+  font-size: var(--rc-fs-stamp);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-stamp--press {
+  animation: rc-tag-in 240ms var(--rc-ease-out) both;
+}
+
+@keyframes rc-tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A neutral tag (Notion's default select colour) */
+.rc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--rc-r-xs);
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── Meters and marks: neutral by default, status colours only for a state ── */
+
+.rc-budget {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  width: 100%;
+}
+
+.rc-budget > span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 2px;
+  background: var(--rc-line-strong);
+  transition: background-color 260ms var(--rc-ease-out);
+}
+
+.rc-budget > span[data-done='true'] {
+  background: var(--rc-stamp-mark);
+}
+
+.rc-budget > span[data-kind='room'] {
+  background: var(--rc-surface-2);
+}
+
+.rc-budget > span:first-child {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.rc-budget > span:last-child {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.rc-meter {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rc-surface-2);
+}
+
+.rc-meter > .rc-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--rc-ink-3);
+}
+
+.rc-meter[data-tone='good'] > .rc-meter-fill {
+  background: var(--rc-good-mark);
+}
+
+.rc-meter[data-tone='attn'] > .rc-meter-fill {
+  background: var(--rc-attn-mark);
+}
+
+.rc-meter[data-tone='good'] {
+  background: var(--rc-good-tint);
+}
+
+.rc-meter[data-tone='attn'] {
+  background: var(--rc-attn-tint);
+}
+
+.rc-meter > .rc-meter-tick {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--rc-ink-3);
+}
+
+/* ── Floating layers: menus, popovers, sheets, dialogs ──────────────────── */
+
+.rc-float {
+  background: var(--rc-surface-float);
+  box-shadow: var(--rc-shadow-float);
+  color: var(--rc-ink-1);
+}
+
+.rc-menu {
+  min-width: 200px;
+  padding: 5px;
+  border-radius: 10px;
+  z-index: 120;
+}
+
+.rc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: var(--rc-r-sm);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--rc-ink-1);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.rc-menu-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--rc-icon);
+}
+
+.rc-menu-item[data-highlighted] {
+  background: var(--rc-hover);
+}
+
+.rc-menu-item[data-danger='true'],
+.rc-menu-item[data-danger='true'] svg {
+  color: var(--rc-danger);
+}
+
+.rc-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--rc-line);
+}
+
+.rc-pop {
+  border-radius: 10px;
+  padding: 5px;
+  z-index: 140;
+}
+
+.rc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: var(--rc-overlay);
+  animation: rc-fade-in 180ms ease-out both;
+}
+
+.rc-sheet {
+  position: fixed;
+  z-index: 111;
+  display: flex;
+  flex-direction: column;
+  inset: auto 0 0 0;
+  max-height: 88vh;
+  border-radius: var(--rc-r-xl) var(--rc-r-xl) 0 0;
+  animation: rc-sheet-up 220ms var(--rc-ease-out) both;
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .rc-sheet {
+    inset: 8px 8px 8px auto;
+    width: min(460px, calc(100vw - 16px));
+    max-height: none;
+    border-radius: var(--rc-r-xl);
+    animation-name: rc-sheet-in;
+  }
+}
+
+.rc-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 10px;
+}
+
+.rc-sheet-title {
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.rc-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 18px 18px;
+}
+
+.rc-sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--rc-line);
+}
+
+.rc-dialog {
+  position: fixed;
+  z-index: 111;
+  left: 50%;
+  top: 50%;
+  width: min(440px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  border-radius: var(--rc-r-xl);
+  padding: 20px;
+  animation: rc-dialog-in 200ms var(--rc-ease-out) both;
+}
+
+@keyframes rc-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rc-sheet-up {
+  from {
+    opacity: 0.6;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes rc-sheet-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(12px);
+  }
+}
+
+@keyframes rc-dialog-in {
+  from {
+    opacity: 0.6;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+}
+
+/* ── Skeleton (flat pulse, no gradient) ─────────────────────────────────── */
+
+.rc-skel {
+  display: block;
+  border-radius: var(--rc-r-sm);
+  background: var(--rc-surface-2);
+  animation: rc-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes rc-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ── Row actions: shown on hover / focus, always on touch ───────────────── */
+
+.rc-row-actions {
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.rc-row:hover .rc-row-actions,
+.rc-row:focus-within .rc-row-actions,
+.rc-row-actions:has([data-state='open']) {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .rc-row-actions {
+    opacity: 1;
+  }
+}
+
+/* ── Small parts ────────────────────────────────────────────────────────── */
+
+.rc-kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--rc-r-xs);
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-3);
+  font-family: var(--rc-font);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rc-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.rc-code {
+  font-family: var(--rc-font-code);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc *,
+  .rc *::before,
+  .rc *::after,
+  .rc.rc-sheet,
+  .rc.rc-dialog,
+  .rc.rc-overlay {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+}
+
+/* ── Picker (RcPicker: a custom select with search) ─────────────────────── */
+
+.rc-picker {
+  display: flex;
+  flex-direction: column;
+  max-height: min(360px, var(--radix-popover-content-available-height, 360px));
+  padding: 5px;
+}
+
+.rc-picker-search {
+  height: 32px;
+  margin: 0 0 5px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--rc-r-sm);
+  background: var(--rc-field);
+  box-shadow: inset 0 0 0 1px var(--rc-field-ring);
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.rc-picker-search::placeholder {
+  color: var(--rc-ink-3);
+}
+
+.rc-picker-search:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--rc-accent-fill), 0 0 0 3px color-mix(in srgb, var(--rc-accent-fill) 22%, transparent);
+}
+
+.rc-picker-list {
+  overflow-y: auto;
+  outline: none;
+}
+
+.rc-picker-list .rc-menu-item[data-active] {
+  background: var(--rc-hover);
+}
+
+.rc-picker-list .rc-menu-item[aria-selected='true'] svg:last-child {
+  color: var(--rc-ink-1);
+}
+
+.rc-picker-hint {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-picker-empty {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--rc-ink-3);
+}

@@ -245,7 +245,7 @@ export function EditorStyles() {
       }
 
       /* Collaboration Cursors */
-      .collaboration-cursor__caret {
+      .collaboration-carets__caret {
         border-left: 1px solid #0d0d0d;
         border-right: 1px solid #0d0d0d;
         margin-left: -1px;
@@ -254,7 +254,7 @@ export function EditorStyles() {
         position: relative;
         word-break: normal;
       }
-      .collaboration-cursor__label {
+      .collaboration-carets__label {
         border-radius: 3px 3px 3px 0;
         color: #fff;
         font-size: 12px;

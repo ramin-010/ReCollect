@@ -1,0 +1,1186 @@
+/*
+ * The doc page and editor (Docs round, 2026-11-14). Notion's measured editor metrics
+ * (context/research/design-v2/notion-editor-rea.md) on Recollect's `.rc` tokens:
+ * a 720 px column, title 40/700, H1 30, H2 24, H3 20 (600, 1.3), body 16/24,
+ * blocks 3 px padding with 1 px margins, the handle and "+" in the left gutter.
+ * Everything here lives under `.rc` (the page and its portals), so light and dark both work.
+ */
+
+.rc {
+  --doc-mark-yellow: var(--rc-attn-tint);
+  --doc-mark-green: var(--rc-good-tint);
+  --doc-mark-red: var(--rc-danger-tint);
+  --doc-code-bg: var(--rc-surface-2);
+  --doc-inline-code-bg: var(--rc-selected);
+  /* Syntax: GitHub's tuned palettes (light below, dark in html:not(.light)). */
+  --hl-keyword: #cf222e;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-comment: #6e7781;
+  --hl-title: #8250df;
+  --hl-type: #953800;
+  --hl-attr: #0550ae;
+  --hl-meta: #6e7781;
+  --hl-add: #116329;
+  --hl-del: #82071e;
+}
+
+html:not(.light) .rc {
+  --hl-keyword: #ff7b72;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-comment: #8b949e;
+  --hl-title: #d2a8ff;
+  --hl-type: #ffa657;
+  --hl-attr: #79c0ff;
+  --hl-meta: #8b949e;
+  --hl-add: #aff5b4;
+  --hl-del: #ffdcd7;
+}
+
+/* ── Page frame ─────────────────────────────────────────────────────────── */
+
+.doc-page {
+  min-height: 100%;
+  background: var(--rc-ground);
+}
+
+.doc-column {
+  width: 100%;
+  max-width: calc(720px + 192px);
+  margin: 0 auto;
+  padding: 0 96px 30vh;
+}
+
+@media (max-width: 1024px) {
+  .doc-column {
+    padding-left: 64px;
+    padding-right: 48px;
+  }
+}
+
+.doc-gone {
+  padding-top: 18vh;
+}
+
+.doc-cover {
+  position: relative;
+  height: min(30vh, 280px);
+  overflow: hidden;
+}
+
+.doc-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.doc-cover-actions {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.doc-cover:hover .doc-cover-actions,
+.doc-cover-actions:focus-within {
+  opacity: 1;
+}
+
+.doc-page-actions {
+  display: flex;
+  gap: 4px;
+  height: 28px;
+  margin: -32px 0 4px -6px;
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.doc-column:hover .doc-page-actions,
+.doc-page-actions:focus-within {
+  opacity: 1;
+}
+
+.doc-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--rc-r-sm);
+  font-size: 14px;
+  color: var(--rc-ink-3);
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+
+.doc-ghost-btn:hover {
+  background: var(--rc-hover);
+  color: var(--rc-ink-2);
+}
+
+.doc-ghost-btn svg {
+  color: var(--rc-icon);
+}
+
+/* ── Title ──────────────────────────────────────────────────────────────── */
+
+.doc-title {
+  display: block;
+  width: 100%;
+  padding: 3px 2px;
+  margin: 0 0 4px;
+  border: 0;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 40px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.doc-title::placeholder {
+  color: var(--rc-ink-3);
+  opacity: 0.55;
+}
+
+.rc .doc-title:focus-visible {
+  outline: none;
+}
+
+/* ── Properties ─────────────────────────────────────────────────────────── */
+
+.doc-props {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--rc-line);
+}
+
+.doc-prop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.doc-prop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: 152px;
+  padding: 0 6px 0 2px;
+  font-size: 14px;
+  color: var(--rc-ink-2);
+}
+
+.doc-prop-label svg {
+  width: 16px;
+  height: 16px;
+  color: var(--rc-icon);
+}
+
+.doc-prop-value {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  gap: 8px;
+}
+
+.doc-prop-wrap {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.doc-prop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 0 6px;
+  border-radius: var(--rc-r-sm);
+  font-size: 14px;
+  color: var(--rc-ink-1);
+  text-align: left;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.doc-prop-btn:hover:not(:disabled),
+.doc-prop-btn[data-state='open'] {
+  background: var(--rc-hover);
+}
+
+.doc-prop-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  font-size: 14px;
+  color: var(--rc-ink-1);
+}
+
+.doc-prop-empty {
+  font-size: 14px;
+  color: var(--rc-ink-3);
+  padding: 0 6px;
+}
+
+.doc-prop-btn .doc-prop-empty {
+  padding: 0;
+}
+
+.doc-prop-value > .doc-prop-hint:first-child {
+  padding: 0 6px;
+}
+
+.doc-prop-hint {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-prop-good {
+  color: var(--rc-good);
+}
+
+.doc-prop-good svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Top bar bits ───────────────────────────────────────────────────────── */
+
+.doc-sync {
+  padding: 0 6px;
+  font-size: 13px;
+  color: var(--rc-ink-3);
+}
+
+.doc-presence {
+  display: inline-flex;
+  padding: 0 4px;
+}
+
+.doc-presence-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -4px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--rc-ground);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+
+.doc-body {
+  position: relative;
+  padding-top: 12px;
+}
+
+/*
+ * The editor reaches into the left gutter (text doesn't move): the pointer stays on the editor all
+ * the way from a block's text to its handle, so the handle never vanishes on the way (TipTap hides
+ * it when the pointer leaves the editor), and the whole gutter beside a block shows its handle, as
+ * in Notion. 64 px covers the handle (48 px) and fits the narrow column's 64 px padding.
+ */
+.rc .doc-prose {
+  outline: none;
+  padding: 0 0 0 64px;
+  margin-left: -64px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--rc-ink-1);
+  caret-color: var(--rc-ink-1);
+  word-break: break-word;
+  min-height: 40vh;
+}
+
+.rc .doc-prose > * {
+  margin: 1px 0;
+}
+
+.rc .doc-prose p {
+  padding: 3px 2px;
+  margin: 1px 0;
+  min-height: 1.5em;
+}
+
+.rc .doc-prose h1,
+.rc .doc-prose h2,
+.rc .doc-prose h3 {
+  padding: 3px 2px;
+  margin-bottom: 1px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--rc-ink-1);
+  letter-spacing: -0.003em;
+}
+
+.rc .doc-prose h1 {
+  font-size: 30px;
+  margin-top: 1.4em;
+}
+
+.rc .doc-prose h2 {
+  font-size: 24px;
+  margin-top: 1.1em;
+}
+
+.rc .doc-prose h3 {
+  font-size: 20px;
+  margin-top: 0.8em;
+}
+
+.rc .doc-prose > :first-child {
+  margin-top: 0;
+}
+
+.rc .doc-prose strong {
+  font-weight: 600;
+}
+
+/* Lists */
+.rc .doc-prose ul,
+.rc .doc-prose ol {
+  padding-left: 1.7em;
+  margin: 1px 0;
+}
+
+.rc .doc-prose ul {
+  list-style: disc;
+}
+
+.rc .doc-prose ul ul {
+  list-style: circle;
+}
+
+.rc .doc-prose ul ul ul {
+  list-style: square;
+}
+
+.rc .doc-prose ol {
+  list-style: decimal;
+}
+
+.rc .doc-prose ol ol {
+  list-style: lower-alpha;
+}
+
+.rc .doc-prose ol ol ol {
+  list-style: lower-roman;
+}
+
+.rc .doc-prose li {
+  padding: 3px 2px 3px 0;
+  margin: 1px 0;
+}
+
+.rc .doc-prose li::marker {
+  color: var(--rc-ink-1);
+}
+
+.rc .doc-prose li > p {
+  padding: 0;
+  margin: 0;
+}
+
+.rc .doc-prose li > ul,
+.rc .doc-prose li > ol {
+  margin-top: 2px;
+}
+
+/* To-do */
+.rc .doc-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-left: 2px;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > label {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  /* 30 = the text line (24) + its 3 px padding above and below: the box sits on the line's middle. */
+  height: 30px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > label input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border-radius: var(--rc-r-xs);
+  box-shadow: inset 0 0 0 1.5px var(--rc-ink-3);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--rc-fast) ease, box-shadow var(--rc-fast) ease;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > label input:hover {
+  background: var(--rc-hover);
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > label input:checked {
+  background: var(--rc-accent-fill)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+  box-shadow: none;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > label input:focus-visible {
+  outline: 2px solid var(--rc-accent-fill);
+  outline-offset: 2px;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.rc .doc-prose ul[data-type='taskList'] li[data-checked='true'] > div > p {
+  color: var(--rc-ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--rc-ink-3);
+}
+
+/* Quote */
+/* A quote is typographic: a 2 px ink rule beside the text, not a card edge. */
+.rc .doc-prose blockquote {
+  position: relative;
+  margin: 4px 0;
+  padding: 3px 2px 3px 16px;
+  border: 0;
+  background: none;
+  font-style: normal;
+}
+
+.rc .doc-prose blockquote::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: var(--rc-r-xs);
+  background: var(--rc-ink-3);
+}
+
+.rc .doc-prose blockquote > p {
+  padding: 0;
+  margin: 0;
+}
+
+/* Divider: the line is 1 px, but its row is 25 px tall (padding, not margin), so hovering anywhere
+   near it finds it and its handle, as in Notion. */
+.rc .doc-prose hr {
+  box-sizing: content-box;
+  height: 1px;
+  padding: 12px 0;
+  margin: 0 2px;
+  border: 0;
+  background: var(--rc-line-strong);
+  background-clip: content-box;
+}
+
+.rc .doc-prose hr.ProseMirror-selectednode {
+  background-color: var(--rc-accent-fill);
+}
+
+/* Inline marks */
+.rc .doc-prose .doc-link,
+.rc .doc-prose a[href] {
+  color: var(--rc-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--rc-accent) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.rc .doc-prose .doc-link:hover,
+.rc .doc-prose a[href]:hover {
+  text-decoration-color: currentColor;
+}
+
+.rc .doc-prose code {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: var(--doc-inline-code-bg);
+  font-family: var(--rc-font-code);
+  font-size: 0.86em;
+  color: var(--rc-ink-1);
+}
+
+.rc .doc-prose mark {
+  border-radius: var(--rc-r-xs);
+  padding: 0 1px;
+  color: inherit;
+  background-color: var(--doc-mark-yellow);
+  box-decoration-break: clone;
+}
+
+/* Placeholders (the focused empty block only) */
+.rc .doc-prose .is-empty::before,
+.rc .doc-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--rc-ink-3);
+  pointer-events: none;
+}
+
+/* Selected blocks (a selected node, e.g. after dragging) */
+.rc .doc-prose .ProseMirror-selectednode:not(hr) {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--rc-accent-fill) 14%, transparent);
+}
+
+/* ── Code block ─────────────────────────────────────────────────────────── */
+
+.doc-code {
+  margin: 4px 0;
+  border-radius: 8px;
+  background: var(--doc-code-bg);
+}
+
+.doc-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 6px 0 8px;
+  user-select: none;
+}
+
+.doc-code-lang,
+.doc-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--rc-r-sm);
+  font-size: 12.5px;
+  color: var(--rc-ink-3);
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease, opacity var(--rc-fast) ease;
+}
+
+.doc-code-lang:hover,
+.doc-code-copy:hover,
+.doc-code-lang[data-state='open'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.doc-code-copy {
+  opacity: 0;
+}
+
+.doc-code:hover .doc-code-copy,
+.doc-code-copy:focus-visible {
+  opacity: 1;
+}
+
+.rc .doc-prose .doc-code pre {
+  margin: 0;
+  padding: 2px 16px 16px;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.rc .doc-prose .doc-code pre code {
+  display: block;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  font-family: var(--rc-font-code);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--rc-ink-1);
+  white-space: pre;
+}
+
+.doc-code .hljs-keyword,
+.doc-code .hljs-selector-tag,
+.doc-code .hljs-literal,
+.doc-code .hljs-doctag {
+  color: var(--hl-keyword);
+}
+
+.doc-code .hljs-string,
+.doc-code .hljs-regexp,
+.doc-code .hljs-template-variable {
+  color: var(--hl-string);
+}
+
+.doc-code .hljs-number,
+.doc-code .hljs-symbol,
+.doc-code .hljs-variable.language_ {
+  color: var(--hl-number);
+}
+
+.doc-code .hljs-comment,
+.doc-code .hljs-quote {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.doc-code .hljs-title,
+.doc-code .hljs-title.function_,
+.doc-code .hljs-section {
+  color: var(--hl-title);
+}
+
+.doc-code .hljs-type,
+.doc-code .hljs-built_in,
+.doc-code .hljs-title.class_,
+.doc-code .hljs-params {
+  color: var(--hl-type);
+}
+
+.doc-code .hljs-attr,
+.doc-code .hljs-attribute,
+.doc-code .hljs-property,
+.doc-code .hljs-name,
+.doc-code .hljs-selector-class,
+.doc-code .hljs-selector-id {
+  color: var(--hl-attr);
+}
+
+.doc-code .hljs-meta,
+.doc-code .hljs-punctuation {
+  color: var(--hl-meta);
+}
+
+.doc-code .hljs-addition {
+  color: var(--hl-add);
+}
+
+.doc-code .hljs-deletion {
+  color: var(--hl-del);
+}
+
+/* ── Callout ────────────────────────────────────────────────────────────── */
+
+.doc-callout {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 12px 16px 12px 10px;
+  border-radius: 8px;
+  background: var(--rc-surface-2);
+}
+
+.doc-callout-icon {
+  flex: none;
+  display: flex;
+  margin-top: 1px;
+  /* Above the body, which reaches under it (below). */
+  position: relative;
+  z-index: 1;
+}
+
+.doc-callout-kind {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--rc-r-sm);
+  color: var(--rc-ink-2);
+  transition: background-color var(--rc-fast) ease;
+}
+
+button.doc-callout-kind:hover,
+button.doc-callout-kind[data-state='open'] {
+  background: var(--rc-hover);
+}
+
+/* The body reaches under the icon's column and the callout's left padding (text doesn't move), so
+   the pointer stays on a block inside the callout on its way left to that block's handle. */
+.doc-callout-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: -44px;
+  padding-left: 44px;
+}
+
+.doc-callout-body > :first-child {
+  margin-top: 0;
+}
+
+.doc-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.doc-callout[data-callout='tip'] {
+  background: var(--rc-good-tint);
+}
+
+.doc-callout[data-callout='tip'] .doc-callout-kind {
+  color: var(--rc-good);
+}
+
+.doc-callout[data-callout='important'] .doc-callout-kind {
+  color: var(--rc-ink-1);
+}
+
+.doc-callout[data-callout='warning'] {
+  background: var(--rc-attn-tint);
+}
+
+.doc-callout[data-callout='warning'] .doc-callout-kind {
+  color: var(--rc-attn);
+}
+
+.doc-callout[data-callout='caution'] {
+  background: var(--rc-danger-tint);
+}
+
+.doc-callout[data-callout='caution'] .doc-callout-kind {
+  color: var(--rc-danger);
+}
+
+/* ── Toggle (details) ───────────────────────────────────────────────────── */
+
+.rc .doc-prose [data-type='details'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 1px 0;
+}
+
+.rc .doc-prose [data-type='details'] > button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 30px;
+  border-radius: var(--rc-r-sm);
+  color: var(--rc-ink-1);
+  cursor: pointer;
+}
+
+.rc .doc-prose [data-type='details'] > button::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5l4.5 4.5L6 12.5z'/%3E%3C/svg%3E") center / 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5l4.5 4.5L6 12.5z'/%3E%3C/svg%3E") center / 16px no-repeat;
+  transition: transform var(--rc-fast) ease;
+}
+
+.rc .doc-prose [data-type='details'].is-open > button::before {
+  transform: rotate(90deg);
+}
+
+.rc .doc-prose [data-type='details'] > button:hover {
+  background: var(--rc-hover);
+}
+
+/* The content reaches under the chevron's column (text doesn't move), so the pointer stays on a
+   block inside the toggle on its way left to that block's handle; the chevron sits above it. */
+.rc .doc-prose [data-type='details'] > button {
+  position: relative;
+  z-index: 1;
+}
+
+.rc .doc-prose [data-type='details'] > div {
+  flex: 1;
+  min-width: 0;
+  margin-left: -26px;
+  padding-left: 26px;
+}
+
+.rc .doc-prose [data-type='details'] summary {
+  display: block;
+  padding: 3px 2px;
+  list-style: none;
+  font-weight: 500;
+  cursor: text;
+}
+
+.rc .doc-prose [data-type='details'] summary::-webkit-details-marker {
+  display: none;
+}
+
+.rc .doc-prose [data-type='details'] summary::marker {
+  content: '';
+}
+
+.rc .doc-prose [data-type='detailsContent'] {
+  padding-left: 0;
+}
+
+.rc .doc-prose [data-type='detailsContent'][hidden] {
+  display: none;
+}
+
+/* ── Images ─────────────────────────────────────────────────────────────── */
+
+.rc .doc-prose img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* ── Live carets ────────────────────────────────────────────────────────── */
+
+.rc .doc-prose .collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1.5px solid;
+  border-right: 0;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.rc .doc-prose .collaboration-carets__label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  padding: 2px 5px;
+  border-radius: 4px 4px 4px 0;
+  font-size: 12px;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1.2;
+  color: #fff;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Below the last block: clicking puts the caret at the end (the column's bottom padding is gone). */
+.doc-tail {
+  height: 30vh;
+  cursor: text;
+}
+
+.doc-column:has(.doc-tail) {
+  padding-bottom: 0;
+}
+
+/* ── Block handle (left gutter) ─────────────────────────────────────────── */
+
+.doc-drop-cursor {
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+/* A block dragged by its handle: our line between blocks (lib/extensions/BlockDrop.ts) replaces the text drop cursor. */
+.doc-block-dragging .doc-drop-cursor {
+  display: none;
+}
+
+.doc-drop-line {
+  position: fixed;
+  z-index: 140;
+  display: none;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ui-accent-fill, #2383e2);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.doc-handle {
+  display: flex;
+  align-items: center;
+}
+
+.doc-handle-btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--rc-icon);
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+
+.doc-handle-btn:hover,
+.doc-handle-btn[aria-expanded='true'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.doc-handle-grip {
+  width: 18px;
+  cursor: grab;
+}
+
+.doc-handle-grip:active {
+  cursor: grabbing;
+}
+
+.doc-block-menu {
+  width: 240px;
+}
+
+.doc-block-menu .rc-menu-item:focus-visible {
+  outline: none;
+  background: var(--rc-hover);
+}
+
+.doc-menu-check {
+  color: var(--rc-ink-1) !important;
+}
+
+/* ── Slash menu ─────────────────────────────────────────────────────────── */
+
+.doc-slash {
+  z-index: 130;
+  width: 300px;
+  overflow-y: auto;
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.doc-slash-group {
+  padding: 8px 8px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rc-ink-3);
+}
+
+.doc-slash-group:first-child {
+  padding-top: 4px;
+}
+
+.doc-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--rc-r-sm);
+  font-size: 14px;
+  color: var(--rc-ink-1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.doc-slash-item[aria-selected='true'] {
+  background: var(--rc-hover);
+}
+
+.doc-slash-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  color: var(--rc-ink-2);
+}
+
+.doc-slash-hint {
+  font-family: var(--rc-font-code);
+  font-size: 12px;
+  color: var(--rc-ink-3);
+}
+
+.doc-slash-empty {
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--rc-ink-3);
+}
+
+/* ── Selection format bar ───────────────────────────────────────────────── */
+
+.doc-bar {
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 9px;
+  background: var(--rc-surface-float);
+  box-shadow: var(--rc-shadow-float);
+  color: var(--rc-ink-1);
+  font-family: var(--rc-font);
+}
+
+.doc-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--rc-r-sm);
+  font-size: 13.5px;
+  color: var(--rc-ink-2);
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+
+.doc-bar-btn:hover,
+.doc-bar-btn[data-state='open'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.doc-bar-btn[aria-pressed='true'] {
+  color: var(--rc-ink-1);
+  background: var(--rc-selected);
+}
+
+.doc-bar-turn {
+  padding: 0 6px 0 8px;
+  font-weight: 500;
+  color: var(--rc-ink-1);
+}
+
+.doc-bar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--rc-line-strong);
+}
+
+.doc-bar-input {
+  width: 240px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--rc-r-sm);
+  background: var(--rc-field);
+  box-shadow: inset 0 0 0 1px var(--rc-field-ring);
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.doc-bar-input:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--rc-accent-fill);
+}
+
+.doc-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--rc-r-xs);
+  box-shadow: inset 0 0 0 1px var(--rc-line-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-page *,
+  .doc-bar *,
+  .doc-slash * {
+    transition: none !important;
+  }
+}
+
+
+/* -- Diagrams (Mermaid code blocks) -- */
+
+.doc-code[data-language='mermaid'] .doc-diagram {
+  position: relative;
+  padding: 4px 16px 16px;
+}
+
+.doc-diagram-measure {
+  position: absolute;
+  inset: 0 16px auto;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.doc-code[data-language='mermaid'][data-mode='edit'] .doc-diagram {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rc-line);
+}
+
+.doc-diagram-svg {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  cursor: default;
+}
+
+.doc-diagram-svg svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.doc-diagram-note {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+}
+
+.doc-diagram-error {
+  color: var(--rc-attn);
+}
+
+.doc-code-mode[aria-pressed='true'] {
+  color: var(--rc-ink-1);
+}
+
+/* A drawn diagram in full screen (DiagramFull): the canvas's float layer; drag pans, the wheel zooms. */
+.doc-diagram-full {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-diagram-view {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.doc-diagram-view:active {
+  cursor: grabbing;
+}
+
+.doc-diagram-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.doc-diagram-full-bar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  opacity: 1;
+}
+
+.doc-diagram-full-note {
+  position: absolute;
+  left: 16px;
+  bottom: 22px;
+  max-width: 50%;
+  font-size: 13px;
+  color: var(--rc-attn);
+}

@@ -1,5 +1,10 @@
-import { DocsView } from '@/components/docs/doc_view';
+import { Suspense } from 'react';
+import { DocsLibrary } from '@/components/docs/library/DocsLibrary';
 
 export default function DocsPage() {
-  return <DocsView />;
+  return (
+    <Suspense>
+      <DocsLibrary />
+    </Suspense>
+  );
 }

@@ -58,11 +58,19 @@ export function TiptapTaskEditor({
   useEffect(() => { onLabelDeleteRef.current = onLabelDelete; }, [onLabelDelete]);
 
   const editor = useEditor({
+
+    // TipTap v3 no longer re-renders on every transaction; keep v2's behaviour here.
+
+    shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({
         // Disable things we don't strictly need yet to keep it lightweight, 
         // or just use defaults. We'll add task lists later when building / commands.
         heading: false,
+        // Keep v2 behaviour: TipTap v3's StarterKit adds Link, Underline and a trailing paragraph.
+        link: false,
+        underline: false,
+        trailingNode: false,
       }) as any,
       TaskList,
       TaskItem.configure({

@@ -97,10 +97,17 @@ export function InlineCursor({ x, y, id, initialContent, onCommit, onDiscard, on
   onChangeRef.current = onChange;
 
   const editor = useEditor({
+
+    // TipTap v3 no longer re-renders on every transaction; keep v2's behaviour here.
+
+    shouldRerenderOnTransaction: true,
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        link: false, // added separately below (TipTap v3 StarterKit includes Link and Underline)
+        underline: false,
+        trailingNode: false,
         bulletList: { keepMarks: true, keepAttributes: false },
         orderedList: { keepMarks: true, keepAttributes: false },
       }) as any,

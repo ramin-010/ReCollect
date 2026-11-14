@@ -10,7 +10,9 @@ import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
 import { ContentCard } from '@/components/content/ContentCard';
-import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft, Lock, KeyRound, CheckCircle2, X, Edit, Camera, LogOut } from 'lucide-react';
+import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft, Lock, KeyRound, CheckCircle2, X, Edit, Camera, LogOut, Bot, Gauge } from 'lucide-react';
+import { AgentTokens } from './AgentTokens';
+import { AiSettings } from './AiSettings';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -18,8 +20,9 @@ import { userApi } from '@/lib/api/user';
 import { authApi } from '@/lib/api/auth';
 import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
+import { features } from '@/lib/features';
 
-type TabType = 'profile' | 'archived' | 'favorites';
+type TabType = 'profile' | 'agents' | 'ai' | 'archived' | 'favorites';
 type PasswordChangeStep = 'idle' | 'sending-otp' | 'otp-sent' | 'verifying' | 'verified' | 'changing';
 
 export function UserSettings() {
@@ -71,6 +74,9 @@ export function UserSettings() {
 
   // Fetch archived and favorite notes from API
   useEffect(() => {
+    // These are legacy content notes, hidden while `content` is off (lib/features.ts).
+    if (!features.content) return;
+
     const fetchNotes = async () => {
       setIsLoadingNotes(true);
       try {
@@ -456,8 +462,15 @@ export function UserSettings() {
 
   const tabs = [
     { id: 'profile' as TabType, label: 'Profile', icon: User },
-    { id: 'archived' as TabType, label: 'Archived', icon: Archive, count: archivedNotes.length },
-    { id: 'favorites' as TabType, label: 'Favorites', icon: Heart, count: favoriteNotes.length },
+    { id: 'agents' as TabType, label: 'Agents', icon: Bot },
+    { id: 'ai' as TabType, label: 'AI', icon: Gauge },
+    // Archived / Favorites list legacy content notes: hidden while `content` is off (lib/features.ts).
+    ...(features.content
+      ? [
+          { id: 'archived' as TabType, label: 'Archived', icon: Archive, count: archivedNotes.length },
+          { id: 'favorites' as TabType, label: 'Favorites', icon: Heart, count: favoriteNotes.length },
+        ]
+      : []),
   ];
 
   return (
@@ -468,7 +481,7 @@ export function UserSettings() {
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              exit={{ opacity: 0 }}
-             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 md:p-12"
+             className="fixed inset-0 z-50 bg-[var(--overlay-mask,rgba(15,15,15,0.4))] flex items-center justify-center p-4 sm:p-6 md:p-12"
              onClick={() => setIsOpen(false)}
           >
             <motion.div
@@ -482,7 +495,7 @@ export function UserSettings() {
               {/* Sidebar Navigation inside Modal */}
               <aside className="hidden md:flex flex-col w-[240px] shrink-0 bg-[hsl(var(--sidebar-bg))] border-r border-[hsl(var(--border))]/30">
                 <div className="p-4 pl-6 pt-6">
-                  <h2 className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 px-2">Account</h2>
+                  <h2 className="text-[12px] font-medium text-[var(--ui-ink-3)] mb-1 px-2">Account</h2>
                 </div>
                 <nav className="flex-1 px-3 space-y-[4px] overflow-y-auto custom-scrollbar">
                   {tabs.map((tab) => {
@@ -497,8 +510,8 @@ export function UserSettings() {
                           w-full flex items-center justify-between gap-3 px-3 py-1.5 rounded-md
                           transition-all duration-200 text-left group text-[14px] font-medium
                           ${isActive 
-                            ? 'bg-white/10 text-[hsl(var(--foreground))]' 
-                            : 'text-[hsl(var(--muted-foreground))] hover:bg-white/5 hover:text-[hsl(var(--foreground))]'
+                            ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' 
+                            : 'text-[var(--ui-ink-2)] hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]'
                           }
                         `}
                       >
@@ -558,6 +571,16 @@ export function UserSettings() {
                       {activeTab === 'profile' && (
                         <p className="text-[14px] text-[hsl(var(--muted-foreground))] mt-1">
                           Manage your account info and security
+                        </p>
+                      )}
+                      {activeTab === 'agents' && (
+                        <p className="text-[14px] text-[hsl(var(--muted-foreground))] mt-1">
+                          Tokens for Claude Code and other agents
+                        </p>
+                      )}
+                      {activeTab === 'ai' && (
+                        <p className="text-[14px] text-[hsl(var(--muted-foreground))] mt-1">
+                          Recall questions and grading, and what they cost
                         </p>
                       )}
                       {activeTab === 'archived' && (
@@ -926,6 +949,18 @@ export function UserSettings() {
                       </AnimatePresence>
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {activeTab === 'agents' && (
+                <motion.div key="agents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <AgentTokens />
+                </motion.div>
+              )}
+
+              {activeTab === 'ai' && (
+                <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <AiSettings />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -2,37 +2,12 @@
 
 import * as Y from 'yjs';
 import { prosemirrorJSONToYDoc, yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
-import Highlight from '@tiptap/extension-highlight';
-import Underline from '@tiptap/extension-underline';
-import { TextStyle } from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import { ResizableImage } from '@/lib/extensions/ResizableImage';
-import { InlineAINode } from '@/lib/extensions/InlineAINode';
-import { EmbedNode } from '@/lib/extensions/EmbedNode';
-import { MediaRow } from '@/lib/extensions/MediaRow';
-import { MediaItem } from '@/lib/extensions/MediaItem';
 import { getSchema } from '@tiptap/core';
+import { docSchemaExtensions } from '@/lib/editor/docSchema';
+import { withCanvasData } from '@/lib/editor/canvasBoard';
 
 // Build the same schema used by the editor
-const extensions = [
-  StarterKit.configure({ heading: { levels: [1, 2, 3] } }) as any,
-  Link,
-  ResizableImage,
-  InlineAINode,
-  EmbedNode,
-  MediaRow,
-  MediaItem,
-  TaskList,
-  TaskItem.configure({ nested: true }),
-  Highlight.configure({ multicolor: true }),
-  Underline,
-  TextStyle,
-  Color,
-];
+const extensions = docSchemaExtensions();
 
 // Get ProseMirror schema from TipTap extensions
 const schema = getSchema(extensions);
@@ -78,14 +53,15 @@ export function jsonToYjsState(json: any): string {
 }
 
 /**
- * Convert Yjs binary state (Base64) to TipTap JSON content
+ * Convert Yjs binary state (Base64) to TipTap JSON content. Canvas blocks carry their board in
+ * `attrs.data` (the board lives outside the fragment), so editors without the Y.Doc can show it.
  */
 export function yjsStateToJson(base64State: string): any {
   const state = Buffer.from(base64State, 'base64');
   const ydoc = new Y.Doc();
   Y.applyUpdate(ydoc, state);
   const fragment = ydoc.getXmlFragment('default');
-  const json = yXmlFragmentToProsemirrorJSON(fragment);
+  const json = withCanvasData(yXmlFragmentToProsemirrorJSON(fragment), ydoc);
   ydoc.destroy();
   return json;
 }

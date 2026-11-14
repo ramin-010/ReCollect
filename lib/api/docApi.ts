@@ -171,6 +171,11 @@ export const docApi = {
     }
   },
 
+  /** Pins or unpins a doc in the library. */
+  async setPinned(id: string, isPinned: boolean): Promise<void> {
+    await axiosInstance.patch(`/api/docs/${id}`, { isPinned });
+  },
+
   async deleteDoc(id: string): Promise<{ success: boolean }> {
     console.log('[docApi] Deleting doc:', id);
     const response = await axiosInstance.delete(`/api/docs/${id}`);

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
   description:
-    'ReCollect is the all-in-one knowledge workspace for professionals. Capture notes, manage tasks, create presentations, draft emails, and sketch on infinite whiteboards — all powered by AI. Free during beta.',
+    'ReCollect is the all-in-one knowledge workspace for professionals. Capture notes, manage tasks, create presentations, draft emails — all powered by AI. Free during beta.',
   keywords: [
     'knowledge management app',
     'note taking app',
@@ -11,7 +11,6 @@ export const metadata: Metadata = {
     'second brain app',
     'task manager',
     'AI notes',
-    'whiteboard app',
     'presentation tool',
     'personal wiki',
     'knowledge workspace',
@@ -21,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
     description:
-      'The all-in-one knowledge workspace: notes, tasks, whiteboards, slides, and AI-powered email — free during beta.',
+      'The all-in-one knowledge workspace: notes, tasks, slides, and AI-powered email — free during beta.',
     type: 'website',
     images: [
       {
@@ -36,7 +35,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
     description:
-      'The all-in-one knowledge workspace: notes, tasks, whiteboards, slides, and AI-powered email — free during beta.',
+      'The all-in-one knowledge workspace: notes, tasks, slides, and AI-powered email — free during beta.',
     images: ['/logo3.webp'],
   },
   alternates: {
@@ -61,7 +60,7 @@ export default function WelcomeLayout({
             name: 'ReCollect',
             url: 'https://re-collect.in',
             description:
-              'All-in-one knowledge workspace for professionals — notes, tasks, whiteboards, slides, and AI-powered email.',
+              'All-in-one knowledge workspace for professionals — notes, tasks, slides, and AI-powered email.',
             applicationCategory: 'ProductivityApplication',
             operatingSystem: 'Web',
             offers: {
@@ -72,7 +71,6 @@ export default function WelcomeLayout({
             },
             featureList: [
               'AI-Powered Notes & Docs',
-              'Infinite Whiteboard Canvas',
               'Integrated Task Management',
               'Spatial Presentations & Slides',
               'AI Email Summaries & Drafts',

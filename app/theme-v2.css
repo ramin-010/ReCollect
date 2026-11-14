@@ -1,0 +1,171 @@
+/*
+ * Recollect theme v2: the app-wide token layer (2026-11-14). It is Notion-grade calm in light and dark.
+ *
+ * The values follow Notion's live design system, reverse-engineered from its CSS. See
+ * context/research/design-v2/notion-tokens.md:
+ * - one warm-grey family
+ * - page, sidebar and floating layers
+ * - three ink levels (nudged darker where Notion misses WCAG AA)
+ * - alpha hover fills
+ * - one blue for focus
+ *
+ * Why a separate file? globals.css keeps the legacy theme blocks inside `@layer base`. These rules are
+ * unlayered, so they win over them without rewriting the 950-line file. The HSL triplets match its
+ * `hsl(var(--x))` usage.
+ * The legacy "dark-gray" class is an alias of dark, so a stored legacy choice lands on the new dark.
+ */
+
+:root {
+  --font-ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica,
+    'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+/* ── Light: page #FFFFFF · sidebar #F9F8F7 · ink #2C2C2B ─────────────────── */
+:root,
+html.light {
+  --background: 0 0% 100%;
+  --foreground: 30 1% 17%;
+  --card: 0 0% 100%;
+  --card-bg: 30 14% 97%;
+  --card-foreground: 30 1% 17%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 1% 17%;
+  --primary: 30 1% 17%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 36 8% 94%;
+  --secondary-foreground: 30 1% 17%;
+  --muted: 0 3% 95%;
+  --muted-foreground: 37 4% 44%;
+  --accent: 36 8% 94%;
+  --accent-foreground: 30 1% 17%;
+  --border: 40 5% 90%;
+  --input: 40 5% 90%;
+  --ring: 210 77% 51%;
+  --brand-primary: 210 77% 51%;
+  --text-secondary: 51 3% 36%;
+  --text-tertiary: 37 4% 44%;
+  --divider: 40 5% 90%;
+  --border-light: 40 5% 90%;
+  --sidebar-bg: 30 14% 97%;
+  --sidebar-hover: 36 8% 94%;
+  --sidebar-active: 36 7% 91%;
+  --sidebar-foreground: 51 3% 36%;
+  --surface-elevated: rgba(55, 53, 47, 0.02);
+  --surface-raised: rgba(55, 53, 47, 0.035);
+  --surface-overlay: rgba(55, 53, 47, 0.06);
+  --surface-inset: rgba(55, 53, 47, 0.04);
+  --border-subtle: rgba(55, 53, 47, 0.09);
+  --border-strong: rgba(55, 53, 47, 0.16);
+  --hover-bg: rgba(55, 53, 47, 0.055);
+  --active-bg: rgba(55, 53, 47, 0.085);
+  --overlay-mask: rgba(15, 15, 15, 0.4);
+  --task-input-bg: 0 0% 100%;
+  --task-input-border: 40 5% 90%;
+  --task-input-text: 30 1% 17%;
+  --task-input-placeholder: 37 4% 44%;
+  --task-key-bg: 36 8% 94%;
+  --task-key-text: 37 4% 44%;
+  --new-bg-color: #f9f8f7;
+  --radius: 0.5rem;
+
+  /* Shell-only tokens (sidebar, top bar) */
+  --ui-ink-1: #2c2c2b;
+  --ui-ink-2: #5f5e59;
+  --ui-ink-3: #73706b;
+  --ui-icon: #8e8b86;
+  --ui-sidebar: #f9f8f7;
+  --ui-sidebar-edge: rgba(42, 28, 0, 0.06);
+  --ui-hover: rgba(55, 53, 47, 0.055);
+  --ui-selected: rgba(55, 53, 47, 0.085);
+  --ui-field: rgba(55, 53, 47, 0.045);
+  --ui-kbd: rgba(55, 53, 47, 0.07);
+  --ui-accent-fill: #2383e2;
+  --ui-avatar-bg: #e3e2df;
+  --ui-avatar-ink: #2c2c2b;
+  --ui-stamp-tint: #f3ebf9;
+  --ui-stamp-ink: #553b69;
+}
+
+/* ── Dark: page #191919 · sidebar #202020 · ink #F0EFED ─────────────────── */
+html.dark,
+html.theme-dark-gray {
+  --background: 0 0% 9.8%;
+  --foreground: 40 8% 94%;
+  --card: 0 0% 12.5%;
+  --card-bg: 0 0% 14.5%;
+  --card-foreground: 40 8% 94%;
+  --popover: 0 0% 14.5%;
+  --popover-foreground: 40 8% 94%;
+  --primary: 40 5% 90%;
+  --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 40 8% 94%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 38 4% 54%;
+  --accent: 30 1% 17%;
+  --accent-foreground: 40 8% 94%;
+  --border: 30 1% 17%;
+  --input: 30 1% 17%;
+  --ring: 210 77% 51%;
+  --brand-primary: 210 77% 51%;
+  --text-secondary: 36 6% 66%;
+  --text-tertiary: 38 4% 54%;
+  --divider: 30 1% 17%;
+  --border-light: 40 2% 21%;
+  --sidebar-bg: 0 0% 12.5%;
+  --sidebar-hover: 0 0% 17%;
+  --sidebar-active: 0 0% 19%;
+  --sidebar-foreground: 40 4% 72%;
+  --surface-elevated: rgba(255, 255, 255, 0.035);
+  --surface-raised: rgba(255, 255, 255, 0.055);
+  --surface-overlay: rgba(255, 255, 255, 0.085);
+  --surface-inset: rgba(0, 0, 0, 0.2);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.11);
+  --hover-bg: rgba(255, 255, 255, 0.055);
+  --active-bg: rgba(255, 255, 255, 0.085);
+  --overlay-mask: rgba(0, 0, 0, 0.6);
+  --task-input-bg: 0 0% 12.5%;
+  --task-input-border: 40 2% 21%;
+  --task-input-text: 40 8% 94%;
+  --task-input-placeholder: 38 4% 54%;
+  --task-key-bg: 30 1% 17%;
+  --task-key-text: 36 6% 66%;
+  --new-bg-color: #252525;
+  --radius: 0.5rem;
+
+  --ui-ink-1: #f0efed;
+  --ui-ink-2: #bcbab6;
+  --ui-ink-3: #8e8b86;
+  --ui-icon: #8e8b86;
+  --ui-sidebar: #202020;
+  --ui-sidebar-edge: transparent;
+  --ui-hover: rgba(255, 255, 255, 0.055);
+  --ui-selected: rgba(255, 255, 255, 0.085);
+  --ui-field: rgba(255, 255, 255, 0.055);
+  --ui-kbd: rgba(255, 255, 255, 0.075);
+  --ui-accent-fill: #2383e2;
+  --ui-avatar-bg: #4a4947;
+  --ui-avatar-ink: #f0efed;
+  --ui-stamp-tint: #3c2d47;
+  --ui-stamp-ink: #f3ebf9;
+}
+
+/* The OS face everywhere, as Notion does (Segoe UI Variable on Windows, SF on a Mac) */
+body {
+  font-family: var(--font-ui);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background-color: rgba(35, 131, 226, 0.28);
+}
+
+/* Single-line labels that may run long (sidebar titles): fade out at the edge instead of "…" */
+.ui-fade-end {
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}

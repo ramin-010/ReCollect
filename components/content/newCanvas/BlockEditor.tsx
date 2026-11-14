@@ -58,10 +58,17 @@ export function BlockEditor({
   }, [debouncedOnChange]);
 
   const editor = useEditor({
+
+    // TipTap v3 no longer re-renders on every transaction; keep v2's behaviour here.
+
+    shouldRerenderOnTransaction: true,
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] }, // Limit headings in notes
+        link: false, // added separately below (TipTap v3 StarterKit includes Link and Underline)
+        underline: false,
+        trailingNode: false,
         bulletList: {
           keepMarks: true,
           keepAttributes: false,

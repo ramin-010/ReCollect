@@ -22,8 +22,9 @@ import {
 } from '@/components/ui-base/DropdownMenu';
 import { RichTaskItem } from './RichTaskItem';
 import { PersonalTableView } from './PersonalTableView';
-import type { TaskData } from './task_Input/types';
+import type { TodoResponse } from '@/lib/api/todoApi';
 import { PersonalTaskDetailModal } from './PersonalTaskDetailModal';
+import { features, isReferenceTypeVisible } from '@/lib/features';
 
 
 export function TodoView() {
@@ -78,7 +79,9 @@ export function TodoView() {
     
     switch (activeFilter) {
       case 'inbox':
-        result = result.filter(t => t.status !== 'complete' && (!t.references || t.references.length === 0));
+        // Links to hidden features (slides / legacy content, see lib/features.ts) don't count,
+        // so tasks linked only to those stay visible here instead of disappearing.
+        result = result.filter(t => t.status !== 'complete' && !t.references?.some(ref => isReferenceTypeVisible(ref.type)));
         break;
       case 'today':
         result = result.filter(t => {
@@ -132,7 +135,7 @@ export function TodoView() {
   }, [todos, activeFilter, sortBy]);
 
   // Handlers
-  const handleCreateTask = async (data: TaskData & { _id?: string }) => {
+  const handleCreateTask = async (data: TodoResponse) => {
     if (data._id) addTodo(data as unknown as Todo);
   };
     
@@ -270,7 +273,8 @@ export function TodoView() {
             {/* App Integrations */}
             {[
               { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
-              { key: 'slides', label: 'Slides', icon: <LayoutTemplate className="w-3.5 h-3.5" /> },
+              // Slides tab is hidden while presentations are off (lib/features.ts)
+              ...(features.slides ? [{ key: 'slides', label: 'Slides', icon: <LayoutTemplate className="w-3.5 h-3.5" /> }] : []),
             ].map(f => (
               <button
                 key={f.key}

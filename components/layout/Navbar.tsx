@@ -6,15 +6,33 @@ import { usePathname } from 'next/navigation';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
 import { Button } from '@/components/ui-base/Button';
-import { Share2, Plus, ImagePlus, X } from 'lucide-react';
+import { Share2, Plus, X, Home, FileText, Users, CheckSquare, Settings, Files, Mail, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
-import { Logo } from '@/components/brand/Logo';
 import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
+import { features } from '@/lib/features';
+import Link from 'next/link';
+import { useTopBar } from '@/lib/store/topBarStore';
+import { FadeText } from '@/components/rc-ui/FadeText';
+
+/** The breadcrumb's page icon (Notion shows the page's own icon, never the brand mark). */
+function PageIcon({ pathname }: { pathname: string }) {
+  const cls = 'h-4 w-4 shrink-0 text-[var(--ui-icon)]';
+  if (pathname === '/') return <Home className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/docs')) return <FileText className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/workspace')) return <Users className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/todo')) return <CheckSquare className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/settings')) return <Settings className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/slides')) return <Files className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/email')) return <Mail className={cls} strokeWidth={1.75} />;
+  return <LayoutGrid className={cls} strokeWidth={1.75} />;
+}
 
 export function Navbar() {
   const pathname = usePathname();
-  const currentDashboard = useDashboardStore((state) => state.currentDashboard);
+  const storedDashboard = useDashboardStore((state) => state.currentDashboard);
+  // Legacy dashboards are hidden (lib/features.ts): no dashboard title, Share (create-dash-link) or "Note" button.
+  const currentDashboard = features.dashboards ? storedDashboard : null;
   const { triggerCreateNote } = useCreateNote();
   
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -24,41 +42,59 @@ export function Navbar() {
   // Determine title based on current pathname
   const getTitle = () => {
     if (pathname === '/') return 'Home';
-    if (pathname.startsWith('/docs')) return 'Documents';
+    if (pathname.startsWith('/docs')) return 'Docs';
     if (pathname.startsWith('/workspace')) return 'Workspace';
     if (pathname.startsWith('/todo')) return 'Tasks';
-    if (pathname.startsWith('/drawing')) return 'Whiteboard';
-    if (pathname.startsWith('/slides')) return 'Presentations';
+    if (features.slides && pathname.startsWith('/slides')) return 'Presentations';
     if (pathname.startsWith('/settings')) return 'Settings';
-    if (pathname.startsWith('/email')) return 'Email';
+    if (features.email && pathname.startsWith('/email')) return 'Email';
     
     if (currentDashboard) return currentDashboard.name;
     return 'Overview';
   };
 
   const title = getTitle();
+  const crumbs = useTopBar((st) => st.crumbs);
+  const pageActions = useTopBar((st) => st.actions);
 
   return (
     <>
-      {/* Navbar Container */}
-      <nav className="notion-navbar sticky  top-0 w-full">
-        {/* <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-[hsl(var(--background))] opacity-100 blur-3xl" />
-        <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-15 pointer-events-none" /> */}
-        <div className="flex h-[52px] items-center px-4 lg:px-6 gap-4 relative z-10">
-          
-          {/* ReCollect Logo and Title */}
-          <div className="flex items-center gap-1">
-            <Logo size="md" showText={false} className="text-[hsl(var(--foreground))]" />
-            
-            <h2 className="text-lg pl-0 font-semibold text-[hsl(var(--foreground))] tracking-tight">
-              {title}
-            </h2>
-          </div>
+      {/* Top bar (theme v2): a slim breadcrumb in the page colour, no band, no border (Notion's pattern) */}
+      <nav className="sticky top-0 w-full bg-[hsl(var(--background))]">
+        <div className="flex h-[44px] items-center pl-[60px] pr-3 lg:px-3 gap-2 relative z-10">
+          {crumbs?.length ? (
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-0.5">
+              <PageIcon pathname={pathname} />
+              {crumbs.map((c, i) => {
+                const last = i === crumbs.length - 1;
+                return (
+                  <span key={`${c.label}-${i}`} className={`flex items-center gap-0.5 ${last ? 'min-w-0' : 'shrink-0'}`}>
+                    {i > 0 && <span aria-hidden className="px-0.5 text-[14px] text-[var(--ui-ink-3)]">/</span>}
+                    {c.href && !last ? (
+                      <Link href={c.href} className="flex h-[28px] items-center rounded-[6px] px-1.5 text-[14px] text-[var(--ui-ink-2)] transition-colors duration-100 hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]">
+                        {c.label}
+                      </Link>
+                    ) : (
+                      <h2 aria-current={last ? 'page' : undefined} className="min-w-0 max-w-[48ch] px-1.5 text-[14px] font-[400] leading-[28px] text-[var(--ui-ink-1)]">
+                        <FadeText title={c.label}>{c.label}</FadeText>
+                      </h2>
+                    )}
+                  </span>
+                );
+              })}
+            </nav>
+          ) : (
+            <div className="flex min-w-0 items-center gap-1.5 h-[28px] px-1.5 rounded-[6px]">
+              <PageIcon pathname={pathname} />
+              <h2 className="truncate text-[14px] font-[400] leading-none text-[var(--ui-ink-1)]">{title}</h2>
+            </div>
+          )}
 
           <div className="flex-1" /> {/* Spacer */}
 
           {/* Actions */}
           <div className="flex items-center gap-1.5">
+            {pageActions}
             {/* 
             {!coverImage && (
               <Button

@@ -9,10 +9,8 @@ import {
   CheckCircle2, 
   Trash2, 
   Plus, 
-  User,
   Tag,
   Clock,
-  MoreHorizontal,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +22,10 @@ import { useTodoStore } from '@/lib/store/todoStore';
 import { toast } from 'sonner';
 import { todoApi } from '@/lib/api/todoApi';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
+import { labelsFromTask } from '@/lib/utils/todoTags';
+
+/** Workspace tasks carry their workspace id (not part of the personal Task type). */
+const isWorkspaceTask = (task: Task) => Boolean((task as Task & { workspace?: string }).workspace);
 
 interface TaskDetailViewProps {
   task: Task;
@@ -52,12 +54,12 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
     
     setIsSaving(true);
     try {
-      const updates: Partial<Task> = {};
+      const updates: { title?: string; description?: string } = {};
       if (title !== task.title) updates.title = title;
       if (description !== (task.description || '')) updates.description = description;
 
-      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
-      const result = await api.updateTodo(task._id, updates as any);
+      const api = isWorkspaceTask(task) ? workspaceTodoApi : todoApi;
+      const result = await api.updateTodo(task._id, updates);
       if (result.success && result.data) {
         onUpdate(task._id, result.data as unknown as Partial<Task>);
         toast.success('Task updated');
@@ -105,15 +107,21 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
     const newSubtasks = task.subtasks?.map(st => 
       st.id === subtaskId ? { ...st, isCompleted: !currentStatus } : st
     );
-    if (!newSubtasks) return;
+    if (!newSubtasks || !task.subtasks) return;
+    const previous = task.subtasks;
     updateLocalStore(task._id, { subtasks: newSubtasks });
-    
+
     try {
-      const api = (task as any).workspace ? workspaceTodoApi : todoApi;
-      if (api.updateSubtask) {
-        await api.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
+      // Workspace todos have no list endpoint: send the full updated array (PATCH /api/workspace-todos/:id).
+      const result = isWorkspaceTask(task)
+        ? await workspaceTodoApi.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus }, previous)
+        : await todoApi.updateSubtask(task._id, subtaskId, { isCompleted: !currentStatus });
+      if (!result.success) {
+        updateLocalStore(task._id, { subtasks: previous });
+        toast.error(result.message || 'Failed to update subtask');
       }
-    } catch (e) {
+    } catch {
+      updateLocalStore(task._id, { subtasks: previous });
       toast.error('Failed to update subtask');
     }
   };
@@ -127,6 +135,7 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
 
   const createdAgo = formatDistanceToNow(parseISO(task.createdAt), { addSuffix: true });
   const isComplete = task.status === 'complete';
+  const taskLabels = labelsFromTask(task);
   const completedSubtasks = task.subtasks?.filter(st => st.isCompleted).length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -388,17 +397,13 @@ export function TaskDetailView({ task, onBack, onUpdate, onDelete }: TaskDetailV
           {/* Labels */}
           <div>
             <label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 block">Labels</label>
-            {task.labels && task.labels.length > 0 ? (
+            {/* The API returns tags as [{ _id, name }] (no colour): same chips as the detail modals */}
+            {taskLabels.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {task.labels.map(l => (
-                  <span 
+                {taskLabels.map(l => (
+                  <span
                     key={l.id}
-                    className="px-2 py-0.5 rounded text-[10px] font-medium border"
-                    style={{ 
-                      borderColor: `${l.color}50`,
-                      backgroundColor: `${l.color}15`,
-                      color: l.color 
-                    }}
+                    className="px-2 py-0.5 rounded text-[10px] font-medium border border-blue-500/30 bg-blue-500/10 text-blue-400"
                   >
                     {l.name}
                   </span>

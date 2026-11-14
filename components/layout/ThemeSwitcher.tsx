@@ -1,86 +1,75 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Monitor } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { motion, AnimatePresence } from 'framer-motion';
 
+/** Light, Dark or System. "dark-gray" (legacy) is an alias of Dark in app/theme-v2.css. */
 const themes = [
-  { id: 'light', label: 'Light', icon: Sun, desc: 'Clean & bright' },
-  { id: 'dark', label: 'Dark', icon: Moon, desc: 'Notion-inspired' },
-  { id: 'theme-dark-gray', label: 'Legacy', icon: Monitor, desc: 'Classic dark' },
+  { id: 'light', label: 'Light', icon: Sun },
+  { id: 'dark', label: 'Dark', icon: Moon },
+  { id: 'system', label: 'System', icon: Monitor },
 ] as const;
 
+/** A compact theme control for the sidebar footer: one icon button, a small menu that opens upward. */
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  // Avoid hydration mismatch — only render the icon after mount
-  useEffect(() => { setMounted(true); }, []);
+  // Avoid a hydration mismatch: the stored theme is only known after mount.
+  useEffect(() => setMounted(true), []);
 
-  if (!mounted) {
-    return (
-      <button className="h-8 w-8 flex items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))]">
-        <Moon className="h-4 w-4" />
-      </button>
-    );
-  }
-
-  const current = themes.find(t => t.id === theme) ?? themes[1];
-  const Icon = current.icon;
+  const currentId = theme === 'theme-dark-gray' ? 'dark' : theme;
+  const current = themes.find((t) => t.id === currentId) ?? themes[1];
+  const Icon = mounted ? current.icon : Moon;
 
   return (
     <div className="relative">
       <button
-        onClick={() => setShowMenu(v => !v)}
-        className="h-8 w-8 flex items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)] transition-all duration-200"
-        title={`Theme: ${current.label}`}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Theme: ${current.label}. Change theme`}
+        title="Theme"
+        className="grid h-[30px] w-[30px] place-items-center rounded-[6px] text-[var(--ui-icon)] transition-colors hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]"
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-[17px] w-[17px]" strokeWidth={1.75} />
       </button>
 
-      <AnimatePresence>
-        {showMenu && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -6 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 z-50 min-w-[180px] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl shadow-xl overflow-hidden"
-            >
-              <div className="p-1.5 space-y-0.5">
-                {themes.map((t) => {
-                  const T = t.icon;
-                  const isActive = theme === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => { setTheme(t.id); setShowMenu(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 text-left
-                        ${isActive
-                          ? 'bg-[hsl(var(--brand-primary))]/10 text-[hsl(var(--brand-primary))]'
-                          : 'text-[hsl(var(--foreground))] hover:bg-[var(--hover-bg)]'
-                        }`}
-                    >
-                      <T className="h-4 w-4 shrink-0" />
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium leading-tight">{t.label}</span>
-                        <span className="text-[10px] text-[hsl(var(--muted-foreground))] leading-tight">{t.desc}</span>
-                      </div>
-                      {isActive && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand-primary))]" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          <div
+            role="menu"
+            aria-label="Theme"
+            className="absolute bottom-full right-0 z-50 mb-1.5 min-w-[164px] rounded-[10px] bg-[hsl(var(--popover))] p-[5px] shadow-[0_0_0_1px_var(--border-subtle),0_14px_28px_-6px_rgba(0,0,0,0.25),0_2px_6px_rgba(0,0,0,0.08)]"
+          >
+            {themes.map((t) => {
+              const T = t.icon;
+              const active = currentId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={active}
+                  onClick={() => {
+                    setTheme(t.id);
+                    setOpen(false);
+                  }}
+                  className="flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-[14px] text-[var(--ui-ink-1)] transition-colors hover:bg-[var(--ui-hover)]"
+                >
+                  <T className="h-4 w-4 shrink-0 text-[var(--ui-icon)]" strokeWidth={1.75} />
+                  <span className="flex-1">{t.label}</span>
+                  {active && <Check className="h-4 w-4 text-[var(--ui-ink-2)]" strokeWidth={2} />}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

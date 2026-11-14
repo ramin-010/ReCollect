@@ -50,7 +50,7 @@ import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 import { TiptapTaskEditor } from '../TiptapTaskEditor';
 import { subMinutes } from 'date-fns';
 
-import { TaskInputProps, PRIORITIES } from './types';
+import { TaskInputProps, PRIORITIES, REFERENCE_PICKER_COPY } from './types';
 import { useTaskInput } from './useTaskInput';
 import { getRelativeDateDisplay, getHighlightedContent } from './utils';
 import { todoApi } from '@/lib/api/todoApi';
@@ -68,7 +68,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
   workspaceId,
   spaceId,
   visibility,
-  workspaceMembers = []
+  workspaceMembers = [],
+  goalType,
 }, ref) => {
   const {
     // State
@@ -120,7 +121,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     setIsAiGenerating,
     handleAiGenerate,
     caretPosition,
-  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility);
+  } = useTaskInput(onSave, onExpandChange, isExpanded, initialReferences, initialTitle, initialDescription, demoMode, workspaceId, spaceId, visibility, goalType);
 
   // Wrap handleKeyDown to inject workspaceMembers for @ai
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -250,11 +251,12 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
     >
       <motion.div 
         animate={{ 
-          borderColor: isAiGenerating ? "rgba(99, 102, 241, 0.4)" : isAiMode ? "rgba(99, 102, 241, 0.2)" : (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"),
-          boxShadow: isAiGenerating ? "0 0 25px -5px rgba(99, 102, 241, 0.25)" : isAiMode ? "0 0 25px -5px rgba(99, 102, 241, 0.15)" : (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 10px 30px -5px rgba(0,0,0,0.3)" : "none")
+          borderColor: isAiGenerating ? "rgba(99, 102, 241, 0.4)" : isAiMode ? "rgba(99, 102, 241, 0.2)" : (isSaving && isQuickAdd) ? "rgba(129, 140, 248, 0.5)" : (isExpanded ? "rgba(125,122,117,0.32)" : "rgba(125,122,117,0.2)"),
+          // Theme v2: warm-grey alpha edges and a soft shadow read on both light and dark grounds.
+          boxShadow: isAiGenerating ? "0 0 25px -5px rgba(99, 102, 241, 0.25)" : isAiMode ? "0 0 25px -5px rgba(99, 102, 241, 0.15)" : (isSaving && isQuickAdd) ? "0 0 20px -2px rgba(99, 102, 241, 0.2)" : (isExpanded ? "0 14px 32px -10px rgba(0,0,0,0.22)" : "none")
         }}
         transition={{ duration: 0.3 }}
-        className= {cn("relative bg-[#2a2a2a] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[#262938] border-indigo-500/10")}
+        className= {cn("relative bg-[hsl(var(--popover))] rounded-xl border transition-colors duration-200", isAiMode && !isAiGenerating && "bg-[color-mix(in_srgb,#6366f1_7%,hsl(var(--popover)))] border-indigo-500/10")}
       >
         {/* AI generating loading indicator moved top */}
         {isAiGenerating && (
@@ -273,13 +275,13 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
           {(isAiMode || isAiGenerating) ? (
             <Sparkles className={cn("w-5 h-5 text-indigo-400 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           ) : (
-            <Circle className={cn("w-5 h-5 text-white/20 shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
+            <Circle className={cn("w-5 h-5 text-[var(--ui-ink-3)] shrink-0", isExpanded ? "mt-0" : "")} strokeWidth={1.5} />
           )}
           
           <div className="relative flex-1">
             
             {!isAiGenerating && highlightedOverlay}
-            <style>{`.task-title-input::selection { background-color: rgba(59,130,246,0.4) !important; color: white !important; }`}</style>
+            <style>{`.task-title-input::selection { background-color: rgba(35,131,226,0.3) !important; color: inherit !important; }`}</style>
             <TextareaAutosize
               ref={inputRef as any}
               value={title}
@@ -291,8 +293,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               maxRows={5}
               suppressHydrationWarning={demoMode}
               className={cn(
-                "task-title-input w-full bg-transparent placeholder:text-white/40 focus:outline-none font-medium relative transition-colors duration-300 resize-none overflow-hidden block p-0 m-0 border-none leading-normal",
-                highlightedOverlay && !isAiGenerating ? "text-transparent caret-white" : (isAiMode || isAiGenerating ? "text-indigo-200" : "text-white")
+                "task-title-input w-full bg-transparent placeholder:text-[var(--ui-ink-3)] focus:outline-none font-medium relative transition-colors duration-300 resize-none overflow-hidden block p-0 m-0 border-none leading-normal",
+                highlightedOverlay && !isAiGenerating ? "text-transparent caret-[var(--ui-ink-1)]" : (isAiMode || isAiGenerating ? "text-indigo-600 dark:text-indigo-200" : "text-[var(--ui-ink-1)]")
               )}
             />
             
@@ -337,7 +339,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         "p-1.5 rounded-md transition-colors",
                         isCalendarOpen || confirmedDueDate 
                           ? "text-indigo-400" 
-                          : "text-white/30 hover:text-white/60"
+                          : "text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]"
                       )}>
                         <Calendar className="w-4 h-4" />
                       </button>
@@ -365,7 +367,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           "p-1.5 rounded-md transition-colors",
                           isReminderOpen || currentReminder
                             ? "text-indigo-400" 
-                            : "text-white/30 hover:text-white/60"
+                            : "text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]"
                         )}
                       >
                         <Bell className="w-4 h-4" />
@@ -385,7 +387,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     <>
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="p-1.5 text-white/30 hover:text-white/60 rounded-md transition-colors"
+                        className="p-1.5 text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] rounded-md transition-colors"
                         title="Add attachment"
                       >
                         <Paperclip className="w-4 h-4" />
@@ -440,17 +442,17 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           <button 
                             className={cn(
                               "p-1.5 rounded-md transition-colors",
-                              currentPriority?.value !== 'normal' ? "text-indigo-400" : "text-white/30 hover:text-white/60"
+                              currentPriority?.value !== 'normal' ? "text-indigo-400" : "text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]"
                             )}>
-                            <Flag className={cn("w-4 h-4", currentPriority?.value !== 'normal' ? currentPriority?.color : "text-white/30")} />
+                            <Flag className={cn("w-4 h-4", currentPriority?.value !== 'normal' ? currentPriority?.color : "text-[var(--ui-ink-3)]")} />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10">
+                        <DropdownMenuContent align="start" className="bg-[hsl(var(--popover))] border-[color:var(--border-subtle)]">
                           {PRIORITIES.map((p) => (
                             <DropdownMenuItem 
                               key={p.value} 
                               onClick={() => setPriority(p.value as 'low' | 'normal' | 'high' | 'urgent')}
-                              className={cn("focus:bg-white/10", p.color)}
+                              className={cn("focus:bg-[var(--ui-selected)]", p.color)}
                             >
                               <Flag className="w-3.5 h-3.5 mr-2" />
                               <span>{p.label}</span>
@@ -464,19 +466,19 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           <PopoverTrigger asChild>
                             <button className={cn(
                               "p-1.5 rounded-md transition-colors",
-                              assignees.length > 0 ? "text-indigo-400" : "text-white/30 hover:text-white/60"
+                              assignees.length > 0 ? "text-indigo-400" : "text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]"
                             )}>
                               {assignees.length === 0 ? (
                                 <UserPlus className="w-4 h-4" />
                               ) : (
                                 <div className="flex -space-x-1.5">
                                   {assignees.slice(0, 2).map((a, i) => (
-                                    <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
+                                    <div key={i} className="w-4 h-4 rounded-full ring-1 ring-[hsl(var(--popover))] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={a.name}>
                                       {a.avatar ? <img src={a.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : getInitials(a.name)}
                                     </div>
                                   ))}
                                   {assignees.length > 2 && (
-                                    <div className="w-4 h-4 rounded-full ring-1 ring-[#2a2a2a] bg-[#3a3a3a] text-white/60 flex items-center justify-center text-[8px] font-bold">
+                                    <div className="w-4 h-4 rounded-full ring-1 ring-[hsl(var(--popover))] bg-[var(--ui-avatar-bg)] text-[var(--ui-ink-2)] flex items-center justify-center text-[8px] font-bold">
                                       +{assignees.length - 2}
                                     </div>
                                   )}
@@ -484,31 +486,31 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               )}
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
-                            <div className="p-2 border-b border-white/10">
+                          <PopoverContent className="p-0 w-64 border-[color:var(--border-subtle)] bg-[hsl(var(--popover))]" align="start" side="bottom" sideOffset={8}>
+                            <div className="p-2 border-b border-[color:var(--border-subtle)]">
                               <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--ui-ink-3)]" />
                                 <input
                                   type="text"
                                   value={assigneeQuery}
                                   onChange={(e) => setAssigneeQuery(e.target.value)}
                                   onKeyDown={(e) => e.stopPropagation()}
                                   placeholder="Search or enter email..."
-                                  className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                                  className="w-full pl-8 pr-3 py-2 text-sm bg-[var(--ui-hover)] border border-[color:var(--border-subtle)] rounded-md text-[var(--ui-ink-1)] placeholder-[var(--ui-ink-3)] outline-none focus:border-indigo-500/50"
                                   autoFocus
                                 />
                               </div>
                             </div>
                             <div className="max-h-40 overflow-y-auto">
                               {isSearchingUsers && (
-                                <div className="flex items-center justify-center py-3 text-white/40">
+                                <div className="flex items-center justify-center py-3 text-[var(--ui-ink-3)]">
                                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                   <span className="text-xs">Searching...</span>
                                 </div>
                               )}
                               {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
                                 <>
-                                  <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                                  <p className="text-[12px] text-[var(--ui-ink-3)] px-3 pt-2 pb-1 font-medium">Workspace Members</p>
                                   {workspaceMembers.map(member => {
                                     const isSelected = assignees.some(a => a.email === member.email);
                                     return (
@@ -517,7 +519,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                       onClick={() => selectAssignee(member.email, member.name, member.avatar)}
                                       className={cn(
                                         "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                                        isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                        isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-[var(--ui-hover)]"
                                       )}
                                     >
                                       <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -528,8 +530,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
-                                        <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                        <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-[var(--ui-ink-1)]")}>{member.name}</p>
+                                        <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-[var(--ui-ink-3)]")}>{member.email}</p>
                                       </div>
                                       {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
                                     </button>
@@ -537,7 +539,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                 </>
                               )}
                               {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
-                                <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                                <p className="text-xs text-[var(--ui-ink-3)] text-center py-3">Type to search or enter email</p>
                               )}
                               {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
                                 const isSelected = assignees.some(a => a.email === user.email);
@@ -547,7 +549,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                   onClick={() => selectAssignee(user.email, user.name, user.avatar)}
                                   className={cn(
                                     "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                                    isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                    isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-[var(--ui-hover)]"
                                   )}
                                 >
                                   <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -558,8 +560,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
-                                    <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
+                                    <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-[var(--ui-ink-1)]")}>{user.name}</p>
+                                    <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-[var(--ui-ink-3)]")}>{user.email}</p>
                                   </div>
                                   {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
                                 </button>
@@ -567,14 +569,14 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
                                 <button
                                   onClick={() => selectAssignee(assigneeQuery.trim())}
-                                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--ui-hover)] transition-colors text-left"
                                 >
                                   <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                                     <Mail className="w-3.5 h-3.5" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
-                                    <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
+                                    <p className="text-xs text-[var(--ui-ink-3)]">Will send workspace invite + assign task</p>
                                   </div>
                                 </button>
                               )}
@@ -587,37 +589,37 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           <PopoverTrigger asChild>
                             <button className={cn(
                               "p-1.5 rounded-md transition-colors",
-                              references.length > 0 ? "text-emerald-400" : "text-white/30 hover:text-white/60"
-                            )} title="Link to a Doc or Slide">
+                              references.length > 0 ? "text-emerald-400" : "text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]"
+                            )} title={REFERENCE_PICKER_COPY.tooltip}>
                               <FileText className="w-4 h-4" />
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 w-72 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
-                            <div className="p-2 border-b border-white/10 bg-white/5 flex items-center gap-2">
+                          <PopoverContent className="p-0 w-72 border-[color:var(--border-subtle)] bg-[hsl(var(--popover))]" align="start" side="bottom" sideOffset={8}>
+                            <div className="p-2 border-b border-[color:var(--border-subtle)] bg-[var(--ui-hover)] flex items-center gap-2">
                               <Search className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Link to Doc or Slide</span>
+                              <span className="text-[12px] font-[500] text-[var(--ui-ink-3)]">{REFERENCE_PICKER_COPY.heading}</span>
                             </div>
-                            <div className="p-2 border-b border-white/10">
+                            <div className="p-2 border-b border-[color:var(--border-subtle)]">
                               <input
                                 type="text"
                                 value={referenceQuery}
                                 onChange={(e) => setReferenceQuery(e.target.value)}
                                 onKeyDown={(e) => e.stopPropagation()}
-                                placeholder="Search docs & slides..."
-                                className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-emerald-500/50"
+                                placeholder={REFERENCE_PICKER_COPY.placeholder}
+                                className="w-full px-3 py-2 text-sm bg-[var(--ui-hover)] border border-[color:var(--border-subtle)] rounded-md text-[var(--ui-ink-1)] placeholder-[var(--ui-ink-3)] outline-none focus:border-emerald-500/50"
                                 autoFocus
                               />
                             </div>
                             <div className="max-h-52 overflow-y-auto p-1">
                               {isSearchingRefs && (
-                                <div className="flex items-center justify-center py-3 text-white/40">
+                                <div className="flex items-center justify-center py-3 text-[var(--ui-ink-3)]">
                                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                   <span className="text-xs">Searching...</span>
                                 </div>
                               )}
                               {!isSearchingRefs && referenceResults.length === 0 && (
-                                <p className="text-xs text-white/30 text-center py-3">
-                                  {referenceQuery ? 'No docs or slides found' : 'Type to search docs & slides'}
+                                <p className="text-xs text-[var(--ui-ink-3)] text-center py-3">
+                                  {referenceQuery ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hint}
                                 </p>
                               )}
                               {!isSearchingRefs && referenceResults.map(item => {
@@ -631,18 +633,18 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                     onClick={() => { handleInlineSelectReference(item); setIsReferencePickerOpen(false); }}
                                     className={cn(
                                       "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left",
-                                      isSelected ? "bg-emerald-500/10" : "hover:bg-white/5"
+                                      isSelected ? "bg-emerald-500/10" : "hover:bg-[var(--ui-hover)]"
                                     )}
                                   >
                                     <div className={cn('w-7 h-7 shrink-0 rounded-md flex items-center justify-center', accentBg)}>
                                       <FileText className={cn('w-3.5 h-3.5', accentColor)} />
                                     </div>
                                     <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                      <span className={cn('text-[10px] font-bold uppercase tracking-wide shrink-0', accentColor)}>
+                                      <span className={cn('text-[12px] font-[500] shrink-0', accentColor)}>
                                         {isDoc ? 'Doc' : 'Slide'}
                                       </span>
-                                      <span className="text-white/20">—</span>
-                                      <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-white/80')}>{item.title}</p>
+                                      <span className="text-[var(--ui-ink-3)]">—</span>
+                                      <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-[var(--ui-ink-1)]')}>{item.title}</p>
                                     </div>
                                     {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                                   </button>
@@ -658,8 +660,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                   {isAiMode && (
                     <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
                       <PopoverTrigger asChild>
-                        <button className="p-1.5 rounded-md transition-colors text-white/30 hover:text-white/60">
-                          <Tag className={cn("w-4 h-4", selectedLabels.length > 0 ? "text-indigo-400" : "text-white/30")} />
+                        <button className="p-1.5 rounded-md transition-colors text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]">
+                          <Tag className={cn("w-4 h-4", selectedLabels.length > 0 ? "text-indigo-400" : "text-[var(--ui-ink-3)]")} />
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="center" side="bottom" sideOffset={8}>
@@ -702,11 +704,11 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
               <div className="flex items-center gap-2 px-4 pb-3 pl-12">
                 <button
                   onClick={acceptSuggestion}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#252525] rounded-lg border border-white/10 transition-colors cursor-pointer group"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--popover))] hover:bg-[#252525] rounded-lg border border-[color:var(--border-subtle)] transition-colors cursor-pointer group"
                 >
-                  <Calendar className="w-3.5 h-3.5 text-white/40" />
-                  <span className="text-sm text-white/70">{getRelativeDateDisplay(suggestedDate)}</span>
-                  <span className="text-xs text-white/30 group-hover:text-white/50 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-[var(--ui-ink-3)]" />
+                  <span className="text-sm text-[var(--ui-ink-2)]">{getRelativeDateDisplay(suggestedDate)}</span>
+                  <span className="text-xs text-[var(--ui-ink-3)] group-hover:text-[var(--ui-ink-3)] flex items-center gap-1">
                     <CornerDownLeft className="w-3 h-3" />
                   </span>
                 </button>
@@ -741,15 +743,15 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
               {/* Subtasks */}
               {subtasks.length > 0 && (
-                <div className="mx-4 mt-2 mb-4 border border-white/10 rounded-lg bg-[#1e1e1e]/50 overflow-hidden">
-                  <div className="px-4 py-2 text-xs font-medium text-white/40 border-b border-white/5 bg-[#1e1e1e]">
+                <div className="mx-4 mt-2 mb-4 border border-[color:var(--border-subtle)] rounded-lg bg-[var(--ui-field)] overflow-hidden">
+                  <div className="px-4 py-2 text-xs font-medium text-[var(--ui-ink-3)] border-b border-[color:var(--border-subtle)] bg-[hsl(var(--popover))]">
                     Sub-issues
                   </div>
                   <div className="p-0.5 space-y-0.5">
                     {subtasks.map((task, index) => (
                       <div key={index} className="flex items-center gap-3 px-3 py-2 group">
-                        <CornerDownRight className="w-3.5 h-3.5 text-white/30" />
-                        <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
+                        <CornerDownRight className="w-3.5 h-3.5 text-[var(--ui-ink-3)]" />
+                        <div className="w-3.5 h-3.5 rounded-full border border-[color:var(--border-strong)]" />
                         <input
                           type="text"
                           value={task}
@@ -772,12 +774,12 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             }
                           }}
                           placeholder="Issue title"
-                          className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/30 focus:outline-none"
+                          className="flex-1 bg-transparent text-sm text-[var(--ui-ink-1)] placeholder:text-[var(--ui-ink-3)] focus:outline-none"
                           autoFocus={task === ''} 
                         />
                         <button 
                           onClick={() => setSubtasks(prev => prev.filter((_, i) => i !== index))}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-white/20 hover:text-white/40 transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1 text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-3)] transition-all"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -785,7 +787,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     ))}
                     <button 
                       onClick={() => setSubtasks(prev => [...prev, ''])}
-                      className="flex items-center gap-2 px-3 py-2 w-full text-left text-xs font-medium text-indigo-400 hover:bg-white/5 transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 w-full text-left text-xs font-medium text-indigo-400 hover:bg-[var(--ui-hover)] transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Add sub-issue</span>
@@ -796,16 +798,16 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
               {/* Meta Bar / Footer */}
               {!isQuickAdd && (
-              <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/5">
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-[color:var(--border-subtle)]">
                 {!isAiMode && (
                 <div className="flex items-center gap-2">
                   {confirmedDueDate && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-white/10 text-white/60">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-[color:var(--border-subtle)] text-[var(--ui-ink-2)]">
                       <Calendar className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{getRelativeDateDisplay(confirmedDueDate)}</span>
                       <button 
                         onClick={clearConfirmedDate}
-                        className="ml-1 p-0.5 text-white/40 hover:text-white/60 rounded transition-colors"
+                        className="ml-1 p-0.5 text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] rounded transition-colors"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -819,7 +821,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
                         assignees.length > 0
                           ? "border-indigo-500/30 text-indigo-400 bg-indigo-500/10"
-                          : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
+                          : "border-dashed border-[color:var(--border-subtle)] text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] hover:bg-[var(--ui-hover)]"
                       )}>
                         {assignees.length === 0 ? (
                           <>
@@ -830,7 +832,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           <div className="flex items-center">
                             <div className="flex -space-x-1.5 mr-1.5">
                               {assignees.map((assignee, idx) => (
-                                <div key={assignee.email} className="w-5 h-5 rounded-full ring-2 ring-[#2a2a2a] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={assignee.name}>
+                                <div key={assignee.email} className="w-5 h-5 rounded-full ring-2 ring-[hsl(var(--popover))] bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[8px] font-bold overflow-hidden" title={assignee.name}>
                                   {assignee.avatar ? (
                                     <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   ) : (
@@ -842,7 +844,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             <span>{assignees.length} assigned</span>
                             <span
                               onClick={(e) => { e.stopPropagation(); setAssignees([]); }}
-                              className="ml-1 p-0.5 hover:text-white/60 rounded cursor-pointer"
+                              className="ml-1 p-0.5 hover:text-[var(--ui-ink-2)] rounded cursor-pointer"
                             >
                               <X className="w-3 h-3" />
                             </span>
@@ -850,23 +852,23 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         )}
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0 w-64 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
-                      <div className="p-2 border-b border-white/10">
+                    <PopoverContent className="p-0 w-64 border-[color:var(--border-subtle)] bg-[hsl(var(--popover))]" align="start" side="bottom" sideOffset={8}>
+                      <div className="p-2 border-b border-[color:var(--border-subtle)]">
                         <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--ui-ink-3)]" />
                           <input
                             type="text"
                             value={assigneeQuery}
                             onChange={(e) => setAssigneeQuery(e.target.value)}
                             placeholder="Search or enter email..."
-                            className="w-full pl-8 pr-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-indigo-500/50"
+                            className="w-full pl-8 pr-3 py-2 text-sm bg-[var(--ui-hover)] border border-[color:var(--border-subtle)] rounded-md text-[var(--ui-ink-1)] placeholder-[var(--ui-ink-3)] outline-none focus:border-indigo-500/50"
                             autoFocus
                           />
                         </div>
                       </div>
                       <div className="max-h-40 overflow-y-auto">
                         {isSearchingUsers && (
-                          <div className="flex items-center justify-center py-3 text-white/40">
+                          <div className="flex items-center justify-center py-3 text-[var(--ui-ink-3)]">
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                             <span className="text-xs">Searching...</span>
                           </div>
@@ -874,7 +876,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         {/* Workspace members as default suggestions (when no query) */}
                         {!assigneeQuery.trim() && workspaceMembers.length > 0 && (
                           <>
-                            <p className="text-[10px] uppercase tracking-wider text-white/25 px-3 pt-2 pb-1 font-medium">Workspace Members</p>
+                            <p className="text-[12px] text-[var(--ui-ink-3)] px-3 pt-2 pb-1 font-medium">Workspace Members</p>
                             {workspaceMembers.map(member => {
                               const isSelected = assignees.some(a => a.email === member.email);
                               return (
@@ -883,7 +885,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                 onClick={() => selectAssignee(member.email, member.name, member.avatar)}
                                 className={cn(
                                   "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                                  isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                                  isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-[var(--ui-hover)]"
                                 )}
                               >
                                 <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -894,8 +896,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{member.name}</p>
-                                  <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{member.email}</p>
+                                  <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-[var(--ui-ink-1)]")}>{member.name}</p>
+                                  <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-[var(--ui-ink-3)]")}>{member.email}</p>
                                 </div>
                                 {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
                               </button>
@@ -903,7 +905,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                           </>
                         )}
                         {!assigneeQuery.trim() && workspaceMembers.length === 0 && (
-                          <p className="text-xs text-white/30 text-center py-3">Type to search or enter email</p>
+                          <p className="text-xs text-[var(--ui-ink-3)] text-center py-3">Type to search or enter email</p>
                         )}
                         {/* Search results (when query exists) */}
                         {!isSearchingUsers && assigneeQuery.trim() && assigneeResults.map(user => {
@@ -914,7 +916,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             onClick={() => selectAssignee(user.email, user.name, user.avatar)}
                             className={cn(
                               "w-full flex items-center gap-3 px-3 py-2 transition-colors text-left",
-                              isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-white/5"
+                              isSelected ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-[var(--ui-hover)]"
                             )}
                           >
                             <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-[10px] font-bold">
@@ -925,8 +927,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-white/80")}>{user.name}</p>
-                              <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-white/40")}>{user.email}</p>
+                              <p className={cn("text-sm truncate", isSelected ? "text-indigo-300" : "text-[var(--ui-ink-1)]")}>{user.name}</p>
+                              <p className={cn("text-xs truncate", isSelected ? "text-indigo-400/70" : "text-[var(--ui-ink-3)]")}>{user.email}</p>
                             </div>
                             {isSelected && <Check className="w-4 h-4 text-indigo-400" />}
                           </button>
@@ -934,14 +936,14 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         {!isSearchingUsers && assigneeQuery.trim() && isValidEmail(assigneeQuery.trim()) && assigneeResults.length === 0 && (
                           <button
                             onClick={() => selectAssignee(assigneeQuery.trim())}
-                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--ui-hover)] transition-colors text-left"
                           >
                             <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                               <Mail className="w-3.5 h-3.5" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-emerald-400">Invite {assigneeQuery.trim()}</p>
-                              <p className="text-xs text-white/40">Will send workspace invite + assign task</p>
+                              <p className="text-xs text-[var(--ui-ink-3)]">Will send workspace invite + assign task</p>
                             </div>
                           </button>
                         )}
@@ -956,12 +958,12 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors",
                         references.length > 0
                           ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
-                          : "border-dashed border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5"
+                          : "border-dashed border-[color:var(--border-subtle)] text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] hover:bg-[var(--ui-hover)]"
                       )}>
                         {references.length === 0 ? (
                           <>
                             <FileText className="w-3.5 h-3.5" />
-                            <span>Link Doc / Slide</span>
+                            <span>{REFERENCE_PICKER_COPY.button}</span>
                           </>
                         ) : (
                           <div className="flex items-center gap-1.5">
@@ -969,7 +971,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                             <span>{references.length} linked</span>
                             <span
                               onClick={(e) => { e.stopPropagation(); setReferences([]); }}
-                              className="ml-0.5 p-0.5 hover:text-white/60 rounded cursor-pointer"
+                              className="ml-0.5 p-0.5 hover:text-[var(--ui-ink-2)] rounded cursor-pointer"
                             >
                               <X className="w-3 h-3" />
                             </span>
@@ -977,32 +979,32 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                         )}
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0 w-72 border-white/10 bg-[#1e1e1e]" align="start" side="bottom" sideOffset={8}>
-                      <div className="p-2 border-b border-white/10 bg-white/5 flex items-center gap-2">
+                    <PopoverContent className="p-0 w-72 border-[color:var(--border-subtle)] bg-[hsl(var(--popover))]" align="start" side="bottom" sideOffset={8}>
+                      <div className="p-2 border-b border-[color:var(--border-subtle)] bg-[var(--ui-hover)] flex items-center gap-2">
                         <Search className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Link to Doc or Slide</span>
+                        <span className="text-[12px] font-[500] text-[var(--ui-ink-3)]">{REFERENCE_PICKER_COPY.heading}</span>
                       </div>
-                      <div className="p-2 border-b border-white/10">
+                      <div className="p-2 border-b border-[color:var(--border-subtle)]">
                         <input
                           type="text"
                           value={referenceQuery}
                           onChange={(e) => setReferenceQuery(e.target.value)}
                           onKeyDown={(e) => e.stopPropagation()}
-                          placeholder="Search docs & slides..."
-                          className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-md text-white placeholder-white/30 outline-none focus:border-emerald-500/50"
+                          placeholder={REFERENCE_PICKER_COPY.placeholder}
+                          className="w-full px-3 py-2 text-sm bg-[var(--ui-hover)] border border-[color:var(--border-subtle)] rounded-md text-[var(--ui-ink-1)] placeholder-[var(--ui-ink-3)] outline-none focus:border-emerald-500/50"
                           autoFocus
                         />
                       </div>
                       <div className="max-h-52 overflow-y-auto p-1">
                         {isSearchingRefs && (
-                          <div className="flex items-center justify-center py-3 text-white/40">
+                          <div className="flex items-center justify-center py-3 text-[var(--ui-ink-3)]">
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                             <span className="text-xs">Searching...</span>
                           </div>
                         )}
                         {!isSearchingRefs && referenceResults.length === 0 && (
-                          <p className="text-xs text-white/30 text-center py-3">
-                            {referenceQuery ? 'No docs or slides found' : 'Type to search docs & slides'}
+                          <p className="text-xs text-[var(--ui-ink-3)] text-center py-3">
+                            {referenceQuery ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hint}
                           </p>
                         )}
                         {!isSearchingRefs && referenceResults.map(item => {
@@ -1016,18 +1018,18 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                               onClick={() => { handleInlineSelectReference(item); setIsReferencePickerOpen(false); }}
                               className={cn(
                                 "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors text-left",
-                                isSelected ? "bg-emerald-500/10" : "hover:bg-white/5"
+                                isSelected ? "bg-emerald-500/10" : "hover:bg-[var(--ui-hover)]"
                               )}
                             >
                               <div className={cn('w-7 h-7 shrink-0 rounded-md flex items-center justify-center', accentBg)}>
                                 <FileText className={cn('w-3.5 h-3.5', accentColor)} />
                               </div>
                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                <span className={cn('text-[10px] font-bold uppercase tracking-wide shrink-0', accentColor)}>
+                                <span className={cn('text-[12px] font-[500] shrink-0', accentColor)}>
                                   {isDoc ? 'Doc' : 'Slide'}
                                 </span>
-                                <span className="text-white/20">—</span>
-                                <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-white/80')}>{item.title}</p>
+                                <span className="text-[var(--ui-ink-3)]">—</span>
+                                <p className={cn('text-sm truncate font-medium', isSelected ? 'text-emerald-300' : 'text-[var(--ui-ink-1)]')}>{item.title}</p>
                               </div>
                               {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                             </button>
@@ -1041,8 +1043,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
                   <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
                     <PopoverTrigger asChild>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-white/10 text-white/60 hover:text-white/80 transition-colors">
-                        <Tag className={cn("w-3.5 h-3.5", selectedLabels.length > 0 ? "text-indigo-400" : "text-white/40")} />
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-[color:var(--border-subtle)] text-[var(--ui-ink-2)] hover:text-[var(--ui-ink-1)] transition-colors">
+                        <Tag className={cn("w-3.5 h-3.5", selectedLabels.length > 0 ? "text-indigo-400" : "text-[var(--ui-ink-3)]")} />
                         <span>{selectedLabels.length > 0 ? `${selectedLabels.length} Labels` : 'Labels'}</span>
                       </button>
                     </PopoverTrigger>
@@ -1058,17 +1060,17 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-white/10 text-white/60 hover:text-white/80 transition-colors">
-                        <Flag className={cn("w-3.5 h-3.5", currentPriority?.color || "text-white/40")} />
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-[color:var(--border-subtle)] text-[var(--ui-ink-2)] hover:text-[var(--ui-ink-1)] transition-colors">
+                        <Flag className={cn("w-3.5 h-3.5", currentPriority?.color || "text-[var(--ui-ink-3)]")} />
                         <span>{currentPriority?.label || 'Priority'}</span>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10">
+                    <DropdownMenuContent align="start" className="bg-[hsl(var(--popover))] border-[color:var(--border-subtle)]">
                       {PRIORITIES.map((p) => (
                         <DropdownMenuItem 
                           key={p.value} 
                           onClick={() => setPriority(p.value as 'low' | 'normal' | 'high' | 'urgent')}
-                          className={cn("focus:bg-white/10", p.color)}
+                          className={cn("focus:bg-[var(--ui-selected)]", p.color)}
                         >
                           <Flag className="w-3.5 h-3.5 mr-2" />
                           <span>{p.label}</span>
@@ -1078,23 +1080,23 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                   </DropdownMenu>
 
                   {isRecurring && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-white/10">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[color:var(--border-subtle)]">
                       <Repeat className="w-3.5 h-3.5 text-indigo-400" />
-                      <span className="text-xs text-white/60">every</span>
+                      <span className="text-xs text-[var(--ui-ink-2)]">every</span>
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-white/80 bg-white/5 hover:bg-white/10 rounded transition-colors">
+                          <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-[var(--ui-ink-1)] bg-[var(--ui-hover)] hover:bg-[var(--ui-selected)] rounded transition-colors">
                             <span>{recurringInterval}</span>
-                            <ChevronDown className="w-3 h-3 text-white/40" />
+                            <ChevronDown className="w-3 h-3 text-[var(--ui-ink-3)]" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10 min-w-[48px]">
+                        <DropdownMenuContent align="start" className="bg-[hsl(var(--popover))] border-[color:var(--border-subtle)] min-w-[48px]">
                           {[1, 2, 3, 4, 5, 6, 7].map(n => (
                             <DropdownMenuItem 
                               key={n} 
                               onClick={() => setRecurringInterval(n)}
-                              className={cn("focus:bg-white/10 text-xs", recurringInterval === n && "text-indigo-400")}
+                              className={cn("focus:bg-[var(--ui-selected)] text-xs", recurringInterval === n && "text-indigo-400")}
                             >
                               {n}
                             </DropdownMenuItem>
@@ -1104,17 +1106,17 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-white/80 bg-white/5 hover:bg-white/10 rounded transition-colors">
+                          <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-[var(--ui-ink-1)] bg-[var(--ui-hover)] hover:bg-[var(--ui-selected)] rounded transition-colors">
                             <span>{recurringUnit}</span>
-                            <ChevronDown className="w-3 h-3 text-white/40" />
+                            <ChevronDown className="w-3 h-3 text-[var(--ui-ink-3)]" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="bg-[#1e1e1e] border-white/10 min-w-[64px]">
+                        <DropdownMenuContent align="start" className="bg-[hsl(var(--popover))] border-[color:var(--border-subtle)] min-w-[64px]">
                           {(['day', 'week', 'month'] as const).map(unit => (
                             <DropdownMenuItem 
                               key={unit} 
                               onClick={() => setRecurringUnit(unit)}
-                              className={cn("focus:bg-white/10 text-xs", recurringUnit === unit && "text-indigo-400")}
+                              className={cn("focus:bg-[var(--ui-selected)] text-xs", recurringUnit === unit && "text-indigo-400")}
                             >
                               {unit}
                             </DropdownMenuItem>
@@ -1124,7 +1126,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
                       <button 
                         onClick={() => setIsRecurring(false)}
-                        className="p-0.5 text-white/40 hover:text-white/60 rounded transition-colors ml-1"
+                        className="p-0.5 text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] rounded transition-colors ml-1"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -1133,21 +1135,21 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="p-1.5 text-white/40 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors">
+                      <button className="p-1.5 text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)] hover:bg-[var(--ui-hover)] rounded-md transition-colors">
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#1e1e1e] border-white/10">
+                    <DropdownMenuContent align="end" className="bg-[hsl(var(--popover))] border-[color:var(--border-subtle)]">
                       <DropdownMenuItem 
                         onClick={() => setIsRecurring(!isRecurring)}
-                        className="focus:bg-white/10"
+                        className="focus:bg-[var(--ui-selected)]"
                       >
                         <Repeat className="w-3.5 h-3.5 mr-2" />
                         <span>{isRecurring ? 'Remove Recurring' : 'Make Recurring'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => setSubtasks(prev => [...prev, ''])}
-                        className="focus:bg-white/10"
+                        className="focus:bg-[var(--ui-selected)]"
                       >
                         <ListPlus className="w-3.5 h-3.5 mr-2" />
                         <span>Add Sub Task</span>
@@ -1165,7 +1167,7 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
                     onClick={handlePrimaryClick}
                     disabled={!title.trim() || isSaving || isAiGenerating}
                     className={cn(
-                      "text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 min-w-[80px] transition-all duration-300",
+                      "text-[var(--ui-ink-1)] text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 min-w-[80px] transition-all duration-300",
                       (isAiMode || isAiGenerating) ? "bg-purple-600 hover:bg-purple-500 shadow-[0_0_15px_-3px_rgba(168,85,247,0.4)]" : "bg-indigo-500 hover:bg-indigo-400"
                     )}
                   >

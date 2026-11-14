@@ -6,6 +6,7 @@ import { FileText, LayoutTemplate, Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { todoApi } from '@/lib/api/todoApi';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { REFERENCE_PICKER_COPY } from './task_Input/types';
 
 export interface ReferenceItem {
   type: 'doc' | 'slide';
@@ -120,7 +121,7 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
             <div className="p-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 backdrop-blur-md flex items-center gap-2">
               <Search className="w-3.5 h-3.5 text-emerald-500" />
               <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                Link to Doc or Slide
+                {REFERENCE_PICKER_COPY.heading}
               </span>
             </div>
 
@@ -138,7 +139,7 @@ export const InlineReferenceDropdown = forwardRef<InlineReferenceDropdownHandle,
 
               {!isLoading && results.length === 0 && (
                 <div className="p-3 text-center text-[hsl(var(--muted-foreground))]/60 text-xs">
-                  {searchQuery.length > 0 ? 'No docs or slides found' : 'Type to search your docs & slides'}
+                  {searchQuery.length > 0 ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hintYour}
                 </div>
               )}
 

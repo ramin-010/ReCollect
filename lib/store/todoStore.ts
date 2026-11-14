@@ -44,7 +44,8 @@ export interface Todo {
   references?: TaskReference[];
   
   // New Fields
-  labels?: { id: string; name: string; color: string }[];
+  // What the API returns ([{ _id, name }]); see lib/utils/todoTags.ts
+  tags?: { _id: string; name: string }[];
   assignees?: { _id: string; name: string; email: string; avatar?: string }[];
   assignedAt?: string;
 

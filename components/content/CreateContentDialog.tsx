@@ -1,6 +1,5 @@
 'use client';
 
-import '@excalidraw/excalidraw/index.css';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FileText,
@@ -28,7 +27,6 @@ import { useCreateNoteState } from '@/lib/hooks/useCreateNoteState';
 import axiosInstance from '@/lib/utils/axios';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { imageStorage } from '@/lib/storage/imageStorage';
-import MinimalExcalidrawCanvas from './ExcalidrawCanvas';
 
 
 interface CreateContentDialogProps {

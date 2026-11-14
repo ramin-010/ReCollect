@@ -5,13 +5,16 @@
 
 import axiosInstance from '@/lib/utils/axios';
 import { nanoid } from 'nanoid';
+import type { TodoTag } from '@/lib/utils/todoTags';
 
-
-export interface TodoLabel {
-  id: string;
-  name: string;
-  color: string;
+/** The backend's { message } from an axios error, if any. */
+function apiErrorMessage(error: unknown): string | undefined {
+  return (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message;
 }
+
+
+// Tags contract (names on write, [{ _id, name }] on read): see lib/utils/todoTags.ts
+export type { TodoTag } from '@/lib/utils/todoTags';
 
 export interface TaskReference {
   type: 'doc' | 'content' | 'slide';
@@ -27,7 +30,8 @@ export interface CreateTodoPayload {
   dueDate?: string;
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
-  labels?: TodoLabel[];
+  /** Tag NAMES; the backend creates unknown ones. (`labels` was never read by the backend.) */
+  tags?: string[];
   assignees?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
@@ -46,7 +50,7 @@ export interface TodoResponse {
   reminderDate?: string;
   completedAt?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
-  labels?: TodoLabel[];
+  tags?: TodoTag[];
   attachments?: string[];
   assignees?: { _id: string; name: string; email: string; avatar?: string }[];
   assignedAt?: string;
@@ -83,7 +87,7 @@ function extractImagesFromHtml(html: string): {
   const imgElements = doc.querySelectorAll('img');
 
   // Extract images and clean up HTML
-  imgElements.forEach((img, index) => {
+  imgElements.forEach((img) => {
     const src = img.getAttribute('src') || img.src;
     if (!src) return;
 
@@ -172,7 +176,7 @@ export const workspaceTodoApi = {
       if (payload.dueDate) formData.append('dueDate', payload.dueDate);
       if (payload.reminderDate) formData.append('reminderDate', payload.reminderDate);
       if (payload.subtasks) formData.append('subtasks', JSON.stringify(payload.subtasks));
-      if (payload.labels) formData.append('labels', JSON.stringify(payload.labels));
+      if (payload.tags) formData.append('tags', JSON.stringify(payload.tags)); // JSON string inside multipart
       if (payload.assignees) formData.append('assignees', JSON.stringify(payload.assignees));
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
       if (payload.references) formData.append('references', JSON.stringify(payload.references));
@@ -191,8 +195,8 @@ export const workspaceTodoApi = {
           data: response.data.data,
           message: response.data.message,
         };
-      } catch (error: any) {
-        console.error('[todoApi] FormData request failed:', error.message);
+      } catch (error) {
+        console.error('[todoApi] FormData request failed:', (error as Error).message);
         throw error;
       }
     } else {
@@ -205,7 +209,7 @@ export const workspaceTodoApi = {
           dueDate: payload.dueDate,
           reminderDate: payload.reminderDate,
           subtasks: payload.subtasks,
-          labels: payload.labels,
+          tags: payload.tags,
           assignees: payload.assignees,
           recurrence: payload.recurrence,
           references: payload.references,
@@ -219,19 +223,11 @@ export const workspaceTodoApi = {
           data: response.data.data,
           message: response.data.message,
         };
-      } catch (error: any) {
-        console.error('[todoApi] JSON request failed:', error.message);
+      } catch (error) {
+        console.error('[todoApi] JSON request failed:', (error as Error).message);
         throw error;
       }
     }
-  },
-
-  /**
-   * Fetch all todos for current user
-   */
-  async fetchTodos(): Promise<TodoResponse[]> {
-    const response = await axiosInstance.get('/api/workspace-todos');
-    return response.data.data || [];
   },
 
   /**
@@ -288,11 +284,11 @@ export const workspaceTodoApi = {
           message: response.data.message
         };
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('[todoApi] Update failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to update task'
+        message: apiErrorMessage(error) || 'Failed to update task'
       };
     }
   },
@@ -307,40 +303,35 @@ export const workspaceTodoApi = {
         success: true,
         message: response.data.message
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('[todoApi] Delete failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to delete task'
+        message: apiErrorMessage(error) || 'Failed to delete task'
       };
     }
   },
 
   /**
-   * Update a subtask within a todo
+   * Update a subtask within a todo. There is no list or subtask endpoint for workspace todos, so
+   * the caller passes the task's current subtasks; the whole updated array is sent with
+   * PATCH /api/workspace-todos/:id (the backend replaces `subtasks` with { id, text, isCompleted }[]).
    */
-  async updateSubtask(todoId: string, subtaskId: string, updates: { isCompleted?: boolean; text?: string }): Promise<{ success: boolean; message?: string }> {
+  async updateSubtask(
+    todoId: string,
+    subtaskId: string,
+    updates: { isCompleted?: boolean; text?: string },
+    currentSubtasks: NonNullable<CreateTodoPayload['subtasks']>,
+  ): Promise<{ success: boolean; data?: TodoResponse; message?: string }> {
     try {
-      // For now, this fetches the todo, updates the subtask, and saves - since we don't have a dedicated subtask endpoint
-      const response = await axiosInstance.get(`/api/workspace-todos`);
-      const todos = response.data.data || [];
-      const todo = todos.find((t: TodoResponse) => t._id === todoId);
-      
-      if (!todo) {
-        return { success: false, message: 'Todo not found' };
-      }
-
-      const updatedSubtasks = todo.subtasks?.map((st: any) => 
-        st.id === subtaskId ? { ...st, ...updates } : st
-      ) || [];
-
-      await axiosInstance.patch(`/api/workspace-todos/${todoId}`, { subtasks: updatedSubtasks });
-      return { success: true };
-    } catch (error: any) {
+      const updatedSubtasks = currentSubtasks.map((st) => (st.id === subtaskId ? { ...st, ...updates } : st));
+      const response = await axiosInstance.patch(`/api/workspace-todos/${todoId}`, { subtasks: updatedSubtasks });
+      return { success: true, data: response.data.data };
+    } catch (error) {
       console.error('[todoApi] Subtask update failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to update subtask'
+        message: apiErrorMessage(error) || 'Failed to update subtask'
       };
     }
   },
@@ -356,11 +347,11 @@ export const workspaceTodoApi = {
         data: response.data.data,
         message: response.data.message
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('[todoApi] Assign failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to assign task'
+        message: apiErrorMessage(error) || 'Failed to assign task'
       };
     }
   },
@@ -375,11 +366,11 @@ export const workspaceTodoApi = {
         success: response.data.success,
         message: response.data.message
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('[todoApi] Unassign failed:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to unassign task'
+        message: apiErrorMessage(error) || 'Failed to unassign task'
       };
     }
   },
@@ -391,7 +382,7 @@ export const workspaceTodoApi = {
     try {
       const response = await axiosInstance.get(`/api/search`, { params: { q: query } });
       return response.data.data || [];
-    } catch (error: any) {
+    } catch (error) {
       console.error('[todoApi] User search failed:', error);
       return [];
     }

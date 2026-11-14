@@ -5,13 +5,12 @@
 
 import axiosInstance from '@/lib/utils/axios';
 import { nanoid } from 'nanoid';
+import type { TodoTag } from '@/lib/utils/todoTags';
+import { isReferenceTypeVisible } from '@/lib/features';
 
 
-export interface TodoLabel {
-  id: string;
-  name: string;
-  color: string;
-}
+// Tags contract (names on write, [{ _id, name }] on read): see lib/utils/todoTags.ts
+export type { TodoTag } from '@/lib/utils/todoTags';
 
 export interface TaskReference {
   type: 'doc' | 'content' | 'slide';
@@ -27,13 +26,16 @@ export interface CreateTodoPayload {
   dueDate?: string;
   reminderDate?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
-  labels?: TodoLabel[];
+  /** Tag NAMES; the backend creates unknown ones. (`labels` was never read by the backend.) */
+  tags?: string[];
   assignees?: string[];
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
   workspace?: string;
   spaceId?: string;
   visibility?: 'private' | 'workspace' | 'public';
+  /** Revise weekly/monthly goal (Home "Weekly" tab). A dateless goal gets its due day server side. */
+  goalType?: 'NONE' | 'WEEKLY' | 'MONTHLY';
 }
 
 export interface TodoResponse {
@@ -46,12 +48,13 @@ export interface TodoResponse {
   reminderDate?: string;
   completedAt?: string;
   subtasks?: { id: string; text: string; isCompleted: boolean }[];
-  labels?: TodoLabel[];
+  tags?: TodoTag[];
   attachments?: string[];
   assignees?: { _id: string; name: string; email: string; avatar?: string }[];
   assignedAt?: string;
   recurrence?: { pattern: 'daily' | 'weekly' | 'monthly'; interval?: number };
   references?: TaskReference[];
+  goalType?: 'NONE' | 'WEEKLY' | 'MONTHLY';
   createdAt: string;
   updatedAt: string;
 }
@@ -172,13 +175,14 @@ export const todoApi = {
       if (payload.dueDate) formData.append('dueDate', payload.dueDate);
       if (payload.reminderDate) formData.append('reminderDate', payload.reminderDate);
       if (payload.subtasks) formData.append('subtasks', JSON.stringify(payload.subtasks));
-      if (payload.labels) formData.append('labels', JSON.stringify(payload.labels));
+      if (payload.tags) formData.append('tags', JSON.stringify(payload.tags)); // JSON string inside multipart
       if (payload.assignees) formData.append('assignees', JSON.stringify(payload.assignees));
       if (payload.recurrence) formData.append('recurrence', JSON.stringify(payload.recurrence));
       if (payload.references) formData.append('references', JSON.stringify(payload.references));
       if (payload.workspace) formData.append('workspace', payload.workspace);
       if (payload.spaceId) formData.append('spaceId', payload.spaceId);
       if (payload.visibility) formData.append('visibility', payload.visibility);
+      if (payload.goalType) formData.append('goalType', payload.goalType);
 
       try {
         const response = await axiosInstance.post('/api/todos', formData, {
@@ -204,13 +208,14 @@ export const todoApi = {
           dueDate: payload.dueDate,
           reminderDate: payload.reminderDate,
           subtasks: payload.subtasks,
-          labels: payload.labels,
+          tags: payload.tags,
           assignees: payload.assignees,
           recurrence: payload.recurrence,
           references: payload.references,
           workspace: payload.workspace,
           spaceId: payload.spaceId,
           visibility: payload.visibility,
+          goalType: payload.goalType,
         });
 
         return {
@@ -401,7 +406,9 @@ export const todoApi = {
   async searchReferences(query: string): Promise<{ type: 'doc' | 'slide'; refId: string; title: string }[]> {
     try {
       const response = await axiosInstance.get('/api/todos/search-references', { params: { q: query } });
-      return response.data.data || [];
+      const results: { type: 'doc' | 'slide'; refId: string; title: string }[] = response.data.data || [];
+      // Slides are hidden (lib/features.ts): only offer docs as link targets.
+      return results.filter((r) => isReferenceTypeVisible(r.type));
     } catch (error: any) {
       console.error('[todoApi] Reference search failed:', error);
       return [];

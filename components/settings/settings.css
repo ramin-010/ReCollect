@@ -1,0 +1,93 @@
+/* Settings sections built on the `.rc` tokens (Agents, AI). */
+
+.set-section {
+  max-width: 640px;
+}
+
+.set-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rc-line);
+  font-size: 14px;
+  color: var(--rc-ink-1);
+}
+
+.set-row:last-child {
+  border-bottom: 0;
+}
+
+.set-meter {
+  height: 6px;
+}
+
+.set-cap {
+  width: 96px;
+}
+
+.set-name {
+  width: 260px;
+}
+
+.set-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 14px;
+  color: var(--rc-ink-1);
+  cursor: pointer;
+}
+
+.set-scope input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--rc-accent-fill);
+}
+
+.set-fresh {
+  padding: 16px;
+  border-radius: var(--rc-r-lg);
+  background: var(--rc-surface-2);
+}
+
+.set-token {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-token code {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--rc-r-md);
+  background: var(--rc-surface);
+  box-shadow: inset 0 0 0 1px var(--rc-field-ring);
+  font-family: var(--rc-font-code);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.set-cmd {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: var(--rc-r-md);
+  background: var(--rc-surface);
+  box-shadow: inset 0 0 0 1px var(--rc-field-ring);
+  font-family: var(--rc-font-code);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

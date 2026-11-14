@@ -19,6 +19,7 @@ import { InlineAssigneeDropdown, InlineAssigneeDropdownHandle } from '../../Inli
 import { SmartReminderModal } from '../../SmartReminderModal';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 import axiosInstance from '@/lib/utils/axios';
+import { labelsFromTask, tagNamesChanged, tagNamesForPayload } from '@/lib/utils/todoTags';
 import {
   Popover,
   PopoverContent,
@@ -59,9 +60,8 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
   const [priority, setPriority] = useState<string>(task.priority || '');
   const [assignees, setAssignees] = useState<any[]>(task.assignees || []);
   const [dueDate, setDueDate] = useState<Date | null>(task.dueDate ? parseISO(task.dueDate) : null);
-  const [selectedLabels, setSelectedLabels] = useState<Label[]>(
-    (task.labels || []).map((l: any) => ({ id: l.id || `label-${l.name}`, name: l.name, color: l.color || 'blue' }))
-  );
+  // The API returns `tags: [{ _id, name }]` (there is no `labels` field).
+  const [selectedLabels, setSelectedLabels] = useState<Label[]>(() => labelsFromTask(task));
   const [currentReminder, setCurrentReminder] = useState<Date | null>(
     task.reminderDate ? parseISO(task.reminderDate) : null
   );
@@ -192,12 +192,18 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
       priority: priority || undefined,
       assignees,
       dueDate: dueDate?.toISOString() || null,
-      labels: selectedLabels.map(l => ({ id: l.id, name: l.name, color: l.color })),
       subtasks: extractedSubtasks,
       recurrence: isRecurring
         ? { pattern: recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly', interval: recurringInterval }
         : null,
     };
+
+    // Tags go as names, only when they changed. Note: the backend ignores an empty list for now,
+    // so removing every tag is not saved (it shows again after the next workspace refetch).
+    const tagNames = tagNamesForPayload(selectedLabels);
+    if (tagNamesChanged(tagNames, tagNamesForPayload(labelsFromTask(task)))) {
+      updates.tags = tagNames;
+    }
 
     // Only include reminderDate in payload if it actually changed.
     // Sending it unconditionally would cause the backend to delete+recreate the reminder on every save.

@@ -1,0 +1,82 @@
+import {
+  Bell,
+  BrainCircuit,
+  Clock,
+  Cloud,
+  Cog,
+  Database,
+  Gauge,
+  Globe,
+  HardDrive,
+  Layers,
+  Monitor,
+  Network,
+  Search,
+  Server,
+  ShieldCheck,
+  Signpost,
+  Smartphone,
+  Split,
+  SquareFunction,
+  User,
+  Waves,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
+import type { CanvasKind } from '@/lib/editor/canvasBoard';
+
+/** What each kind of box shows (spec §9): lucide icons, no brand logos. */
+export const KIND_ICONS: Record<CanvasKind, LucideIcon> = {
+  client: Monitor,
+  user: User,
+  mobile: Smartphone,
+  service: Server,
+  worker: Cog,
+  function: SquareFunction,
+  database: Database,
+  cache: Zap,
+  queue: Layers,
+  stream: Waves,
+  storage: HardDrive,
+  search: Search,
+  cdn: Globe,
+  dns: Signpost,
+  gateway: Network,
+  lb: Split,
+  auth: ShieldCheck,
+  external: Cloud,
+  monitor: Gauge,
+  scheduler: Clock,
+  notify: Bell,
+  model: BrainCircuit,
+};
+
+export const KIND_LABEL: Record<CanvasKind, string> = {
+  client: 'Client',
+  user: 'User',
+  mobile: 'Mobile app',
+  service: 'Service',
+  worker: 'Worker',
+  function: 'Function',
+  database: 'Database',
+  cache: 'Cache',
+  queue: 'Queue',
+  stream: 'Stream',
+  storage: 'Storage',
+  search: 'Search',
+  cdn: 'CDN',
+  dns: 'DNS',
+  gateway: 'Gateway',
+  lb: 'Load balancer',
+  auth: 'Auth',
+  external: 'External',
+  monitor: 'Monitoring',
+  scheduler: 'Scheduler',
+  notify: 'Notifications',
+  model: 'Model',
+};
+
+export function KindIcon({ kind }: { kind: CanvasKind }) {
+  const Icon = KIND_ICONS[kind];
+  return Icon ? <Icon className="cv-kind" strokeWidth={1.75} aria-label={KIND_LABEL[kind]} /> : null;
+}

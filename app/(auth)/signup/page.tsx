@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
+import { features } from '@/lib/features';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -92,14 +93,16 @@ function SignupForm() {
         setUser(response.data);
         localStorage.setItem('auth_hint', '1');
 
-        // Create default dashboard
-        try {
-          await dashboardApi.create({
-            name: `${signupData.name}'s Dashboard`,
-            description: 'My personal space for notes and ideas',
-          });
-        } catch (dashError) {
-          console.error('Error creating default dashboard:', dashError);
+        // Create default dashboard (legacy; skipped while dashboards are hidden, see lib/features.ts)
+        if (features.dashboards) {
+          try {
+            await dashboardApi.create({
+              name: `${signupData.name}'s Dashboard`,
+              description: 'My personal space for notes and ideas',
+            });
+          } catch (dashError) {
+            console.error('Error creating default dashboard:', dashError);
+          }
         }
 
         toast.success('Account created!', {
@@ -150,13 +153,16 @@ function SignupForm() {
           const isNewUser = new Date().getTime() - new Date(response.data.createdAt).getTime() < 60000;
 
           if (isNewUser) {
-            try {
-              await dashboardApi.create({
-                name: `${response.data.name}'s Dashboard`,
-                description: 'My personal space for notes and ideas',
-              });
-            } catch (dashError) {
-              console.error('Dashboard creation (may already exist):', dashError);
+            // Legacy default dashboard; skipped while dashboards are hidden (lib/features.ts)
+            if (features.dashboards) {
+              try {
+                await dashboardApi.create({
+                  name: `${response.data.name}'s Dashboard`,
+                  description: 'My personal space for notes and ideas',
+                });
+              } catch (dashError) {
+                console.error('Dashboard creation (may already exist):', dashError);
+              }
             }
 
             toast.success('Account created!', {

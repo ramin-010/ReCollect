@@ -19,8 +19,19 @@ import { HomeView } from '@/components/home/HomeView';
 import { dashboardApi } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
 import { ContentCardSkeleton } from '@/components/content/ContentCardSkeleton';
+import { features } from '@/lib/features';
+import { LearningHome } from '@/components/learning/LearningHome';
 
 export default function HomePage() {
+  // The learning dashboard (Revise's layout) is Home; features.learningHome = false brings back HomeView.
+  if (features.learningHome) return <LearningHome />;
+  // Legacy dashboards/content are hidden (lib/features.ts), so Home is just the HomeView widgets
+  // and the dashboard view below (which loads /api/dashboard/:id/contents) never mounts.
+  if (!features.dashboards) return <HomeView />;
+  return <LegacyDashboardHome />;
+}
+
+function LegacyDashboardHome() {
   const dashboards = useDashboardStore((state) => state.dashboards);
   const currentDashboard = useDashboardStore((state) => state.currentDashboard);
   const getDashboardContents = useDashboardStore((state) => state.getDashboardContents);

@@ -15,6 +15,7 @@ import { CreateNoteProvider } from '@/lib/context/CreateNoteContext';
 import { useViewStore } from '@/lib/store/viewStore';
 import { QuickTaskAdd } from '@/components/todo/QuickTaskAdd';
 import { UserSettings } from '@/components/settings/UserSettings';
+import { features } from '@/lib/features';
 
 export default function AppLayout({
   children,
@@ -64,6 +65,9 @@ export default function AppLayout({
       return;
     }
 
+    // Legacy dashboards are hidden (lib/features.ts): skip this extra getMe() round-trip.
+    if (!features.dashboards) return;
+
     // Fetch dashboards now that we're authenticated
     const fetchDashboards = async () => {
       try {
@@ -88,8 +92,8 @@ export default function AppLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[2.5px] border-white/10 border-t-white/70 rounded-full animate-spin" />
-          <p className="text-[13px] text-white/30 font-medium tracking-wide animate-pulse">Loading...</p>
+          <div className="w-7 h-7 border-[2px] border-[color:var(--border-strong)] border-t-[color:var(--ui-ink-2)] rounded-full animate-spin" />
+          <p className="text-[13px] text-[var(--ui-ink-3)] font-medium">Loading…</p>
         </div>
       </div>
     );
@@ -101,7 +105,7 @@ export default function AppLayout({
 
   return (
     <CreateNoteProvider>
-      <div className="h-screen overflow-hidden flex bg-pattern">
+      <div className="h-screen overflow-hidden flex bg-[hsl(var(--background))]">
         {!hideSidebar && <Sidebar />}
         <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
           <AnimatePresence>

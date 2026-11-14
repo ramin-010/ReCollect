@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import {
-  Clock, FileText, PenTool, CheckSquare, Files,
+  Clock, FileText, CheckSquare, Files,
   CalendarDays, ChevronRight, ChevronLeft, Mail,
   LayoutDashboard, Presentation, ArrowRight, Inbox
 } from 'lucide-react';
@@ -22,7 +22,6 @@ import {
 // ─── Helper Functions ─────────────────────────────────────
 const TYPE_CONFIG = {
   doc: { icon: FileText, color: 'emerald', label: 'Document' },
-  drawing: { icon: PenTool, color: 'purple', label: 'Whiteboard' },
   slide: { icon: Files, color: 'orange', label: 'Presentation' },
   workspace: { icon: LayoutDashboard, color: 'blue', label: 'Workspace' },
 } as const;

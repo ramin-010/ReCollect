@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T00:00:00+05:30",
+  "title": "Design System: Recollect",
+  "extensions": {
+    "colorMeta": {
+      "slip-white": { "role": "neutral", "displayName": "Slip White", "canonical": "#FFFFFF" },
+      "slip-inset": { "role": "neutral", "displayName": "Slip Inset", "canonical": "#F2F1F5" },
+      "ink-1-light": { "role": "neutral", "displayName": "Ink", "canonical": "#1D1B26" },
+      "slip-blue": { "role": "primary", "displayName": "Slip Blue (what can be clicked)", "canonical": "#2B50C4", "tonalRamp": ["#121f52", "#1b2f7a", "#2340a2", "#2b50c4", "#5677d6", "#86a0e4", "#b9c8f1", "#ecf0fc"] },
+      "stamp-violet": { "role": "secondary", "displayName": "Stamp Violet (stamped dates only)", "canonical": "#5B3CC4", "tonalRamp": ["#251652", "#36217a", "#482da2", "#5b3cc4", "#7d63d4", "#a08fe1", "#c6bbef", "#efebfb"] },
+      "good": { "role": "status", "displayName": "On track", "canonical": "#1E7A4C" },
+      "attention": { "role": "status", "displayName": "Behind", "canonical": "#8A5600" },
+      "danger": { "role": "status", "displayName": "Error / delete", "canonical": "#B3261E" },
+      "graphite-surface": { "role": "neutral", "displayName": "Graphite (dark paper)", "canonical": "#1F1F21" }
+    },
+    "typographyMeta": {
+      "page-heading": { "displayName": "Page heading", "purpose": "The date on Home. 28 / 34 / 36 px at phone / laptop / wide." },
+      "section-title": { "displayName": "Section title", "purpose": "Focus, Due today, Goals, Pocket." },
+      "row-title": { "displayName": "Row title", "purpose": "Slip, focus and task rows." },
+      "meta": { "displayName": "Meta", "purpose": "Subject, review stage, waiting since; tabular figures in columns." },
+      "stamp": { "displayName": "Stamp", "purpose": "Sofia Sans Condensed capitals for stamped dates only." }
+    },
+    "shadows": [
+      { "name": "float-light", "value": "0 1px 2px rgba(20,18,30,.06), 0 10px 28px -8px rgba(20,18,30,.22)", "purpose": "Menus, popovers, sheets, dialogs in light themes. Cards never carry a shadow." },
+      { "name": "float-dark", "value": "0 1px 2px rgba(0,0,0,.5), 0 14px 36px -10px rgba(0,0,0,.7)", "purpose": "The same layers in dark themes, on the lighter float surface." }
+    ],
+    "motion": [
+      { "name": "stamp-press", "value": "260ms cubic-bezier(0.2, 0.9, 0.25, 1)", "purpose": "The one authored moment: the due stamp presses in when a revision is ticked." },
+      { "name": "check-fill", "value": "120ms cubic-bezier(0.2, 0.9, 0.25, 1)", "purpose": "Check cell fills before the stamp." },
+      { "name": "quiet", "value": "150ms ease", "purpose": "Hover and press colour changes." },
+      { "name": "sheet", "value": "220ms cubic-bezier(0.2, 0.9, 0.25, 1)", "purpose": "Sheets slide 12–16 px; state, not decoration." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "wide", "value": "1600px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Main button",
+      "kind": "button",
+      "refersTo": "button-main",
+      "description": "The one dark action per screen (Capture on Home).",
+      "html": "<button class=\"ds-btn-main\">Capture</button>",
+      "css": ".ds-btn-main { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: #1d1b26; color: #fff; font: 600 14.5px 'Sofia Sans', system-ui, sans-serif; cursor: pointer; transition: background-color .15s ease, transform 80ms ease; } .ds-btn-main:hover { background: #34313f; } .ds-btn-main:active { transform: translateY(1px); } .ds-btn-main:focus-visible { outline: 2px solid #2b50c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Outlined button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Every other action (Spread them out, Cancel).",
+      "html": "<button class=\"ds-btn-outline\">Spread them out</button>",
+      "css": ".ds-btn-outline { height: 30px; padding: 0 10px; border: 1px solid #d3d0db; border-radius: 8px; background: transparent; color: #1d1b26; font: 600 13.5px 'Sofia Sans', system-ui, sans-serif; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; } .ds-btn-outline:hover { background: #f2f1f5; border-color: #8f8c9c; } .ds-btn-outline:focus-visible { outline: 2px solid #2b50c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Quiet button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "In-place actions in slip blue (Carry over, New goal, the budget).",
+      "html": "<button class=\"ds-btn-quiet\">Carry over</button>",
+      "css": ".ds-btn-quiet { height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #2b50c4; font: 600 13.5px 'Sofia Sans', system-ui, sans-serif; cursor: pointer; transition: background-color .15s ease; } .ds-btn-quiet:hover { background: #ecf0fc; } .ds-btn-quiet:focus-visible { outline: 2px solid #2b50c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Check cell",
+      "kind": "custom",
+      "refersTo": "check-cell",
+      "description": "Hollow = to do, filled slip blue = done; one click each way.",
+      "html": "<button class=\"ds-check\" role=\"checkbox\" aria-checked=\"false\" aria-label=\"Mark done\"></button> <button class=\"ds-check\" role=\"checkbox\" aria-checked=\"true\" aria-label=\"Mark not done\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></button>",
+      "css": ".ds-check { width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0; border-radius: 6px; border: 1.5px solid #8f8c9c; background: #fff; color: transparent; cursor: pointer; transition: background-color .12s, border-color .12s; } .ds-check:hover { border-color: #2b50c4; } .ds-check[aria-checked='true'] { background: #2b50c4; border-color: #2b50c4; color: #fff; } .ds-check:focus-visible { outline: 2px solid #2b50c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Due stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Signature: the next review date pressed into a ticked row; also days left on a goal.",
+      "html": "<span class=\"ds-stamp\">Next 16 Nov</span>",
+      "css": ".ds-stamp { display: inline-flex; align-items: center; padding: 3px 6px 2px; border: 1.5px solid currentColor; border-radius: 4px; color: #5b3cc4; font: 700 13px/1 'Sofia Sans Condensed', 'Sofia Sans', sans-serif; letter-spacing: .04em; text-transform: uppercase; font-variant-numeric: tabular-nums; transform: rotate(-3deg); animation: ds-press 260ms cubic-bezier(.2,.9,.25,1) both; } @keyframes ds-press { from { opacity: .25; transform: scale(1.32) rotate(-9deg); filter: blur(.8px); } to { opacity: 1; transform: rotate(-3deg); filter: none; } }"
+    },
+    {
+      "name": "Segmented control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Soft row; the chosen one dark, with its count (All notes: Vault, Scratch, Inbox).",
+      "html": "<div class=\"ds-seg\" role=\"tablist\"><button role=\"tab\" aria-selected=\"true\">Vault <span>9</span></button><button role=\"tab\" aria-selected=\"false\">Scratch <span>2</span></button></div>",
+      "css": ".ds-seg { display: inline-flex; gap: 2px; height: 34px; padding: 3px; border-radius: 10px; background: #f2f1f5; } .ds-seg button { padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: #4b4858; font: 600 13.5px 'Sofia Sans', sans-serif; cursor: pointer; } .ds-seg button:hover { color: #1d1b26; } .ds-seg button[aria-selected='true'] { background: #1d1b26; color: #fff; } .ds-seg span { font-weight: 500; opacity: .8; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Search input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "34 px field; accent border and tint ring on focus.",
+      "html": "<input class=\"ds-input\" type=\"search\" placeholder=\"Search all notes\">",
+      "css": ".ds-input { height: 34px; width: 260px; padding: 0 12px; border: 1px solid #d3d0db; border-radius: 8px; background: #fff; color: #1d1b26; font: 15px 'Sofia Sans', sans-serif; transition: border-color .15s, box-shadow .15s; } .ds-input::placeholder { color: #6a6778; } .ds-input:hover { border-color: #8f8c9c; } .ds-input:focus-visible { outline: none; border-color: #2b50c4; box-shadow: 0 0 0 3px #ecf0fc; }"
+    },
+    {
+      "name": "Paper card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat paper: one hairline rule, never a shadow (slip, goal, pocket).",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Product-company SDE role</p><p class=\"ds-card-meta\">2 of 6 milestones</p></div>",
+      "css": ".ds-card { width: 300px; padding: 12px 14px; border: 1px solid #e4e2ea; border-radius: 12px; background: #fff; } .ds-card-title { margin: 0; font: 600 16px/1.3 'Sofia Sans', sans-serif; color: #1d1b26; } .ds-card-meta { margin: 6px 0 0; font: 13.5px/1.35 'Sofia Sans', sans-serif; color: #6a6778; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The library date-due slip",
+    "overview": "Today is the slip glued inside a library book: the short list due today, each item stamped with its next date the moment it is done. On an app screen the world lends only a palette (slip white or graphite, slip-blue print, stamp-violet ink), a type voice (Sofia Sans with condensed capitals for stamps), density, and one signature move, the due stamp. Layout, navigation and controls stay standard web parts. Home is short and finite: one hero slip drawn against the daily budget, a light Focus list, tasks only when due, and a compact rail with the goal's honest forecast and a copy-first pocket.",
+    "keyCharacteristics": [
+      "Paper lies flat: hairline rules, no card shadows; only floating layers lift.",
+      "One accent for what can be clicked; violet only for stamped dates and marks.",
+      "States always speak twice: colour plus an icon and words.",
+      "Nothing opens by itself; failed calls stay inside their own section."
+    ],
+    "rules": [
+      { "name": "One accent", "body": "Slip blue goes only on what can be clicked.", "section": "colors" },
+      { "name": "Stamp ink is a date", "body": "Violet appears only where the system stamped a date or a mark.", "section": "colors" },
+      { "name": "Flat paper", "body": "Cards carry a hairline, never a shadow; never border + shadow together.", "section": "elevation" },
+      { "name": "Rank by weight first", "body": "Hierarchy comes from weight before size; nothing under 12 px.", "section": "typography" }
+    ],
+    "dos": [
+      "Say the day plainly: \"2 to revise · about 16 min · 16 waiting\".",
+      "Name buttons by what happens and keep the name through confirm and toast.",
+      "Let text wrap; rows grow, nothing is cut with an ellipsis."
+    ],
+    "donts": [
+      "Open anything by itself on load.",
+      "Show red for lateness, a streak flame or a percentage of blocks.",
+      "Use eyebrows, coloured left edges, cards inside cards, gradients, glows or a monospace costume."
+    ]
+  }
+}

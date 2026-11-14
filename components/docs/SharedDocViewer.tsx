@@ -1,17 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { docSchemaExtensions } from '@/lib/editor/docSchema';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
-import Highlight from '@tiptap/extension-highlight';
-import Underline from '@tiptap/extension-underline';
-import { TextStyle } from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
-import { ResizableImage } from '@/lib/extensions/ResizableImage';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useViewStore } from '@/lib/store/viewStore';
 import { useDocStore } from '@/lib/store/docStore';
@@ -101,29 +93,14 @@ export function SharedDocViewer({ doc, slug, mode = 'public', onBack }: SharedDo
   };
 
   const editor = useEditor({
+
+    // TipTap v3 no longer re-renders on every transaction; keep v2's behaviour here.
+
+    shouldRerenderOnTransaction: true,
     editable: false, // READ ONLY MODE
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-      } as any) as any,
-      Link.configure({
-        openOnClick: true, // Allow clicking links in read-only mode
-        HTMLAttributes: {
-          class: 'text-blue-400 underline cursor-pointer hover:text-blue-300',
-        },
-      }),
-      ResizableImage,
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      Highlight.configure({
-        multicolor: true,
-      }),
-      Underline,
-      TextStyle,
-      Color,
+      ...docSchemaExtensions({ openLinksOnClick: true }),
       AutoJoiner.configure({
         elementsToJoin: ['bulletList', 'orderedList'],
       }),

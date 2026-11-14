@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { parseTaskInput } from '@/lib/utils/smartDateParser';
+import { parseTaskInput, parseDueDateString } from '@/lib/utils/smartDateParser';
+import { tagNamesForPayload } from '@/lib/utils/todoTags';
 import { todoApi } from '@/lib/api/todoApi';
 import { TaskReference } from './types';
 import { workspaceTodoApi } from '@/lib/api/workspaceTodoApi';
@@ -12,6 +13,15 @@ import { Label } from '../LabelsModal';
 import { InlineLabelDropdownHandle } from '../InlineLabelDropdown';
 import { InlineAssigneeDropdownHandle, Assignee } from '../InlineAssigneeDropdown';
 
+// Labels the AI suggested (handleAiGenerate) carry this id prefix, so a new suggestion can replace them.
+const AI_LABEL_ID_PREFIX = 'ai-tag-';
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Lower-cased `#tag` / `@mention` tokens of a title. */
+const titleTokens = (text: string, sigil: '#' | '@') =>
+  text.match(sigil === '#' ? /#(\w+)/g : /@(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
+
 export const useTaskInput = (
   onSave: TaskInputProps['onSave'],
   onExpandChange: TaskInputProps['onExpandChange'],
@@ -22,7 +32,8 @@ export const useTaskInput = (
   demoMode?: boolean,
   workspaceId?: string,
   spaceId?: string,
-  visibility?: 'private' | 'workspace' | 'public'
+  visibility?: 'private' | 'workspace' | 'public',
+  goalType?: TaskInputProps['goalType']
 ) => {
   const [title, setTitle] = useState(initialTitle || '');
   const [description, setDescription] = useState(initialDescription || '');
@@ -74,14 +85,17 @@ export const useTaskInput = (
   const suggestedDate = parsedResult?.dueDate && !confirmedDueDate ? parsedResult.dueDate : null;
 
   const handleLabelsChange = (labels: Label[]) => {
+    // Labels are `#name` tokens in the title (as the inline # picker, the highlighter and handleSave
+    // expect); this used to write `@name`, a leftover of the old label syntax, which ended up in the
+    // saved title.
     const newLabel = labels.find(l => !selectedLabels.some(sl => sl.id === l.id));
     if (newLabel) {
-      setTitle(prev => `${prev.trim()} @${newLabel.name}`.trim());
+      setTitle(prev => `${prev.trim()} #${newLabel.name}`.trim());
     }
-    
+
     const removedLabel = selectedLabels.find(sl => !labels.some(l => l.id === sl.id));
     if (removedLabel) {
-      setTitle(prev => prev.replace(new RegExp(`@${removedLabel.name}\\s?`, 'gi'), '').trim());
+      setTitle(prev => prev.replace(new RegExp(`#${escapeRegExp(removedLabel.name)}\\s?`, 'gi'), '').trim());
     }
     
     setSelectedLabels(labels);
@@ -90,17 +104,29 @@ export const useTaskInput = (
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
-    setTitle(value);
 
-    const labelsInText = value.match(/#(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
-    setSelectedLabels(prev => 
-      prev.filter(label => labelsInText.includes(label.name.toLowerCase()))
+    // Drop a label / assignee only when the user deleted its token from the title in this edit.
+    // Ones that never had a token in the title (AI suggestions, the Labels / assignee pickers, the
+    // description editor) stay until removed explicitly. (Before, every keystroke dropped them.)
+    const prevTags = titleTokens(title, '#');
+    const nextTags = titleTokens(value, '#');
+    setSelectedLabels(prev =>
+      prev.filter(label => {
+        const name = label.name.toLowerCase();
+        return !(prevTags.includes(name) && !nextTags.includes(name));
+      })
     );
 
-    const assigneesInText = value.match(/@(\w+)/g)?.map(m => m.slice(1).toLowerCase()) || [];
+    const prevMentions = titleTokens(title, '@');
+    const nextMentions = titleTokens(value, '@');
     setAssignees(prev =>
-      prev.filter(a => assigneesInText.some(t => a.name.toLowerCase().startsWith(t)))
+      prev.filter(a => {
+        const name = a.name.toLowerCase();
+        return !(prevMentions.some(t => name.startsWith(t)) && !nextMentions.some(t => name.startsWith(t)));
+      })
     );
+
+    setTitle(value);
     const match = value.match(/#(\w*)$/);
     let isMenuOpen = false;
 
@@ -216,31 +242,31 @@ export const useTaskInput = (
         }
 
         // Auto-fill due date
-        if (d.dueDate) {
-          const parsed = new Date(d.dueDate);
-          if (!isNaN(parsed.getTime())) {
+        // The AI sends a bare "YYYY-MM-DD": that day in local time at the parser's default 18:00
+        // (new Date() read it as UTC midnight, i.e. 05:30 in IST).
+        if (typeof d.dueDate === 'string' && d.dueDate) {
+          const parsed = parseDueDateString(d.dueDate);
+          if (parsed) {
             setConfirmedDueDate(parsed);
             setCurrentReminder(subMinutes(parsed, 10));
           }
         }
 
-        // Auto-fill tags/labels
-        if (d.tags && d.tags.length > 0) {
-          const newLabels = d.tags.map((tag: string) => ({
-            id: `ai-tag-${tag}`,
-            name: tag,
-            color: 'blue',
-          }));
-          setSelectedLabels(prev => {
-            const merged = [...prev];
-            for (const nl of newLabels) {
-              if (!merged.some(l => l.name.toLowerCase() === nl.name.toLowerCase())) {
-                merged.push(nl);
-              }
+        // Auto-fill tags/labels. A new suggestion replaces the previous AI suggestion; labels the
+        // user picked stay (they were sent to the AI as availableTags).
+        const aiTags: string[] = Array.isArray(d.tags)
+          ? d.tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+          : [];
+        setSelectedLabels(prev => {
+          const merged = prev.filter(l => !l.id.startsWith(AI_LABEL_ID_PREFIX));
+          for (const tag of aiTags) {
+            const name = tag.trim();
+            if (!merged.some(l => l.name.toLowerCase() === name.toLowerCase())) {
+              merged.push({ id: `${AI_LABEL_ID_PREFIX}${name}`, name, color: 'blue' });
             }
-            return merged;
-          });
-        }
+          }
+          return merged;
+        });
 
         // Auto-fill assignees
         if (d.assignees && d.assignees.length > 0 && workspaceMembers.length > 0) {
@@ -360,12 +386,14 @@ export const useTaskInput = (
       dueDate: finalDueDate?.toISOString(),
       reminderDate: currentReminder?.toISOString(),
       subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
-      tags: selectedLabels.length > 0 ? selectedLabels.map(l => l.name) : undefined,
+      // Tag names; todoApi / workspaceTodoApi forward them as `tags` (JSON, or a JSON string in multipart).
+      tags: selectedLabels.length > 0 ? tagNamesForPayload(selectedLabels) : undefined,
       recurrence: recurrenceData,
       references: references.length > 0 ? references : (initialReferences && initialReferences.length > 0 ? initialReferences : undefined),
       workspace: workspaceId,
       spaceId: spaceId,
       visibility: visibility,
+      goalType: goalType && goalType !== 'NONE' ? goalType : undefined,
     };
     
     console.log('[TaskInput] Calling todoApi.createTodo...');

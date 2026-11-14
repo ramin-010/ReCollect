@@ -2,6 +2,8 @@
 import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
+// Theme v2 (Notion-grade tokens + the OS font). Unlayered, so it wins over the legacy blocks in globals.css.
+import './theme-v2.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';

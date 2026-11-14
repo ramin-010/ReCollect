@@ -19,12 +19,14 @@ import { InlineLabelDropdown, InlineLabelDropdownHandle } from './InlineLabelDro
 import { SmartReminderModal } from './SmartReminderModal';
 import { SmartDatePicker } from '@/components/ui-base/SmartDatePicker';
 import { todoApi } from '@/lib/api/todoApi';
+import { labelsFromTask, tagNamesChanged, tagNamesForPayload } from '@/lib/utils/todoTags';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui-base/Popover';
 import { getHighlightedContent } from './task_Input/utils';
+import { REFERENCE_PICKER_COPY } from './task_Input/types';
 import TextareaAutosize from 'react-textarea-autosize';
 import {
   DropdownMenu,
@@ -65,9 +67,8 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
     (task.references || []).map((r: any) => ({ type: r.type, refId: r.refId, title: r.title }))
   );
   const [dueDate, setDueDate] = useState<Date | null>(task.dueDate ? parseISO(task.dueDate) : null);
-  const [selectedLabels, setSelectedLabels] = useState<Label[]>(
-    (task.labels || []).map((l: any) => ({ id: l.id || `label-${l.name}`, name: l.name, color: l.color || 'blue' }))
-  );
+  // The API returns `tags: [{ _id, name }]` (there is no `labels` field).
+  const [selectedLabels, setSelectedLabels] = useState<Label[]>(() => labelsFromTask(task));
   const [currentReminder, setCurrentReminder] = useState<Date | null>(
     task.reminderDate ? parseISO(task.reminderDate) : null
   );
@@ -165,13 +166,19 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
       status,
       priority: priority || undefined,
       dueDate: dueDate?.toISOString() || null,
-      labels: selectedLabels.map(l => ({ id: l.id, name: l.name, color: l.color })),
       subtasks: extractedSubtasks,
       references: references.map(r => ({ type: r.type, refId: r.refId, title: r.title })),
       recurrence: isRecurring
         ? { pattern: recurringUnit === 'day' ? 'daily' : recurringUnit === 'week' ? 'weekly' : 'monthly', interval: recurringInterval }
         : null,
     };
+
+    // Tags go as names, only when they changed. Note: the backend ignores an empty list for now,
+    // so removing every tag is not saved (the server's tags come back below).
+    const tagNames = tagNamesForPayload(selectedLabels);
+    if (tagNamesChanged(tagNames, tagNamesForPayload(labelsFromTask(task)))) {
+      updates.tags = tagNames;
+    }
 
     const originalReminderMs = task.reminderDate ? new Date(task.reminderDate).getTime() : null;
     const newReminderMs = currentReminder ? currentReminder.getTime() : null;
@@ -188,6 +195,10 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
         // so subsequent saves don't re-upload the same images
         if (result.data.description !== undefined) {
           setDescription(result.data.description || '');
+        }
+        // Same for tags: take the server's list (real ids for new tags; shows what was really saved).
+        if (Array.isArray(result.data.tags)) {
+          setSelectedLabels(labelsFromTask(result.data));
         }
         // Sync parent state (for the task list UI)
         onUpdateTask(task._id, result.data);
@@ -397,7 +408,7 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
                           <PopoverContent className="p-0 w-72 border-[hsl(var(--border))] bg-[hsl(var(--card))]" align="start" side="bottom" sideOffset={8}>
                             <div className="p-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 flex items-center gap-2">
                               <Search className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Link to Doc or Slide</span>
+                              <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{REFERENCE_PICKER_COPY.heading}</span>
                             </div>
                             <div className="p-2 border-b border-[hsl(var(--border))]">
                               <input
@@ -405,7 +416,7 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
                                 value={referenceQuery}
                                 onChange={(e) => setReferenceQuery(e.target.value)}
                                 onKeyDown={(e) => e.stopPropagation()}
-                                placeholder="Search docs & slides..."
+                                placeholder={REFERENCE_PICKER_COPY.placeholder}
                                 className="w-full px-3 py-2 text-sm bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-md text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/50 outline-none focus:border-emerald-500/50"
                                 autoFocus
                               />
@@ -419,7 +430,7 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
                               )}
                               {!isSearchingRefs && referenceResults.length === 0 && (
                                 <p className="text-xs text-[hsl(var(--muted-foreground))] text-center py-3">
-                                  {referenceQuery ? 'No docs or slides found' : 'Type to search docs & slides'}
+                                  {referenceQuery ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hint}
                                 </p>
                               )}
                               {!isSearchingRefs && referenceResults.map(item => {

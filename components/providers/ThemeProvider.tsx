@@ -20,7 +20,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="theme-dark-gray"
+      // Theme v2: Light, Dark or System. 'theme-dark-gray' stays only so a stored legacy choice still
+      // resolves; app/theme-v2.css makes it an alias of the new dark.
+      defaultTheme="dark"
       enableSystem
       themes={['light', 'dark', 'theme-dark-gray']}
       disableTransitionOnChange

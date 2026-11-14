@@ -1,6 +1,6 @@
 /**
  * Slide API - Server communication for slide decks
- * Supports image uploads via FormData (mirrors drawingApi pattern)
+ * Supports image uploads via FormData
  */
 
 import axiosInstance from '@/lib/utils/axios';

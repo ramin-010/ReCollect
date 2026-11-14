@@ -3,11 +3,12 @@
  * Hybrid: localStorage for instant reads + server API for cross-device persistence
  */
 import axiosInstance from '@/lib/utils/axios';
+import { features } from '@/lib/features';
 
 export interface RecentVisit {
   id: string;
   itemId: string;
-  itemType: 'doc' | 'drawing' | 'slide' | 'workspace';
+  itemType: 'doc' | 'slide' | 'workspace';
   title: string;
   route: string;
   visitedAt: number; // timestamp
@@ -37,6 +38,12 @@ function writeCache(visits: RecentVisit[]) {
   }
 }
 
+// Old deck visits would link to /slides, which is hidden (lib/features.ts). Filter on read only;
+// stored visits are left alone.
+function visibleVisits(visits: RecentVisit[]): RecentVisit[] {
+  return features.slides ? visits : visits.filter((v) => v.itemType !== 'slide');
+}
+
 // ─── Public API ──────────────────────────────────────────
 
 /**
@@ -44,7 +51,7 @@ function writeCache(visits: RecentVisit[]) {
  */
 export function trackVisit(item: {
   itemId: string;
-  itemType: 'doc' | 'drawing' | 'slide' | 'workspace';
+  itemType: 'doc' | 'slide' | 'workspace';
   title: string;
   route: string;
 }) {
@@ -81,7 +88,7 @@ export function trackVisit(item: {
  * Optionally syncs from server in the background.
  */
 export function getRecentVisitsFromCache(): RecentVisit[] {
-  return readCache();
+  return visibleVisits(readCache());
 }
 
 /**
@@ -100,12 +107,12 @@ export async function syncRecentVisits(): Promise<RecentVisit[]> {
         visitedAt: new Date(v.visitedAt).getTime(),
       }));
       writeCache(visits);
-      return visits;
+      return visibleVisits(visits);
     }
   } catch {
     // Server unavailable — fall back to cache
   }
-  return readCache();
+  return visibleVisits(readCache());
 }
 
 /**

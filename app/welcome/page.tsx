@@ -29,10 +29,6 @@ import { LandingEmailViewer } from '@/components/brand/LandingEmailViewer';
 import { CRDT_SLIDE_PAYLOAD } from './SlideDemoPayload';
 
 // Lazy-load heavy below-the-fold components
-const CinematicWhiteboardViewer = dynamic(
-  () => import('@/components/brand/CinematicWhiteboardViewer').then(m => ({ default: m.CinematicWhiteboardViewer })),
-  { ssr: false }
-);
 const CinematicSecurity = dynamic(
   () => import('@/components/brand/CinematicSecurity').then(m => ({ default: m.CinematicSecurity })),
   { ssr: false }
@@ -361,33 +357,6 @@ export default function WelcomePage() {
       </section>
       
 
-      {/* --- WHITEBOARD (Infinite Canvas) --- */}
-      <section className="py-20 pb-0 pt-10 md:pt-20 px-6 relative overflow-hidden bg-background">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
-
-        <div className="max-w-[1400px] mx-auto relative z-10 flex flex-col items-center">
-            
-             <div className="w-full max-w-[1280px] text-left mb-8 space-y-4  xl:px-0">
-                 <h2 className="text-4xl md:text-[2.5rem] font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
-                    Think bigger. Move faster.
-                 </h2>
-                 
-                 <p className="text-md md:text-lg text-muted-foreground leading-relaxed max-w-5xl pl-2">
-                    A whiteboard engine built for speed. We've optimized the sync protocol to be 
-                    <span className="text-foreground font-semibold mx-1">3x faster</span> than standard implementations.<br></br> Zero lag, even with hundreds of nodes.
-                </p>
-             </div>
-
-             <div className="relative w-full max-w-[1280px] mb-12">
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08)_0%,transparent_60%)] -z-10 pointer-events-none" />
-                 <CinematicWhiteboardViewer />
-             </div>
-             
-        </div>
-      </section>
-
       {/* --- FEATURES GRID SECTION --- */}
       <section className="py-20 pt-5 md:pt-20 px-6 relative overflow-hidden bg-background ">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
@@ -611,10 +580,6 @@ export default function WelcomePage() {
                            <label className="flex items-center gap-3 cursor-pointer group">
                                <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
                                <span className="text-foreground">Docs & Notes Wiki <span className="text-muted-foreground/60 font-normal ml-1">~$10/user</span></span>
-                           </label>
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Infinite Whiteboards <span className="text-muted-foreground/60 font-normal ml-1">~$15/user</span></span>
                            </label>
                       </div>
                       {/* Col 2 */}
