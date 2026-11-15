@@ -32,39 +32,45 @@ export default function PrivacyPage() {
                 <Shield size={32} />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Privacy Policy</h1>
-            <p className="text-xl text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
+            <p className="text-xl text-slate-500">Last updated: 15 November 2026</p>
         </div>
 
         <div className="prose prose-slate prose-lg max-w-none space-y-8 text-slate-700">
             <section>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">1. Introduction</h2>
                 <p>
-                    Welcome to ReCollect ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy.
-                    This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our application.
+                    Recollect (&quot;we&quot;, &quot;us&quot;) is a learning app built and run by one engineer. This page says plainly what it keeps about you,
+                    where that lives, and who else sees it.
                 </p>
             </section>
 
             <section>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">2. Information We Collect</h2>
-                <p>
-                    We collect personal information that you voluntarily provide to us when you register on the application, express an interest in obtaining information about us or our products and services, when you participate in activities on the application, or otherwise when you contact us.
-                </p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">2. What it keeps</h2>
                 <ul className="list-disc pl-6 space-y-2 mt-4">
-                    <li>Personal Information Provided by You: Names, email addresses, passwords, and other similar information.</li>
-                    <li>Payment Data: We may collect data necessary to process your payment if you make purchases.</li>
+                    <li>Your account: your name, your email address, and your password (stored only as a hash) or your Google sign-in.</li>
+                    <li>What you put in: docs, notes, tasks, goals, study sessions and revisions, and the files you upload.</li>
+                    <li>A sign-in cookie, so you stay signed in. No advertising or tracking cookies.</li>
+                </ul>
+                <p className="mt-4">There are no payments, so no payment data.</p>
+            </section>
+
+            <section>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">3. Where it lives, and who sees it</h2>
+                <ul className="list-disc pl-6 space-y-2 mt-4">
+                    <li>
+                        Your content is stored in the app&apos;s database on its server. It is <strong>not end-to-end encrypted</strong>: the server reads it so
+                        search, revisions, sharing and the AI features work.
+                    </li>
+                    <li>Files you upload are stored with Cloudinary.</li>
+                    <li>When you use an AI feature (Ask AI, Recall, the weekly coach), the text it needs is sent to Anthropic&apos;s API to write the answer.</li>
+                    <li>Agents you connect with a token, or by signing in from an app, can read and change your data as Settings → Agents describes. You can end any of them there at any time.</li>
+                    <li>A doc you publish can be read by anyone with its link; a doc you share can be read or edited by the people you add.</li>
+                    <li>Nothing is sold, and nothing is used for advertising.</li>
                 </ul>
             </section>
-            
-            <section>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">3. Local-First Architecture</h2>
-                <p>
-                    ReCollect is designed with a "Local-First" architecture. This means your notes, thoughts, and personal data are primarily stored on your local device. 
-                    When you choose to sync your data, it is end-to-end encrypted before it leaves your device. We technically cannot see your private content.
-                </p>
-            </section>
 
             <section>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">4. Contact Us</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">4. Contact</h2>
                 <p>
                     If you have questions or comments about this policy, you may email us at recollect.support@gmail.com.
                 </p>
@@ -74,7 +80,7 @@ export default function PrivacyPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-12 text-center text-sm text-slate-500">
-        <p>&copy; {new Date().getFullYear()} ReCollect Inc. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Recollect</p>
       </footer>
     </div>
   );

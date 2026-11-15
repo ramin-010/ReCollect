@@ -2,25 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Zap, CheckSquare } from 'lucide-react';
+import { Users, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AVATAR_COLLECTION } from './CommunityDoodles';
 
 const slides = [
   {
-    id: 'tasks',
-    title: 'Integrated Tasks',
-    desc: 'Tasks live right inside your docs. Assign, date, and track work without switching context.',
-    image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658873/of4_osyddh.png',
-    icon: CheckSquare,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20'
-  },
-  {
     id: 'collab',
-    title: 'Real-Time Collaboration',
-    desc: 'Work together with your team in real-time. See cursors, edits, and presence instantly.',
+    title: 'Edit together, live',
+    desc: 'Share a doc and work on it at the same time: you see each other’s cursors and changes as they happen.',
     image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658866/02f5_gvfyh9.png',
     icon: Users,
     color: 'text-blue-400',
@@ -29,8 +18,8 @@ const slides = [
   },
   {
     id: 'slash',
-    title: 'Power at Your Fingertips',
-    desc: 'Type "/" to unlock a world of possibilities. Headers, lists, media, and more without lifting your hands.',
+    title: 'Type / for any block',
+    desc: 'Headings, lists, to-dos, code, tables, callouts and diagrams, without leaving the keyboard.',
     image: 'https://res.cloudinary.com/dsfb3jjqx/image/upload/v1770658873/of3_a9xovn.png',
     icon: Zap,
     color: 'text-amber-400',
@@ -61,13 +50,6 @@ export function CinematicDocsViewer() {
     return () => clearInterval(interval);
   }, [isHovering]);
 
-
-  // Contextual Comments for each slide - Lorelei avatars (#2, #3, #5)
-  const slideComments = [
-    { text: "Assigned to @design-team 🎨", user: AVATAR_COLLECTION[2] }, // #2 Lorelei/Felix
-    { text: "I'm editing this live! ⚡", user: AVATAR_COLLECTION[24] },   // #3 Lorelei/Zack
-    { text: "/generate limits", user: AVATAR_COLLECTION[51] },           // #5 Lorelei/Callie
-  ];
 
   return (
     <div className="w-full max-w-[1350px] mx-auto px-4">

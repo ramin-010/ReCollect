@@ -84,6 +84,19 @@ html.light {
   --ui-avatar-ink: #2c2c2b;
   --ui-stamp-tint: #f3ebf9;
   --ui-stamp-ink: #553b69;
+
+  /* Folded in from globals.css's legacy theme blocks (11-15); older parts still read them. */
+  --brand-secondary: 259 84% 55%;
+  --card-highlight: 228 10% 0% / 0.1;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --slide-bg: #f4f3f0;
+  --success: 142 76% 36%;
+  --surface-dark: 0 0% 88%;
+  --surface-light: 0 0% 100%;
+  --surface-medium: 0 0% 92%;
+  --warning: 38 72% 50%;
+  --welcome-bg: 40 5% 97%;
 }
 
 /* ── Dark: page #191919 · sidebar #202020 · ink #F0EFED ─────────────────── */
@@ -149,6 +162,16 @@ html.theme-dark-gray {
   --ui-avatar-ink: #f0efed;
   --ui-stamp-tint: #3c2d47;
   --ui-stamp-ink: #f3ebf9;
+
+  /* Folded in from globals.css's legacy theme blocks (11-15); older parts still read them. */
+  --brand-secondary: 0 0% 70%;
+  --card-highlight: 0 0% 100% / 0.08;
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --slide-bg: #2d2d2d;
+  --success: 142 35% 50%;
+  --warning: 38 85% 55%;
+  --welcome-bg: 0 0% 12%;
 }
 
 /* The OS face everywhere, as Notion does (Segoe UI Variable on Windows, SF on a Mac) */

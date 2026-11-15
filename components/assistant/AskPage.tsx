@@ -1,15 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, LoaderCircle, MessageSquareText, PanelLeft, RotateCw, Square, SquarePen, Trash2, CircleAlert, X } from 'lucide-react';
+import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, LoaderCircle, MessageSquareText, RotateCw, Square, CircleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { RcButton, RcConfirm, RcIconButton, RcSkel, rcScope } from '@/components/rc-ui';
-import { FadeText } from '@/components/rc-ui/FadeText';
+import { RcButton, RcSkel, rcScope } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
-import { assistantApi, AskError, type AssistantMessage, type AssistantThread, type AssistantTool } from '@/lib/api/assistantApi';
+import { assistantApi, AskError, type AssistantMessage, type AssistantTool } from '@/lib/api/assistantApi';
+import { useAskThreads } from '@/lib/store/askThreadsStore';
 import { agentApi } from '@/lib/api/agentApi';
 import { learningApi } from '@/lib/api/learningApi';
 import { recallApi, type AiUsage } from '@/lib/api/recallApi';
@@ -42,20 +42,11 @@ const STARTERS = [
 ];
 
 
-const DAY_MS = 86_400_000;
-function groupOf(updatedAt: string, now: Date): string {
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const t = new Date(updatedAt).getTime();
-  if (t >= start) return 'Today';
-  if (t >= start - DAY_MS) return 'Yesterday';
-  if (t >= start - 7 * DAY_MS) return 'Previous 7 days';
-  return 'Older';
-}
-
 /**
  * Ask AI (MANAGER_AND_DOCS_PLAN §3.4): he asks, the manager acts through the same tools his agents
- * use. Conversations on the left; the open one in a 720 column; each tool call as a row (changes
- * with Undo, actions that need his tap as cards); what each answer cost under it.
+ * use. The conversations are in the main sidebar (Chats, as in Notion); the open one in a 720 column;
+ * each tool call as a row (changes with Undo, actions that need his tap as cards); what each answer
+ * cost under it.
  */
 export function AskPage() {
   const router = useRouter();
@@ -63,8 +54,9 @@ export function AskPage() {
   const urlThread = params.get('t');
   const urlAsk = params.get('q');
 
-  const [threads, setThreads] = useState<AssistantThread[] | null | 'failed'>(null);
-  const [threadsAttempt, setThreadsAttempt] = useState(0);
+  const threads = useAskThreads((s) => s.threads);
+  const loadThreads = useAskThreads((s) => s.load);
+  const upsertThread = useAskThreads((s) => s.upsert);
   const [activeId, setActiveId] = useState<string | null>(urlThread);
   const [messages, setMessages] = useState<AssistantMessage[] | null | 'failed'>(urlThread ? null : []);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -72,9 +64,6 @@ export function AskPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [usage, setUsage] = useState<AiUsage | null>(null);
-  const [showThreads, setShowThreads] = useState(false);
-  const [toDelete, setToDelete] = useState<AssistantThread | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -86,17 +75,10 @@ export function AskPage() {
   const setTopBar = useTopBar((s) => s.setTopBar);
   const clearTopBar = useTopBar((s) => s.clearTopBar);
 
-  // The conversation list.
+  // The conversation list (shared with the sidebar's Chats; the title in the top bar comes from it).
   useEffect(() => {
-    let alive = true;
-    assistantApi.listThreads().then(
-      (t) => alive && setThreads(t),
-      () => alive && setThreads('failed'),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [threadsAttempt]);
+    void loadThreads();
+  }, [loadThreads]);
 
   const refreshUsage = useCallback(() => {
     recallApi.usage().then(setUsage, () => setUsage(null));
@@ -107,7 +89,6 @@ export function AskPage() {
   useEffect(() => {
     if (urlThread === activeId && (messages !== null || urlThread === null)) return;
     setActiveId(urlThread);
-    setShowThreads(false);
     if (urlThread && urlThread === madeHere.current) return;
     setPending(null);
     setMessages(urlThread ? null : []);
@@ -184,12 +165,7 @@ export function AskPage() {
                 setMessages((m) => (Array.isArray(m) ? m : []));
                 router.replace(`/ask?t=${t._id}`, { scroll: false });
               }
-              const now = new Date().toISOString();
-              setThreads((list) => {
-                const rest = Array.isArray(list) ? list.filter((x) => x._id !== t._id) : [];
-                const old = Array.isArray(list) ? list.find((x) => x._id === t._id) : undefined;
-                return [{ _id: t._id, title: t.title, createdAt: old?.createdAt ?? now, updatedAt: now }, ...rest];
-              });
+              upsertThread({ _id: t._id, title: t.title });
             },
             onTool: (tool) => {
               const follow = nearEnd();
@@ -219,7 +195,7 @@ export function AskPage() {
         focusInput();
       }
     },
-    [activeId, refreshUsage, router, scrollToEnd],
+    [activeId, refreshUsage, router, scrollToEnd, upsertThread],
   );
 
   // Ctrl K → "Ask": /ask?q=… starts a new conversation with it.
@@ -230,16 +206,16 @@ export function AskPage() {
     void send(urlAsk);
   }, [urlAsk, router, send]);
 
-  const newChat = () => {
-    if (sending.current) return;
-    madeHere.current = null;
-    setPending(null);
-    setMessages([]);
-    setActiveId(null);
-    setShowThreads(false);
-    router.push('/ask', { scroll: false });
-    focusInput();
-  };
+  // The sidebar's "New chat" (it links here; the URL change clears the page): the box takes the focus.
+  useEffect(() => {
+    const onNew = () => {
+      if (sending.current) return;
+      madeHere.current = null;
+      focusInput();
+    };
+    document.addEventListener('recollect:new-chat', onNew);
+    return () => document.removeEventListener('recollect:new-chat', onNew);
+  }, []);
 
   const retry = () => {
     if (!pending) return;
@@ -287,35 +263,6 @@ export function AskPage() {
     }
   };
 
-  const remove = async () => {
-    if (!toDelete) return;
-    setDeleting(true);
-    try {
-      await assistantApi.deleteThread(toDelete._id);
-      setThreads((list) => (Array.isArray(list) ? list.filter((t) => t._id !== toDelete._id) : list));
-      if (toDelete._id === activeId) newChat();
-      setToDelete(null);
-      toast.success('Conversation deleted');
-    } catch {
-      toast.error("That conversation couldn't be deleted. Try again.");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const groups = useMemo(() => {
-    if (!Array.isArray(threads)) return [];
-    const now = new Date();
-    const out: Array<{ label: string; items: AssistantThread[] }> = [];
-    for (const t of threads) {
-      const label = groupOf(t.updatedAt, now);
-      const g = out.find((x) => x.label === label);
-      if (g) g.items.push(t);
-      else out.push({ label, items: [t] });
-    }
-    return out;
-  }, [threads]);
-
   const isEmpty = Array.isArray(messages) && messages.length === 0 && !pending;
 
   const composer = (
@@ -332,60 +279,7 @@ export function AskPage() {
 
   return (
     <div className={cn(rcScope, 'ask')}>
-      {showThreads && <button type="button" aria-label="Close the conversations" className="ask-threads-scrim" onClick={() => setShowThreads(false)} />}
-      <aside className="ask-threads" data-open={showThreads || undefined} aria-label="Conversations">
-        <div className="ask-threads-head">
-          <button type="button" className="ask-new" onClick={newChat}>
-            <SquarePen className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
-            New chat
-          </button>
-          <RcIconButton label="Close the conversations" size="sm" className="ask-threads-close" onClick={() => setShowThreads(false)}>
-            <X className="h-4 w-4" strokeWidth={1.75} />
-          </RcIconButton>
-        </div>
-        {threads === null && (
-          <div className="flex flex-col gap-2 px-2 pt-4" aria-busy aria-label="Loading your conversations">
-            {[0, 1, 2, 3].map((i) => (
-              <RcSkel key={i} className="h-[18px] rounded-[6px]" style={{ width: `${86 - i * 12}%` }} />
-            ))}
-          </div>
-        )}
-        {threads === 'failed' && (
-          <div className="px-2 pt-4">
-            <p className="rc-meta">Couldn’t load your conversations.</p>
-            <RcButton size="sm" variant="outline" className="mt-2" icon={<RotateCw />} onClick={() => setThreadsAttempt((n) => n + 1)}>
-              Try again
-            </RcButton>
-          </div>
-        )}
-        {Array.isArray(threads) && threads.length === 0 && <p className="ask-threads-empty">Your conversations show here.</p>}
-        {groups.map((g) => (
-          <div key={g.label}>
-            <p className="ask-group-label">{g.label}</p>
-            {g.items.map((t) => (
-              <div key={t._id} className="ask-thread" aria-current={t._id === activeId ? 'page' : undefined}>
-                <button type="button" className="ask-thread-open" onClick={() => router.push(`/ask?t=${t._id}`, { scroll: false })}>
-                  <FadeText title={t.title}>{t.title}</FadeText>
-                </button>
-                <RcIconButton label="Delete this conversation" size="sm" className="ask-thread-del" onClick={() => setToDelete(t)}>
-                  <Trash2 className="h-[15px] w-[15px]" strokeWidth={1.75} />
-                </RcIconButton>
-              </div>
-            ))}
-          </div>
-        ))}
-      </aside>
-
       <section className="ask-main">
-        <div className="ask-narrow-bar">
-          <RcButton variant="quiet" size="sm" icon={<PanelLeft className="h-4 w-4" strokeWidth={1.75} />} onClick={() => setShowThreads(true)}>
-            Conversations
-          </RcButton>
-          <RcIconButton label="New chat" size="sm" onClick={newChat}>
-            <SquarePen className="h-4 w-4" strokeWidth={1.75} />
-          </RcIconButton>
-        </div>
-
         {isEmpty ? (
           <div className="ask-scroll">
             <div className="ask-empty">
@@ -486,20 +380,6 @@ export function AskPage() {
         )}
       </section>
 
-      <RcConfirm
-        open={!!toDelete}
-        onOpenChange={(o) => !o && setToDelete(null)}
-        title="Delete this conversation?"
-        body={
-          <>
-            “{toDelete?.title}” and its messages are deleted for good. What it changed stays; undo those from Home → From your agent.
-          </>
-        }
-        confirmLabel="Delete conversation"
-        danger
-        busy={deleting}
-        onConfirm={() => void remove()}
-      />
     </div>
   );
 }

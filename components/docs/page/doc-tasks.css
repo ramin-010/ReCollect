@@ -1,0 +1,80 @@
+/* The doc's tasks (DocTasks.tsx): a popover from the property row, in the timeline's rhythm. */
+@layer components {
+  .dt-pop {
+    z-index: 110;
+    width: min(340px, calc(100vw - 32px));
+    padding: 14px 14px 12px;
+    border-radius: var(--rc-r-lg);
+  }
+  .dt-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rc-ink-1);
+  }
+  .dt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 8px -6px 0;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .dt-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 6px;
+  }
+  .dt-item:hover {
+    background: var(--rc-hover);
+  }
+  .dt-mark {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 6px;
+  }
+  .dt-mark:focus-visible {
+    outline: 2px solid var(--rc-accent-fill);
+    outline-offset: -2px;
+  }
+  .dt-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-top: 3px;
+  }
+  .dt-name {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--rc-ink-1);
+    overflow-wrap: anywhere;
+  }
+  .dt-item--done .dt-name {
+    color: var(--rc-ink-3);
+    text-decoration: line-through;
+  }
+  .dt-due {
+    font-size: 13px;
+    color: var(--rc-ink-3);
+  }
+  .dt-due--late {
+    color: var(--rc-attn);
+  }
+  .dt-add {
+    margin-top: 10px;
+  }
+  .dt-foot {
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .dt-link {
+    color: var(--rc-accent);
+  }
+  .dt-link:hover {
+    text-decoration: underline;
+  }
+}

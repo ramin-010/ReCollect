@@ -1,6 +1,6 @@
 /*
- * Ask AI (MANAGER_AND_DOCS_PLAN §3.4), theme v2. A quiet chat: conversations on the left a size
- * smaller than the page, the conversation in a 720 column like a doc, the composer docked below.
+ * Ask AI (MANAGER_AND_DOCS_PLAN §3.4), theme v2. A quiet chat: the conversations live in the main
+ * sidebar (Chats), the conversation in a 720 column like a doc, the composer docked below.
  * The one authored moment: a tool row settles in as the manager finishes it (4 px rise, 220 ms).
  */
 @layer components {
@@ -13,97 +13,6 @@
     color: var(--rc-ink-1);
   }
 
-  /* ── Conversations ─────────────────────────────────────────────────── */
-  .ask-threads {
-    width: 248px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 8px 8px 24px;
-    border-right: 1px solid var(--rc-line);
-    overflow-y: auto;
-  }
-  .ask-threads-head {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .ask-new {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 32px;
-    padding: 0 8px;
-    border-radius: var(--rc-r-sm);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--rc-ink-2);
-    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
-  }
-  .ask-new svg {
-    color: var(--rc-icon);
-  }
-  .ask-new:hover {
-    background: var(--rc-hover);
-    color: var(--rc-ink-1);
-  }
-  .ask-threads-close {
-    display: none;
-  }
-  .ask-group-label {
-    padding: 16px 8px 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--rc-ink-3);
-  }
-  .ask-threads-empty {
-    padding: 16px 8px 0;
-    font-size: 13px;
-    line-height: 1.4;
-    color: var(--rc-ink-3);
-  }
-  .ask-thread {
-    display: flex;
-    align-items: center;
-    height: 30px;
-    border-radius: var(--rc-r-sm);
-    color: var(--rc-ink-2);
-    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
-  }
-  .ask-thread:hover {
-    background: var(--rc-hover);
-    color: var(--rc-ink-1);
-  }
-  .ask-thread[aria-current='page'] {
-    background: var(--rc-selected);
-    color: var(--rc-ink-1);
-  }
-  .ask-thread-open {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    padding: 0 4px 0 8px;
-    text-align: left;
-    font-size: 14px;
-    border-radius: var(--rc-r-sm);
-  }
-  .ask-thread[aria-current='page'] .ask-thread-open {
-    font-weight: 500;
-  }
-  .ask-thread-del {
-    margin-right: 2px;
-    opacity: 0;
-    transition: opacity var(--rc-fast) ease;
-  }
-  .ask-thread:hover .ask-thread-del,
-  .ask-thread:focus-within .ask-thread-del {
-    opacity: 1;
-  }
-  .ask-threads-scrim {
-    display: none;
-  }
-
   /* ── The conversation ──────────────────────────────────────────────── */
   .ask-main {
     position: relative;
@@ -111,9 +20,6 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-  }
-  .ask-narrow-bar {
-    display: none;
   }
   .ask-scroll {
     flex: 1;
@@ -523,38 +429,6 @@
     color: var(--rc-ink-1);
   }
 
-  /* ── Narrow: the conversations become a panel over the page ───────── */
-  @media (max-width: 1099px) {
-    .ask-threads {
-      display: none;
-    }
-    .ask-threads[data-open] {
-      display: flex;
-      position: absolute;
-      inset: 0 auto 0 0;
-      z-index: 30;
-      width: min(300px, 86vw);
-      background: var(--rc-surface-float);
-      box-shadow: var(--rc-shadow-float);
-      border-right: 0;
-    }
-    .ask-threads-close {
-      display: inline-flex;
-    }
-    .ask-threads-scrim {
-      display: block;
-      position: absolute;
-      inset: 0;
-      z-index: 29;
-      background: var(--rc-overlay);
-    }
-    .ask-narrow-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 12px 0;
-    }
-  }
   @media (max-width: 640px) {
     .ask-column {
       padding: 12px 16px 24px;

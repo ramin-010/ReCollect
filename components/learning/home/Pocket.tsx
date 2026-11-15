@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -519,7 +519,22 @@ export function AllNotesSheet({
             .sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || b.createdAt.getTime() - a.createdAt.getTime()),
     [notes, tab, q],
   );
-  const inboxItems = inbox.items.filter((c) => !q || [c.title, c.content, c.url].some((x) => x?.toLowerCase().includes(q)));
+  // Home's payload carries the newest few; past those the tab loads the whole inbox (again after
+  // each change, which refreshes `inbox`).
+  const [wholeInbox, setWholeInbox] = useState<Capture[] | null>(null);
+  const needsMore = inbox.count > inbox.items.length;
+  useEffect(() => {
+    if (!open || tab !== 'INBOX' || !needsMore) return;
+    let live = true;
+    learningApi
+      .listCaptures({ inbox: true, limit: 200 })
+      .then((items) => live && setWholeInbox(items))
+      .catch(() => {}); // the newest few still show
+    return () => {
+      live = false;
+    };
+  }, [open, tab, needsMore, inbox]);
+  const inboxItems = (needsMore && wholeInbox ? wholeInbox : inbox.items).filter((c) => !q || [c.title, c.content, c.url].some((x) => x?.toLowerCase().includes(q)));
 
   return (
     <RcSheet open={open} onOpenChange={onOpenChange} title="All notes">

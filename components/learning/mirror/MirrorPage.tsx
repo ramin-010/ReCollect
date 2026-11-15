@@ -186,6 +186,11 @@ function WeeklyHours({ weeks }: { weeks: MirrorData['weeks'] }) {
   const barW = Math.min(BAR_MAX, slot * 0.5);
   const y = (m: number) => (m / max) * innerH;
   const ticks = [0, max / 2, max];
+  // The hovered week reads out in the card's own header and legend, where it can't cover a bar
+  // (a floating card is taller than the plot, so beside the last columns it hid their neighbour).
+  // Every variant (all weeks, then each week) sits in the same grid cell and only the live one
+  // shows, so the cell keeps the tallest one's height and the chart never moves as the text wraps.
+  const variants: Array<number | null> = [null, ...weeks.map((_, i) => i)];
 
   return (
     <section aria-labelledby="hours-h" className="rc-card px-5 py-4">
@@ -193,20 +198,56 @@ function WeeklyHours({ weeks }: { weeks: MirrorData['weeks'] }) {
         <h2 id="hours-h" className="rc-h2">
           Hours per week
         </h2>
-        <p className="rc-meta rc-num">last {weeks.length} weeks · {formatMinutes(all)} logged</p>
+        <div className="grid">
+          {variants.map((v) => {
+            const live = v === hover;
+            const w = v === null ? null : weeks[v]!;
+            return (
+              <p key={v ?? 'all'} aria-hidden={!live} className={cn('rc-meta rc-num [grid-area:1/1]', !live && 'invisible')}>
+                {w ? (
+                  <>
+                    <span className="font-medium text-[var(--rc-ink-1)]">Week of {SHORT.format(at(w.weekStart))}</span>
+                    {' · '}
+                    {totals[v!] ? `${formatMinutes(totals[v!]!)} logged` : 'nothing logged'}
+                    {w.targets.total > 0 && ` · ${w.targets.done} of ${w.targets.total} week targets`}
+                  </>
+                ) : (
+                  `last ${weeks.length} weeks · ${formatMinutes(all)} logged`
+                )}
+              </p>
+            );
+          })}
+        </div>
       </div>
       {all === 0 ? (
         <p className="rc-meta mt-4">No sessions in the last {weeks.length} weeks. Study chats, Claude Code and Ctrl K “log 40m …” fill this in.</p>
       ) : (
         <>
-          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1" aria-label="Legend">
-            {sums.map(([k, m]) => (
-              <li key={k} className="flex items-center gap-1.5 text-[13px] text-[var(--rc-ink-2)]">
-                <span className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: kindColor(k) }} aria-hidden />
-                {KIND_LABEL[k]} <span className="rc-num text-[var(--rc-ink-3)]">{formatMinutes(m)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 grid">
+            {variants.map((v) => {
+              const live = v === hover;
+              const w = v === null ? null : weeks[v]!;
+              return (
+                <ul
+                  key={v ?? 'all'}
+                  aria-hidden={!live}
+                  aria-label={w ? `Week of ${SHORT.format(at(w.weekStart))}, by kind` : 'Legend'}
+                  className={cn('flex flex-wrap gap-x-4 gap-y-1 [grid-area:1/1]', !live && 'invisible')}
+                >
+                  {sums.map(([k, m]) => {
+                    const value = w ? w.minutes[k] : m;
+                    return (
+                      <li key={k} className="flex items-center gap-1.5 text-[13px] text-[var(--rc-ink-2)]">
+                        <span className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: kindColor(k) }} aria-hidden />
+                        {KIND_LABEL[k]}{' '}
+                        <span className={cn('rc-num', w && value ? 'font-medium text-[var(--rc-ink-1)]' : 'text-[var(--rc-ink-3)]')}>{w && !value ? '–' : formatMinutes(value)}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })}
+          </div>
           <div className="relative mt-3" ref={box}>
             <svg width="100%" height={CHART_H} viewBox={`0 0 ${width} ${CHART_H}`} role="img" aria-label={`Hours per week by kind, ${weeks.length} weeks: the table below has the numbers`}>
               {ticks.map((t) => (
@@ -252,33 +293,6 @@ function WeeklyHours({ weeks }: { weeks: MirrorData['weeks'] }) {
                 );
               })}
             </svg>
-            {hover !== null && weeks[hover] && (
-              <div
-                role="status"
-                className="rc-card pointer-events-none absolute z-10 w-[176px] px-3 py-2 text-[13px]"
-                style={tooltipAt(PAD.left + slot * hover + slot / 2, barW, width)}
-              >
-                <p className="font-medium text-[var(--rc-ink-1)]">Week of {SHORT.format(at(weeks[hover].weekStart))}</p>
-                {KINDS.filter((k) => weeks[hover]!.minutes[k] > 0).map((k) => (
-                  <p key={k} className="mt-0.5 flex items-center justify-between gap-3 text-[var(--rc-ink-2)]">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block h-2 w-2 rounded-[2px]" style={{ background: kindColor(k) }} aria-hidden />
-                      {KIND_LABEL[k]}
-                    </span>
-                    <span className="rc-num">{formatMinutes(weeks[hover]!.minutes[k])}</span>
-                  </p>
-                ))}
-                <p className="mt-1 flex justify-between gap-3 border-t border-[var(--rc-line)] pt-1 text-[var(--rc-ink-1)]">
-                  <span>Total</span>
-                  <span className="rc-num">{totals[hover] ? formatMinutes(totals[hover]!) : 'nothing logged'}</span>
-                </p>
-                {weeks[hover].targets.total > 0 && (
-                  <p className="rc-meta rc-num mt-0.5">
-                    {weeks[hover].targets.done} of {weeks[hover].targets.total} week targets
-                  </p>
-                )}
-              </div>
-            )}
           </div>
           <details className="mt-2">
             <summary className="rc-meta cursor-pointer select-none">Show the numbers</summary>
@@ -315,13 +329,6 @@ function WeeklyHours({ weeks }: { weeks: MirrorData['weeks'] }) {
       )}
     </section>
   );
-}
-
-/** The tooltip beside its column (right of it, or left near the right edge), never over it. */
-function tooltipAt(centre: number, barW: number, width: number): { left: number; top: number } {
-  const w = 176;
-  const right = centre + barW / 2 + 12;
-  return { left: right + w <= width ? right : Math.max(0, centre - barW / 2 - 12 - w), top: 4 };
 }
 
 /** A column segment with a 4px rounded data-end on top, square at the bottom. */

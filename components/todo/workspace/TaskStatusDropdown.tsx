@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { Check, CheckCircle2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { rcScope } from '@/components/rc-ui';
+import { TaskStatusMark } from '../TaskMarks';
+import { STATUS_WORDS } from '../taskWords';
 
 export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'blocked' | 'complete';
 
@@ -11,70 +14,43 @@ interface TaskStatusDropdownProps {
   children: React.ReactNode;
 }
 
+const STATUSES: TaskStatus[] = ['pending', 'in_progress', 'review', 'blocked', 'complete'];
+
+/**
+ * A task's status picker on theme v2 (the float layer, the slash menu's rows): each status with the
+ * mark the list draws for it and its words in sentence case, a check on the current one.
+ */
 export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: TaskStatusDropdownProps) {
   const [open, setOpen] = useState(false);
 
-  const STATUSES = [
-    { value: 'pending', label: 'To Do', colorClass: 'text-zinc-500' },
-    { value: 'in_progress', label: 'In Progress', colorClass: 'text-blue-500', fillClass: 'bg-blue-500' },
-    { value: 'review', label: 'Review', colorClass: 'text-amber-400', fillClass: 'bg-amber-400' },
-    { value: 'blocked', label: 'Blocked', colorClass: 'text-rose-500', fillClass: 'bg-rose-500' },
-    { value: 'complete', label: 'Complete', colorClass: 'text-emerald-500', isCheck: true },
-  ];
-
-  const handleSelect = (val: TaskStatus) => {
-    onStatusChange(val);
-    setOpen(false);
-  };
-
-  const renderIcon = (option: any) => {
-    if (option.value === 'pending') {
-      return <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-dashed border-[hsl(var(--muted))] shrink-0" />;
-    }
-    if (option.isCheck) {
-      return <CheckCircle2 className={cn("w-[16px] h-[16px] shrink-0 fill-emerald-500/20 ml-[-1px]", option.colorClass)} />;
-    }
-    return (
-      <div className={cn("w-[14px] h-[14px] rounded-full border-[2px] shrink-0 flex items-center justify-center", option.colorClass, "border-current")}>
-        <div className={cn("w-[5px] h-[5px] rounded-full", option.fillClass)} />
-      </div>
-    );
-  };
-
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        {children}
-      </Popover.Trigger>
+      <Popover.Trigger asChild>{children}</Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content 
-          className="w-[180px] bg-[hsl(var(--card))] rounded-xl shadow-xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-50 text-[13px] outline-none font-sans"
+        <Popover.Content
+          className={cn(rcScope, 'rc-float z-50 w-[188px] rounded-[10px] p-1 text-[14px] outline-none')}
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-col py-1.5 px-1.5">
-            {STATUSES.map(option => {
-              const isSelected = currentStatus === option.value;
+          <div role="menu" aria-label="Status" className="flex flex-col">
+            {STATUSES.map((value) => {
+              const isSelected = currentStatus === value;
               return (
                 <button
-                  key={option.value}
-                  onClick={() => handleSelect(option.value as TaskStatus)}
-                  className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 hover:bg-[hsl(var(--muted))]/10 transition-colors focus:bg-[hsl(var(--muted))]/10 outline-none group",
-                    isSelected ? "bg-[hsl(var(--muted))]/20" : ""
-                  )}
+                  key={value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={isSelected}
+                  onClick={() => {
+                    onStatusChange(value);
+                    setOpen(false);
+                  }}
+                  className="flex h-8 w-full items-center gap-2.5 rounded-[6px] px-2 text-left text-[var(--rc-ink-1)] outline-none transition-colors hover:bg-[var(--rc-hover)] focus-visible:bg-[var(--rc-hover)]"
                 >
-                  <div className="flex items-center justify-center w-4 h-4">
-                    {renderIcon(option)}
-                  </div>
-                  <span className={cn(
-                    "font-medium text-[13px] flex-1",
-                    isSelected ? "text-[hsl(var(--foreground))]/90" : "text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]/90 transition-colors"
-                  )}>
-                    {option.label}
-                  </span>
-                  {isSelected && <Check className="w-4 h-4 text-[hsl(var(--muted-foreground))]/50 shrink-0" />}
+                  <TaskStatusMark status={value} className="h-4 w-4" />
+                  <span className="flex-1">{STATUS_WORDS[value]}</span>
+                  {isSelected && <Check className="h-4 w-4 shrink-0 text-[var(--rc-ink-2)]" aria-hidden />}
                 </button>
               );
             })}

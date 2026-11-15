@@ -909,6 +909,16 @@ function createMock() {
       return [...db.categories];
     },
 
+    async listCaptures(params: { q?: string; inbox?: boolean; limit?: number }) {
+      await sleep();
+      const terms = (params.q ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const hits = db.captures
+        .filter((c) => !params.inbox || isInbox(c))
+        .filter((c) => terms.every((t) => [c.title, c.content, c.url].some((x) => x?.toLowerCase().includes(t))))
+        .sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || (a.createdAt < b.createdAt ? 1 : -1));
+      return clone(hits.slice(0, params.limit ?? 20).map(toCapture));
+    },
+
     async createCapture(body: CreateCaptureBody) {
       await sleep();
       if (!body.title?.trim() && !body.content?.trim() && !body.url?.trim() && !(body.attachments ?? []).length) {

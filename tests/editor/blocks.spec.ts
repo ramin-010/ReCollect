@@ -79,6 +79,10 @@ test('Canvas: the bottom grip changes its height in 8 px steps; full screen open
   await seed(page, [{ type: 'paragraph', content: 'Above the board' }, { type: 'canvas', props: { canvasId: `cv_test_${Date.now()}`, height: 440 } }, { type: 'paragraph', content: 'Below the board' }]);
   const surface = page.locator('.doc-body-v2 .doc-canvas-surface').first();
   await expect(surface).toBeVisible();
+  // Bring the whole board into the window first, as a person scrolls to it (its bottom grip can sit
+  // below a 730 px window under the doc's property rows).
+  await surface.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await person.pause(300);
   const before = (await surface.boundingBox())!;
   expect(Math.round(before.height)).toBe(440);
   // Slowly drag the bottom edge down by about 85 px.

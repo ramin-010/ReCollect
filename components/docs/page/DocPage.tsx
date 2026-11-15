@@ -461,7 +461,7 @@ function DocSurface({
           }}
         />
 
-        <DocProperties docId={doc._id} updatedAt={doc.updatedAt} editable={editable} />
+        <DocProperties docId={doc._id} docTitle={title} updatedAt={doc.updatedAt} editable={editable} />
 
         {/* The switch (DOCS_EDITOR_V2_PLAN phase 4, 2026-11-15): the new editor edits the doc's "blocks"
             fragment; the old one shows its frozen copy ("default"), read-only, behind ?editor=v1. */}

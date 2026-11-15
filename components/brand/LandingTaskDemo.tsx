@@ -50,31 +50,31 @@ export function LandingTaskDemo() {
                 <div className="absolute top-[-1%] left-[2%] sm:left-[-13%] max-w-[280px] text-right sm:text-left transform -rotate-2 opacity-75 hover:opacity-100 transition-opacity duration-500">
                     <h3 className="text-xl sm:text-2xl text-emerald-700 dark:text-emerald-300/80 mb-1 font-bold">Your Second Brain</h3>
                     <p className="text-lg sm:text-[1.4rem] text-black leading-tight">
-                        Keeps all your tasks, reminders, and workflows in check without the chaos.
+                        Tasks, reminders and the notes you revise, on one calm page.
                     </p>
                 </div>
 
                 {/* 2. Context Integration (Top Right) */}
                 <div className="absolute top-[-1%] right-[2%] sm:right-[-13%] max-w-[280px] text-left sm:text-right transform rotate-2 opacity-75 hover:opacity-100 transition-opacity duration-500">
-                     <h3 className="text-xl sm:text-2xl text-purple-700 dark:text-purple-300/80 mb-1 font-bold">Deep Integration</h3>
+                     <h3 className="text-xl sm:text-2xl text-purple-700 dark:text-purple-300/80 mb-1 font-bold">Today, this week, this month</h3>
                     <p className="text-lg sm:text-[1.4rem] text-black leading-tight">
-                        Manage tasks specifically for Docs, Whiteboards & Notes right where you work.
+                        Plan a task for when it fits, right where you capture it.
                     </p>
                 </div>
 
                 {/* 3. Collaboration (Bottom Left) */}
                 <div className="absolute bottom-[-1%] left-[2%] sm:left-[-13%] max-w-[280px] text-right sm:text-left transform rotate-1 opacity-75 hover:opacity-100 transition-opacity duration-500">
-                    <h3 className="text-xl sm:text-2xl text-blue-700 dark:text-blue-300/80 mb-1 font-bold">Healthy Collaboration</h3>
+                    <h3 className="text-xl sm:text-2xl text-blue-700 dark:text-blue-300/80 mb-1 font-bold">Shared workspaces</h3>
                     <p className="text-lg sm:text-[1.4rem] text-black leading-tight">
-                        Assign tasks and sync with your team instantly for smoother workflows.
+                        Share a workspace and assign its tasks to the people in it.
                     </p>
                 </div>
 
                 {/* 4. Smart Reminders (Bottom Right) */}
                 <div className="absolute bottom-[-1%] right-[2%] sm:right-[-13%] max-w-[280px] text-left sm:text-right transform -rotate-1 opacity-75 hover:opacity-100 transition-opacity duration-500">
-                     <h3 className="text-xl sm:text-2xl text-amber-600 dark:text-amber-300/80 mb-1 font-bold">Smart Timing</h3>
+                     <h3 className="text-xl sm:text-2xl text-amber-600 dark:text-amber-300/80 mb-1 font-bold">Reminders on time</h3>
                     <p className="text-lg sm:text-[1.4rem] text-black leading-tight">
-                        Intelligent 10-min before reminders ensure you never miss a beat.
+                        Type “tomorrow 5pm” and the reminder is set for 10 minutes before.
                     </p>
                 </div>
 

@@ -10,6 +10,7 @@ import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSkel
 import { RcPicker } from '@/components/rc-ui/RcPicker';
 import { docApi, type DocSearchHit } from '@/lib/api/docApi';
 import { learningApi } from '@/lib/api/learningApi';
+import { agentApi, type DocActivity } from '@/lib/api/agentApi';
 import { useDocStore, type Doc } from '@/lib/store/docStore';
 import type { Subject, SubjectWithTopics, TopicStatus } from '@/lib/learning/types';
 import { formatRelative } from '@/components/docs/page/format';
@@ -18,7 +19,7 @@ import { StatusCell } from './StatusCell';
 import { SubjectPathView } from './SubjectPath';
 import './docs-library.css';
 
-type View = 'all' | 'due' | 'pinned' | 'shared' | 'path' | 'trash';
+type View = 'all' | 'due' | 'pinned' | 'shared' | 'agents' | 'path' | 'trash';
 type Sort = 'edited' | 'created' | 'title';
 const UNFILED = '__unfiled';
 
@@ -52,6 +53,8 @@ export function DocsLibrary() {
   const { docs, isInitialized, setDocs, updateDoc, removeDoc } = useDocStore();
   const [subjects, setSubjects] = useState<SubjectWithTopics[]>([]);
   const [statuses, setStatuses] = useState<TopicStatus[] | null>(null);
+  /** Docs an agent wrote or changed (still standing), by id: the "From agents" view. */
+  const [agentDocs, setAgentDocs] = useState<Map<string, DocActivity>>(() => new Map());
   const [loadFailed, setLoadFailed] = useState(false);
   // ?subject=<id> opens that subject's path (Home's Next up links here).
   const [view, setView] = useState<View>(() => (params.get('subject') ? 'path' : 'all'));
@@ -91,14 +94,17 @@ export function DocsLibrary() {
   const load = useCallback(async () => {
     setLoadFailed(false);
     try {
-      const [d, s, st] = await Promise.all([
+      const [d, s, st, fromAgents] = await Promise.all([
         docApi.fetchAllDocs(),
         learningApi.getSubjects().catch(() => [] as SubjectWithTopics[]),
         learningApi.getTopicStatuses().catch(() => [] as TopicStatus[]),
+        // The "From agents" view only; without it the rest of the library still works.
+        agentApi.docActivity().catch(() => []),
       ]);
       setDocs(d.map((x) => x as unknown as Doc));
       setSubjects(s);
       setStatuses(st);
+      setAgentDocs(new Map(fromAgents.map((a) => [a.docId, a])));
     } catch {
       setLoadFailed(true);
     }
@@ -155,9 +161,10 @@ export function DocsLibrary() {
       due: rows.filter(isDue).length,
       pinned: rows.filter((r) => r.doc.isPinned).length,
       shared: rows.filter(isShared).length,
+      agents: rows.filter((r) => agentDocs.has(r.doc._id)).length,
       trash: trashRows.length,
     }),
-    [rows, trashRows],
+    [rows, trashRows, agentDocs],
   );
 
   const subjectCounts = useMemo(() => {
@@ -178,6 +185,7 @@ export function DocsLibrary() {
       if (view === 'due' && !isDue(r)) return false;
       if (view === 'pinned' && !r.doc.isPinned) return false;
       if (view === 'shared' && !isShared(r)) return false;
+      if (view === 'agents' && !agentDocs.has(r.doc._id)) return false;
       if (subjectFilter === UNFILED && r.subject) return false;
       if (subjectFilter && subjectFilter !== UNFILED && r.subject?._id !== subjectFilter) return false;
       if (q && !hitsNow?.has(r.doc._id) && !(r.doc.title || 'untitled').toLowerCase().includes(q) && !r.subject?.name.toLowerCase().includes(q)) return false;
@@ -197,7 +205,7 @@ export function DocsLibrary() {
       return time(b.doc.updatedAt) - time(a.doc.updatedAt);
     });
     return list;
-  }, [rows, view, subjectFilter, searchText, hitsNow, sort]);
+  }, [rows, view, subjectFilter, searchText, hitsNow, sort, agentDocs]);
 
   const togglePin = async (doc: Doc) => {
     updateDoc(doc._id, { isPinned: !doc.isPinned });
@@ -287,6 +295,7 @@ export function DocsLibrary() {
     { value: 'due' as View, label: 'Due', count: counts.due },
     { value: 'pinned' as View, label: 'Pinned', count: counts.pinned },
     ...(counts.shared ? [{ value: 'shared' as View, label: 'Shared', count: counts.shared }] : []),
+    ...(counts.agents || view === 'agents' ? [{ value: 'agents' as View, label: 'From agents', count: counts.agents }] : []),
     ...(counts.trash ? [{ value: 'trash' as View, label: 'Trash', count: counts.trash }] : []),
   ];
 
@@ -390,7 +399,7 @@ export function DocsLibrary() {
             ) : visible.length === 0 ? (
               <div className="lib-empty">
                 <p className="rc-body rc-ink-2">
-                  {query.trim() ? `No docs match “${query.trim()}”.` : view === 'due' ? 'Nothing to revise today.' : view === 'pinned' ? 'No pinned docs. Pin one from its menu.' : 'No docs here yet.'}
+                  {query.trim() ? `No docs match “${query.trim()}”.` : view === 'due' ? 'Nothing to revise today.' : view === 'pinned' ? 'No pinned docs. Pin one from its menu.' : view === 'agents' ? 'Docs your agents write or change show here.' : 'No docs here yet.'}
                 </p>
                 {(query || view !== 'all' || subjectFilter) && (
                   <RcButton

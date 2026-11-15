@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, LayoutList, Table, Inbox, Calendar, FileText, StickyNote, ArrowUpDown, LayoutTemplate } from 'lucide-react';
+import { LayoutList, Table, ArrowUpDown } from 'lucide-react';
 import { TaskInput } from './task_Input';
 import { BulkActionBar } from './workspace/modals/BulkActionBar';
-import { TodoHeader } from './TodoHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axiosInstance from '@/lib/utils/axios';
@@ -14,17 +13,12 @@ import type { Todo } from '@/lib/store/todoStore';
 import { useViewStore } from '@/lib/store/viewStore';
 import type { TodoFilterType } from '@/lib/store/viewStore';
 import { isToday, isPast, parseISO } from 'date-fns';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui-base/DropdownMenu';
+import { rcScope, RcButton, RcIconButton, RcMenu, RcSegmented, RcSkel } from '@/components/rc-ui';
 import { RichTaskItem } from './RichTaskItem';
 import { PersonalTableView } from './PersonalTableView';
 import type { TodoResponse } from '@/lib/api/todoApi';
 import { PersonalTaskDetailModal } from './PersonalTaskDetailModal';
-import { features, isReferenceTypeVisible } from '@/lib/features';
+import { isReferenceTypeVisible } from '@/lib/features';
 
 
 export function TodoView() {
@@ -64,14 +58,24 @@ export function TodoView() {
 
   useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
-  // Stats (only used for inbox header)
-  const stats = useMemo(() => {
-    const total = todos.length;
-    const completed = todos.filter(t => t.status === 'complete').length;
-    const pending = total - completed;
-    const progress = total === 0 ? 0 : (completed / total) * 100;
-    return { total, completed, pending, progress };
+  // The header's line and the views' counts, in plain numbers (no percentages).
+  const counts = useMemo(() => {
+    const open = todos.filter((t) => t.status !== 'complete');
+    return {
+      open: open.length,
+      inbox: open.filter((t) => !t.references?.some((ref) => isReferenceTypeVisible(ref.type))).length,
+      today: open.filter((t) => t.dueDate && isToday(parseISO(t.dueDate))).length,
+      // Still to come today (the line counts a late one once, as late).
+      laterToday: open.filter((t) => t.dueDate && isToday(parseISO(t.dueDate)) && !isPast(parseISO(t.dueDate))).length,
+      late: open.filter((t) => t.dueDate && isPast(parseISO(t.dueDate))).length,
+      docs: open.filter((t) => t.references?.some((ref) => ref.type === 'doc')).length,
+      completed: todos.length - open.length,
+    };
   }, [todos]);
+  const summary =
+    counts.open === 0
+      ? 'Nothing open. Add a task above, or press Ctrl K anywhere.'
+      : [`${counts.open} open`, counts.laterToday ? `${counts.laterToday} due later today` : '', counts.late ? `${counts.late} late` : ''].filter(Boolean).join(' · ');
 
   // Filtered Tasks (only for inbox-type filters)
   const filteredTasks = useMemo(() => {
@@ -211,141 +215,69 @@ export function TodoView() {
     });
   }, [updateTodo]);
 
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  }, []);
+  const views = [
+    { value: 'inbox' as const, label: 'Inbox', count: counts.inbox },
+    { value: 'today' as const, label: 'Today', count: counts.today },
+    { value: 'docs' as const, label: 'From docs', count: counts.docs },
+    { value: 'completed' as const, label: 'Done', count: counts.completed },
+  ];
+  const view = views.some((v) => v.value === activeFilter) ? (activeFilter as (typeof views)[number]['value']) : 'inbox';
+  const SORT_WORDS = { priority: 'Priority', dueDate: 'Due date', recent: 'Recently changed' } as const;
+  const EMPTY: Record<string, string> = {
+    inbox: 'Nothing in your inbox. Add a task above, or press Ctrl K anywhere.',
+    today: 'Nothing is due today.',
+    docs: 'No open tasks come from your docs.',
+    completed: 'Finished tasks show here.',
+  };
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin text-emerald-500" />
+      <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')} aria-busy aria-label="Loading your tasks">
+        <div className="mx-auto w-full max-w-[1000px] px-6 pt-10 md:px-8">
+          <RcSkel className="h-9 w-40" />
+          <RcSkel className="mt-3 h-4 w-56" />
+          <RcSkel className="mt-8 h-14 w-full" />
+          {[0, 1, 2, 3].map((i) => (
+            <RcSkel key={i} className="mt-4 h-6 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  // ── Inbox-type view (with header, filters, task list) ──
+  // ── The page: its heading and line, the task box, the views, the list ──
   return (
-    <div className="min-h-screen text-[hsl(var(--foreground))] bg-[hsl(var(--background))] font-sans pb-20 selection:bg-emerald-500/30">
-      
-      {/* Header Area - Always visible like in workspace */}
-      <div className="pb-8">
-        <TodoHeader greeting={greeting} stats={stats} />
-      </div>
+    <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)] pb-20')}>
+      <div className="mx-auto w-full max-w-[1000px] px-6 md:px-8">
+        <header className="pt-10 pb-6 max-md:pt-14">
+          <h1 className="rc-h1">Tasks</h1>
+          <p className="rc-meta mt-1.5 text-[15px] rc-num">{summary}</p>
+        </header>
 
-      <div className="max-w-[1000px] mx-auto px-6 md:px-8 w-full">
-        {/* Unified Task Input */}
         <div className="mb-5">
-            <TaskInput
-                onSave={handleCreateTask}
-                isExpanded={isInputExpanded}
-                onExpandChange={setIsInputExpanded}
-            />
+          <TaskInput onSave={handleCreateTask} isExpanded={isInputExpanded} onExpandChange={setIsInputExpanded} />
         </div>
 
-        {/* Filter Bar — left-aligned with count badges, View Switcher on right */}
-        <div className="flex items-center justify-between mb-4">
+        {/* The views as the segmented row (the chosen one dark, with its count); sort and layout on its right. */}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none]">
+            <RcSegmented label="Which tasks" value={view} onChange={(v) => useViewStore.getState().setTodoFilter(v as TodoFilterType)} options={views} />
+          </div>
           <div className="flex items-center gap-1">
-            {/* Core Tasks */}
-            {[
-              { key: 'inbox', label: 'Inbox', icon: <Inbox className="w-3.5 h-3.5" /> },
-              { key: 'today', label: 'Today', hideOnMobile: true, icon: <Calendar className="w-3.5 h-3.5" /> },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
-                  f.hideOnMobile && "hidden sm:flex",
-                  activeFilter === f.key
-                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
-                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-
-            <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1 shrink-0" />
-
-            {/* App Integrations */}
-            {[
-              { key: 'docs', label: 'Docs', icon: <FileText className="w-3.5 h-3.5" /> },
-              // Slides tab is hidden while presentations are off (lib/features.ts)
-              ...(features.slides ? [{ key: 'slides', label: 'Slides', icon: <LayoutTemplate className="w-3.5 h-3.5" /> }] : []),
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
-                  activeFilter === f.key
-                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
-                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                )}
-              >
-                {f.icon}
-                {f.label}
-              </button>
-            ))}
-
-            <div className="w-[1px] h-4 bg-[hsl(var(--border))] mx-1 shrink-0" />
-
-            {/* Completed */}
-            {[
-              { key: 'completed', label: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => useViewStore.getState().setTodoFilter(f.key as TodoFilterType)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap rounded-md flex items-center gap-2 leading-none",
-                  activeFilter === f.key
-                    ? "text-[hsl(var(--foreground))]/90 bg-[hsl(var(--muted))]/40"
-                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Sort filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="px-3 py-[8px] flex items-center gap-2 text-xs font-medium border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]/30 rounded-md hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  {sortBy === 'priority' ? 'Priority' : sortBy === 'dueDate' ? 'Due Date' : 'Recent'}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[140px]">
-                <DropdownMenuItem onClick={() => setSortBy('priority')}>Priority</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('dueDate')}>Due Date</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy('recent')}>Recent</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* View Switcher */}
-            <div className="flex items-center bg-[hsl(var(--muted))]/10 p-1 rounded-lg border border-[hsl(var(--border))]">
-            <button 
-              onClick={() => setCurrentView('list')}
-              className={cn("p-1.5 rounded-md transition-colors", currentView === 'list' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
-              title="List View"
+            <RcMenu
+              label="Sort tasks"
+              actions={(['priority', 'dueDate', 'recent'] as const).map((s) => ({ label: SORT_WORDS[s], onSelect: () => setSortBy(s) }))}
             >
-              <LayoutList className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => setCurrentView('table')}
-              className={cn("p-1.5 rounded-md transition-colors", currentView === 'table' ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30")}
-              title="Table View"
-            >
-              <Table className="w-4 h-4" />
-            </button>
-            
-          </div>
+              <RcButton size="sm" variant="quiet" icon={<ArrowUpDown className="h-3.5 w-3.5" aria-hidden />} aria-label={`Sort: ${SORT_WORDS[sortBy]}`}>
+                {SORT_WORDS[sortBy]}
+              </RcButton>
+            </RcMenu>
+            <RcIconButton label="List" size="sm" aria-pressed={currentView === 'list'} className={cn(currentView === 'list' && 'bg-[var(--rc-selected)] text-[var(--rc-ink-1)]')} onClick={() => setCurrentView('list')}>
+              <LayoutList />
+            </RcIconButton>
+            <RcIconButton label="Table" size="sm" aria-pressed={currentView === 'table'} className={cn(currentView === 'table' && 'bg-[var(--rc-selected)] text-[var(--rc-ink-1)]')} onClick={() => setCurrentView('table')}>
+              <Table />
+            </RcIconButton>
           </div>
         </div>
       </div>
@@ -355,64 +287,65 @@ export function TodoView() {
         {currentView === 'list' ? (
           <motion.div
             key="list"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-1 max-w-[1000px] mx-auto px-6 md:px-8 w-full"
+            transition={{ duration: 0.12 }}
+            className="mx-auto flex w-full max-w-[1000px] flex-col gap-px px-4 md:px-6"
           >
-                          <AnimatePresence mode="popLayout">
-                            {filteredTasks.length === 0 ? (
-                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center opacity-30">
-                                <CheckCircle2 className="w-12 h-12 mx-auto mb-3" />
-                                <p>No tasks here</p>
-                              </motion.div>
-                            ) : (
-                              filteredTasks.map((task) => (
-                                <RichTaskItem
-                                  key={task._id}
-                                  task={task}
-                                  isComplete={task.status === 'complete'}
-                                  onSelect={(t) => setSelectedTask(t as unknown as Todo)}
-                                  onStatusChange={handleStatusChange}
-                                  onUpdateTask={handleUpdateTask}
-                                  isSelected={selectedTasks.has(task._id)}
-                                  onToggleSelect={(id) => setSelectedTasks(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(id)) next.delete(id);
-                                    else next.add(id);
-                                    return next;
-                                  })}
-                                />
-                              ))
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="table"
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                           className="px-6 md:px-8 w-[1100px] mx-auto"
-                        >
-                          <PersonalTableView
-                            filteredTasks={filteredTasks}
-                            onStatusChange={handleStatusChange}
-                            onUpdateTask={handleUpdateTask}
-                            onClick={(t) => setSelectedTask(t as unknown as Todo)}
-                            selectedTasks={selectedTasks}
-                            onToggleSelect={(id) => setSelectedTasks(prev => {
-                              const next = new Set(prev);
-                              if (next.has(id)) next.delete(id);
-                              else next.add(id);
-                              return next;
-                            })}
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+            {filteredTasks.length === 0 ? (
+              <p className="px-2 py-6 text-[15px] text-[var(--rc-ink-2)]">{EMPTY[view]}</p>
+            ) : (
+              filteredTasks.map((task) => (
+                <RichTaskItem
+                  key={task._id}
+                  task={task}
+                  isComplete={task.status === 'complete'}
+                  onSelect={(t) => setSelectedTask(t as unknown as Todo)}
+                  onStatusChange={handleStatusChange}
+                  onUpdateTask={handleUpdateTask}
+                  isSelected={selectedTasks.has(task._id)}
+                  onToggleSelect={(id) =>
+                    setSelectedTasks((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    })
+                  }
+                />
+              ))
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="table"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="mx-auto w-full max-w-[1000px] overflow-x-auto px-6 md:px-8"
+          >
+            <div className="min-w-[860px]">
+              <PersonalTableView
+                filteredTasks={filteredTasks}
+                onStatusChange={handleStatusChange}
+                onUpdateTask={handleUpdateTask}
+                onClick={(t) => setSelectedTask(t as unknown as Todo)}
+                selectedTasks={selectedTasks}
+                onToggleSelect={(id) =>
+                  setSelectedTasks((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <BulkActionBar 
         selectedTasks={selectedTasks}

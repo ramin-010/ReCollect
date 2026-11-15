@@ -488,6 +488,23 @@ export const learningApi = {
     return call(() => axiosInstance.get('/api/captures/categories'));
   },
 
+  /**
+   * Ctrl K → Find (`q`: every word, in the title, text or link; also captures being revised) and
+   * All notes › Inbox (`inbox`: the ones not on a revision schedule). Pinned first, then newest.
+   */
+  async listCaptures(params: { q?: string; inbox?: boolean; limit?: number } = {}, signal?: AbortSignal): Promise<Capture[]> {
+    const m = await mock();
+    const raw: RawCapture[] = m
+      ? await m.listCaptures(params)
+      : await call(() =>
+          axiosInstance.get('/api/captures', {
+            params: { q: params.q?.trim() || undefined, inbox: params.inbox ? 1 : undefined, limit: params.limit },
+            signal,
+          }),
+        );
+    return raw.map(parseCapture);
+  },
+
   // #18
   async createCapture(body: CreateCaptureBody): Promise<{ capture: Capture; chain?: ChainRevision[] }> {
     const m = await mock();

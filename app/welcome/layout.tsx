@@ -1,41 +1,40 @@
 import type { Metadata } from 'next';
 
+// Only what is true of the app today (the honest-copy task, 11-15): no encryption, slides, email or
+// company claims.
+const TITLE = 'Recollect: keep what you learn, find what you need';
+const DESCRIPTION =
+  'Recollect brings your notes back on a short daily list, keeps your goals honest and works with the coding agents you already use. Open source.';
+
 export const metadata: Metadata = {
-  title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
-  description:
-    'ReCollect is the all-in-one knowledge workspace for professionals. Capture notes, manage tasks, create presentations, draft emails — all powered by AI. Free during beta.',
+  title: TITLE,
+  description: DESCRIPTION,
   keywords: [
-    'knowledge management app',
+    'spaced repetition',
+    'learning app for engineers',
+    'study plan',
     'note taking app',
-    'productivity tool',
     'second brain app',
-    'task manager',
-    'AI notes',
-    'presentation tool',
-    'personal wiki',
-    'knowledge workspace',
-    'Notion alternative',
-    'all-in-one workspace',
+    'MCP server',
+    'Claude Code',
   ],
   openGraph: {
-    title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
-    description:
-      'The all-in-one knowledge workspace: notes, tasks, slides, and AI-powered email — free during beta.',
+    title: TITLE,
+    description: DESCRIPTION,
     type: 'website',
     images: [
       {
         url: '/logo3.webp',
         width: 512,
         height: 512,
-        alt: 'ReCollect Logo',
+        alt: 'Recollect logo',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ReCollect — Organize Your Thoughts, Amplify Your Knowledge',
-    description:
-      'The all-in-one knowledge workspace: notes, tasks, slides, and AI-powered email — free during beta.',
+    title: TITLE,
+    description: DESCRIPTION,
     images: ['/logo3.webp'],
   },
   alternates: {
@@ -57,31 +56,24 @@ export default function WelcomeLayout({
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'WebApplication',
-            name: 'ReCollect',
+            name: 'Recollect',
             url: 'https://re-collect.in',
-            description:
-              'All-in-one knowledge workspace for professionals — notes, tasks, slides, and AI-powered email.',
-            applicationCategory: 'ProductivityApplication',
+            description: DESCRIPTION,
+            applicationCategory: 'EducationalApplication',
             operatingSystem: 'Web',
             offers: {
               '@type': 'Offer',
               price: '0',
               priceCurrency: 'USD',
-              description: 'Free during beta',
             },
             featureList: [
-              'AI-Powered Notes & Docs',
-              'Integrated Task Management',
-              'Spatial Presentations & Slides',
-              'AI Email Summaries & Drafts',
-              'Real-time Collaboration',
-              'Local-First Architecture',
-              'End-to-End Encryption',
+              'Spaced revisions on a short daily list',
+              'Docs with diagrams, code blocks and live editing',
+              'Ask AI inside a doc',
+              'Goals with deadlines and honest forecasts',
+              'Pinned notes and commands, one click to copy',
+              'An MCP server for coding agents',
             ],
-            creator: {
-              '@type': 'Organization',
-              name: 'ReCollect Inc.',
-            },
           }),
         }}
       />

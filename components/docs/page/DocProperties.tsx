@@ -11,13 +11,14 @@ import type { Goal, SubjectWithTopics, TopicByDoc } from '@/lib/learning/types';
 import { formatRelative, formatStampDay } from './format';
 import { RecallSheet, type RecallTarget } from '@/components/learning/recall/RecallSheet';
 import { RevisionTimeline } from './RevisionTimeline';
+import { DocTasks } from './DocTasks';
 
 const CYCLES = 4;
 /** The picker's last row when the doc is filed: take it out of its subject. */
 const NO_SUBJECT = '__none__';
 
-/** Notion-style property rows under the title: subject, revision, goal, last edit. */
-export function DocProperties({ docId, updatedAt, editable }: { docId: string; updatedAt?: string; editable: boolean }) {
+/** Notion-style property rows under the title: subject, revision, goal, agent, tasks, last edit. */
+export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { docId: string; docTitle?: string; updatedAt?: string; editable: boolean }) {
   const [info, setInfo] = useState<TopicByDoc | null>(null);
   const [subjects, setSubjects] = useState<SubjectWithTopics[] | null>(null);
   const [goals, setGoals] = useState<Goal[] | null>(null);
@@ -124,9 +125,11 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
 
   if (failed) return null; // the learning API is down: the doc still works
   if (!info || !subjects) {
+    // As many rows as a plain doc shows once loaded (Subject, Revision, Tasks for an editor, Edited),
+    // so the body doesn't jump down when they arrive.
     return (
       <div className="doc-props" aria-busy>
-        {[0, 1, 2].map((i) => (
+        {(editable ? [0, 1, 2, 3] : [0, 1, 2]).map((i) => (
           <div key={i} className="doc-prop">
             <RcSkel className="h-4 w-24" />
             <RcSkel className="h-4 w-40" />
@@ -272,6 +275,8 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
           </span>
         </div>
       )}
+
+      <DocTasks docId={docId} docTitle={docTitle} editable={editable} />
 
       {updatedAt && (
         <div className="doc-prop">

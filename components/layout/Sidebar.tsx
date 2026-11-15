@@ -3,12 +3,12 @@
 // Nothing bounces. Tokens come from app/theme-v2.css (--ui-*).
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
-import { useViewStore } from '@/lib/store/viewStore';
+import { useViewStore, type TodoFilterType } from '@/lib/store/viewStore';
 import { useNotificationStore } from '@/lib/store/notificationStore';
 import { useSettingsStore } from '@/lib/store/settingsStore';
 import { Button } from '@/components/ui-base/Button';
@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { NotificationsPopover } from './NotificationsPopover';
+import { SidebarChats } from './SidebarChats';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { getRecentVisitsFromCache, RecentVisit } from '@/lib/services/recentVisits';
 import { features, type FeatureName } from '@/lib/features';
@@ -192,10 +193,10 @@ interface SidebarContentProps {
   isMobile: boolean;
   onCollapse: () => void;
   onNavigate: () => void;
-  user: any;
+  user: ReturnType<typeof useAuthStore.getState>['user'];
   pathname: string;
-  todoFilter?: any;
-  setTodoFilter?: (filter: any) => void;
+  todoFilter?: TodoFilterType;
+  setTodoFilter?: (filter: TodoFilterType) => void;
   onSettingsClick: () => void;
 }
 
@@ -205,6 +206,10 @@ const rowBase =
 function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, pathname, todoFilter, setTodoFilter, onSettingsClick }: SidebarContentProps) {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [recent, setRecent] = useState<RecentVisit[]>([]);
+  // The lower list: Chats while in Ask AI, Recent elsewhere; a click on the other tab holds until he navigates.
+  const [choice, setChoice] = useState<{ path: string; tab: 'recent' | 'chats' } | null>(null);
+  const onAsk = pathname === '/ask' || !!pathname?.startsWith('/ask/');
+  const section: 'recent' | 'chats' = choice && choice.path === pathname ? choice.tab : onAsk ? 'chats' : 'recent';
 
   // Recents update whenever the path changes (a navigation).
   useEffect(() => {
@@ -289,7 +294,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
               onClick={onNavigate}
               todoFilter={todoFilter}
               onSubItemClick={(filterId) => {
-                if (current.id === 'todo' && setTodoFilter) setTodoFilter(filterId);
+                if (current.id === 'todo' && setTodoFilter) setTodoFilter(filterId as TodoFilterType);
                 onNavigate();
               }}
             />
@@ -304,28 +309,67 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
         })}
       </nav>
 
-      {/* ── Recent ── */}
-      {!isCollapsed && recent.length > 0 ? (
+      {/* ── Recent · Chats (Notion's way: Ask AI's conversations live here, not in a column of its own) ── */}
+      {!isCollapsed ? (
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-2 pb-2 custom-scrollbar">
-          <div className="flex h-[26px] items-center px-2 text-[12px] font-[500] text-[var(--ui-ink-3)]">Recent</div>
-          <div className="flex flex-col gap-px">
-            {recent.map((v) => (
-              <Link
-                key={`${v.itemType}-${v.itemId}`}
-                href={v.route}
-                onClick={onNavigate}
-                title={v.title}
+          <div
+            role="tablist"
+            aria-label="Lists"
+            className="flex h-[26px] items-center gap-0.5 px-1"
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              e.preventDefault();
+              const next = section === 'recent' ? 'chats' : 'recent';
+              setChoice({ path: pathname, tab: next });
+              e.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)?.focus();
+            }}
+          >
+            {(['recent', 'chats'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                data-tab={t}
+                aria-selected={section === t}
+                tabIndex={section === t ? 0 : -1}
+                onClick={() => setChoice({ path: pathname, tab: t })}
                 className={cn(
-                  rowBase,
-                  'font-[400]',
-                  pathname === v.route ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' : 'hover:bg-[var(--ui-hover)]',
+                  'h-[22px] rounded-[5px] px-1.5 text-[12px] font-[500] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)]',
+                  section === t ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' : 'text-[var(--ui-ink-3)] hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-2)]',
                 )}
               >
-                {recentIcon(v.itemType)}
-                <span className="ui-fade-end min-w-0 flex-1 py-1 text-left">{v.title || 'Untitled'}</span>
-              </Link>
+                {t === 'recent' ? 'Recent' : 'Chats'}
+              </button>
             ))}
           </div>
+          {section === 'chats' ? (
+            <div className="mt-1">
+              <Suspense fallback={null}>
+                <SidebarChats onNavigate={onNavigate} />
+              </Suspense>
+            </div>
+          ) : recent.length > 0 ? (
+            <div className="mt-1 flex flex-col gap-px">
+              {recent.map((v) => (
+                <Link
+                  key={`${v.itemType}-${v.itemId}`}
+                  href={v.route}
+                  onClick={onNavigate}
+                  title={v.title}
+                  className={cn(
+                    rowBase,
+                    'font-[400]',
+                    pathname === v.route ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' : 'hover:bg-[var(--ui-hover)]',
+                  )}
+                >
+                  {recentIcon(v.itemType)}
+                  <span className="ui-fade-end min-w-0 flex-1 py-1 text-left">{v.title || 'Untitled'}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="px-2 pt-2 text-[13px] leading-[1.4] text-[var(--ui-ink-3)]">Docs you open show here.</p>
+          )}
         </div>
       ) : (
         <div className="flex-1" />

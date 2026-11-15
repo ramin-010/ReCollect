@@ -28,6 +28,13 @@ export interface AgentEdit {
   canUndo: boolean;
 }
 
+/** A doc an agent wrote or changed: its latest such change and how many still stand. */
+export interface DocActivity {
+  docId: string;
+  lastAt: string;
+  edits: number;
+}
+
 type Raw = Record<string, unknown>;
 const unwrap = <T>(r: { data: { data?: T } & Raw }): T => (r.data.data ?? (r.data as unknown as T)) as T;
 const idOf = (x: Raw) => String(x.id ?? x._id ?? '');
@@ -73,6 +80,14 @@ export const agentApi = {
   },
   async listEdits(params: { unseen?: boolean; since?: string } = {}): Promise<AgentEdit[]> {
     return list(unwrap(await axiosInstance.get('/api/agent/edits', { params }))).map(toEdit);
+  },
+  /** The docs agents wrote or changed (changes still standing), latest first: the library's "From agents". */
+  async docActivity(): Promise<DocActivity[]> {
+    return list(unwrap(await axiosInstance.get('/api/agent/doc-activity'))).map((r) => ({
+      docId: String(r.docId),
+      lastAt: String(r.lastAt),
+      edits: Number(r.edits ?? 0),
+    }));
   },
   async undoEdit(id: string): Promise<void> {
     await axiosInstance.post(`/api/agent/edits/${id}/undo`);

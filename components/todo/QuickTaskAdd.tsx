@@ -61,8 +61,8 @@ function pillKeys<T extends string>(e: React.KeyboardEvent<HTMLElement>, list: r
  * Ctrl+K: ONE palette (LEARNING_SPEC §4). Task mode is the existing quick add (TaskInput,
  * unchanged) plus a This week / This month chip; Note / Link mode is the capture composer;
  * ↻ "Revise this" saves a capture and starts its revisions (switching Task → Note, since todos
- * can't be revised). Find (loop v2 §8) searches the quick notes and copies one; Ctrl+K again
- * inside the palette switches to it.
+ * can't be revised). Find (loop v2 §8) searches the quick notes and the saved notes and links,
+ * and copies one; Ctrl+K again inside the palette switches to it.
  */
 export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const [mounted, setMounted] = useState(false);

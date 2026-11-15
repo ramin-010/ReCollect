@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Calendar, AlignLeft, Paperclip, GripVertical, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AlignLeft, Calendar, Check, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { parseISO, differenceInSeconds, differenceInHours, isTomorrow, format } from 'date-fns';
 import { subMinutes } from 'date-fns';
 
 import { TaskStatusDropdown, TaskStatus } from './workspace/TaskStatusDropdown';
 import { DueDateDropdown } from './workspace/modals/DueDateDropdown';
 import { PriorityDropdown } from './workspace/modals/PriorityDropdown';
 import type { Todo } from '@/lib/store/todoStore';
+import { TaskStatusMark, PriorityBars } from './TaskMarks';
+import { dueWords, PRIORITY_WORDS, STATUS_WORDS } from './taskWords';
 
 interface RichTaskItemProps {
   task: Todo;
@@ -20,218 +20,116 @@ interface RichTaskItemProps {
   onToggleSelect?: (id: string) => void;
 }
 
+const metaBtn = 'flex h-7 items-center gap-1.5 rounded-[6px] px-1.5 text-[13px] whitespace-nowrap transition-colors hover:bg-[var(--rc-hover)] focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--rc-accent-fill)]';
+
 /**
- * Smart date formatting
+ * A task on theme v2 (inside an `.rc` scope): an inset row that fills on hover (no dividers), the
+ * status mark, the title that wraps, and the due date, status and priority, each opening its own
+ * picker. On a laptop they sit at the row's end; on a phone they make the meta line under the title.
  */
-function formatSmartDate(dateStr: string, isDueDate: boolean = true): { text: string; isOverdue: boolean } {
-  const now = new Date();
-  const date = parseISO(dateStr);
-  const MathAbs = Math.abs; // for safe usage
-  const diffSecs = differenceInSeconds(date, now);
-
-  // Overdue
-  if (diffSecs < 0) {
-    const absDiffSecs = MathAbs(diffSecs);
-    if (absDiffSecs < 3600) {
-      const diffMins = Math.floor(absDiffSecs / 60);
-      return { text: `Overdue by ${diffMins} min${diffMins !== 1 ? 's' : ''}`, isOverdue: true };
-    }
-    const diffHrs = Math.floor(absDiffSecs / 3600);
-    if (diffHrs < 24) {
-      return { text: `Overdue by ${diffHrs} hr${diffHrs !== 1 ? 's' : ''}`, isOverdue: true };
-    }
-    const diffDays = Math.floor(absDiffSecs / 86400);
-    return { text: `Overdue by ${diffDays} day${diffDays !== 1 ? 's' : ''}`, isOverdue: true };
-  }
-
-  // Within 24 hours
-  const diffHrs = differenceInHours(date, now);
-  if (diffHrs < 24) {
-    if (diffSecs < 60) return { text: `${isDueDate ? 'Due in' : 'In'} ${diffSecs}s`, isOverdue: false };
-    if (diffSecs < 3600) return { text: `${isDueDate ? 'Due in' : 'In'} ${Math.floor(diffSecs / 60)}min`, isOverdue: false };
-    return { text: `${isDueDate ? 'Due in' : 'In'} ${diffHrs}hr`, isOverdue: false };
-  }
-
-  // Tomorrow
-  if (isTomorrow(date)) return { text: `${isDueDate ? 'Due tomorrow' : 'Tomorrow'}`, isOverdue: false };
-
-  // Otherwise dd/MM/yy
-  return { text: format(date, 'dd/MM/yy'), isOverdue: false };
-}
-
-function getPriorityConfig(priority: string) {
-  switch (priority) {
-    case 'urgent': return { color: 'text-rose-500/90', fill: 'fill-rose-500/20' };
-    case 'high': return { color: 'text-amber-500/90', fill: 'fill-amber-500/20' };
-    case 'normal': case 'medium': return { color: 'text-blue-400/90', fill: 'fill-blue-500/20' };
-    case 'low': return { color: 'text-zinc-500', fill: 'fill-zinc-400/20' };
-    default: return { color: 'text-zinc-500', fill: '' };
-  }
-}
-
 export function RichTaskItem({ task, isComplete, onSelect, onStatusChange, onUpdateTask, isSelected, onToggleSelect }: RichTaskItemProps) {
   const [isCompleting, setIsCompleting] = useState(false);
   const isDone = isComplete || isCompleting;
-  const priorityConfig = getPriorityConfig(task.priority || 'low');
+  const due = task.dueDate ? dueWords(task.dueDate) : null;
+  const status = isCompleting ? 'complete' : task.status;
+  const priority = task.priority ? PRIORITY_WORDS[task.priority] : undefined;
 
-  const dueDateDisplay = task.dueDate ? formatSmartDate(task.dueDate, true) : null;
+  const changeStatus = (next: TaskStatus) => {
+    if (next === 'complete' && task.status !== 'complete') {
+      setIsCompleting(true);
+      setTimeout(() => onStatusChange(task._id, next), 1600); // the tick shows, then the row leaves
+    } else {
+      onStatusChange(task._id, next);
+    }
+  };
 
   return (
-    <div 
+    <div
       onClick={() => onSelect(task)}
       className={cn(
-        "group relative grid grid-cols-[40px_minmax(0,1fr)_120px_120px_100px] gap-4 py-2.5 items-center border-b rounded-lg border-[hsl(var(--border))]/50 transition-all cursor-pointer",
-        "bg-transparent hover:bg-[hsl(var(--muted))]/30",
-        isCompleting && "opacity-0 duration-1000 delay-1000 pointer-events-none scale-[0.98]"
+        'group relative grid grid-cols-[28px_minmax(0,1fr)] items-start gap-x-2 rounded-[6px] px-2 py-[9px] cursor-pointer transition-[background-color,opacity] sm:grid-cols-[28px_minmax(0,1fr)_auto] sm:items-center',
+        'hover:bg-[var(--rc-hover)]',
+        isSelected && 'bg-[var(--rc-selected)] hover:bg-[var(--rc-selected)]',
+        isCompleting && 'opacity-0 duration-700 delay-[900ms] pointer-events-none',
       )}
     >
-      {/* Hover Select Checkbox */}
+      {/* Select for bulk actions (on hover, left of the row). */}
       {onToggleSelect && (
-        <div 
+        <button
+          type="button"
+          aria-label={isSelected ? `Unselect “${task.title}”` : `Select “${task.title}”`}
+          aria-pressed={!!isSelected}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(task._id);
+          }}
           className={cn(
-            "absolute -left-12 top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition-opacity z-10",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            'absolute -left-7 top-[11px] hidden h-4 w-4 items-center justify-center rounded-[4px] transition-opacity md:flex',
+            isSelected
+              ? 'bg-[var(--rc-accent-fill)] text-white opacity-100'
+              : 'opacity-0 shadow-[inset_0_0_0_1.5px_var(--rc-icon)] group-hover:opacity-100 focus-visible:opacity-100',
           )}
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
         >
-          <GripVertical className="w-3.5 h-3.5 text-white/20 hover:text-white/50 cursor-grab hidden md:block" />
-          <button className={cn(
-            "flex items-center justify-center w-[16px] h-[16px] rounded-[4px] border transition-colors shadow-sm",
-            isSelected 
-              ? "bg-indigo-500 border-indigo-500 text-white" 
-              : "border-[hsl(var(--border))] hover:border-indigo-400 bg-[hsl(var(--card))]"
-          )}>
-            {isSelected && <Check className="w-3 h-3" strokeWidth={3} />}
-          </button>
-        </div>
+          {isSelected && <Check className="h-3 w-3" strokeWidth={3} />}
+        </button>
       )}
 
-      {/* 1. Status Toggle */}
-      <div className="flex items-center justify-center shrink-0" onClick={(e) => e.stopPropagation()}>
-        <TaskStatusDropdown 
-          currentStatus={(isCompleting ? 'complete' : task.status) as TaskStatus}
-          onStatusChange={(newStatus) => {
-            if (newStatus === 'complete' && task.status !== 'complete') {
-              setIsCompleting(true);
-              setTimeout(() => {
-                onStatusChange(task._id, newStatus);
-              }, 2000); // Wait for fade
-            } else {
-              onStatusChange(task._id, newStatus);
-            }
-          }}
-        >
-          <button className="flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity focus:outline-none">
-            {isDone ? (
-              <CheckCircle2 className="w-[18px] h-[18px] text-emerald-500 fill-emerald-500/20" />
-            ) : task.status === 'in_progress' ? (
-              <div className="w-[18px] h-[18px] rounded-full border-[2px] border-blue-500 flex items-center justify-center">
-                <div className="w-[6px] h-[6px] rounded-full bg-blue-500" />
-              </div>
-            ) : task.status === 'review' ? (
-              <div className="w-[18px] h-[18px] rounded-full border-[2px] border-amber-400 flex items-center justify-center">
-                <div className="w-[6px] h-[6px] rounded-full bg-amber-400" />
-              </div>
-            ) : task.status === 'blocked' ? (
-              <div className="w-[18px] h-[18px] rounded-full border-[2px] border-rose-500 flex items-center justify-center">
-                <div className="w-[6px] h-[6px] rounded-full bg-rose-500" />
-              </div>
-            ) : (
-              <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-dashed border-[hsl(var(--muted-foreground))] group-hover:border-solid group-hover:border-[hsl(var(--foreground))]/100 transition-all flex items-center justify-center" />
-            )}
+      {/* The status mark (a tick to finish; the picker for the rest). */}
+      <div className="flex h-7 items-center justify-center sm:h-auto" onClick={(e) => e.stopPropagation()}>
+        <TaskStatusDropdown currentStatus={status as TaskStatus} onStatusChange={changeStatus}>
+          <button type="button" className="group/mark grid h-7 w-7 place-items-center rounded-[6px] hover:bg-[var(--rc-hover)] focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--rc-accent-fill)]" aria-label={`Status: ${STATUS_WORDS[status] ?? 'To do'}. Change it`}>
+            <TaskStatusMark status={status} />
           </button>
         </TaskStatusDropdown>
       </div>
 
-      {/* 2. Task Name & Metadata */}
-      <div className="flex items-center gap-2 min-w-0">
-        <p className={cn(
-          "text-[14px] truncate font-medium",
-          isDone ? "text-[hsl(var(--muted-foreground))] line-through" : "text-[hsl(var(--foreground))]"
-        )}>
-          {task.title}
-        </p>
-        {task.description && (
-          <AlignLeft className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]/50 shrink-0" />
-        )}
-        {isDone && task.references && task.references.length > 0 && (
-          <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]/50 text-[hsl(var(--muted-foreground))] text-[9px] font-medium uppercase tracking-wider shrink-0" title="Linked to content">
-             {task.references[0].type}
-          </span>
-        )}
+      {/* The title (wraps, never cut) and its small marks. */}
+      <div className="min-w-0 self-center py-[3px]">
+        <p className={cn('inline break-words text-[15px] leading-[1.4]', isDone ? 'text-[var(--rc-ink-3)] line-through' : 'text-[var(--rc-ink-1)]')}>{task.title}</p>
+        {task.description && <AlignLeft className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-[var(--rc-icon)]" aria-label="Has notes" />}
       </div>
 
-      {/* 4. Due Date */}
-      <div className="flex justify-start text-[11px] shrink-0 font-medium" onClick={(e) => e.stopPropagation()}>
-        <DueDateDropdown 
+      {/* Due date · status · priority: the row's end on a laptop, the meta line on a phone. */}
+      <div className="col-start-2 -ml-1.5 flex flex-wrap items-center gap-x-1 sm:col-start-3 sm:row-start-1 sm:ml-0 sm:flex-nowrap sm:justify-end" onClick={(e) => e.stopPropagation()}>
+        <DueDateDropdown
           currentDate={task.dueDate}
           onDateChange={(date) => {
             const updates: Partial<Todo> = { dueDate: date };
-            if (date) {
-              updates.reminderDate = subMinutes(new Date(date), 10).toISOString();
-            } else {
-              updates.reminderDate = undefined;
-            }
+            updates.reminderDate = date ? subMinutes(new Date(date), 10).toISOString() : undefined;
             onUpdateTask(task._id, updates);
           }}
         >
-          <button className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors focus:outline-none whitespace-nowrap",
-            dueDateDisplay?.isOverdue ? "text-rose-400/80 font-medium" : task.dueDate ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--muted-foreground))]"
-          )}>
-            {task.dueDate && dueDateDisplay ? (
-              <span>{dueDateDisplay.text}</span>
+          <button type="button" className={cn(metaBtn, due?.late && !isDone ? 'text-[var(--rc-attn)]' : 'text-[var(--rc-ink-3)]', !due && 'max-sm:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} aria-label={due ? `Due ${due.text}. Change the date` : 'Add a due date'}>
+            {due ? (
+              <>
+                {due.late && !isDone && <Clock className="h-3.5 w-3.5" aria-hidden />}
+                <span className="tabular-nums">{due.text}</span>
+              </>
             ) : (
-              <Calendar className="w-3.5 h-3.5 shrink-0 opacity-40" />
+              <Calendar className="h-3.5 w-3.5" aria-hidden />
             )}
           </button>
         </DueDateDropdown>
-      </div>
 
-      {/* 3. Status Pill */}
-      <div className="flex items-center justify-start shrink-0" onClick={(e) => e.stopPropagation()}>
-        <TaskStatusDropdown 
-          currentStatus={(isCompleting ? 'complete' : task.status) as TaskStatus}
-          onStatusChange={(newStatus) => {
-            if (newStatus === 'complete' && task.status !== 'complete') {
-              setIsCompleting(true);
-              setTimeout(() => {
-                onStatusChange(task._id, newStatus);
-              }, 2000);
-            } else {
-              onStatusChange(task._id, newStatus);
-            }
-          }}
-        >
-          <button className={cn(
-            "px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wide uppercase focus:outline-none transition-colors",
-            isDone 
-              ? "bg-emerald-500/10 text-emerald-400/70 hover:bg-emerald-500/15" 
-              : task.status === 'in_progress'
-                ? "bg-blue-500/10 text-blue-400/70 hover:bg-blue-500/15"
-                : task.status === 'review'
-                  ? "bg-amber-500/10 text-amber-400/70 hover:bg-amber-500/15"
-                  : task.status === 'blocked'
-                    ? "bg-rose-500/10 text-rose-400/70 hover:bg-rose-500/15"
-                    : "bg-white/[0.03] text-white/30 hover:bg-white/[0.06]"
-          )}>
-            {isDone ? 'COMPLETE' : task.status === 'in_progress' ? 'IN PROGRESS' : task.status === 'review' ? 'REVIEW' : task.status === 'blocked' ? 'BLOCKED' : 'TO DO'}
-          </button>
-        </TaskStatusDropdown>
-      </div>
+        {status !== 'pending' && status !== 'complete' && (
+          <TaskStatusDropdown currentStatus={status as TaskStatus} onStatusChange={changeStatus}>
+            <button type="button" className={cn(metaBtn, 'text-[var(--rc-ink-2)]')} aria-label={`Status: ${STATUS_WORDS[status]}. Change it`}>
+              <span className="rounded-[4px] bg-[var(--rc-surface-2)] px-1.5 py-[1px] text-[12.5px] font-medium">{STATUS_WORDS[status]}</span>
+            </button>
+          </TaskStatusDropdown>
+        )}
 
-      {/* 5. Priority */}
-      <div className="flex items-center justify-start shrink-0" onClick={(e) => e.stopPropagation()}>
-        <PriorityDropdown 
-           currentPriority={task.priority as "high" | "medium" | "low" | undefined}
-           onPriorityChange={(priority) => onUpdateTask(task._id, { priority: priority as "high" | "medium" | "low" | undefined })}
+        <PriorityDropdown
+          currentPriority={task.priority as 'high' | 'medium' | 'low' | undefined}
+          onPriorityChange={(p) => onUpdateTask(task._id, { priority: p as 'high' | 'medium' | 'low' | undefined })}
         >
-          <button className={cn(
-             "p-1 rounded hover:bg-white/[0.04] transition-colors focus:outline-none",
-           "font-medium uppercase tracking-wider text-[9px]", 
-             priorityConfig.color
-          )}>
-            {task.priority || 'Normal'}
+          <button
+            type="button"
+            className={cn(metaBtn, (task.priority as string | undefined) === 'urgent' ? 'text-[var(--rc-attn)]' : 'text-[var(--rc-ink-3)]', !priority && 'max-sm:hidden opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
+            aria-label={priority ? `Priority: ${priority}. Change it` : 'Set a priority'}
+          >
+            <PriorityBars priority={task.priority} />
+            {priority && <span className="sm:w-[52px]">{priority}</span>}
           </button>
         </PriorityDropdown>
       </div>

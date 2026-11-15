@@ -1,74 +1,59 @@
 'use client';
 
 import React from 'react';
-import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Caveat } from 'next/font/google';
 
 const caveat = Caveat({ subsets: ['latin'], weight: ['400', '700'] });
 import { motion, useScroll, useTransform } from "framer-motion";
-import { 
-  Sparkles, 
+import {
+  Sparkles,
   Keyboard,
   Github,
   FileText,
   CheckSquare,
   LayoutList,
-  Share2,
-  Maximize,
-  Network
+  Network,
+  Ban,
+  Database,
+  Bot,
+  Code2,
+  Route,
 } from 'lucide-react';
 import { Button } from '@/components/ui-base/Button';
 import { Logo } from '@/components/brand/Logo';
-import { cn } from '@/lib/utils';
 import { CinematicDocsViewer } from '@/components/brand/CinematicDocsViewer';
 import { LandingTaskDemo } from '@/components/brand/LandingTaskDemo';
-import { LandingSlideViewer } from '@/components/brand/LandingSlideViewer';
-import { LandingEmailViewer } from '@/components/brand/LandingEmailViewer';
-import { CRDT_SLIDE_PAYLOAD } from './SlideDemoPayload';
 
-// Lazy-load heavy below-the-fold components
-const CinematicSecurity = dynamic(
-  () => import('@/components/brand/CinematicSecurity').then(m => ({ default: m.CinematicSecurity })),
-  { ssr: false }
-);
+// Only what is true of the app today (STATE §8 "the honest-copy task", 11-15): no claims of
+// encryption, teams, slides or email, no invented users.
+const AGENT_POINTS = [
+  {
+    icon: Network,
+    title: 'Notes with real diagrams',
+    text: 'Agents write Mermaid; Recollect lays out the boxes and arrows, and keeps your own changes when they edit again.',
+  },
+  {
+    icon: LayoutList,
+    title: 'The record writes itself',
+    text: 'Study sessions, quiz scores and weak spots come in from your chats, so nothing is a log you have to keep.',
+  },
+  {
+    icon: Route,
+    title: 'One plan everywhere',
+    text: 'Your goals, study paths and the week are the same in the app and in every agent you connect.',
+  },
+];
 
-
-// --- Media Placeholder Component ---
-function MediaPlaceholder({ type, prompt, height = "h-64 md:h-96" }: { type: string, prompt: string, height?: string }) {
-    return (
-        <div className={cn("relative w-full rounded-2xl border border-border bg-card overflow-hidden shadow-2xl group", height)}>
-            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(68,68,68,.2)_50%,transparent_75%,transparent_100%)] bg-[length:250%_250%,100%_100%] animate-[shimmer_3s_infinite] opacity-30 dark:opacity-100" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
-                <div className="bg-background/80 backdrop-blur-md p-4 rounded-xl border border-border max-w-md">
-                    <span className="text-xs font-mono text-primary mb-2 block uppercase tracking-widest">{type} Placeholder</span>
-                    <p className="text-sm text-muted-foreground italic">"{prompt}"</p>
-                </div>
-            </div>
-             {/* Abstract Gradient generic bg */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 opacity-50" />
-        </div>
-    );
-}
-
-// --- Feature Badge ---
-function FeatureBadge({ icon: Icon, text, color = "blue" }: { icon: any, text: string, color?: string }) {
-    const colorStyles = {
-        blue: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-        purple: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-        amber: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-        emerald: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-        rose: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-    }[color] || "bg-gray-500/10 text-gray-500";
-
-    return (
-        <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border mb-6", colorStyles)}>
-            <Icon size={14} />
-            <span>{text}</span>
-        </div>
-    );
-}
+const DATA_POINTS = [
+  { icon: Ban, text: 'No ads, no selling your data, no trackers.' },
+  {
+    icon: Database,
+    text: 'Your notes live in the app’s database. They are not end-to-end encrypted: the server reads them so search, revisions and sharing work.',
+  },
+  { icon: Bot, text: 'When you use an AI feature, the text it needs goes to Anthropic’s API to write the answer.' },
+  { icon: Code2, text: 'The code is open source under the MIT License: read every line, or run your own copy.' },
+];
 
 export default function WelcomePage() {
   const { scrollYProgress } = useScroll();
@@ -89,37 +74,13 @@ export default function WelcomePage() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-6 z-10">
-                {/* Community Doodle Widget */}
-                <div className="hidden lg:flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                        {[0, 1, 2].map((i) => (
-                            <div 
-                                key={i} 
-                                className="relative w-7 h-7 rounded-full border border-background bg-card overflow-hidden shadow-sm"
-                            >
-                                <img 
-                                    src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${['felix','zack','aneka'][i]}&backgroundColor=transparent`}
-                                    alt="User"
-                                    className="w-full h-full object-cover scale-150 translate-y-1"
-                                />
-                            </div>
-                        ))}
-                    </div>
-                    <div className="flex flex-col justify-center">
-                        <span className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">Community</span>
-                        <span className="text-xs font-bold text-foreground leading-none">Active Builders</span>
-                    </div>
-                </div>
-
-                <div className="w-px h-6 bg-border/50 hidden lg:block" />
-
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                   <Link href="/login" className="whitespace-nowrap text-[13px] sm:text-[14px] font-medium text-foreground hover:opacity-70 transition-opacity px-1.5 sm:px-2">
                       Log in
                   </Link>
                   <Button href="/signup" className="whitespace-nowrap shrink-0 bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-full px-4 sm:px-5 py-1.5 sm:py-2 font-medium h-9 sm:h-10 text-[13px] sm:text-[14px] shadow-sm border-none transition-colors">
-                      <span className="hidden sm:inline">Get ReCollect free</span>
-                      <span className="sm:hidden">Get Free</span>
+                      <span className="hidden sm:inline">Create an account</span>
+                      <span className="sm:hidden">Sign up</span>
                   </Button>
                 </div>
             </div>
@@ -151,35 +112,33 @@ export default function WelcomePage() {
                 
                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--primary))]/10 text-sm font-medium mt-6 mb-8 text-[hsl(var(--primary))]">
                    <Sparkles className="w-4 h-4" />
-                   Professional Knowledge Management
+                   For engineers who learn on the job
                  </div>
-                 
+
                  <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-8 leading-tight ">
-                   <span className="inline-block">Organize Your </span>
+                   <span className="inline-block">Keep what you</span>
                    <span className="inline-block bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-xl mx-2 shadow-lg">
-                     Thoughts
+                     learn
                    </span>
-                   <span className="inline-block"></span>
                    <br className="hidden sm:block" />
-                   <span className="inline-block">Amplify Your </span>
+                   <span className="inline-block">Find what you</span>
                    <span className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-xl mx-2 shadow-lg">
-                     Knowledge
+                     need
                    </span>
-                   <span className="inline-block"></span>
                  </h1>
-                 
+
                  <p className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] max-w-3xl mx-auto mb-12 leading-relaxed">
-                   ReCollect is your professional companion for capturing ideas, organizing knowledge, 
-                   and building connections between your thoughts. Never lose a brilliant idea again.
+                   Recollect brings your notes back on a short daily list, keeps your goals honest and works with the
+                   coding agents you already use. The commands you reach for every day are one click away.
                  </p>
-                 
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10 mt-8">
                     <Button
                       size="lg"
                       href="/signup"
                       className="bg-[#0070F3] hover:bg-[#0060D0] text-white rounded-md px-8 h-12 text-base font-semibold shadow-none border-none transition-colors w-full sm:w-auto"
                     >
-                      Get ReCollect free
+                      Create an account
                     </Button>
                     
                     <Button
@@ -228,7 +187,7 @@ export default function WelcomePage() {
                     style={caveat.style}
                     className="text-2xl tracking-wide text-indigo-400/90 font-semibold whitespace-nowrap"
                     >
-                    AI-powered workflow
+                    Ask AI in any doc
                     </span>
 
                     {/* Minimal heart */}
@@ -250,7 +209,7 @@ export default function WelcomePage() {
              
 
                  <p className="text-center mt-8 text-lg font-lg text-muted-foreground max-w-3xl mx-auto">
-                    Real-time collaboration, slash commands, and integrated tasks—all in one place.
+                    Live editing, slash commands, diagrams and code, and an AI that edits with you, all in one doc.
                  </p>
              </div>
         </div>
@@ -263,10 +222,10 @@ export default function WelcomePage() {
             {/* Typographic Statement */}
             <div className="space-y-2">
                 <h2 className="text-3xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)] text-foreground">
-                    The problem with modern work.
+                    Learning on the job leaks.
                 </h2>
                 <p className="text-xl md:text-xl text-muted-foreground max-w-2xl mx-auto drop-shadow-md">
-                    Too many tools. Too much noise. Not enough flow.
+                    You read it, you get it, and three weeks later it&apos;s gone.
                 </p>
             </div>
 
@@ -278,8 +237,8 @@ export default function WelcomePage() {
                          <FileText className="w-6 h-6" />
                      </div>
                      <div>
-                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Scattered Knowledge</h3>
-                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Your notes are trapped in isolated documents, making it impossible to find context when you actually need it.</p>
+                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Notes you never see again</h3>
+                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">What you learn sits in docs you never reopen, so it fades before you need it.</p>
                      </div>
                 </div>
                 {/* Problem 2 */}
@@ -288,8 +247,8 @@ export default function WelcomePage() {
                          <CheckSquare className="w-6 h-6" />
                      </div>
                      <div>
-                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Disconnected Tasks</h3>
-                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Action items live in a completely different app, creating a massive gap between planning and doing.</p>
+                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Plans that turn into guilt</h3>
+                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Rigid schedules pile up overdue items until opening the app feels like a debt.</p>
                      </div>
                 </div>
                 {/* Problem 3 */}
@@ -298,8 +257,8 @@ export default function WelcomePage() {
                          <LayoutList className="w-6 h-6" />
                      </div>
                      <div>
-                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Endless Switching</h3>
-                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Jumping between wikis, trackers, and whiteboards breaks your focus and kills momentum.</p>
+                         <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">Agents that forget</h3>
+                         <p className="text-muted-foreground text-sm mt-2 leading-relaxed">Your coding agents teach you all day, and none of it is kept anywhere you&apos;ll look again.</p>
                      </div>
                 </div>
                 
@@ -332,13 +291,13 @@ export default function WelcomePage() {
                 <div className="flex-1 space-y-4 md:space-y-5">
                      <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-foreground/70 bg-muted/50 px-3 py-1.5 rounded-lg border border-border/50">
                         <Keyboard className="w-4 h-4" /> 
-                        <span>Cmd + K</span>
+                        <span>Ctrl K</span>
                     </div>
                     <h3 className="text-2xl md:text-3xl font-bold tracking-tight font-[family-name:var(--font-inter)]">
-                        Capture at the speed of thought.
+                        Capture without leaving what you&apos;re doing.
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">
-                        Never lose flow. Open the command palette from anywhere to instantly create a task, find a note, or switch contexts without leaving your keyboard.
+                        Open it from anywhere to add a task, save a note or a link, find a saved command, or ask the AI, all from the keyboard.
                     </p>
                 </div>
                 <div className="flex-1 w-full relative">
@@ -357,313 +316,76 @@ export default function WelcomePage() {
       </section>
       
 
-      {/* --- FEATURES GRID SECTION --- */}
-      <section className="py-20 pt-5 md:pt-20 px-6 relative overflow-hidden bg-background ">
+      {/* --- YOUR AGENTS --- */}
+      <section className="py-20 px-6 relative overflow-hidden bg-background">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        
-        <div className="max-w-[1280px] mx-auto relative z-10 flex flex-col items-center">
-             
-             {/* Section Header */}
-           
-             {/* Features Layout: Desktop Grid (lg and above) */}
-             <div className="w-full hidden lg:grid grid-cols-[45%_1fr] gap-16 xl:gap-20 items-start relative">
-                 
-                 {/* MINIMAL ZIG-ZAG BOUNDARY SEPARATOR */}
-                 {/* This line visually cleaves Section 1 (Slides) from Section 2 (Email) */}
-                 <div className="absolute inset-x-0 top-[45%] right-[3%] h-[220px] pointer-events-none z-20 overflow-visible">
-                     <svg className="w-full h-full overflow-visible" fill="none" viewBox="0 0 1000 300" preserveAspectRatio="none">
-                         <defs>
-                             <linearGradient id="separator-fade" x1="0%" y1="0%" x2="100%" y2="0%">
-                                 <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
-                                 <stop offset="55%" stopColor="currentColor" stopOpacity="0.5" />
-                                 <stop offset="50%" stopColor="currentColor" stopOpacity="0.5" />
-                                 <stop offset="45%" stopColor="currentColor" stopOpacity="0.5" />
-                                 <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                             </linearGradient>
-                         </defs>
-                         {/* TAPERED FILLED PATH: Thick in the center (bezier area), razor-thin at both ends */}
-                         <path 
-                             d="M 0 51.1 
-                                L 440 51.5 
-                                Q 498 51.5 498 100 
-                                V 200 
-                                Q 498 248.5 550 248.5 
-                                L 1000 248.1
-                                L 1000 249.9 
-                                L 560 251.5 
-                                Q 502 251.5 502 210 
-                                V 110 
-                                Q 502 48.5 450 48.5 
-                                L 0 48.9 Z" 
-                             className="text-neutral-300 dark:text-neutral-700"
-                             fill="url(#separator-fade)"
-                         />
-                     </svg>
-                 </div>
-                 
-                 {/* Left Column */}
-                 <div className="w-full flex flex-col gap-4 xl:gap-20">
-                     {/* Feature 1 Text (Slides) */}
-                     <div className="w-full flex flex-col items-start relative z-10  bt-[#242424]">
-                         <h3 className="text-3xl md:text-[2.5rem] font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
-                             Break free from strict rows.
-                         </h3>
-                         <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10">
-                             Slide apps trap you in linear boxes. Whiteboards leave you with unstructured chaos. We give you the ultimate spatial canvas: place powerful text editors anywhere without sacrificing structure.
-                         </p>
-                         
-                         {/* Value Propositions List */}
-                         <ul className="space-y-6">
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-                                    <Network className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">Spatial Workflows</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Connect different blocks to create powerful workflows. Drop in dynamic embeds and rich images exactly where you want them.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
-                                    <Maximize className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">Infinite Canvas & Slides</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Never hit a wall again. Enjoy unlimited space and endless slides, completely boundary-free.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">AI-Powered Generation</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Hit a creative block? Our deeply integrated AI can perfectly generate and arrange structured slides for you in seconds.</p>
-                                </div>
-                            </li>
-                         </ul>
-                     </div>
-
-                     {/* Feature 2 Visual (Email) */}
-                     <div className="w-full relative flex justify-start">
-                         {/* Subtle Glow Behind the visual */}
-                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[90%] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08)_0%,transparent_70%)] -z-10 pointer-events-none rounded-full blur-3xl" />
-                         
-                         <div className="relative w-full max-w-[600px] h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-1 transition-transform duration-500 ease-out bg-[#262626] group">
-                             <div className="w-full h-full bg-[#262626]">
-                                <LandingEmailViewer />
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-
-                 {/* Right Column */}
-                 <div className="w-full flex flex-col gap-14 xl:gap-22">
-                     {/* Feature 1 Visual (Slides) */}
-                     <div className="w-full relative flex justify-end">
-                         {/* Subtle Glow Behind the visual */}
-                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.06)_0%,transparent_70%)] -z-10 pointer-events-none rounded-full blur-3xl" />
-                         
-                         <div className="relative w-full max-w-[800px]">
-                             <div className="relative w-full h-[450px] xl:h-[600px]  rounded-xl overflow-hidden">
-                                 <LandingSlideViewer content={CRDT_SLIDE_PAYLOAD} />
-                             </div>
-                         </div>
-                     </div>
-
-                     {/* Feature 2 Text (Email) */}
-                     <div className="w-full flex flex-col items-start relative z-10 px-4 xl:px-8 mt-12">
-                         <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
-                             AI-powered email, without switching apps.
-                         </h3>
-                         <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-                             Get instant summaries of long email chains and never lose track of a conversation. Draft context-aware replies in seconds — AI reads the thread so you don&apos;t have to.
-                         </p>
-                     </div>
-                 </div>
-             </div>
-
-             {/* Features Layout: Mobile Stack (hidden on lg and above) */}
-             <div className="w-full flex lg:hidden flex-col gap-16 md:gap-24">
-                  {/* Feature 1 */}
-                  <div className="w-full flex flex-col gap-8 md:gap-12">
-                     <div className="w-full flex flex-col items-start relative z-10">
-                         <h3 className="text-3xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
-                             Break free from strict rows.
-                         </h3>
-                         <p className="text-base text-muted-foreground leading-relaxed mb-8">
-                             Slide apps trap you in linear boxes. Whiteboards leave you with unstructured chaos. We give you the ultimate spatial canvas: place powerful text editors anywhere without sacrificing structure.
-                         </p>
-                         <ul className="space-y-6">
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-                                    <Network className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">Spatial Workflows</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Connect different blocks to create powerful workflows. Drop in dynamic embeds and rich images exactly where you want them.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
-                                    <Maximize className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">Infinite Canvas & Slides</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Enjoy unlimited space and endless slides, completely boundary-free.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-4">
-                                <div className="mt-1 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-semibold text-foreground">AI-Powered Generation</h4>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">Let AI perfectly generate and arrange structured slides for you instantly.</p>
-                                </div>
-                            </li>
-                         </ul>
-                     </div>
-                     <div className="w-full relative flex justify-center">
-                         <div className="relative w-full h-auto sm:h-[400px] overflow-visible rounded-2xl sm:rounded-none">
-                             <LandingSlideViewer content={CRDT_SLIDE_PAYLOAD} />
-                         </div>
-                     </div>
-                  </div>
-
-                  {/* Feature 2 */}
-                  <div className="w-full flex flex-col-reverse gap-8 md:gap-12">
-                     <div className="w-full relative flex justify-center">
-                         <div className="relative w-full max-w-[600px] h-[400px] sm:h-[500px] overflow-hidden rounded-[16px] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] bg-[#262626] ">
-                            
-                             <div className="w-full h-full  bg-[#262626]">
-                                <LandingEmailViewer />
-                             </div>
-                             <div className="absolute bottom-0 left-0 w-full h-[80px] bg-gradient-to-t from-[#262626] via-[#262626]/80 to-transparent pointer-events-none" />
-                         </div>
-                     </div>
-                     <div className="w-full flex flex-col items-start relative z-10">
-                         <h3 className="text-3xl font-bold tracking-tight text-foreground mb-4 font-[family-name:var(--font-inter)] leading-tight">
-                             AI-powered email, without switching apps.
-                         </h3>
-                         <p className="text-base text-muted-foreground leading-relaxed">
-                             Get instant summaries of long email chains and never lose track of a conversation.
-                         </p>
-                     </div>
-                  </div>
-             </div>
+        <div className="max-w-5xl mx-auto space-y-10 relative z-10">
+          <div className="space-y-4 max-w-2xl">
+            <h2 className="text-3xl md:text-[2.5rem] font-bold tracking-tight leading-tight text-foreground font-[family-name:var(--font-inter)]">
+              Your agents keep it up to date.
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              Recollect has its own MCP server. Claude Code and other agents read your plan, write notes with real diagrams and log what
+              you studied, through a token you can end at any time. Every change they make shows on Home and can be undone.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {AGENT_POINTS.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="p-6 rounded-2xl bg-[#FBFBFA] dark:bg-zinc-900/50 border border-border shadow-sm text-left flex flex-col items-start space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-foreground font-[family-name:var(--font-inter)] tracking-tight">{title}</h3>
+                  <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-
-      {/* --- PRIVACY & SECURITY --- */}
-      <CinematicSecurity />
-
-      {/* --- CONSOLIDATION & SAVINGS --- */}
-      <section className="py-16 md:py-24 pt-12 md:pt-20 px-4 md:px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 overflow-hidden border-t border-border/40">
-        <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-10 mb-8 md:mb-12">
-                <div className="space-y-4 max-w-2xl">
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight font-[family-name:var(--font-inter)]">
-                        More workflow.<br/> Zero invoices.
-                    </h2>
-                    <p className="text-lg text-muted-foreground">
-                        Stop paying for fragmented tools. Bring your entire team's stack under one roof for free while we are in beta.
-                    </p>
+      {/* --- WHAT HAPPENS TO YOUR NOTES --- */}
+      <section className="py-16 md:py-20 px-6 relative z-10 bg-[#F4F4F2] dark:bg-zinc-900/40 border-t border-border/40">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_1.3fr] gap-8 md:gap-12 items-start">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-[2.5rem] font-bold tracking-tight leading-tight text-foreground font-[family-name:var(--font-inter)]">
+              What happens to your notes.
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">Said plainly, so you can decide.</p>
+          </div>
+          <ul className="space-y-5">
+            {DATA_POINTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-start gap-4">
+                <div className="mt-0.5 shrink-0 bg-background p-2 rounded-lg border border-border">
+                  <Icon className="w-5 h-5 text-foreground/70" />
                 </div>
-            </div>
-
-            <div className="w-full bg-[#FBFBFA] dark:bg-black/40 border border-border/80 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 md:gap-y-6 gap-x-6 md:gap-x-8 mb-6 md:mb-10 pb-6 md:pb-10 border-b border-border/60">
-                      {/* Col 1 */}
-                      <div className="space-y-4 text-sm font-medium">
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Docs & Notes Wiki <span className="text-muted-foreground/60 font-normal ml-1">~$10/user</span></span>
-                           </label>
-                      </div>
-                      {/* Col 2 */}
-                      <div className="space-y-4 text-sm font-medium">
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Integrated Task Tracker <span className="text-muted-foreground/60 font-normal ml-1">~$10/user</span></span>
-                           </label>
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Presentations <span className="text-muted-foreground/60 font-normal ml-1">~$10/user</span></span>
-                           </label>
-                      </div>
-                      {/* Col 3 */}
-                      <div className="space-y-4 text-sm font-medium">
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Cloud Storage <span className="text-muted-foreground/60 font-normal ml-1">~$12/user</span></span>
-                           </label>
-                           <label className="flex items-center gap-3 cursor-pointer group">
-                               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-border text-emerald-500 focus:ring-emerald-500 pointer-events-none" />
-                               <span className="text-foreground">Workflow Automation <span className="text-muted-foreground/60 font-normal ml-1">~$8/user</span></span>
-                           </label>
-                      </div>
-                 </div>
-
-                 {/* Bottom: Totals Comparison */}
-                 <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-8 items-center p-6 bg-[#F4F4F2] dark:bg-zinc-900 rounded-2xl border border-border/40">
-                     <div className="hidden border-r border-border/50 pr-8 md:flex flex-col justify-center">
-                         <p className="text-sm font-semibold text-muted-foreground mb-1 uppercase tracking-wider">The Old Way</p>
-                         <p className="text-3xl font-black text-muted-foreground/50 line-through decoration-2 decoration-red-500/50">
-                             ~$65/mo
-                         </p>
-                         <p className="text-xs text-muted-foreground mt-1">per user, fragmented</p>
-                     </div>
-                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                         <div>
-                             <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1 uppercase tracking-wider">ReCollect Full Stack</p>
-                             <div className="flex items-baseline gap-2">
-                                <p className="text-5xl md:text-6xl font-black font-[family-name:var(--font-inter)] tracking-tighter text-foreground">
-                                    $0
-                                </p>
-                                <span className="text-lg font-bold text-muted-foreground">/ during beta</span>
-                             </div>
-                         </div>
-                         <Button size="lg" variant="primary" href="/signup" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
-                            Claim Free Account
-                         </Button>
-                     </div>
-                 </div>
-            </div>
-            
-            <p className="text-center text-sm text-muted-foreground mt-6">
-                * Prices based on average competitor standard-tier pricing. ReCollect is currently 100% free while in beta.
-            </p>
+                <p className="text-base text-foreground/85 leading-relaxed">{text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
       {/* --- FOOTER CTA --- */}
       <section className="relative py-24 md:py-30 md:pb-20 pb-10 px-6 border-t border-border overflow-hidden bg-background">
-         <div className="absolute inset-0 -z-10 bg-background">
-             <div className="absolute inset-0 opacity-40 mix-blend-overlay">
-                <MediaPlaceholder type="Background" prompt="Deep space stars, subtle constellations, dark purple nebula. Atmospheric." height="h-full" />
-             </div>
-             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-         </div>
-
          <div className="max-w-4xl mx-auto text-center space-y-6 md:space-y-10 relative z-10">
-            <h2 className="text-4xl md:text-7xl font-bold tracking-tighter text-foreground drop-shadow-2xl font-[family-name:var(--font-inter)]">
-                Ready to organize <br/> your mind?
+            <h2 className="text-4xl md:text-7xl font-bold tracking-tighter text-foreground font-[family-name:var(--font-inter)]">
+                Start keeping <br/> what you learn.
             </h2>
-            <p className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto drop-shadow-md">
-                Join thousands of thinkers, builders, and creators who have made ReCollect their digital home.
+            <p className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+                Built by one engineer for his own learning. You&apos;re welcome to use it too.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 pt-6 md:pt-8">
                 <Button size="lg" variant="primary" href="/signup" className="h-16 px-12 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
-                    Get Started Free
+                    Create an account
                 </Button>
                 <Button size="lg" variant="outline" href="/login" className="h-16 px-12 text-xl rounded-full bg-card/50 backdrop-blur-md border-border hover:bg-card text-foreground">
-                    Sign In
+                    Log in
                 </Button>
             </div>
-            <div className="pt-10 flex items-center justify-center gap-8 text-sm text-muted-foreground font-medium">
-                <span>© 2026 ReCollect Inc.</span>
+            <div className="pt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground font-medium">
+                <span>© 2026 Recollect</span>
                 <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
                 <a href="https://www.linkedin.com/in/rinkal-kumar-46130a329" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
