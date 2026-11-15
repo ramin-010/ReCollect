@@ -384,7 +384,8 @@ export const useTaskInput = (
       priority,
       status,
       dueDate: finalDueDate?.toISOString(),
-      reminderDate: currentReminder?.toISOString(),
+      // A suggested date saved without its chip gets the chip's reminder (10 minutes before).
+      reminderDate: (currentReminder ?? (!confirmedDueDate && suggestedDate ? subMinutes(suggestedDate, 10) : null))?.toISOString(),
       subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
       // Tag names; todoApi / workspaceTodoApi forward them as `tags` (JSON, or a JSON string in multipart).
       tags: selectedLabels.length > 0 ? tagNamesForPayload(selectedLabels) : undefined,
@@ -530,7 +531,9 @@ export const useTaskInput = (
       inputRef.current?.blur();
     }
     
-    if ((e.key === 'Tab' || e.key === 'Enter') && suggestedDate && !e.shiftKey) {
+    // Tab takes a suggested date as a chip; Enter saves at once with it (one Enter, as typed: the
+    // save uses the suggestion, its clean title and the same reminder as the chip would).
+    if (e.key === 'Tab' && suggestedDate && !e.shiftKey) {
       e.preventDefault();
       acceptSuggestion();
       return;

@@ -532,6 +532,19 @@ function Tools({
   );
 }
 
+/**
+ * What he did after the answer: its words may still say "tap Do it" or "Undo above" (written before
+ * he chose), so a quiet line under it says what happened since. Tapping Do it needs no line.
+ */
+function sinceWords(tools: AssistantTool[]): string | null {
+  const undone = tools.filter((t) => t.undone).length;
+  const dismissed = tools.filter((t) => t.action?.status === 'dismissed').length;
+  const parts: string[] = [];
+  if (dismissed) parts.push(dismissed === 1 ? 'dismissed the action' : `dismissed ${dismissed} actions`);
+  if (undone) parts.push(undone === 1 ? 'undid the change' : `undid ${undone} changes`);
+  return parts.length ? `Since then, you ${parts.join(' and ')}.` : null;
+}
+
 function Answer({
   message,
   busy,
@@ -548,6 +561,7 @@ function Answer({
     <div className="ask-answer">
       {steps > 0 && <Tools tools={message.tools} where={message._id} busy={busy} onUndo={onUndo} onDecide={onDecide} />}
       <AskMarkdown text={message.text} />
+      {sinceWords(message.tools) && <p className="ask-meta ask-since">{sinceWords(message.tools)}</p>}
       {message.costUsd !== null && (
         <p className="ask-meta">
           {costWords(message.costUsd)}

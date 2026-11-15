@@ -2,8 +2,7 @@ import React, { useState,useEffect, useRef, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Calendar, Flag, Tag, CheckCircle2, CheckCircle, MoreHorizontal, 
-  History, Box, CircleDot, UserCircle2, Bell, Paperclip, ListPlus, 
+  X, Calendar, Flag, Tag, CheckCircle2, CheckCircle, History, Box, CircleDot, UserCircle2, Bell, Paperclip, ListPlus, 
   Repeat, ChevronDown, CornerDownRight, Plus, Loader2, Save
 } from 'lucide-react';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
@@ -407,7 +406,6 @@ function TaskDetailContent({ task, isOpen, onClose, onUpdateTask, workspaceMembe
                       </button>
                     )}
 
-                    <button className="hover:text-[hsl(var(--foreground))] transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
                     <button onClick={onClose} className="p-1 -mr-1 hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/20 rounded transition-colors"><X className="w-5 h-5" /></button>
                   </div>
                 </div>

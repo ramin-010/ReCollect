@@ -40,6 +40,22 @@ const iconToggle = (on: boolean) =>
 /** A floating group of controls (popover surface + hairline ring + soft shadow). */
 const floatPill = 'flex items-center gap-0.5 p-[3px] rounded-[9px] bg-[hsl(var(--popover))] shadow-[0_0_0_1px_var(--border-subtle),0_6px_16px_-4px_rgba(0,0,0,0.18)]';
 const MODE_LABEL = { task: 'Task', note: 'Note', link: 'Link', find: 'Find', ask: 'Ask' } as const;
+const MODES = ['task', 'note', 'link', 'find', 'ask'] as const;
+const GOALS = ['NONE', 'WEEKLY', 'MONTHLY'] as const;
+
+/**
+ * Arrow keys between the pills of one group (the modes are tabs, the plan is a radio group): Left
+ * and Right move and choose, Home and End jump to the ends, and the focus follows the choice.
+ */
+function pillKeys<T extends string>(e: React.KeyboardEvent<HTMLElement>, list: readonly T[], current: T, choose: (value: T) => void) {
+  const i = list.indexOf(current);
+  const to = e.key === 'ArrowRight' ? (i + 1) % list.length : e.key === 'ArrowLeft' ? (i - 1 + list.length) % list.length : e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : -1;
+  if (to < 0 || !list[to]) return;
+  e.preventDefault();
+  e.stopPropagation();
+  choose(list[to]);
+  e.currentTarget.querySelectorAll<HTMLButtonElement>('button')[to]?.focus();
+}
 
 /**
  * Ctrl+K: ONE palette (LEARNING_SPEC §4). Task mode is the existing quick add (TaskInput,
@@ -53,6 +69,8 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const { addTodo } = useTodoStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<CaptureComposerHandle>(null);
+  /** Until when the mode tabs keep the focus: a mode's field focuses itself as it appears. */
+  const holdTabsUntil = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -197,10 +215,11 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
     return true;
   };
 
-  const switchMode = (next: PaletteMode) => {
+  /** `keepFocus`: chosen with the arrow keys on the tabs, so the focus stays there (no jump to the input). */
+  const switchMode = (next: PaletteMode, keepFocus = false) => {
     setMode(next);
     if (next === 'task' || next === 'find' || next === 'ask') setRevise(false);
-    if (next === 'find' || next === 'ask') return;
+    if (keepFocus || next === 'find' || next === 'ask') return;
     setTimeout(() => (next === 'task' ? inputRef.current?.focus() : composerRef.current?.focus()), 30);
   };
 
@@ -249,6 +268,15 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
             exit={phone ? { opacity: 0, y: 24 } : { opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-[101] px-4 sm:px-0 max-sm:top-auto max-sm:bottom-0 max-sm:px-3 max-sm:pt-2.5 max-sm:pb-[calc(12px+env(safe-area-inset-bottom))] max-sm:rounded-t-[14px] max-sm:bg-[var(--ui-sidebar)] max-sm:shadow-[0_-12px_32px_-10px_rgba(0,0,0,0.3)]"
+            onFocusCapture={(e) => {
+              // Just switched with the arrow keys: the new mode's field may grab the focus as it
+              // mounts (Note's title, Ask's box); the chosen tab keeps it, as tabs should.
+              if (Date.now() > holdTabsUntil.current) return;
+              const target = e.target as HTMLElement;
+              // Only a field focusing itself; a control he moves to (a pill, a button) keeps it.
+              if (!target.matches('textarea, input, [contenteditable="true"]')) return;
+              e.currentTarget.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+            }}
             onKeyDownCapture={(e) => {
               if (mode !== 'task' || e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
               const value = (e.target as HTMLInputElement).value;
@@ -263,9 +291,12 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
             {/* Top row: mode · ↻ Revise this · goal / subject · pin + attach */}
             <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <div className={floatPill} role="tablist" aria-label="Capture type">
-                  {(['task', 'note', 'link', 'find', 'ask'] as const).map((m) => (
-                    <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={pill(mode === m)}>
+                <div className={floatPill} role="tablist" aria-label="Capture type" onKeyDown={(e) => {
+                    holdTabsUntil.current = Date.now() + 300;
+                    pillKeys(e, MODES, mode, (m) => switchMode(m, true));
+                  }}>
+                  {MODES.map((m) => (
+                    <button key={m} role="tab" aria-selected={mode === m} tabIndex={mode === m ? 0 : -1} onClick={() => switchMode(m)} className={pill(mode === m)}>
                       {MODE_LABEL[m]}
                     </button>
                   ))}
@@ -285,9 +316,9 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                 </button>
                 )}
                 {mode === 'task' && (
-                  <div className={floatPill} title="Plan it for this week or this month">
-                    {(['NONE', 'WEEKLY', 'MONTHLY'] as const).map((g) => (
-                      <button key={g} onMouseDown={(e) => e.preventDefault()} onClick={() => setGoal(g)} className={pill(goal === g)}>
+                  <div className={floatPill} role="radiogroup" aria-label="When" title="Plan it for this week or this month" onKeyDown={(e) => pillKeys(e, GOALS, goal, setGoal)}>
+                    {GOALS.map((g) => (
+                      <button key={g} role="radio" aria-checked={goal === g} tabIndex={goal === g ? 0 : -1} onMouseDown={(e) => e.preventDefault()} onClick={() => setGoal(g)} className={pill(goal === g)}>
                         {g === 'NONE' ? 'Anytime' : g === 'WEEKLY' ? 'This week' : 'This month'}
                       </button>
                     ))}

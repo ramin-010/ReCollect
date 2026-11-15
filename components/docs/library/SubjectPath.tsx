@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { ArrowDown, ArrowUp, CircleCheck, CircleDashed, CircleSlash, Copy, FilePlus2, FileText, GripVertical, MoreHorizontal, Plus, Target } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleCheck, CircleDashed, CircleSlash, Copy, FilePlus2, FileText, GripVertical, MoreHorizontal, Plus, Target, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { learningApi } from '@/lib/api/learningApi';
 import { cn } from '@/lib/utils';
 import type { PathStatus, PathTopic, SubjectPath, TopicPathPatch, TopicStatus } from '@/lib/learning/types';
-import { RcButton, RcIconButton, RcMenu, RcSkel, rcScope, type MenuAction } from '@/components/rc-ui';
+import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSkel, rcScope, type MenuAction } from '@/components/rc-ui';
 import { PATH_STATUS_WORD, PathMark, studyPrompt } from '@/components/learning/PathMark';
 import { StatusCell } from './StatusCell';
 
@@ -35,6 +35,8 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const [drag, setDrag] = useState<{ id: string; slot: number } | null>(null);
+  const [removing, setRemoving] = useState<PathTopic | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
 
   // The library keys this view by subject, so a new subject starts with fresh state.
@@ -64,6 +66,22 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
     } catch {
       setPath(before);
       toast.error('That did not save. Try again.');
+    }
+  };
+
+  /** "Remove from path": the topic goes (its revisions with it); its note stays in Docs. */
+  const removeTopic = async () => {
+    if (!removing) return;
+    setRemoveBusy(true);
+    try {
+      await learningApi.deleteTopic(removing._id);
+      toast.success('Removed from the path');
+      setRemoving(null);
+      setReloads((r) => r + 1);
+    } catch {
+      toast.error('That did not save. Try again.');
+    } finally {
+      setRemoveBusy(false);
     }
   };
 
@@ -204,6 +222,7 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
                 : { label: 'Write the note', icon: <FilePlus2 className="h-4 w-4" />, onSelect: () => void writeNote(t) },
               ...(i > 0 ? [{ label: 'Move up', icon: <ArrowUp className="h-4 w-4" />, onSelect: () => moveTo(t, i - 1), separatorBefore: true }] : []),
               ...(i < n - 1 ? [{ label: 'Move down', icon: <ArrowDown className="h-4 w-4" />, onSelect: () => moveTo(t, i + 1), separatorBefore: i === 0 }] : []),
+              { label: 'Remove from path', icon: <Trash2 className="h-4 w-4" />, onSelect: () => setRemoving(t), danger: true, separatorBefore: true },
             ];
             return (
               <li
@@ -292,6 +311,16 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
         </button>
       )}
       {n === 0 && !adding && <p className="path-hint">Plan the course here one topic at a time, or ask a study chat to plan it: it can add every topic in one go.</p>}
+      <RcConfirm
+        open={removing !== null}
+        onOpenChange={(o) => !o && setRemoving(null)}
+        title={`Remove “${removing?.title ?? ''}” from the path?`}
+        body={removing?.docId ? 'Its revisions end with it. Its note stays in Docs.' : 'Nothing else goes with it.'}
+        confirmLabel="Remove from path"
+        danger
+        busy={removeBusy}
+        onConfirm={() => void removeTopic()}
+      />
     </div>
   );
 }

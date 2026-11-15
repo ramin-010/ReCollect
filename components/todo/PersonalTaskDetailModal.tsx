@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Calendar, Flag, Tag, CheckCircle2, CheckCircle, MoreHorizontal,
-  Box, CircleDot, Bell, Paperclip, ListPlus,
+  X, Calendar, Flag, Tag, CheckCircle2, CheckCircle, Box, CircleDot, Bell, Paperclip, ListPlus,
   Repeat, ChevronDown, CornerDownRight, Plus, Loader2, Save,
   FileText, LayoutTemplate, Search, Link2, Check,
 } from 'lucide-react';
@@ -321,7 +320,6 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
                       {isSaving ? 'Saving...' : 'Save'}
                     </button>
 
-                    <button className="hover:text-white transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
                     <button onClick={onClose} className="p-1 -mr-1 hover:text-white hover:bg-white/10 rounded transition-colors"><X className="w-5 h-5" /></button>
                   </div>
                 </div>

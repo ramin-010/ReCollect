@@ -154,6 +154,12 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* What he did after the answer, under its words (they may still say "tap Do it"). */
+  .ask-since {
+    margin-top: 6px;
+    color: var(--rc-ink-2);
+  }
+
   /* Tool rows: a read is a quiet line; a change says what changed and offers Undo. */
   .ask-tools {
     display: flex;
