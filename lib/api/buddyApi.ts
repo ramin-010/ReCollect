@@ -53,10 +53,21 @@ export interface MemoryCounts {
   pending: number;
 }
 
+/** Something it does by itself after his standing yes (B6). */
+export interface Routine {
+  _id: string;
+  kind: string;
+  title: string;
+  enabled: boolean;
+  runs: number;
+  lastRunDay: string | null;
+}
+
 export interface YouData {
   settings: BuddySettings;
   counts: MemoryCounts;
   memories: Memory[];
+  routines: Routine[];
 }
 
 export interface MemoryPatch {
@@ -98,6 +109,7 @@ export const buddyApi = {
   today: async (): Promise<BuddyToday> => unwrap(await axiosInstance.get('/api/buddy/today')),
   tell: async (text: string): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/tell', { text })),
   feedback: async (input: { buddyDayId: string; target: string; verdict: 'more' | 'less' }): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/feedback', input)),
+  setRoutine: async (id: string, enabled: boolean): Promise<Routine> => unwrap(await axiosInstance.patch(`/api/buddy/routines/${encodeURIComponent(id)}`, { enabled })),
   /** Everything as JSON, for a file download. */
   exportAll: async (): Promise<unknown> => unwrap(await axiosInstance.get('/api/buddy/export')),
 };

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSheet, RcSkel, RcSwitch, rcScope, type MenuAction } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
-import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPatch, type YouData } from '@/lib/api/buddyApi';
+import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPatch, type Routine, type YouData } from '@/lib/api/buddyApi';
 import './you.css';
 
 /**
@@ -514,6 +514,33 @@ function MonthLine({ pending }: { pending: number }) {
   );
 }
 
+/** Something it does by itself after his yes (B6): its switch. */
+function RoutineRow({ routine, onChanged }: { routine: Routine; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async (on: boolean) => {
+    setBusy(true);
+    try {
+      await buddyApi.setRoutine(routine._id, on);
+      onChanged();
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">{routine.title}, by itself</p>
+        <p className="rc-meta mt-0.5">
+          {routine.runs ? `Done ${routine.runs === 1 ? 'once' : `${routine.runs} times`}${routine.lastRunDay ? ` · last ${dayText(routine.lastRunDay)}` : ''}` : 'Not used yet'} · each one shows on Home with Undo
+        </p>
+      </div>
+      <RcSwitch checked={routine.enabled} disabled={busy} onChange={(on) => void toggle(on)} label={routine.title} />
+    </div>
+  );
+}
+
 /** Whether it thinks each night (AI money), and "Think now". */
 function Thinking({ enabled, onChanged }: { enabled: boolean; onChanged: () => void }) {
   const [busy, setBusy] = useState<'switch' | 'think' | null>(null);
@@ -592,6 +619,9 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
         <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
       </div>
       <Thinking enabled={data.settings.enabled} onChanged={onChanged} />
+      {data.routines.map((r) => (
+        <RoutineRow key={r._id} routine={r} onChanged={onChanged} />
+      ))}
       <MonthLine pending={data.counts.pending} />
       <div className="you-setting">
         <div className="min-w-0">
