@@ -73,6 +73,7 @@ import { createBlockDrop } from './blockDrop';
 import { RcFilePanel } from './RcFilePanel';
 import { NoCellHandle, RcTableExtend, RcTableHandle } from './RcTableHandles';
 import { DocAsk, type AskFocus, type DocAskEditor } from './DocAsk';
+import { PhoneBlockBar, type PhoneBarEditor } from './PhoneBlockBar';
 import { uploadToCloud } from '@/lib/utils/upload';
 
 type Editor = typeof docSchema.BlockNoteEditor;
@@ -305,6 +306,13 @@ const TURN_INTO = [
   ['heading', 'Toggle heading 3', ListCollapse, { level: 3, isToggleable: true }],
   ['quote', 'Quote', Quote, undefined],
 ] as const;
+
+const TURN_INTO_ENTRIES = TURN_INTO.map(([type, label, Icon, props]) => ({ type, label, Icon, props: props as Record<string, unknown> | undefined }));
+
+/** The words for a block's kind that Turn into doesn't offer (the phone bar's label). */
+const KIND_NAMES: Record<string, string> = { codeBlock: 'Code', image: 'Image', callout: 'Callout', canvas: 'Canvas', diagram: 'Diagram', table: 'Table', divider: 'Divider' };
+const kindName = (block: { type: string; props: Record<string, unknown> }) =>
+  turnIntoLabel(block) ?? (block.type === 'heading' ? `Heading ${Number(block.props['level'] ?? 1)}` : KIND_NAMES[block.type] ?? 'Block');
 
 /** The Turn into entry a block is now (a heading by its level and whether it folds). */
 function turnIntoLabel(block: { type: string; props: Record<string, unknown> } | undefined): string | undefined {
@@ -846,6 +854,19 @@ export function LabEditor({
             {editable && <TableHandlesController tableHandle={RcTableHandle as never} extendButton={RcTableExtend as never} tableCellHandle={NoCellHandle} />}
           </BlockNoteViewRaw>
           {ask && docId && <DocAsk key={ask.key} editor={editor as unknown as DocAskEditor} ydoc={ydoc} docId={docId} focus={ask} onClose={closeAsk} />}
+          {editable && !ask && (
+            <PhoneBlockBar
+              editor={editor as unknown as PhoneBarEditor}
+              root={rootRef}
+              turnInto={TURN_INTO_ENTRIES}
+              kindOf={kindName}
+              onTurn={(block, type, props) => {
+                if (isToggleKind(type, props)) openToggle(block.id);
+                editor.updateBlock(block.id, { type, props } as never);
+              }}
+              onAsk={canAsk ? openAsk : null}
+            />
+          )}
         </div>
       </AskContext.Provider>
     </BlockDocContext.Provider>

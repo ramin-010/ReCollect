@@ -42,7 +42,7 @@ export interface AssistantThreadFull extends AssistantThread {
   messages: AssistantMessage[];
 }
 
-export type TurnStop = 'done' | 'rounds' | 'cap' | 'error';
+export type TurnStop = 'done' | 'rounds' | 'cap' | 'error' | 'stopped';
 
 /** What he points at inside a doc: the selected blocks or the cursor's, and the selected words. */
 export interface DocAskFocus {
@@ -53,6 +53,8 @@ export interface DocAskFocus {
 export interface StreamHandlers {
   onThread?: (thread: { _id: string; title: string; docId?: string | null }) => void;
   onTool?: (tool: AssistantTool) => void;
+  /** The model's words as they arrive; a new round (after its tools) starts its words again. */
+  onDelta?: (delta: { text: string; round: number }) => void;
   onDone?: (done: { message: AssistantMessage; stopped: TurnStop; rounds: number }) => void;
 }
 
@@ -88,6 +90,10 @@ export const assistantApi = {
   },
   async deleteThread(id: string): Promise<void> {
     await axiosInstance.delete(`/api/assistant/threads/${id}`);
+  },
+  /** His Stop: the running turn ends; its stream still sends done (stopped: "stopped"). */
+  async stop(threadId: string): Promise<boolean> {
+    return (data(await axiosInstance.post(`/api/assistant/threads/${threadId}/stop`)) as { stopped: boolean }).stopped;
   },
 
   /**
@@ -129,6 +135,7 @@ export const assistantApi = {
       const value = JSON.parse(payload);
       if (event === 'thread') handlers.onThread?.(value);
       else if (event === 'tool') handlers.onTool?.(value);
+      else if (event === 'delta') handlers.onDelta?.(value);
       else if (event === 'done') {
         finished = true;
         handlers.onDone?.(value);

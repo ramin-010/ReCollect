@@ -278,6 +278,14 @@
     color: var(--rc-icon);
     animation: ask-spin 900ms linear infinite;
   }
+  /* The words while it works, and Stop at the line's end. */
+  .ask-working-words {
+    flex: 1;
+    min-width: 0;
+  }
+  .ask-answer > .ask-md + .ask-working {
+    margin-top: 8px;
+  }
   .ask-failed {
     display: flex;
     flex-wrap: wrap;

@@ -29,6 +29,7 @@ import {
   ScanSearch,
   Shrink,
   Sparkles,
+  Square,
   SpellCheck,
   TextQuote,
   Undo2,
@@ -110,6 +111,11 @@ interface Turn {
   message: AssistantMessage | null;
   stopped?: TurnStop;
   error: string | null;
+  /** The model's words of its current step, as they arrive (a new step starts them again). */
+  streamed?: string;
+  round?: number;
+  /** He pressed Stop and the turn is ending. */
+  stopping?: boolean;
 }
 
 const flatIds = (blocks: readonly Block[]): string[] => blocks.flatMap((b) => [b.id, ...flatIds(b.children ?? [])]);
@@ -198,6 +204,8 @@ export function DocAsk({
   const [phase, setPhase] = useState<'idle' | 'working' | 'done'>('idle');
   const [turn, setTurn] = useState<Turn | null>(null);
   const [threadId, setThreadId] = useState<string | null>(null);
+  // The running turn's thread, for Stop (set by the stream before any words arrive).
+  const threadRef = useRef<string | null>(null);
   // Blocks the AI added, and blocks it changed in place, while this box is open.
   const [made, setMade] = useState<string[]>([]);
   const [touched, setTouched] = useState<string[]>([]);
@@ -314,6 +322,30 @@ export function DocAsk({
     [phase, onClose, anchorId],
   );
 
+  /** His Stop: the turn ends where it is; what it already did stays, each change with its Undo. */
+  const stop = useCallback(() => {
+    const id = threadRef.current;
+    if (!id) return;
+    setTurn((t) => (t && !t.stopping ? { ...t, stopping: true } : t));
+    void assistantApi.stop(id).catch(() => {
+      setTurn((t) => (t ? { ...t, stopping: false } : t));
+      toast.error("It couldn't be stopped. It will finish on its own.");
+    });
+  }, []);
+
+  // While it writes the line is gone, so Esc is heard on the whole page (before the editor's own Esc).
+  useEffect(() => {
+    if (phase !== 'working') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      stop();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [phase, stop]);
+
   // A click outside keeps what was written and closes the box (never while it writes).
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -347,9 +379,13 @@ export function DocAsk({
           ...(threadId ? { threadId } : {}),
         },
         {
-          onThread: (t) => setThreadId(t._id),
+          onThread: (t) => {
+            threadRef.current = t._id;
+            setThreadId(t._id);
+          },
           onTool: (tool) => setTurn((t) => (t ? { ...t, tools: [...t.tools, tool] } : t)),
-          onDone: ({ message, stopped }) => setTurn((t) => (t ? { ...t, message, stopped } : t)),
+          onDelta: ({ text: piece, round }) => setTurn((t) => (t ? { ...t, streamed: t.round === round ? `${t.streamed ?? ''}${piece}` : piece, round } : t)),
+          onDone: ({ message, stopped }) => setTurn((t) => (t ? { ...t, message, stopped, stopping: false } : t)),
         },
       );
     } catch (err) {
@@ -449,6 +485,8 @@ export function DocAsk({
   };
 
   const changed = live.length > 0;
+  // He stopped it: what it said so far shows; with no change made, Close or Try again (never "Insert below" a half answer).
+  const halted = turn?.stopped === 'stopped';
   // A failed call, or a turn the engine stopped (the cap, a model error): said in the box, never inserted.
   const failed = turn?.error ?? (turn?.stopped === 'error' || turn?.stopped === 'cap' ? answer || 'It stopped before it finished.' : null);
   const starters = startersFor(focus);
@@ -470,6 +508,7 @@ export function DocAsk({
   const main = () => {
     if (failed && turn) void send(turn.text, { shown: turn.prompt });
     else if (changed) close(true);
+    else if (halted) close(true);
     else if (answer) void insertAnswer();
     else close(true);
   };
@@ -505,8 +544,8 @@ export function DocAsk({
         data-phase={phase}
         style={{ top: top ?? 0, visibility: top === null ? 'hidden' : undefined }}
         onKeyDown={(e) => {
-          // Esc closes from anywhere in the box (the line, a button), back to the doc.
-          if (e.key === 'Escape') {
+          // Esc closes from anywhere in the box (the line, a button), back to the doc; while it works, Esc stops it.
+          if (e.key === 'Escape' && phase !== 'working') {
             e.preventDefault();
             close(true);
           }
@@ -526,11 +565,20 @@ export function DocAsk({
                 )}
               </div>
             )}
+            {/* The working line (and its Stop) stays put above the words as they arrive. */}
             {phase === 'working' && (
-              <p className="doc-ask-working">
+              <div className="doc-ask-working">
                 <LoaderCircle className="doc-ask-spin" strokeWidth={1.75} aria-hidden />
-                {steps.some((t) => t.level === 2 && t.ok) ? 'Still writing…' : 'Writing…'}
-              </p>
+                <span className="doc-ask-working-words">{turn.stopping ? 'Stopping…' : steps.some((t) => t.level === 2 && t.ok) ? 'Still writing…' : 'Writing…'}</span>
+                <RcButton variant="quiet" size="sm" className="doc-ask-stop" icon={<Square aria-hidden fill="currentColor" />} disabled={!!turn.stopping} onClick={stop} aria-keyshortcuts="Escape">
+                  Stop
+                </RcButton>
+              </div>
+            )}
+            {phase === 'working' && turn.streamed?.trim() && (
+              <div className="doc-ask-answer doc-ask-answer--streaming">
+                <AskMarkdown text={turn.streamed} />
+              </div>
             )}
             {phase === 'done' && failed && (
               <p className="doc-ask-failed">
@@ -558,6 +606,15 @@ export function DocAsk({
                         Close
                       </RcButton>
                       <RcButton variant="outline" size="sm" icon={<RotateCw aria-hidden />} disabled={!!busy} onClick={main}>
+                        Try again
+                      </RcButton>
+                    </>
+                  ) : halted && !changed ? (
+                    <>
+                      <RcButton variant="quiet" size="sm" disabled={!!busy} onClick={() => close(true)}>
+                        Close
+                      </RcButton>
+                      <RcButton variant="outline" size="sm" icon={<RotateCw aria-hidden />} disabled={!!busy} onClick={() => turn && void send(turn.text, { shown: turn.prompt })}>
                         Try again
                       </RcButton>
                     </>

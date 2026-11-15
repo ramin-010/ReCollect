@@ -828,3 +828,119 @@ html.light .rc,
   height: 16px;
   color: var(--rc-ink-2);
 }
+
+/* The block handle on a phone (PhoneBlockBar.tsx): a bar on the keyboard while he edits on a touch
+   screen. The float surface, a hairline above, 44 px targets; its menus rise from it as a sheet. */
+.phone-block-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: 2px 6px;
+  background: var(--rc-surface-float);
+  box-shadow: 0 -1px 0 var(--rc-line);
+  font-family: var(--rc-font);
+}
+.phone-block-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--rc-ink-2);
+  -webkit-tap-highlight-color: transparent;
+}
+.phone-block-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+}
+.phone-block-btn:active,
+.phone-block-btn[aria-expanded='true'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+.phone-block-btn:disabled {
+  opacity: 0.4;
+}
+.phone-block-kind {
+  padding: 0 6px 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rc-ink-1);
+  white-space: nowrap;
+}
+.phone-block-kind svg {
+  width: 16px;
+  height: 16px;
+  color: var(--rc-icon);
+}
+.phone-block-sep {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--rc-line);
+}
+.phone-block-bar > .phone-block-btn:last-child {
+  margin-left: auto;
+}
+.phone-block-sheet {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: var(--rc-r-xl);
+  background: var(--rc-surface-float);
+  box-shadow: var(--rc-shadow-float);
+  animation: lab-pop 200ms ease;
+}
+.phone-block-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--rc-ink-1);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.phone-block-row svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--rc-icon);
+  stroke-width: 1.75;
+}
+.phone-block-row:active {
+  background: var(--rc-hover);
+}
+.phone-block-row[aria-checked='true'] {
+  background: var(--rc-selected);
+}
+.phone-block-row--danger,
+.phone-block-row--danger svg {
+  color: var(--rc-danger);
+}
+/* The bottom tab bar steps aside while the block bar shows. */
+body.doc-block-bar .phone-tabs {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-block-sheet {
+    animation: none;
+  }
+}

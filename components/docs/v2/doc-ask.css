@@ -118,6 +118,18 @@
   font-size: 14px;
   color: var(--rc-ink-2);
 }
+.doc-ask-working-words {
+  flex: 1;
+  min-width: 0;
+}
+/* Stop: quiet, at the line's end, while it writes (Esc does the same). */
+.doc-ask-stop {
+  flex-shrink: 0;
+}
+/* The words as they arrive, under the working line (which stays put). */
+.doc-ask-answer--streaming {
+  margin-top: 6px;
+}
 .doc-ask-spin {
   width: 16px;
   height: 16px;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, LoaderCircle, MessageSquareText, PanelLeft, RotateCw, SquarePen, Trash2, CircleAlert, X } from 'lucide-react';
+import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, LoaderCircle, MessageSquareText, PanelLeft, RotateCw, Square, SquarePen, Trash2, CircleAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RcButton, RcConfirm, RcIconButton, RcSkel, rcScope } from '@/components/rc-ui';
 import { FadeText } from '@/components/rc-ui/FadeText';
@@ -26,6 +26,12 @@ interface Pending {
   error: string | null;
   /** The stream had begun: his message is kept on the server. */
   kept: boolean;
+  /** The model's words of its current step, as they arrive (a new step starts them again). */
+  streamed?: string;
+  round?: number;
+  /** The thread it runs in (for Stop), and whether he pressed it. */
+  threadId?: string;
+  stopping?: boolean;
 }
 
 const STARTERS = [
@@ -147,6 +153,15 @@ export function AskPage() {
 
   const focusInput = () => setTimeout(() => inputRef.current?.focus(), 30);
 
+  /** His Stop: the turn ends where it is; what it did stays (each change with its Undo), and the answer comes as usual. */
+  const stopTurn = useCallback((threadId: string) => {
+    setPending((p) => (p ? { ...p, stopping: true } : p));
+    void assistantApi.stop(threadId).catch(() => {
+      setPending((p) => (p ? { ...p, stopping: false } : p));
+      toast.error("It couldn't be stopped. It will finish on its own.");
+    });
+  }, []);
+
   const send = useCallback(
     async (raw: string, opts: { retry?: boolean } = {}) => {
       const text = raw.trim();
@@ -161,7 +176,7 @@ export function AskPage() {
           { ...(threadId ? { threadId } : {}), text },
           {
             onThread: (t) => {
-              setPending((p) => (p ? { ...p, kept: true } : p));
+              setPending((p) => (p ? { ...p, kept: true, threadId: t._id } : p));
               if (!threadId) {
                 threadId = t._id;
                 madeHere.current = t._id;
@@ -180,6 +195,11 @@ export function AskPage() {
               const follow = nearEnd();
               setPending((p) => (p ? { ...p, tools: [...p.tools, tool] } : p));
               if (follow) requestAnimationFrame(() => scrollToEnd(true));
+            },
+            onDelta: ({ text: piece, round }) => {
+              const follow = nearEnd();
+              setPending((p) => (p ? { ...p, streamed: p.round === round ? `${p.streamed ?? ''}${piece}` : piece, round } : p));
+              if (follow) requestAnimationFrame(() => scrollToEnd(false));
             },
             onDone: ({ message }) => {
               const follow = nearEnd();
@@ -440,10 +460,19 @@ export function AskPage() {
                               </RcButton>
                             </div>
                           ) : (
-                            <p className="ask-working">
-                              <LoaderCircle className="ask-working-icon" strokeWidth={1.75} aria-hidden />
-                              Working…
-                            </p>
+                            <>
+                              <div className="ask-working">
+                                <LoaderCircle className="ask-working-icon" strokeWidth={1.75} aria-hidden />
+                                <span className="ask-working-words">{pending.stopping ? 'Stopping…' : 'Working…'}</span>
+                                {pending.threadId && (
+                                  <RcButton size="sm" variant="quiet" icon={<Square fill="currentColor" />} disabled={!!pending.stopping} onClick={() => stopTurn(pending.threadId!)}>
+                                    Stop
+                                  </RcButton>
+                                )}
+                              </div>
+                              {/* The words as they arrive, under the working line (which stays put, Stop with it). */}
+                              {pending.streamed?.trim() && <AskMarkdown text={pending.streamed} />}
+                            </>
                           )}
                         </div>
                       </>
