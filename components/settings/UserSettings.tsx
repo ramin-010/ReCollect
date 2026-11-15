@@ -10,9 +10,10 @@ import { Card } from '@/components/ui-base/Card';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
 import { ContentCard } from '@/components/content/ContentCard';
-import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft, Lock, KeyRound, CheckCircle2, X, Edit, Camera, LogOut, Bot, Gauge } from 'lucide-react';
+import { User, Settings, Mail, Bell, Archive, Heart, Save, ArrowLeft, Lock, KeyRound, CheckCircle2, X, Edit, Camera, LogOut, Bot, Gauge, Smartphone } from 'lucide-react';
 import { AgentTokens } from './AgentTokens';
 import { AiSettings } from './AiSettings';
+import { PhoneAppSettings } from './PhoneAppSettings';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
 import { useViewStore } from '@/lib/store/viewStore';
@@ -22,7 +23,7 @@ import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
 import { features } from '@/lib/features';
 
-type TabType = 'profile' | 'agents' | 'ai' | 'archived' | 'favorites';
+type TabType = 'profile' | 'agents' | 'ai' | 'phone' | 'archived' | 'favorites';
 type PasswordChangeStep = 'idle' | 'sending-otp' | 'otp-sent' | 'verifying' | 'verified' | 'changing';
 
 export function UserSettings() {
@@ -464,6 +465,7 @@ export function UserSettings() {
     { id: 'profile' as TabType, label: 'Profile', icon: User },
     { id: 'agents' as TabType, label: 'Agents', icon: Bot },
     { id: 'ai' as TabType, label: 'AI', icon: Gauge },
+    { id: 'phone' as TabType, label: 'Phone app', icon: Smartphone },
     // Archived / Favorites list legacy content notes: hidden while `content` is off (lib/features.ts).
     ...(features.content
       ? [
@@ -582,6 +584,11 @@ export function UserSettings() {
                       {activeTab === 'ai' && (
                         <p className="text-[14px] text-[hsl(var(--muted-foreground))] mt-1">
                           Recall questions and grading, and what they cost
+                        </p>
+                      )}
+                      {activeTab === 'phone' && (
+                        <p className="text-[14px] text-[hsl(var(--muted-foreground))] mt-1">
+                          Your day on your Android home and lock screen
                         </p>
                       )}
                       {activeTab === 'archived' && (
@@ -967,6 +974,12 @@ export function UserSettings() {
               {activeTab === 'agents' && (
                 <motion.div key="agents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                   <AgentTokens />
+                </motion.div>
+              )}
+
+              {activeTab === 'phone' && (
+                <motion.div key="phone" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <PhoneAppSettings />
                 </motion.div>
               )}
 

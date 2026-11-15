@@ -1,0 +1,75 @@
+/* Settings → Phone app (PhoneAppSettings.tsx): the address choice as rows, the connect code on white. */
+.phone-app-addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+.phone-app-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--rc-r-sm, 6px);
+  cursor: pointer;
+}
+.phone-app-address:hover {
+  background: var(--rc-hover);
+}
+.phone-app-address input {
+  margin-top: 4px;
+  accent-color: var(--rc-accent-fill);
+}
+.phone-app-address > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.phone-app-url {
+  font-family: var(--rc-font-code);
+  font-size: 13px;
+  color: var(--rc-ink-1);
+}
+.phone-app-code {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+/* A QR code reads best dark on white, in both themes. */
+.phone-app-qr {
+  flex: none;
+  width: 196px;
+  height: 196px;
+  padding: 8px;
+  border-radius: var(--rc-r-md, 8px);
+  background: #fff;
+  box-shadow: var(--rc-card-shadow);
+}
+.phone-app-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.phone-app-steps {
+  display: flex;
+  flex: 1;
+  min-width: 200px;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--rc-ink-1);
+}
+.phone-app-intro {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rc-ink-2);
+}
+.phone-app-kind {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+}
+.phone-app-copy {
+  align-self: flex-start;
+}

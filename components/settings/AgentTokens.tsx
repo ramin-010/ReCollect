@@ -22,6 +22,7 @@ const SHORT: Record<string, string> = {
   'learning:write': 'sets goals and notes',
   'sessions:write': 'logs sessions',
   'tasks:write': 'changes tasks',
+  ambient: "reads the day's picture (phone app)",
 };
 
 const SCOPES = [
