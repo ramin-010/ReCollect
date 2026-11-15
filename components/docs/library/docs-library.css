@@ -355,9 +355,13 @@
     flex-direction: row;
     gap: 6px;
     margin: 0 -16px;
-    padding: 0 16px 2px;
+    /* The chips fade at the edges where they run on (DESIGN.md: a fade, never "…"); the padding
+       lets the first and the last chip sit clear of the fade when scrolled to either end. */
+    padding: 0 24px 2px 16px;
     overflow-x: auto;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 24px), transparent 100%);
   }
 
   .lib-rail::-webkit-scrollbar {
