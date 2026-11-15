@@ -68,6 +68,8 @@ export interface YouData {
   counts: MemoryCounts;
   memories: Memory[];
   routines: Routine[];
+  /** The months, newest first, each with its "Still true?" questions still unanswered (B7). */
+  chapters: Array<{ _id: string; period: string; text: string; questions: Array<{ memoryId: string; question: string }> }>;
 }
 
 export interface MemoryPatch {
@@ -110,6 +112,7 @@ export const buddyApi = {
   tell: async (text: string): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/tell', { text })),
   feedback: async (input: { buddyDayId: string; target: string; verdict: 'more' | 'less' }): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/feedback', input)),
   setRoutine: async (id: string, enabled: boolean): Promise<Routine> => unwrap(await axiosInstance.patch(`/api/buddy/routines/${encodeURIComponent(id)}`, { enabled })),
+  answer: async (memoryId: string, answer: 'yes' | 'no'): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/questions', { memoryId, answer })),
   /** Everything as JSON, for a file download. */
   exportAll: async (): Promise<unknown> => unwrap(await axiosInstance.get('/api/buddy/export')),
 };

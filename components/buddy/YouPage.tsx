@@ -162,6 +162,7 @@ export function YouPage() {
               </div>
             )}
             <Portrait portrait={data.settings.portrait} />
+            <Questions chapters={data.chapters} onAnswered={reload} />
 
             <div className="you-filters mt-8">
               <RcSegmented
@@ -201,6 +202,7 @@ export function YouPage() {
               )}
             </div>
 
+            <Chapters chapters={data.chapters} />
             <Learning data={data} onPaused={setPaused} onChanged={reload} />
           </>
         )}
@@ -242,6 +244,59 @@ function EmptyAll({ onAdd }: { onAdd: () => void }) {
         Add a memory
       </RcButton>
     </div>
+  );
+}
+
+const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** The audit's "Still true?" questions (B7): his yes makes the memory his, his no marks it wrong. */
+function Questions({ chapters, onAnswered }: { chapters: YouData['chapters']; onAnswered: () => void }) {
+  const questions = chapters.flatMap((c) => c.questions);
+  if (!questions.length) return null;
+  const answer = async (memoryId: string, a: 'yes' | 'no') => {
+    try {
+      await buddyApi.answer(memoryId, a);
+      onAnswered();
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    }
+  };
+  return (
+    <section aria-label="Still true?" className="rc-card mt-6 flex flex-col gap-2 px-4 py-3">
+      {questions.map((q) => (
+        <div key={q.memoryId} className="flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-0 flex-1 text-[15px] text-[var(--rc-ink-1)]">{q.question}</p>
+          <div className="flex gap-1.5">
+            <RcButton size="sm" onClick={() => void answer(q.memoryId, 'yes')}>
+              Yes
+            </RcButton>
+            <RcButton size="sm" variant="quiet" onClick={() => void answer(q.memoryId, 'no')}>
+              Not any more
+            </RcButton>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** The months as short chapters, newest first (B7). */
+function Chapters({ chapters }: { chapters: YouData['chapters'] }) {
+  if (!chapters.length) return null;
+  return (
+    <section aria-labelledby="you-chapters" className="mt-12">
+      <h2 id="you-chapters" className="rc-h2 mb-2">
+        Your months
+      </h2>
+      <div className="flex flex-col gap-4">
+        {chapters.map((c) => (
+          <div key={c._id}>
+            <p className="text-[14px] font-medium text-[var(--rc-ink-2)]">{MONTH.format(new Date(`${c.period}-01T00:00:00Z`))}</p>
+            <p className="rc-body mt-0.5 text-[var(--rc-ink-1)]">{c.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
