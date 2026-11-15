@@ -113,3 +113,9 @@
     transition: none;
   }
 }
+
+/* Home's buddy card: a chosen thumb stays filled. */
+.buddy-thumb-on {
+  background: var(--rc-selected);
+  color: var(--rc-ink-1);
+}

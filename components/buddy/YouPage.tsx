@@ -33,9 +33,9 @@ const KIND_WORD: Record<MemoryKind, string> = {
 /** The groups of each view, in order (a group with nothing in it is left out). */
 const GROUPS: Record<Exclude<View, 'older'>, Array<{ title: string; kinds: MemoryKind[] }>> = {
   lasting: [
-    { title: 'Who you are', kinds: ['fact', 'value'] },
+    { title: 'Facts and values', kinds: ['fact', 'value'] },
     { title: 'What you like', kinds: ['preference'] },
-    { title: 'Where you’re heading', kinds: ['aim', 'decision'] },
+    { title: 'Aims and decisions', kinds: ['aim', 'decision'] },
     { title: 'Ideas', kinds: ['idea'] },
   ],
   now: [
@@ -201,7 +201,7 @@ export function YouPage() {
               )}
             </div>
 
-            <Learning data={data} onPaused={setPaused} />
+            <Learning data={data} onPaused={setPaused} onChanged={reload} />
           </>
         )}
       </div>
@@ -514,7 +514,52 @@ function MonthLine({ pending }: { pending: number }) {
   );
 }
 
-function Learning({ data, onPaused }: { data: YouData; onPaused: (paused: boolean) => Promise<void> }) {
+/** Whether it thinks each night (AI money), and "Think now". */
+function Thinking({ enabled, onChanged }: { enabled: boolean; onChanged: () => void }) {
+  const [busy, setBusy] = useState<'switch' | 'think' | null>(null);
+  const toggle = async (on: boolean) => {
+    setBusy('switch');
+    try {
+      await buddyApi.updateSettings({ enabled: on });
+      toast.success(on ? 'It thinks about your day each night now' : 'It no longer thinks each night');
+      onChanged();
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const think = async () => {
+    setBusy('think');
+    try {
+      await buddyApi.thinkNow();
+      toast.success('Done: your portrait and today’s lines are fresh');
+      onChanged();
+    } catch {
+      toast.error('It couldn’t think just now. Try again in a minute.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Think about my day each night</p>
+        <p className="rc-meta mt-0.5">After 4 am it sorts what it learned, writes your portrait and the day’s lines. About 4 cents a night from your AI credit.</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {enabled && (
+          <RcButton size="sm" variant="quiet" busy={busy === 'think'} onClick={() => void think()}>
+            Think now
+          </RcButton>
+        )}
+        <RcSwitch checked={enabled} disabled={busy === 'switch'} onChange={(on) => void toggle(on)} label="Think about my day each night" />
+      </div>
+    </div>
+  );
+}
+
+function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (paused: boolean) => Promise<void>; onChanged: () => void }) {
   const [exporting, setExporting] = useState(false);
   const download = async () => {
     setExporting(true);
@@ -546,6 +591,7 @@ function Learning({ data, onPaused }: { data: YouData; onPaused: (paused: boolea
         </div>
         <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
       </div>
+      <Thinking enabled={data.settings.enabled} onChanged={onChanged} />
       <MonthLine pending={data.counts.pending} />
       <div className="you-setting">
         <div className="min-w-0">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { BuddyCard } from '@/components/buddy/BuddyCard';
 import { cn } from '@/lib/utils';
 import { PersonalTaskDetailModal } from '@/components/todo/PersonalTaskDetailModal';
 import { isLearningMock } from '@/lib/api/learningApi';
@@ -95,6 +96,7 @@ export function TodayHome({ data }: { data: TodayPayload }) {
               <TodaySoFar today={data.today} />
               <Suggested />
             </div>
+            <BuddyCard />
             <LookAgain />
             <FocusLines focus={data.focus} onRetry={retry} />
             <ThisWeek />

@@ -73,6 +73,16 @@ export interface BuddyUsage {
   days: Array<{ day: string; seen: number; kept: number; notes: number; items: number; costUsd: number }>;
 }
 
+/** GET /api/buddy/today: the line for now, the day's step (its three lines, note and follow-up). */
+export interface BuddyToday {
+  enabled: boolean;
+  paused: boolean;
+  name: string | null;
+  slot: 'morning' | 'afternoon' | 'evening';
+  line: { slot: string; text: string; form: string; lockOk: boolean; fallback?: boolean; dayId: string } | null;
+  day: { _id: string; day: string; lines: unknown; note: string | null; followUp: string | null } | null;
+}
+
 const unwrap = <T>(r: { data: { data?: T } }): T => r.data.data as T;
 
 export const buddyApi = {
@@ -82,7 +92,12 @@ export const buddyApi = {
   forgetMemory: async (id: string): Promise<{ deleted: true; notes: number }> => unwrap(await axiosInstance.delete(`/api/buddy/memories/${encodeURIComponent(id)}`)),
   updateSettings: async (patch: Partial<Pick<BuddySettings, 'enabled' | 'paused' | 'name' | 'tone' | 'capUsd'>>): Promise<BuddySettings> =>
     unwrap(await axiosInstance.patch('/api/buddy/settings', patch)),
+  /** Think now (the night step again today); 409 when it is off, paused or at its cap. */
+  thinkNow: async (): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/think')),
   usage: async (): Promise<BuddyUsage> => unwrap(await axiosInstance.get('/api/buddy/usage')),
+  today: async (): Promise<BuddyToday> => unwrap(await axiosInstance.get('/api/buddy/today')),
+  tell: async (text: string): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/tell', { text })),
+  feedback: async (input: { buddyDayId: string; target: string; verdict: 'more' | 'less' }): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/feedback', input)),
   /** Everything as JSON, for a file download. */
   exportAll: async (): Promise<unknown> => unwrap(await axiosInstance.get('/api/buddy/export')),
 };
