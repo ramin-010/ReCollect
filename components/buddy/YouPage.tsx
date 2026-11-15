@@ -678,6 +678,24 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
         <RoutineRow key={r._id} routine={r} onChanged={onChanged} />
       ))}
       <MonthLine pending={data.counts.pending} />
+      {data.health.steps > 0 && (
+        <div className="you-setting">
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">How well it knows you</p>
+            <p className="rc-meta mt-0.5">
+              {[
+                `${data.counts.lasting} lasting, ${data.counts.working} for now`,
+                `${data.health.confirmedShare}% confirmed by you`,
+                `${data.health.thumbs.more} more like this, ${data.health.thumbs.less} not this`,
+                data.health.dropped ? `${data.health.dropped} ${data.health.dropped === 1 ? 'thing' : 'things'} its checks threw out` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}{' '}
+              · the last 30 days
+            </p>
+          </div>
+        </div>
+      )}
       <div className="you-setting">
         <div className="min-w-0">
           <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Export everything</p>

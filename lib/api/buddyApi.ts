@@ -70,6 +70,8 @@ export interface YouData {
   routines: Routine[];
   /** The months, newest first, each with its "Still true?" questions still unanswered (B7). */
   chapters: Array<{ _id: string; period: string; text: string; questions: Array<{ memoryId: string; question: string }> }>;
+  /** The last 30 days: how much of what it knows he confirmed, his thumbs, what the guards threw out. */
+  health: { confirmedShare: number; thumbs: { more: number; less: number }; dropped: number; steps: number };
 }
 
 export interface MemoryPatch {
