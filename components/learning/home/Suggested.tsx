@@ -16,6 +16,10 @@ const ACCEPT_LABEL: Record<Suggestion['kind'], string> = {
   focus_line: 'Add to today',
   profile_edit: 'Update profile',
   action: 'Do it',
+  task: 'Add to tasks',
+  note: 'Save to inbox',
+  decision: 'Log decision',
+  routine: 'Yes, by itself',
 };
 
 const ACCEPTED: Record<Suggestion['kind'], string> = {
@@ -23,6 +27,10 @@ const ACCEPTED: Record<Suggestion['kind'], string> = {
   focus_line: 'Added to today’s focus',
   profile_edit: 'Profile updated',
   action: 'Done',
+  task: 'Added to your tasks',
+  note: 'Saved to your inbox',
+  decision: 'Logged in your decisions',
+  routine: 'It does this by itself now',
 };
 
 /** "3 of 4 targets · 6 h logged · 2 topics finished", leaving out what is zero; null for an empty week. */
@@ -37,7 +45,8 @@ function weekLine(w: WeekSummary): string | null {
   return parts.length ? parts.join(' · ') : null;
 }
 
-const from = (s: Suggestion): string | null => (s.proposedBy === 'agent' ? `from ${s.agentName ?? 'your agent'}` : s.proposedBy === 'coach' ? 'from the coach' : null);
+const from = (s: Suggestion): string | null =>
+  s.proposedBy === 'agent' ? `from ${s.agentName ?? 'your agent'}` : s.proposedBy === 'coach' ? 'from the coach' : s.proposedBy === 'buddy' ? 'from your buddy' : null;
 
 /**
  * Suggested (LOOP_COMPLETE_SPEC 1.6, ECOSYSTEM_PLAN change 9): the one place for every proposal, from

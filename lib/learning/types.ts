@@ -527,7 +527,8 @@ export interface WeekData {
   review: { due: boolean; weekStart: DayString };
 }
 
-export type SuggestionKind = 'week_target' | 'focus_line' | 'profile_edit' | 'action';
+/** task, note, decision: the buddy's items from his chats; routine: "do this by itself" (BUDDY_MEMORY_PLAN). */
+export type SuggestionKind = 'week_target' | 'focus_line' | 'profile_edit' | 'action' | 'task' | 'note' | 'decision' | 'routine';
 
 export interface Suggestion {
   _id: string;
@@ -535,7 +536,7 @@ export interface Suggestion {
   text: string;
   reason: string | null;
   payload: Record<string, unknown>;
-  proposedBy: 'app' | 'coach' | 'agent' | 'ask_ai';
+  proposedBy: 'app' | 'coach' | 'agent' | 'ask_ai' | 'buddy';
   agentName: string | null;
   batch: string | null;
   status: 'pending' | 'accepted' | 'dismissed';

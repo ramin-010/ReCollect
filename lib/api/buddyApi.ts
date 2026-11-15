@@ -49,6 +49,8 @@ export interface MemoryCounts {
   closed: number;
   wrong: number;
   notes: number;
+  /** Notes from his chats the night step has not sorted into memories yet. */
+  pending: number;
 }
 
 export interface YouData {
@@ -66,6 +68,11 @@ export interface MemoryPatch {
   status?: 'active' | 'wrong' | 'closed';
 }
 
+export interface BuddyUsage {
+  month: { spentUsd: number; capUsd: number };
+  days: Array<{ day: string; seen: number; kept: number; notes: number; items: number; costUsd: number }>;
+}
+
 const unwrap = <T>(r: { data: { data?: T } }): T => r.data.data as T;
 
 export const buddyApi = {
@@ -75,6 +82,7 @@ export const buddyApi = {
   forgetMemory: async (id: string): Promise<{ deleted: true; notes: number }> => unwrap(await axiosInstance.delete(`/api/buddy/memories/${encodeURIComponent(id)}`)),
   updateSettings: async (patch: Partial<Pick<BuddySettings, 'enabled' | 'paused' | 'name' | 'tone' | 'capUsd'>>): Promise<BuddySettings> =>
     unwrap(await axiosInstance.patch('/api/buddy/settings', patch)),
+  usage: async (): Promise<BuddyUsage> => unwrap(await axiosInstance.get('/api/buddy/usage')),
   /** Everything as JSON, for a file download. */
   exportAll: async (): Promise<unknown> => unwrap(await axiosInstance.get('/api/buddy/export')),
 };

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSheet, RcSkel, RcSwitch, rcScope, type MenuAction } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
-import { buddyApi, type Memory, type MemoryKind, type MemoryPatch, type YouData } from '@/lib/api/buddyApi';
+import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPatch, type YouData } from '@/lib/api/buddyApi';
 import './you.css';
 
 /**
@@ -477,6 +477,43 @@ function AddSheet({ open, onOpenChange, onAdded }: { open: boolean; onOpenChange
   );
 }
 
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** This month in one line: what it spent of its cap, what it read and kept, what waits for the night. */
+function MonthLine({ pending }: { pending: number }) {
+  const [usage, setUsage] = useState<BuddyUsage | null>(null);
+  useEffect(() => {
+    let alive = true;
+    buddyApi.usage().then(
+      (u) => alive && setUsage(u),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!usage) return null;
+  const month = usage.days.filter((d) => d.day.slice(0, 7) === usage.days[0]?.day.slice(0, 7));
+  const seen = month.reduce((n, d) => n + d.seen, 0);
+  const kept = month.reduce((n, d) => n + d.kept, 0);
+  return (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">This month</p>
+        <p className="rc-meta mt-0.5">
+          {[
+            `${USD.format(usage.month.spentUsd)} of its ${USD.format(usage.month.capUsd)}`,
+            seen ? `${seen} of your messages read, ${kept} kept` : null,
+            pending ? `${pending} new ${pending === 1 ? 'note waits' : 'notes wait'} for tonight` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Learning({ data, onPaused }: { data: YouData; onPaused: (paused: boolean) => Promise<void> }) {
   const [exporting, setExporting] = useState(false);
   const download = async () => {
@@ -509,6 +546,7 @@ function Learning({ data, onPaused }: { data: YouData; onPaused: (paused: boolea
         </div>
         <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
       </div>
+      <MonthLine pending={data.counts.pending} />
       <div className="you-setting">
         <div className="min-w-0">
           <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Export everything</p>
