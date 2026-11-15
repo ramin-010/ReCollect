@@ -70,6 +70,7 @@ export function TodayHome({ data }: { data: TodayPayload }) {
           plan={data.plan}
           settings={settings}
           rhythm={data.stats.rhythm ?? null}
+          nextDue={data.nextDue ?? null}
           onOpenSettings={() => openSettings()}
           onEndBusy={() => void useLearningStore.getState().updateSettings({ busyUntil: null })}
           onCapture={openCapturePalette}

@@ -12,22 +12,28 @@ interface DayHeaderProps {
   plan: TodayPlan | null;
   settings: LearningSettings | null;
   rhythm: Rhythm | null;
+  /** The next day with something to revise (GET /api/today nextDue). */
+  nextDue?: { day: DayString; count: number } | null;
   onOpenSettings: () => void;
   onEndBusy: () => void;
   onCapture: () => void;
 }
 
-/** The day in one line (owner's format: one separator style, no full stops). */
-function summary(plan: TodayPlan): string {
+/**
+ * The day in one line (owner's format: one separator style, no full stops). An empty day says when
+ * revising comes back ("next on Tue 17 Nov").
+ */
+function summary(plan: TodayPlan, today: DayString, nextDue: { day: DayString; count: number } | null): string {
   const left = plan.planned.length;
   const done = plan.doneToday.length;
   const minutes = plan.planned.reduce((s, r) => s + estimateMinutes(r), 0);
   const waiting = plan.waitingCount > 0 ? `${plan.waitingCount} waiting` : null;
+  const next = nextDue && plan.waitingCount === 0 ? `next on ${weekdayDay(nextDue.day, today)}` : null;
   const parts =
     left === 0 && done === 0
-      ? [plan.waitingCount > 0 ? 'Nothing planned for today' : 'Nothing to revise today', waiting]
+      ? [plan.waitingCount > 0 ? 'Nothing planned for today' : 'Nothing to revise today', waiting, next]
       : left === 0
-        ? [`All ${done} done`, waiting]
+        ? [`All ${done} done`, waiting, next]
         : [`${left} to revise`, `about ${minutes} min`, waiting];
   return parts.filter(Boolean).join(' · ');
 }
@@ -61,7 +67,7 @@ function RhythmInline({ rhythm, today }: { rhythm: Rhythm; today: DayString }) {
  * The page head: the date, one line under it (the day's summary or the calm busy / comeback line,
  * with the week's rhythm at its end), the one dark action (Capture, Ctrl K) and settings.
  */
-export function DayHeader({ today, plan, settings, rhythm, onOpenSettings, onEndBusy, onCapture }: DayHeaderProps) {
+export function DayHeader({ today, plan, settings, rhythm, nextDue = null, onOpenSettings, onEndBusy, onCapture }: DayHeaderProps) {
   const mode = plan?.mode ?? 'normal';
   const count = plan ? plan.planned.length + plan.doneToday.length : 0;
 
@@ -86,7 +92,7 @@ export function DayHeader({ today, plan, settings, rhythm, onOpenSettings, onEnd
               </RcButton>
             </span>
           ) : (
-            plan && <span className="lg:whitespace-nowrap">{summary(plan)}</span>
+            plan && <span className="lg:whitespace-nowrap">{summary(plan, today, nextDue)}</span>
           )}
           {rhythm && <RhythmInline rhythm={rhythm} today={today} />}
         </div>

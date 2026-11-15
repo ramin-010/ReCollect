@@ -415,6 +415,8 @@ interface TodayPayloadBase<R, C, Q> {
   goals?: TodayGoal[] | null;
   /** Each path's next topic, at most 3, goal-linked first (SYNC_SPINE_SPEC 1.1). */
   next?: NextUp[];
+  /** The next day with something to revise after today, and how much (null: nothing scheduled). */
+  nextDue?: { day: DayString; count: number } | null;
 }
 
 // ─── Paths (BUDDY_PLAN B1, SYNC_SPINE_SPEC 1.1) ─────────────────────────────

@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bot, CalendarClock, CheckCircle2, Clock3, Folder, Target } from 'lucide-react';
+import { Bot, CalendarClock, CheckCircle2, Clock3, Folder, Target, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { RcButton, RcSkel, RcStamp } from '@/components/rc-ui';
+import { RcButton, RcConfirm, RcSkel, RcStamp } from '@/components/rc-ui';
 import { RcPicker } from '@/components/rc-ui/RcPicker';
 import { learningApi } from '@/lib/api/learningApi';
 import { agentApi, type AgentEdit } from '@/lib/api/agentApi';
@@ -13,6 +13,8 @@ import { RecallSheet, type RecallTarget } from '@/components/learning/recall/Rec
 import { RevisionTimeline } from './RevisionTimeline';
 
 const CYCLES = 4;
+/** The picker's last row when the doc is filed: take it out of its subject. */
+const NO_SUBJECT = '__none__';
 
 /** Notion-style property rows under the title: subject, revision, goal, last edit. */
 export function DocProperties({ docId, updatedAt, editable }: { docId: string; updatedAt?: string; editable: boolean }) {
@@ -23,6 +25,7 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
   const [busy, setBusy] = useState(false);
   const [recall, setRecall] = useState<RecallTarget | null>(null);
   const [agentEdit, setAgentEdit] = useState<AgentEdit | null>(null);
+  const [unfiling, setUnfiling] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -90,7 +93,20 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
     }
   };
 
+  const unfile = () =>
+    topic &&
+    run(async () => {
+      await learningApi.deleteTopic(topic._id);
+      setUnfiling(false);
+    }, 'Removed from the subject');
+
   const chooseSubject = (subjectId: string) => {
+    if (subjectId === NO_SUBJECT) {
+      // Its revisions go with it, so ask first when it has any; the doc itself always stays.
+      if (topic && info?.chain.length) setUnfiling(true);
+      else void unfile();
+      return;
+    }
     if (topic) {
       if (topic.subjectId === subjectId) return;
       void run(() => learningApi.updateTopic(topic._id, { subjectId }), 'Subject changed');
@@ -134,12 +150,15 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
           {editable ? (
             <RcPicker
               label="Subject"
-              options={subjects.map((s) => ({
-                value: s._id,
-                label: s.name,
-                hint: s.topics.length ? String(s.topics.length) : undefined,
-                icon: <span className="rc-swatch" style={{ background: s.color ?? 'var(--rc-icon)' }} aria-hidden />,
-              }))}
+              options={[
+                ...subjects.map((s) => ({
+                  value: s._id,
+                  label: s.name,
+                  hint: s.topics.length ? String(s.topics.length) : undefined,
+                  icon: <span className="rc-swatch" style={{ background: s.color ?? 'var(--rc-icon)' }} aria-hidden />,
+                })),
+                ...(topic ? [{ value: NO_SUBJECT, label: 'Remove from subject', icon: <X aria-hidden strokeWidth={1.75} /> }] : []),
+              ]}
               value={subject?._id ?? null}
               onChange={chooseSubject}
               onCreate={createSubject}
@@ -266,6 +285,16 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
         </div>
       )}
       <RecallSheet target={recall} onOpenChange={(o) => !o && setRecall(null)} onFinished={() => void load()} />
+      <RcConfirm
+        open={unfiling}
+        onOpenChange={setUnfiling}
+        title={`Remove from ${subject?.name ?? 'its subject'}?`}
+        body={done > 0 ? `Its revisions end with it (${done} of ${CYCLES} done so far). The doc itself stays.` : 'Its planned revisions end with it. The doc itself stays.'}
+        confirmLabel="Remove from subject"
+        danger
+        busy={busy}
+        onConfirm={() => void unfile()}
+      />
     </div>
   );
 }
