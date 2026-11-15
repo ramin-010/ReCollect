@@ -24,7 +24,8 @@ const KIND_WORDS: Record<ServerAddress['kind'], string> = {
 /**
  * Settings → Phone app (ANDROID_APP_SPEC): connects our Android app to this server with a token that
  * can only read the day's picture and widget (the `ambient` scope). The phone's own camera reads the
- * QR code: it holds a recollect://connect link that opens the app. The token shows once, here.
+ * QR code: a link to the server's /phone/connect page, which opens the app (or offers its file).
+ * The token shows once, here.
  */
 export function PhoneAppSettings() {
   const [addresses, setAddresses] = useState<ServerAddress[] | null>(null);
@@ -53,7 +54,10 @@ export function PhoneAppSettings() {
     setMaking(true);
     try {
       const made = await agentApi.createToken({ name: 'Phone app', scopes: ['ambient'] });
-      setLink(`recollect://connect?server=${encodeURIComponent(chosen)}&token=${encodeURIComponent(made.token)}`);
+      // A web link, so any camera or QR reader opens it; the page hands the token to the app with one
+      // tap and offers the app's file when it isn't installed. The token rides in the fragment, which
+      // never reaches the server.
+      setLink(`${chosen}/phone/connect#t=${encodeURIComponent(made.token)}`);
     } catch {
       toast.error("The connect code couldn't be made. Try again.");
     } finally {
@@ -99,7 +103,7 @@ export function PhoneAppSettings() {
               {/* qrcode-generator draws plain SVG from the link (no scripts). */}
               <div className="phone-app-qr" role="img" aria-label="Connect code" dangerouslySetInnerHTML={{ __html: svg ?? '' }} />
               <div className="phone-app-steps">
-                <p>Open the camera on your phone and point it at the code; tap the link it shows. Recollect opens and connects.</p>
+                <p>Point your phone&apos;s camera at the code and open the link it shows, then tap Open the phone app. No app on the phone yet? The same page offers it.</p>
                 <p className="rc-meta">The code holds a new token that can only read the day&apos;s picture. It shows once; end it any time in Settings → Agents (&ldquo;Phone app&rdquo;).</p>
                 <RcButton
                   variant="quiet"
