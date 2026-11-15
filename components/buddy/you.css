@@ -1,0 +1,115 @@
+/* "About you" (/you): the parts the kit doesn't have. Theme v2 tokens only. */
+
+.you-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.you-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.you-search svg {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+
+.you-search .rc-input {
+  padding-left: 32px;
+}
+
+@media (max-width: 639px) {
+  .you-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+}
+
+.you-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 -8px;
+  padding: 8px 8px;
+  border-radius: var(--rc-r-sm);
+}
+
+.you-text {
+  font-size: var(--rc-fs-body);
+  line-height: 1.45;
+  color: var(--rc-ink-1);
+  overflow-wrap: anywhere;
+}
+
+.you-text--older {
+  color: var(--rc-ink-2);
+}
+
+.you-edit {
+  font-size: var(--rc-fs-body);
+}
+
+.you-empty {
+  padding: 28px 0 8px;
+}
+
+.you-chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--rc-r-sm);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rc-line-strong);
+  color: var(--rc-ink-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition:
+    background var(--rc-fast) ease,
+    color var(--rc-fast) ease;
+}
+
+.you-chip:hover {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.you-chip[aria-checked='true'] {
+  background: var(--rc-main);
+  box-shadow: none;
+  color: var(--rc-on-main);
+}
+
+.you-chip:focus-visible {
+  outline: 2px solid var(--rc-accent-fill);
+  outline-offset: 2px;
+}
+
+.you-learning {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rc-line);
+}
+
+.you-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.you-setting + .you-setting {
+  border-top: 1px solid var(--rc-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .you-chip {
+    transition: none;
+  }
+}

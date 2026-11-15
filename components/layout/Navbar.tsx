@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
 import { Button } from '@/components/ui-base/Button';
-import { Share2, Plus, X, Home, FileText, Users, CheckSquare, Settings, Files, Mail, LayoutGrid, ChartNoAxesColumn, Sparkles } from 'lucide-react';
+import { Share2, Plus, X, Home, FileText, Users, CheckSquare, Settings, Files, Mail, LayoutGrid, ChartNoAxesColumn, Sparkles, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
@@ -24,6 +24,7 @@ function PageIcon({ pathname }: { pathname: string }) {
   if (pathname.startsWith('/todo')) return <CheckSquare className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/settings')) return <Settings className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/mirror')) return <ChartNoAxesColumn className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/you')) return <UserRound className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/ask')) return <Sparkles className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/slides')) return <Files className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/email')) return <Mail className={cls} strokeWidth={1.75} />;
@@ -46,6 +47,7 @@ export function Navbar() {
     if (pathname === '/') return 'Home';
     if (pathname.startsWith('/docs')) return 'Docs';
     if (pathname.startsWith('/mirror')) return 'Where you stand';
+    if (pathname.startsWith('/you')) return 'About you';
     if (pathname.startsWith('/ask')) return 'Ask AI';
     if (pathname.startsWith('/share')) return 'Save to Recollect';
     if (pathname.startsWith('/lab')) return 'Lab';

@@ -24,7 +24,7 @@ import { LookAgain } from './LookAgain';
 import { TodaySoFar } from './TodaySoFar';
 import { CoachSheet } from './CoachSheet';
 import Link from 'next/link';
-import { ChartNoAxesColumn, MessageSquareText } from 'lucide-react';
+import { ChartNoAxesColumn, MessageSquareText, UserRound } from 'lucide-react';
 import { GoalSheet } from './GoalSheet';
 import { GoalsRail } from './GoalsRail';
 import { AllNotesSheet, PocketRail } from './Pocket';
@@ -124,6 +124,11 @@ export function TodayHome({ data }: { data: TodayPayload }) {
                 <ChartNoAxesColumn className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
                 <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">Where you stand</span>
                 <span className="rc-meta">pace and hours, worked out</span>
+              </Link>
+              <Link href="/you" className="rc-row rc-hoverable flex w-full items-center gap-2 rounded-[6px] px-2 py-[7px] text-left">
+                <UserRound className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
+                <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">About you</span>
+                <span className="rc-meta">what your buddy knows</span>
               </Link>
             </div>
             <PocketRail notes={data.quickNotes} onOpenAll={() => setNotesOpen(true)} />
