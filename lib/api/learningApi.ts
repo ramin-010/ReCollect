@@ -50,6 +50,17 @@ import type {
   Topic,
   TopicByDoc,
   UpdateCaptureBody, TopicStatus,
+  PathTopic,
+  SubjectPath,
+  TopicPathPatch,
+  SessionKind,
+  SessionList,
+  MirrorData,
+  RevisionCalendar,
+  Suggestion,
+  WeekData,
+  WeekTarget,
+  WorkSession,
 } from '@/lib/learning/types';
 import { derivePlan } from '@/lib/learning/plan';
 import type { LearningMock } from '@/lib/learning/mock/learningMock';
@@ -388,6 +399,79 @@ export const learningApi = {
     const m = await mock();
     if (m) return m.deleteTopic(id);
     return call(() => axiosInstance.delete(`/api/topics/${id}`));
+  },
+
+  /** A subject's topics in course order (planned, in progress, done, skipped) and what is next. */
+  async getPath(subjectId: string): Promise<SubjectPath> {
+    return call(() => axiosInstance.get(`/api/subjects/${subjectId}/path`));
+  },
+
+  /** Planned topics put on a path, after `after` (the end when left out; null puts them first). */
+  async planTopics(subjectId: string, titles: string[], after?: string | null): Promise<{ created: string[]; path: SubjectPath }> {
+    return call(() => axiosInstance.post(`/api/subjects/${subjectId}/path`, { titles, ...(after !== undefined ? { after } : {}) }));
+  },
+
+  /** The record: sessions of the last `days` days (today included), newest first, with day totals. */
+  async listSessions(days = 14): Promise<SessionList> {
+    return call(() => axiosInstance.get('/api/sessions', { params: { days } }));
+  },
+
+  /** A session logged by hand (Ctrl K: "log 40m graphs"). */
+  async createSession(body: { title: string; minutes?: number | null; kind?: SessionKind; subjectId?: string | null }): Promise<WorkSession> {
+    return call(() => axiosInstance.post('/api/sessions', body));
+  },
+
+  async updateSession(id: string, body: { title?: string; minutes?: number | null; kind?: SessionKind }): Promise<WorkSession> {
+    return call(() => axiosInstance.patch(`/api/sessions/${id}`, body));
+  },
+
+  async deleteSession(id: string): Promise<{ deleted: true }> {
+    return call(() => axiosInstance.delete(`/api/sessions/${id}`));
+  },
+
+  /** Where Ramin stands (LOOP_COMPLETE_SPEC 1.7): pace per path, hours per week, per-subject numbers. */
+  /** Each day's pending reviews and open tasks against the budget (the Move calendar). */
+  async revisionCalendar(from: DayString, days = 42): Promise<RevisionCalendar> {
+    return call(() => axiosInstance.get('/api/revisions/calendar', { params: { from, days } }));
+  },
+
+  async getMirror(): Promise<MirrorData> {
+    return call(() => axiosInstance.get('/api/mirror'));
+  },
+
+  /** The week (LOOP_COMPLETE_SPEC 1.6): its targets with what is done, last week, the review. */
+  async getWeek(start?: DayString): Promise<WeekData> {
+    return call(() => axiosInstance.get('/api/week', { params: start ? { start } : {} }));
+  },
+
+  async addWeekTarget(body: { text: string; weekStart?: DayString }): Promise<WeekTarget> {
+    return call(() => axiosInstance.post('/api/week/targets', body));
+  },
+
+  async updateWeekTarget(id: string, body: { text?: string; status?: WeekTarget['status'] }): Promise<WeekTarget> {
+    return call(() => axiosInstance.patch(`/api/week/targets/${id}`, body));
+  },
+
+  /** Pending suggestions (the Sunday review's batch is written when it is due). */
+  async listSuggestions(): Promise<Suggestion[]> {
+    return call(() => axiosInstance.get('/api/suggestions'));
+  },
+
+  async acceptSuggestion(id: string): Promise<Suggestion> {
+    return call(() => axiosInstance.post(`/api/suggestions/${id}/accept`));
+  },
+
+  async dismissSuggestion(id: string): Promise<Suggestion> {
+    return call(() => axiosInstance.post(`/api/suggestions/${id}/dismiss`));
+  },
+
+  async decideSuggestions(body: { accept?: string[]; dismiss?: string[] }): Promise<{ accepted: string[]; dismissed: string[]; failed: { _id: string; message: string }[] }> {
+    return call(() => axiosInstance.post('/api/suggestions/decide', body));
+  },
+
+  /** A topic moved along its path: status, next step, place, or a planned topic's title. */
+  async updateTopicPath(topicId: string, patch: TopicPathPatch): Promise<{ topic: PathTopic; path: SubjectPath }> {
+    return call(() => axiosInstance.patch(`/api/topics/${topicId}/path`, patch));
   },
 
   // #16

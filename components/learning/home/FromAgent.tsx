@@ -2,12 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { RcButton } from '@/components/rc-ui';
 import { agentApi, type AgentEdit } from '@/lib/api/agentApi';
 import { formatRelative } from '@/components/docs/page/format';
 import { SectionHead } from './parts';
+
+const FOLD_AFTER = 3;
 
 /**
  * "From your agent" (PLAN §2): what a coding agent changed since you last looked, so agent work
@@ -18,6 +20,7 @@ export function FromAgent() {
   const router = useRouter();
   const [edits, setEdits] = useState<AgentEdit[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +61,9 @@ export function FromAgent() {
     }
   };
 
+  // More than three: one line until opened, so the day's work stays on the first screen (1.6).
+  const folded = edits.length > FOLD_AFTER && !expanded;
+
   return (
     <section aria-labelledby="agent-h">
       <SectionHead id="agent-h" title="From your agent">
@@ -67,7 +73,17 @@ export function FromAgent() {
           </RcButton>
         )}
       </SectionHead>
-      <ul className="flex flex-col">
+      {folded && (
+        <button type="button" onClick={() => setExpanded(true)} className="rc-row rc-hoverable -mx-2 flex w-[calc(100%+16px)] items-center gap-3 px-2 py-[7px] text-left" aria-expanded={false}>
+          <Bot className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
+          <span className="text-[var(--rc-fs-body)] text-[var(--rc-ink-1)]">
+            {edits.length} changes from your agents
+          </span>
+          <span className="rc-meta">{[...new Set(edits.map((e) => e.agentName))].slice(0, 3).join(', ')}</span>
+          <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
+        </button>
+      )}
+      <ul className={folded ? 'hidden' : 'flex flex-col'}>
         {edits.map((e) => (
           <li key={e.id} className="rc-row rc-hoverable group -mx-2 flex items-start gap-3 px-2 py-[7px]">
             <Bot className="mt-[3px] h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />

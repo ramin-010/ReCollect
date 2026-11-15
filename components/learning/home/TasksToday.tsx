@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLearningStore } from '@/lib/store/learningStore';
 import type { GroupedTask, TaskGroups } from '@/lib/learning/taskGroups';
@@ -42,10 +43,17 @@ export function TasksToday({
 }) {
   const due = [...groups.overdue, ...groups.today];
   const open = due.filter((t) => !t.isDone);
-  if (open.length === 0 && reviewCount === 0) return null;
+  if (due.length === 0 && reviewCount === 0) return null;
   const shown = [...open, ...due.filter((t) => t.isDone)].slice(0, MAX_ROWS);
   const more = due.length - shown.length;
   const { toggleTask, openTaskDetail } = useLearningStore.getState();
+  // A tick says what it did and can be taken back (the row may leave the list on the next refresh).
+  const tick = (task: GroupedTask) => {
+    const wasDone = task.isDone;
+    void toggleTask(task._id).then(() => {
+      if (!wasDone) toast.success(`Done: ${task.title}`, { action: { label: 'Undo', onClick: () => void toggleTask(task._id) } });
+    });
+  };
 
   return (
     <section aria-labelledby="tasks-h">
@@ -61,7 +69,7 @@ export function TasksToday({
           {shown.map((task) => (
             <li key={task._id} className="flex items-start gap-3 py-2.5 border-b border-[var(--rc-line)]">
               <div className="pt-[2px]">
-                <RcCheck checked={task.isDone} onToggle={() => void toggleTask(task._id)} label={task.isDone ? `Mark “${task.title}” not done` : `Mark “${task.title}” done`} />
+                <RcCheck checked={task.isDone} onToggle={() => tick(task)} label={task.isDone ? `Mark “${task.title}” not done` : `Mark “${task.title}” done`} />
               </div>
               <button
                 type="button"

@@ -12,6 +12,9 @@ const FEATURE_LABEL: Record<string, string> = {
   recall_grade: 'Grading answers',
   practice_note: 'Practice notes',
   weekly_coach: 'Weekly coach',
+  assistant: 'Ask AI',
+  doc_ask: 'Ask AI in docs',
+  task_parse: 'Task line (@ai)',
 };
 
 const usd = (n: number) => `$${n.toFixed(n < 10 ? 2 : 0)}`;
@@ -47,7 +50,12 @@ export function AiSettings() {
     }
     setSaving(true);
     try {
-      setUsage(await recallApi.setCap(Math.round(n * 100) / 100));
+      const capUsd = Math.round(n * 100) / 100;
+      await recallApi.setCap(capUsd);
+      // The headline and meter read the fresh numbers (the save's answer may not carry them).
+      const fresh = await recallApi.usage().catch(() => null);
+      setUsage((prev) => fresh ?? (prev ? { ...prev, capUsd } : prev));
+      setCap(String(fresh?.capUsd ?? capUsd));
       toast.success('Monthly cap saved');
     } catch {
       toast.error('The cap was not saved. Try again.');
@@ -116,7 +124,7 @@ export function AiSettings() {
         <p className="rc-field-help">When this month reaches the cap, questions and grading pause until the 1st. Reviews still work.</p>
         <div className="mt-2 flex items-center gap-2">
           <span className="rc-ink-2">$</span>
-          <input id="ai-cap" className="rc-input set-cap" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} />
+          <input id="ai-cap" className="rc-input set-cap" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value.replace(/[^0-9.]/g, '').replace(/(\.\d*)\./g, '$1'))} onKeyDown={(e) => { if (e.key === 'Enter') void save(); }} />
           <RcButton variant="outline" busy={saving} onClick={() => void save()} disabled={cap === String(usage.capUsd)}>
             Save cap
           </RcButton>

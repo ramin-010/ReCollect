@@ -26,6 +26,7 @@ import {
   PanelLeft,
   Search,
   Settings,
+  Sparkles,
   Users,
   X,
 } from 'lucide-react';
@@ -52,6 +53,7 @@ interface NavItem {
 const allPrimaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className={ICON} strokeWidth={STROKE} /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className={ICON} strokeWidth={STROKE} /> },
+  { id: 'ask', route: '/ask', label: 'Ask AI', icon: <Sparkles className={ICON} strokeWidth={STROKE} /> },
   {
     id: 'todo',
     route: '/todo',
@@ -89,6 +91,40 @@ export function Sidebar() {
   const todoFilter = useViewStore((state) => state.todoFilter);
   const setTodoFilter = useViewStore((state) => state.setTodoFilter);
   const setSettingsOpen = useSettingsStore((state) => state.setIsOpen);
+
+  // The collapsed sidebar is remembered per browser; Ctrl+\ toggles it (Notion's key).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('sidebar-collapsed') === '1') setIsCollapsed(true);
+    } catch {
+      /* storage blocked: start expanded */
+    }
+  }, [setIsCollapsed]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+        e.preventDefault();
+        const next = !useViewStore.getState().isSidebarCollapsed;
+        setIsCollapsed(next);
+        try {
+          localStorage.setItem('sidebar-collapsed', next ? '1' : '0');
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setIsCollapsed]);
+  const toggleCollapsed = () => {
+    const next = !isCollapsed;
+    setIsCollapsed(next);
+    try {
+      localStorage.setItem('sidebar-collapsed', next ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
 
   const shared = {
     user,
@@ -144,7 +180,7 @@ export function Sidebar() {
         transition={{ duration: 0.2, ease: [0.2, 0.9, 0.25, 1] }}
         className="hidden lg:block relative z-30 shrink-0"
       >
-        <SidebarContent {...shared} isCollapsed={isCollapsed} isMobile={false} onCollapse={() => setIsCollapsed(!isCollapsed)} onNavigate={() => {}} />
+        <SidebarContent {...shared} isCollapsed={isCollapsed} isMobile={false} onCollapse={toggleCollapsed} onNavigate={() => {}} />
       </motion.aside>
     </>
   );
@@ -207,7 +243,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
           type="button"
           onClick={onCollapse}
           aria-label={isMobile ? 'Close the menu' : isCollapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-          title={isMobile ? 'Close' : isCollapsed ? 'Expand' : 'Collapse'}
+          title={isMobile ? 'Close' : isCollapsed ? 'Expand (Ctrl+\\)' : 'Collapse (Ctrl+\\)'}
           className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[6px] text-[var(--ui-icon)] transition-colors hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]"
         >
           {isMobile ? <X className={ICON} strokeWidth={STROKE} /> : <PanelLeft className={ICON} strokeWidth={STROKE} />}

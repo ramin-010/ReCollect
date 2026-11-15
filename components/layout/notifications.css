@@ -1,0 +1,142 @@
+/* The bell's list (NotificationsPopover.tsx) on theme v2: the float layer, rows like the app's lists. */
+@layer components {
+  .nt-pop {
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    height: min(560px, 80vh);
+    padding: 0;
+    border-radius: var(--rc-r-lg);
+    overflow: hidden;
+  }
+  .nt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 10px 6px 16px;
+  }
+  .nt-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rc-ink-1);
+  }
+  .nt-head-actions {
+    display: flex;
+    gap: 2px;
+  }
+  .nt-tabs {
+    padding: 2px 12px 10px;
+    border-bottom: 1px solid var(--rc-line);
+  }
+  .nt-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+  }
+  .nt-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--rc-r-sm);
+  }
+  .nt-row[data-opens] {
+    cursor: pointer;
+  }
+  .nt-row[data-opens]:hover {
+    background: var(--rc-hover);
+  }
+  .nt-avatar {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: var(--rc-surface-2);
+    color: var(--rc-icon);
+  }
+  .nt-avatar svg {
+    width: 15px;
+    height: 15px;
+  }
+  .nt-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .nt-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+  .nt-name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--rc-ink-2);
+    overflow-wrap: anywhere;
+  }
+  .nt-row[data-unread] .nt-name {
+    color: var(--rc-ink-1);
+  }
+  .nt-message {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--rc-ink-3);
+    overflow-wrap: anywhere;
+  }
+  .nt-time {
+    font-size: 12.5px;
+    color: var(--rc-ink-3);
+  }
+  .nt-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .nt-answer {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--rc-ink-3);
+  }
+  .nt-answer--yes {
+    color: var(--rc-good);
+  }
+  .nt-answer svg {
+    width: 14px;
+    height: 14px;
+  }
+  .nt-dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    margin-top: 7px;
+    border-radius: 999px;
+    background: var(--rc-accent-fill);
+  }
+  .nt-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 24px 12px;
+    font-size: 14px;
+    color: var(--rc-ink-3);
+  }
+  .nt-empty svg {
+    width: 16px;
+    height: 16px;
+    color: var(--rc-icon);
+  }
+}

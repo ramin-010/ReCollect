@@ -1,0 +1,87 @@
+/* The public page of a published doc (PublicDocPage.tsx): the app's doc look without the app around it.
+   A 44 px bar in the page colour (the app's top bar), then the doc column. */
+@layer components {
+  .pub-page {
+    min-height: 100vh;
+  }
+  .pub-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 44px;
+    padding: 0 12px 0 14px;
+    background: var(--rc-ground);
+  }
+  .rc a.pub-brand,
+  .pub-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 6px;
+    margin-left: -6px;
+    border-radius: var(--rc-r-sm);
+    color: var(--rc-ink-1);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color var(--rc-fast) ease;
+  }
+  .pub-brand:hover {
+    background: var(--rc-hover);
+  }
+  .pub-brand img {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+  }
+  .pub-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pub-asked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    font-size: 13.5px;
+    color: var(--rc-ink-2);
+  }
+  .pub-asked svg {
+    width: 16px;
+    height: 16px;
+    color: var(--rc-good);
+  }
+
+  .doc-column.pub-column {
+    padding-top: 56px;
+  }
+  .doc-column.pub-column--cover {
+    padding-top: 32px;
+  }
+  .pub-gone {
+    padding-top: 18vh;
+  }
+  .doc-title.pub-title {
+    margin-bottom: 6px;
+  }
+  /* Like the doc page's properties: the hairline 12 px under it, then the body. */
+  .pub-meta {
+    margin: 0 0 0 2px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rc-line);
+    font-size: 13px;
+    color: var(--rc-ink-3);
+  }
+
+  @media (max-width: 640px) {
+    .doc-column.pub-column {
+      padding-top: 28px;
+    }
+  }
+}

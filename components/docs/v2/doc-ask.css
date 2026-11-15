@@ -1,0 +1,229 @@
+/* Ask AI inside a doc (DOCS_EDITOR_V2_PLAN phase 5): the box under the block he is in, on the float
+   layer (12 radius, the float shadow), as wide as the text column. Its rows reuse Ask AI's tool rows.
+   The one authored moment: what the AI wrote takes the selection tint and lets it go (1.6 s). */
+
+.lab-editor {
+  --doc-ask-focus: color-mix(in srgb, var(--rc-accent-fill) 12%, transparent);
+  --doc-ask-new: color-mix(in srgb, var(--rc-accent-fill) 24%, transparent);
+}
+
+/* A zero-height layer after the editor: the box is placed from it, under its block. */
+.doc-ask-layer {
+  position: relative;
+  height: 0;
+}
+
+.doc-ask {
+  position: absolute;
+  left: -6px;
+  right: 0;
+  z-index: 30;
+  background: var(--rc-surface);
+  box-shadow: var(--rc-shadow-float);
+  border-radius: 12px;
+  color: var(--rc-ink-1);
+  font-family: var(--rc-font);
+  animation: doc-ask-pop 160ms ease-out;
+}
+@keyframes doc-ask-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+/* The line he types in: the mark, the words, the send button. */
+.doc-ask-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+}
+.doc-ask-mark {
+  width: 18px;
+  height: 18px;
+  margin-top: 5px;
+  flex-shrink: 0;
+  color: var(--rc-icon);
+}
+.doc-ask-input {
+  flex: 1;
+  min-width: 0;
+  max-height: 168px;
+  padding: 2px 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 15px;
+  line-height: 24px;
+}
+.doc-ask-input::placeholder {
+  color: var(--rc-ink-3);
+}
+.doc-ask-send {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--rc-main);
+  color: var(--rc-on-main);
+  transition: background-color 100ms ease;
+}
+.doc-ask-send:hover:not(:disabled) {
+  background: var(--rc-main-hover);
+}
+.doc-ask-send:disabled {
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-3);
+  cursor: default;
+}
+.doc-ask-send svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+.doc-ask-send:focus-visible {
+  outline: 2px solid var(--rc-accent-fill);
+  outline-offset: 2px;
+}
+
+/* What it did and said, above the line. */
+.doc-ask-result {
+  padding: 10px 14px 10px;
+  border-bottom: 1px solid var(--rc-line);
+}
+.doc-ask[data-phase='working'] .doc-ask-result {
+  border-bottom: 0;
+}
+.doc-ask-asked {
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--rc-ink-3);
+  overflow-wrap: anywhere;
+}
+.doc-ask-steps {
+  margin: 2px 0;
+}
+.doc-ask-working {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 14px;
+  color: var(--rc-ink-2);
+}
+.doc-ask-spin {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--rc-icon);
+  animation: ask-spin 900ms linear infinite;
+}
+.doc-ask-failed {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--rc-ink-2);
+}
+.doc-ask-failed-icon {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--rc-attn-mark);
+}
+.doc-ask-answer {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--rc-ink-1);
+}
+.doc-ask-answer--long {
+  max-height: min(320px, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.doc-ask-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+.doc-ask-cost {
+  font-size: 13px;
+  color: var(--rc-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.doc-ask-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* The starters: the slash menu's rows, under the box. */
+.doc-ask-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 264px;
+  max-width: 100%;
+}
+
+/* Scrolled into view clear of the top bar, and on a phone clear of the bottom tab bar. */
+.doc-ask,
+.doc-ask-menu {
+  scroll-margin: 52px 0 16px;
+}
+@media (max-width: 767px) {
+  .doc-ask,
+  .doc-ask-menu {
+    scroll-margin-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+}
+
+/* What the AI just wrote: the selection tint, let go. */
+@keyframes doc-ask-arrive {
+  from {
+    background-color: var(--doc-ask-new);
+  }
+}
+
+/* While the box is open the block handle stays away (it would sit beside the box). */
+.doc-asking .lab-side {
+  display: none;
+}
+
+/* The format bar's Ask AI: the mark and the words, a hairline before the marks. */
+.lab-bar-btn.lab-bar-ask {
+  display: flex;
+  width: auto;
+  gap: 6px;
+  padding: 0 8px 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rc-ink-1);
+}
+.lab-bar-sep {
+  width: 1px;
+  margin: 4px 2px;
+  background: var(--rc-line-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-ask {
+    animation: none;
+  }
+  .doc-ask-spin {
+    animation-duration: 2400ms;
+  }
+}

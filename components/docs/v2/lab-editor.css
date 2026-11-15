@@ -1,0 +1,830 @@
+/* BlockNote spike in the app (/lab/editor): our own chrome on theme tokens, sized to Notion's
+   measurements (context/research/notion-editor-behaviour.md). Unlayered so it wins over the
+   library's base styles without !important. */
+
+.lab-editor {
+  --lab-col: 720px;
+  max-width: calc(var(--lab-col) + 192px);
+  margin: 0 auto;
+}
+
+/* The editing surface: Notion's column and type (doc-body 16/24, H1 30, H2 24, H3 20 at 600). */
+.lab-editor .bn-editor {
+  padding: 8px 96px 30vh;
+  background: transparent;
+  color: var(--rc-ink-1);
+  font-family: var(--rc-font);
+  font-size: 16px;
+  line-height: 1.5;
+  outline: none;
+}
+.lab-editor .bn-inline-content {
+  font-size: 16px;
+  line-height: 24px;
+}
+.lab-editor [data-content-type='heading'][data-level='1'] .bn-inline-content {
+  font-size: 30px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.lab-editor [data-content-type='heading'][data-level='2'] .bn-inline-content {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.lab-editor [data-content-type='heading'][data-level='3'] .bn-inline-content {
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+/* H4 is offered (Notion stops at H3); H5 and H6 come only from Markdown: smaller steps, H6 in ink 2. */
+.lab-editor [data-content-type='heading'][data-level='4'] .bn-inline-content {
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.lab-editor [data-content-type='heading'][data-level='5'] .bn-inline-content {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.lab-editor [data-content-type='heading'][data-level='6'] .bn-inline-content {
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--rc-ink-2);
+}
+.lab-editor [data-content-type='quote'] blockquote {
+  border-left: 2px solid var(--rc-ink-3);
+  padding-left: 14px;
+  color: var(--rc-ink-1);
+}
+.lab-editor .bn-inline-content code {
+  font-family: var(--rc-font-code);
+  font-size: 85%;
+  background: var(--rc-surface-2);
+  border-radius: 4px;
+  padding: 0.15em 0.3em;
+  color: var(--rc-danger);
+}
+
+/* Block selection: accent at 14 %, inset 2 px, radius 4 (Notion). */
+.lab-editor .bn-editor .ProseMirror-selectednode > .bn-block-content,
+.lab-editor .bn-editor [data-node-type='blockContainer'].ProseMirror-selectednode {
+  outline: none;
+  background: rgba(35, 131, 226, 0.14);
+  border-radius: 4px;
+}
+.lab-editor .bn-editor ::selection {
+  background: rgba(35, 131, 226, 0.28);
+}
+
+/* Custom blocks with no inline content (the canvas) take the column's full width. */
+.lab-editor .bn-block-content[data-content-type='canvas'] {
+  display: block;
+  width: 100%;
+  padding: 6px 0 6px 6px;
+}
+.lab-editor .bn-block-content[data-content-type='canvas'] > *,
+.lab-editor .doc-canvas {
+  width: 100%;
+}
+.lab-editor .bn-editor .ProseMirror-selectednode > .bn-block-content[data-content-type='canvas'] {
+  background: none;
+}
+.lab-editor .bn-editor .ProseMirror-selectednode > .bn-block-content[data-content-type='canvas'] .doc-canvas-surface {
+  box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.5);
+}
+
+/* The drop line: 4 px at 43 % (set in the editor options; this keeps its ends square). */
+.lab-editor .prosemirror-dropcursor-block {
+  border-radius: 0;
+}
+
+/* NB-10: a drop that nests draws its line where the child will sit (ours, fixed to the viewport)
+   and tints the future parent with its children (accent at 7 %, radius 4). */
+.lab-nest-line {
+  position: fixed;
+  z-index: 50;
+  height: 4px;
+  background: rgba(35, 131, 226, 0.43);
+  pointer-events: none;
+  display: none;
+}
+.lab-editor .bn-block-outer[data-nest-target='true'],
+.lab-editor .bn-block-outer[data-drop-target='true'] {
+  position: relative;
+}
+.lab-editor .bn-block-outer[data-nest-target='true']::after,
+.lab-editor .bn-block-outer[data-drop-target='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(35, 131, 226, 0.07);
+  box-shadow: none;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* The side menu: "+" 24×24 and the grip 18×24, 10 px left of the column; fades in 200 ms. */
+.lab-side {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  animation: lab-fade 200ms ease-out;
+}
+@keyframes lab-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.lab-side-btn {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--rc-icon);
+  transition: background-color 20ms ease-in;
+}
+.lab-side-btn:hover,
+.lab-side[data-open] .lab-side-grip {
+  background: var(--rc-hover);
+  color: var(--rc-ink-2);
+}
+.lab-side-add {
+  width: 24px;
+  cursor: pointer;
+}
+.lab-side-grip {
+  width: 18px;
+  cursor: grab;
+}
+.lab-side-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+}
+.lab-side-grip svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Menus: the float layer, radius 10, rows 30 px, the 5 % hover fill, hints on the right. */
+.lab-menu {
+  background: var(--rc-surface);
+  box-shadow: var(--rc-shadow-float);
+  border-radius: 10px;
+  padding: 4px;
+  color: var(--rc-ink-1);
+  font-family: var(--rc-font);
+  animation: lab-pop 200ms ease;
+}
+@keyframes lab-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.lab-slash {
+  width: 311px;
+  max-height: 332px;
+  overflow-y: auto;
+}
+.lab-block-menu {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: -4px;
+  width: 265px;
+  z-index: 30;
+}
+.lab-menu-label {
+  padding: 8px 8px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rc-ink-3);
+}
+.lab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--rc-ink-1);
+  text-align: left;
+  cursor: pointer;
+}
+.lab-menu-item:hover,
+.lab-menu-item[data-selected] {
+  background: var(--rc-hover);
+}
+.lab-menu-item svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+  color: var(--rc-icon);
+  flex-shrink: 0;
+}
+.lab-menu-item span {
+  flex: 1;
+  min-width: 0;
+}
+.lab-menu-item kbd {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--rc-ink-3);
+}
+.lab-menu-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--rc-line);
+}
+
+/* The format bar: one row above the selection. */
+.lab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 9px;
+  background: var(--rc-surface);
+  box-shadow: var(--rc-shadow-float);
+}
+.lab-bar-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--rc-ink-2);
+}
+.lab-bar-btn:hover {
+  background: var(--rc-hover);
+}
+.lab-bar-btn[data-on] {
+  color: var(--rc-accent);
+  background: var(--rc-accent-tint);
+}
+.lab-bar-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-side,
+  .lab-menu {
+    animation: none;
+  }
+}
+
+/* Inside the doc page (?editor=v2) the page's column already sets the width and gutters. */
+.doc-body-v2 .lab-editor {
+  max-width: none;
+  margin: 0;
+}
+.doc-body-v2 .lab-editor .bn-editor {
+  padding: 4px 0 30vh;
+}
+
+/* The grip's tooltip (NB-05): two lines, the verbs bold, under the grip, after 250 ms. */
+.lab-side {
+  position: relative;
+}
+.lab-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-30%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #2c2c2b;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 40;
+  animation: lab-fade 120ms ease-out;
+}
+.lab-tip b {
+  color: #fff;
+  font-weight: 500;
+}
+
+.lab-menu-search {
+  display: block;
+  width: calc(100% - 8px);
+  height: 30px;
+  margin: 4px 4px 2px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--rc-field);
+  box-shadow: inset 0 0 0 1px var(--rc-accent-fill), 0 0 0 3px color-mix(in srgb, var(--rc-accent-fill) 22%, transparent);
+  color: var(--rc-ink-1);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.lab-menu-search::placeholder {
+  color: var(--rc-ink-3);
+}
+.lab-block-menu {
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+}
+
+/* The block whose menu is open shows the selection tint (accent 14 %, radius 4). */
+.lab-editor [data-node-type='blockContainer'][data-menu-open] > .bn-block-content {
+  background: rgba(35, 131, 226, 0.14);
+  border-radius: 4px;
+}
+
+/* The block menu opens under the grip and over the text (to its left it would be cut by the app's
+   scrolling area; Notion's floats above the sidebar). */
+.lab-block-menu {
+  right: auto;
+  left: 0;
+  top: calc(100% + 4px);
+}
+
+/* ── Measured against Notion (0a): a paragraph block is 40 px (8 + 24 + 8), list rows 30 px,
+   headings 79 / 67 / 58 with 32 / 28 / 24 px above the text and 8 below, children indented 32 px.
+   BlockNote leaves the default heading level (1) out of the DOM, so H1 is "no data-level". ── */
+/* Across, Notion's numbers too: the block box starts 8 px left of a paragraph's text and a list
+   item's text sits 38 px in (its marker, then 6 px), so a child block (+32) starts under its
+   parent's text. The editor moves 6 px left so the text still lines up with the title. */
+.lab-editor .bn-editor {
+  margin-left: -6px;
+}
+.lab-editor .bn-block-content {
+  padding: 8px 2px 8px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='bulletListItem'],
+.lab-editor .bn-block-content[data-content-type='numberedListItem'],
+.lab-editor .bn-block-content[data-content-type='checkListItem'],
+.lab-editor .bn-block-content[data-content-type='toggleListItem'] {
+  padding: 3px 2px 3px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='bulletListItem'] .bn-inline-content,
+.lab-editor .bn-block-content[data-content-type='numberedListItem'] .bn-inline-content,
+.lab-editor .bn-block-content[data-content-type='checkListItem'] .bn-inline-content,
+.lab-editor .bn-block-content[data-content-type='toggleListItem'] .bn-inline-content {
+  padding-left: 6px;
+}
+.lab-editor .bn-block-content[data-content-type='heading']:not([data-level]),
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='1'] {
+  padding: 32px 2px 8px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='heading']:not([data-level]) .bn-inline-content {
+  font-size: 30px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='2'] {
+  padding: 28px 2px 8px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='3'] {
+  padding: 24px 2px 8px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='4'] {
+  padding: 20px 2px 6px 8px;
+}
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='5'],
+.lab-editor .bn-block-content[data-content-type='heading'][data-level='6'] {
+  padding: 16px 2px 6px 8px;
+}
+/* A toggle heading: its space above moves onto the toggle's frame (BlockNote's own pattern), so the
+   frame's grid centres the triangle on the heading's line instead of on the line plus that space. */
+.lab-editor .bn-toggle-slot > .bn-block-content[data-content-type='heading'] {
+  padding-top: 8px;
+}
+.lab-editor .bn-toggle-frame:has(> .bn-toggle-slot > .bn-block-content[data-content-type='heading']) {
+  padding-top: 24px;
+}
+.lab-editor .bn-toggle-frame:has(> .bn-toggle-slot > .bn-block-content[data-content-type='heading'][data-level='2']) {
+  padding-top: 20px;
+}
+.lab-editor .bn-toggle-frame:has(> .bn-toggle-slot > .bn-block-content[data-content-type='heading'][data-level='3']) {
+  padding-top: 16px;
+}
+.lab-editor .bn-toggle-frame:has(> .bn-toggle-slot > .bn-block-content[data-content-type='heading'][data-level='4']) {
+  padding-top: 12px;
+}
+.lab-editor .bn-block-group .bn-block-group {
+  margin-left: 32px;
+}
+
+/* A ticked to-do (NB-26, Notion): the text at 50 % ink, struck through by a line at 70 %; the box in the accent fill. */
+.lab-editor .bn-block-content[data-content-type='checkListItem'][data-checked='true'] .bn-inline-content {
+  color: color-mix(in srgb, var(--rc-ink-1) 50%, transparent);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--rc-ink-1) 35%, transparent);
+}
+.lab-editor .bn-block-content[data-content-type='checkListItem'] input[type='checkbox'] {
+  accent-color: var(--rc-accent-fill, #2383e2);
+}
+
+/* Block selection (NB-12): accent at 14 %, the block box inset 2 px, radius 4. */
+.lab-editor [data-node-type='blockContainer'][data-block-selected] > .bn-block-content {
+  background: rgba(35, 131, 226, 0.14);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px var(--rc-ground, #fff);
+}
+
+/* The margin marquee (NB-15): the selection tint, no border. */
+.lab-marquee {
+  position: fixed;
+  z-index: 60;
+  background: rgba(35, 131, 226, 0.14);
+  pointer-events: none;
+}
+
+/* Our file panel (an empty image block): Upload or Link, on the float layer. */
+.lab-file-panel {
+  width: 340px;
+  padding: 0 0 8px;
+}
+.lab-file-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--rc-line);
+}
+.lab-file-tab {
+  height: 32px;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--rc-ink-2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.lab-file-tab:hover {
+  color: var(--rc-ink-1);
+}
+.lab-file-tab[aria-selected='true'] {
+  color: var(--rc-ink-1);
+  border-bottom-color: var(--rc-ink-1);
+  font-weight: 500;
+}
+.lab-file-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 0;
+}
+.lab-file-main {
+  width: 100%;
+  justify-content: center;
+}
+.lab-file-url {
+  width: 100%;
+  margin: 0;
+}
+.lab-file-note {
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--rc-ink-3);
+  text-align: center;
+}
+.lab-file-body .lab-file-note {
+  padding: 0;
+}
+.lab-file-problem {
+  margin-top: 8px;
+  color: var(--rc-attn);
+}
+
+/* The Diagram block (phase 2): the old editor's code-block look (surface 2, radius 8, the quiet bar),
+   the Mermaid source above the drawing when shown. */
+.lab-editor .bn-block-content[data-content-type='diagram'] {
+  display: block;
+  width: 100%;
+  padding: 4px 0 4px 6px;
+}
+.lab-editor .lab-diagram {
+  width: 100%;
+}
+.lab-editor .lab-diagram .lab-diagram-source {
+  margin: 0;
+  padding: 2px 16px 12px;
+  background: transparent;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.lab-editor .lab-diagram .lab-diagram-source code {
+  display: block;
+  min-height: 21px;
+  padding: 0;
+  background: none;
+  font-family: var(--rc-font-code);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--rc-ink-1);
+  white-space: pre;
+}
+.lab-editor .lab-diagram .doc-diagram {
+  position: relative;
+  padding: 4px 16px 16px;
+}
+.lab-editor .lab-diagram[data-mode='edit'] .doc-diagram {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rc-line);
+}
+
+/* The code block (lib/blocks/code/View.tsx): the old editor's look and bar (surface 2, radius 8, a quiet bar
+   with the language picker and Copy, ink mono 13.5/1.6), not BlockNote's black box with its native select. */
+.lab-editor .bn-block-content[data-content-type='codeBlock'] {
+  display: block;
+  width: 100%;
+  padding: 4px 0 4px 6px;
+  background: transparent;
+  color: var(--rc-ink-1);
+}
+.lab-editor .lab-code {
+  width: 100%;
+  margin: 0;
+  background: var(--doc-code-bg, var(--rc-surface-2));
+}
+.lab-editor .lab-code .lab-code-source {
+  --bn-suggestion-surface: var(--rc-surface-2);
+  margin: 0;
+  padding: 2px 16px 16px;
+  background: transparent;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.lab-editor .lab-code .lab-code-source code {
+  display: block;
+  min-height: 21px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--rc-font-code);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--rc-ink-1);
+  white-space: pre;
+}
+/* Shiki's tokens carry both GitHub palettes (the old editor's colours): dark by default, as the app's
+   theme is; the light one under html.light. Plain text and unknown languages stay ink. */
+.lab-editor .lab-code .shiki {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+}
+html.light .lab-editor .lab-code .shiki {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+}
+
+/* The callout block (phase 2) reuses the old editor's .doc-callout look; BlockNote's content node sits in the body. */
+.lab-editor .bn-block-content[data-content-type='callout'] {
+  display: block;
+  padding: 4px 0 4px 6px;
+}
+.lab-editor .lab-callout {
+  display: flex;
+  width: 100%;
+}
+.lab-editor .lab-callout-body .bn-inline-content {
+  min-height: 24px;
+}
+
+/* Tables: BlockNote's table block on our tokens (hairline cells, a surface-2 header row or column),
+   and our handles (RcTableHandles.tsx): a grip on the hovered row and column, a "+" strip to extend. */
+.lab-editor .bn-block-content[data-content-type='table'] {
+  display: block;
+  padding: 2px 0 2px 6px;
+}
+.lab-editor .bn-editor [data-content-type='table'] th,
+.lab-editor .bn-editor [data-content-type='table'] td {
+  border: 1px solid var(--rc-line-strong);
+  padding: 6px 10px;
+  color: var(--rc-ink-1);
+}
+.lab-editor .bn-editor [data-content-type='table'] th {
+  background: var(--rc-surface-2);
+  font-weight: 600;
+}
+.lab-editor .bn-editor [data-content-type='table'] .bn-inline-content {
+  font-size: 15px;
+  line-height: 22px;
+}
+.lab-editor .bn-table-drop-cursor {
+  background-color: rgba(35, 131, 226, 0.43);
+}
+.lab-table-handle {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rc-r-xs);
+  background: var(--rc-surface-float);
+  box-shadow: 0 0 0 1px var(--rc-line-strong), 0 1px 2px rgba(0, 0, 0, 0.08);
+  color: var(--rc-icon);
+  cursor: grab;
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+.lab-table-handle--column {
+  width: 24px;
+  height: 18px;
+}
+.lab-table-handle:hover,
+.lab-table-handle[data-state='open'] {
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-1);
+}
+.lab-table-handle.is-dragging {
+  cursor: grabbing;
+  opacity: 0.6;
+}
+.lab-table-handle svg {
+  width: 14px;
+  height: 14px;
+}
+.lab-table-menu {
+  min-width: 180px;
+}
+.rc-menu-item .lab-table-check {
+  color: var(--rc-accent);
+}
+.lab-table-extend {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rc-r-xs);
+  background: transparent;
+  color: var(--rc-icon);
+  cursor: pointer;
+  transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+}
+.lab-table-extend--rows {
+  height: 18px;
+  margin-top: 2px;
+}
+.lab-table-extend--cols {
+  width: 18px;
+  margin-left: 2px;
+}
+.lab-table-extend:hover {
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-1);
+}
+.lab-table-extend svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Text and background colours (the format bar's Color menu) ─────────────────────────────────
+   Notion's colour families (context/research/design-v2/notion-tokens.md): the coloured text is the
+   family's saturated step in both themes; a background is its tag step (light) or its dark tag step.
+   BlockNote's own palette is an old, light-only one, so ours replaces it in the app's scope (inline
+   styles are [data-style-type][data-value]; block props and our swatches [data-text-color]). */
+.rc {
+  --c-gray-bg: #383836;
+  --c-brown-bg: #45362d;
+  --c-orange-bg: #53361f;
+  --c-yellow-bg: #504425;
+  --c-green-bg: #263d30;
+  --c-blue-bg: #233850;
+  --c-purple-bg: #3c2d47;
+  --c-pink-bg: #4e2b3c;
+  --c-red-bg: #502c29;
+}
+html.light .rc,
+.rc.rc-light {
+  --c-gray-bg: #f0efed;
+  --c-brown-bg: #f5ede9;
+  --c-orange-bg: #fbebde;
+  --c-yellow-bg: #f9f3dc;
+  --c-green-bg: #e8f1ec;
+  --c-blue-bg: #e5f2fc;
+  --c-purple-bg: #f3ebf9;
+  --c-pink-bg: #fae9f1;
+  --c-red-bg: #fce9e7;
+}
+.rc [data-style-type='textColor'][data-value='gray'],
+.rc [data-text-color='gray'] { color: #7d7a75; }
+.rc [data-style-type='textColor'][data-value='brown'],
+.rc [data-text-color='brown'] { color: #9f765a; }
+.rc [data-style-type='textColor'][data-value='orange'],
+.rc [data-text-color='orange'] { color: #d27b2d; }
+.rc [data-style-type='textColor'][data-value='yellow'],
+.rc [data-text-color='yellow'] { color: #cb9434; }
+.rc [data-style-type='textColor'][data-value='green'],
+.rc [data-text-color='green'] { color: #50946e; }
+.rc [data-style-type='textColor'][data-value='blue'],
+.rc [data-text-color='blue'] { color: #387dc9; }
+.rc [data-style-type='textColor'][data-value='purple'],
+.rc [data-text-color='purple'] { color: #9a6bb4; }
+.rc [data-style-type='textColor'][data-value='pink'],
+.rc [data-text-color='pink'] { color: #c14c8a; }
+.rc [data-style-type='textColor'][data-value='red'],
+.rc [data-text-color='red'] { color: #cf5148; }
+.rc [data-style-type='backgroundColor'][data-value='gray'],
+.rc [data-background-color='gray'] { background-color: var(--c-gray-bg); }
+.rc [data-style-type='backgroundColor'][data-value='brown'],
+.rc [data-background-color='brown'] { background-color: var(--c-brown-bg); }
+.rc [data-style-type='backgroundColor'][data-value='orange'],
+.rc [data-background-color='orange'] { background-color: var(--c-orange-bg); }
+.rc [data-style-type='backgroundColor'][data-value='yellow'],
+.rc [data-background-color='yellow'] { background-color: var(--c-yellow-bg); }
+.rc [data-style-type='backgroundColor'][data-value='green'],
+.rc [data-background-color='green'] { background-color: var(--c-green-bg); }
+.rc [data-style-type='backgroundColor'][data-value='blue'],
+.rc [data-background-color='blue'] { background-color: var(--c-blue-bg); }
+.rc [data-style-type='backgroundColor'][data-value='purple'],
+.rc [data-background-color='purple'] { background-color: var(--c-purple-bg); }
+.rc [data-style-type='backgroundColor'][data-value='pink'],
+.rc [data-background-color='pink'] { background-color: var(--c-pink-bg); }
+.rc [data-style-type='backgroundColor'][data-value='red'],
+.rc [data-background-color='red'] { background-color: var(--c-red-bg); }
+
+/* The Color menu: under its button, the slash menu's rows, a swatch per row. */
+.lab-color {
+  position: relative;
+  display: inline-flex;
+}
+.lab-color-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -4px;
+  z-index: 40;
+  width: 220px;
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.lab-swatch {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--rc-line-strong);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+.lab-swatch--bg {
+  box-shadow: inset 0 0 0 1px var(--rc-line);
+}
+.lab-color-menu .lab-check {
+  width: 16px;
+  height: 16px;
+  color: var(--rc-ink-2);
+}
+.lab-menu-item .lab-swatch {
+  flex: 0 0 22px;
+}
+
+/* The selection bar's block kind ("Text ▾"): the block menu's Turn into, under its button. */
+.lab-turn {
+  position: relative;
+  display: inline-flex;
+}
+.lab-bar-btn.lab-bar-turn {
+  display: flex;
+  width: auto;
+  gap: 2px;
+  padding: 0 4px 0 8px;
+  font-size: 14px;
+  color: var(--rc-ink-2);
+  white-space: nowrap;
+}
+.lab-bar-btn.lab-bar-turn svg {
+  width: 14px;
+  height: 14px;
+}
+.lab-turn-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -4px;
+  z-index: 40;
+  width: 220px;
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.lab-turn-menu .lab-check {
+  width: 16px;
+  height: 16px;
+  color: var(--rc-ink-2);
+}

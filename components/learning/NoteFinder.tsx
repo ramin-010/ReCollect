@@ -65,7 +65,7 @@ export function NoteFinder({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[#1c1c1e]/95 shadow-2xl overflow-hidden" onKeyDown={onKeyDown}>
+    <div className="rounded-2xl bg-[hsl(var(--popover))] shadow-[0_0_0_1px_var(--border-subtle),0_10px_30px_-5px_rgba(0,0,0,0.3)] overflow-hidden" onKeyDown={onKeyDown}>
       <div className="flex items-center gap-3 px-4 h-14 border-b border-[color:var(--border-subtle)]">
         <Search className="w-[18px] h-[18px] text-[var(--ui-ink-3)] shrink-0" aria-hidden />
         <input

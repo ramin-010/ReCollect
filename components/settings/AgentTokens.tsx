@@ -7,12 +7,29 @@ import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcSkel } from '@/components/rc-ui';
 import { agentApi, type ApiToken } from '@/lib/api/agentApi';
 import { formatRelative } from '@/components/docs/page/format';
+import { AgentProfile } from './AgentProfile';
 import './settings.css';
+
+/** A token's scopes in plain words for the list ("can read, write docs, log sessions"). */
+function scopeWords(scopes: string[]): string {
+  if (scopes.length === SCOPES.length) return 'every permission';
+  return scopes.map((v) => SHORT[v] ?? v).join(', ');
+}
+
+const SHORT: Record<string, string> = {
+  read: 'reads',
+  'docs:write': 'writes docs',
+  'learning:write': 'sets goals and notes',
+  'sessions:write': 'logs sessions',
+  'tasks:write': 'changes tasks',
+};
 
 const SCOPES = [
   { value: 'read', label: 'Read docs, goals and today' },
   { value: 'docs:write', label: 'Write docs' },
   { value: 'learning:write', label: 'Set goals, focus lines and notes' },
+  { value: 'sessions:write', label: 'Log study and work sessions' },
+  { value: 'tasks:write', label: 'Add and change your tasks' },
 ] as const;
 
 /**
@@ -23,7 +40,7 @@ export function AgentTokens() {
   const [tokens, setTokens] = useState<ApiToken[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [name, setName] = useState('Claude Code');
-  const [scopes, setScopes] = useState<string[]>(['read', 'docs:write', 'learning:write']);
+  const [scopes, setScopes] = useState<string[]>(['read', 'docs:write', 'learning:write', 'sessions:write', 'tasks:write']);
   const [creating, setCreating] = useState(false);
   const [fresh, setFresh] = useState<{ name: string; token: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -152,7 +169,7 @@ export function AgentTokens() {
               <span className="min-w-0">
                 <span className="block font-medium">{t.name}</span>
                 <span className="rc-meta">
-                  {t.prefix}… · {t.lastUsedAt ? `used ${formatRelative(t.lastUsedAt)}` : 'never used'} · {t.scopes.join(', ')}
+                  {t.signIn ? 'Signed in from the app' : `${t.prefix}…`} · {t.lastUsedAt ? `used ${formatRelative(t.lastUsedAt)}` : 'never used'} · {scopeWords(t.scopes)}
                 </span>
               </span>
               <RcButton size="sm" variant="danger" onClick={() => setRevoke(t)}>
@@ -162,6 +179,8 @@ export function AgentTokens() {
           ))}
         </ul>
       )}
+
+      <AgentProfile />
 
       <RcConfirm
         open={!!revoke}

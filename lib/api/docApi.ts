@@ -3,7 +3,6 @@
  */
 
 import axiosInstance from '@/lib/utils/axios';
-import { imageStorage } from '@/lib/storage/imageStorage';
 
 export interface ServerDoc {
   _id: string;
@@ -12,6 +11,7 @@ export interface ServerDoc {
   coverImage: string | null;
   isPinned: boolean;
   isArchived: boolean;
+  trashedAt?: string | null;
   cloudImages?: { imageId: string; cloudUrl: string; cloudPublicId: string }[];
   collaborators?: Array<{
     user: string | { _id: string; name: string; email: string };
@@ -23,49 +23,21 @@ export interface ServerDoc {
   createdAt: string;
 }
 
-function extractAllImageIds(content: any): string[] {
-  const allIds: string[] = [];
-  
-  function traverse(node: any) {
-    if (node.type === 'resizableImage' || node.type === 'image') {
-      if (node.attrs?.imageId) {
-        allIds.push(node.attrs.imageId);
-      }
-    }
-    if (node.content && Array.isArray(node.content)) {
-      node.content.forEach(traverse);
-    }
-  }
-  
-  traverse(content);
-  return allIds;
-}
-
-
-function extractPendingImages(content: any): { imageId: string; path: number[] }[] {
-  const pending: { imageId: string; path: number[] }[] = [];
-  
-  function traverse(node: any, path: number[] = []) {
-    if (node.type === 'resizableImage' || node.type === 'image') {
-      if (node.attrs?.imageId && node.attrs.src?.startsWith('blob:')) {
-        pending.push({ imageId: node.attrs.imageId, path: [...path] });
-      }
-    }
-    
-    if (node.content && Array.isArray(node.content)) {
-      node.content.forEach((child: any, index: number) => {
-        traverse(child, [...path, index]);
-      });
-    }
-  }
-  
-  traverse(content);
-  return pending;
+/** A doc found by GET /api/docs/search: titles and text on Postgres full-text, best match first. */
+export interface DocSearchHit {
+  _id: string;
+  title: string;
+  updatedAt: string;
+  /** The doc's text around the first match ('' for an empty doc). */
+  snippet: string;
+  /** [start, end) of each matched word in `snippet`; none when only the title matched. */
+  marks: Array<[number, number]>;
 }
 
 export const docApi = {
 
-  async createDoc(data: { title: string }): Promise<{ success: boolean; data?: ServerDoc }> {
+  /** A new doc; with `content` (a template's JSON) it starts with it, as blocks (the server converts it). */
+  async createDoc(data: { title: string; content?: unknown }): Promise<{ success: boolean; data?: ServerDoc }> {
     console.log('[docApi] Creating new doc:', data.title);
     const response = await axiosInstance.post('/api/docs', data);
     return {
@@ -81,11 +53,18 @@ export const docApi = {
     return response.data.data || [];
   },
 
+  /** The library's search: every word matches in some form (a stem, or a word's start). */
+  async searchDocs(q: string, opts: { signal?: AbortSignal } = {}): Promise<DocSearchHit[]> {
+    const response = await axiosInstance.get('/api/docs/search', { params: { q: q.slice(0, 200) }, signal: opts.signal });
+    return response.data.data || [];
+  },
+
   async fetchDoc(id: string): Promise<ServerDoc | null> {
     console.log('[docApi] Fetching doc:', id);
     try {
       const response = await axiosInstance.get(`/api/docs/${id}`);
-      return response.data.data || null;
+      // The caller's role comes beside the doc (GET /api/docs/:id answers { data, role }).
+      return response.data.data ? { ...response.data.data, role: response.data.role } : null;
     } catch (err: any) {
       if (err.response?.status === 404) {
         return null;
@@ -94,84 +73,22 @@ export const docApi = {
     }
   },
 
-  async saveDoc(id: string, data: {
-    content: any;
-    title: string;
-    coverImage: string | null;
-  }): Promise<{ success: boolean; updatedAt: string; data?: ServerDoc }> {
-    console.log('[docApi] Saving doc:', id);
-    
-    
-    const allImageIds = extractAllImageIds(data.content);
-    
-    
-    const pendingImages = extractPendingImages(data.content);
-    console.log('[docApi] All images:', allImageIds.length, '| Pending:', pendingImages.length);
-    
-    if (pendingImages.length > 0) {
-      
-      const formData = new FormData();
-      const imageNodeIds: string[] = [];
-      
-      for (const { imageId } of pendingImages) {
-        try {
-          const blob = await imageStorage.getImage(imageId);
-          if (blob) {
-            formData.append(`image_${imageId}`, blob, 'image.png');
-            imageNodeIds.push(imageId);
-          }
-        } catch (err) {
-          console.error(`[docApi] Failed to get image ${imageId}:`, err);
-        }
-      }
-      
-      
-      formData.append('content', JSON.stringify(data.content));
-      formData.append('title', data.title);
-      formData.append('coverImage', data.coverImage || '');
-      formData.append('imageNodeIds', JSON.stringify(imageNodeIds));
-      formData.append('allImageIds', JSON.stringify(allImageIds));
-      
-      console.log('[docApi] Sending FormData with', imageNodeIds.length, 'images');
-      
-      const response = await axiosInstance.post(`/api/docs/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      
-      for (const imageId of imageNodeIds) {
-        try {
-          await imageStorage.deleteImage(imageId);
-        } catch (err) {
-          console.error(`[docApi] Failed to cleanup image ${imageId}:`, err);
-        }
-      }
-      
-      return {
-        success: response.data.success,
-        updatedAt: response.data.data?.updatedAt || new Date().toISOString(),
-        data: response.data.data,
-      };
-    } else {
-      
-      const response = await axiosInstance.post(`/api/docs/${id}`, {
-        content: data.content,
-        title: data.title,
-        coverImage: data.coverImage,
-        allImageIds: allImageIds,
-      });
-      
-      return {
-        success: response.data.success,
-        updatedAt: response.data.data?.updatedAt || new Date().toISOString(),
-        data: response.data.data,
-      };
-    }
+  async trashDoc(id: string): Promise<{ _id: string; trashedAt: string | null }> {
+    const response = await axiosInstance.post(`/api/docs/${id}/trash`);
+    return response.data.data;
   },
 
-  /** Pins or unpins a doc in the library. */
+  async restoreDoc(id: string): Promise<{ _id: string; trashedAt: string | null }> {
+    const response = await axiosInstance.post(`/api/docs/${id}/restore`);
+    return response.data.data;
+  },
+
+  /** Every doc in the trash, deleted for good. */
+  async emptyTrash(): Promise<{ deleted: number }> {
+    const response = await axiosInstance.post('/api/docs/trash/empty');
+    return response.data.data;
+  },
+
   async setPinned(id: string, isPinned: boolean): Promise<void> {
     await axiosInstance.patch(`/api/docs/${id}`, { isPinned });
   },

@@ -94,6 +94,33 @@ function BoardInner({ ydoc, canvasId, board, editable, full, onToggleFull }: Can
 
   const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
 
+  // A board that arrives live (an agent's write) mounts before its block has a size or before its
+  // boxes arrive, so React Flow's one fit on start lands at the smallest zoom. Fit again when the
+  // board gets its size or its first boxes, until the person pans or zooms it themselves.
+  const viewTouched = useRef(false);
+  const hadNodes = useRef(nodes.length > 0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let wasEmpty = el.clientWidth === 0 || el.clientHeight === 0;
+    const ro = new ResizeObserver(() => {
+      const empty = el.clientWidth === 0 || el.clientHeight === 0;
+      if (wasEmpty && !empty && !viewTouched.current) requestAnimationFrame(() => void rf.fitView(FIT));
+      wasEmpty = empty;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rf]);
+  useEffect(() => {
+    if (hadNodes.current || nodes.length === 0) return;
+    hadNodes.current = true;
+    // Wait for React Flow to measure the new boxes.
+    const t = setTimeout(() => {
+      if (!viewTouched.current) void rf.fitView(FIT);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [nodes.length, rf]);
+
   /** A node's rectangle in board coordinates (a box in a zone is stored relative to it). */
   const absRect = useCallback(
     (id: string): Rect | null => {
@@ -531,6 +558,10 @@ function BoardInner({ ydoc, canvasId, board, editable, full, onToggleFull }: Can
           connectionRadius={28}
           fitView
           fitViewOptions={FIT}
+          onMoveStart={(event) => {
+            // Only the person's own pan or zoom (an event) stops the refits above; our fitView has none.
+            if (event) viewTouched.current = true;
+          }}
           minZoom={0.2}
           maxZoom={2}
           snapToGrid

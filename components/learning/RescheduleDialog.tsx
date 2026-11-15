@@ -8,6 +8,7 @@ import { addDays, formatDayChip, dueInstantForDay, dayOf } from '@/lib/learning/
 import { resolveTimeZone, type DayString } from '@/lib/learning/engine';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { LearningDialog } from './LearningDialog';
+import { MoveCalendar } from './MoveCalendar';
 import { lx } from './styles';
 
 /** The calendar day the user picked on the wheel (its local Y-M-D), independent of time zones. */
@@ -21,28 +22,30 @@ const pickedDay = (d: Date): DayString => `${d.getFullYear()}-${String(d.getMont
 export function RescheduleDialog({ today, timezone }: { today: DayString; timezone: string }) {
   const target = useLearningStore((s) => s.rescheduleTarget);
   const close = () => useLearningStore.getState().openReschedule(null);
-  const { rescheduleRevision, updateTask } = useLearningStore.getState();
+  const { updateTask } = useLearningStore.getState();
   const [error, setError] = useState<string | null>(null);
   const tz = resolveTimeZone(timezone);
 
   useEffect(() => setError(null), [target]);
 
   if (!target) return null;
-  const isRevision = target.kind === 'revision';
-  const current = isRevision ? target.scheduledFor : target.dueDate ? dayOf(new Date(target.dueDate), tz) : null;
+  // A review moves on the month calendar, each day's load beside it (Ramin's Revise "Move here").
+  if (target.kind === 'revision') {
+    return (
+      <MoveCalendar
+        target={{ id: target.id, title: target.title, scheduledFor: target.scheduledFor }}
+        today={today}
+        onClose={close}
+        onMoved={() => void useLearningStore.getState().refresh()}
+      />
+    );
+  }
+  // A task: date and time.
+  const current = target.dueDate ? dayOf(new Date(target.dueDate), tz) : null;
 
   const applyDay = async (day: DayString, instant?: Date) => {
-    if (isRevision) {
-      if (day < today) {
-        setError('Pick today or a later day.');
-        return;
-      }
-      close();
-      await rescheduleRevision(target.id, day);
-    } else {
-      close();
-      await updateTask(target.id, { dueDate: (instant ?? dueInstantForDay(day, tz)).toISOString() });
-    }
+    close();
+    await updateTask(target.id, { dueDate: (instant ?? dueInstantForDay(day, tz)).toISOString() });
   };
 
   const quick: { label: string; day: DayString }[] = [
@@ -81,8 +84,7 @@ export function RescheduleDialog({ today, timezone }: { today: DayString; timezo
             </button>
           ))}
         </div>
-        {isRevision && <p className={cn('text-[11px] text-center', lx.muted)}>Later cycles of this item move by the same number of days.</p>}
-        <SmartDatePicker selectedDate={initial} onSelect={(d) => void applyDay(pickedDay(d), isRevision ? undefined : d)} />
+        <SmartDatePicker selectedDate={initial} onSelect={(d) => void applyDay(pickedDay(d), d)} />
         {error && <p className={cn('text-xs', lx.danger)}>{error}</p>}
       </div>
     </LearningDialog>

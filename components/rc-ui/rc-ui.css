@@ -35,6 +35,11 @@
 
   /* Dark: page #191919, cards #202020, floating #252525 (Notion bacPri / bacEle / popBac) */
   --rc-ground: hsl(var(--background));
+  /* Session kinds in charts (dataviz reference slots 1-4, dark steps; validated on #191919 and #202020) */
+  --rc-kind-study: #3987e5;
+  --rc-kind-practice: #d95926;
+  --rc-kind-build: #199e70;
+  --rc-kind-review: #c98500;
   --rc-surface: #202020;
   --rc-surface-2: #262626;
   --rc-surface-float: #252525;
@@ -90,6 +95,11 @@
 /* Light: page #FFFFFF, sidebar #F9F8F7, warm ink #2C2C2B (Notion bacPri / bacSec / texPri) */
 html.light .rc,
 .rc.rc-light {
+  /* Session kinds, light steps (validated on #ffffff; aqua and yellow are under 3:1, so every chart has a legend and a table) */
+  --rc-kind-study: #2a78d6;
+  --rc-kind-practice: #eb6834;
+  --rc-kind-build: #1baf7a;
+  --rc-kind-review: #eda100;
   --rc-surface: #ffffff;
   --rc-surface-2: #f4f3f2;
   --rc-surface-float: #ffffff;
@@ -179,6 +189,27 @@ html.light .rc,
   color: var(--rc-accent);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+}
+
+/* A button that is a link (an <a> or Next's <Link> with rc-btn / rc-icon-btn) keeps its button look. */
+.rc a.rc-btn,
+.rc a.rc-icon-btn {
+  text-decoration: none;
+}
+.rc a.rc-btn--main {
+  color: var(--rc-on-main);
+}
+.rc a.rc-btn--outline {
+  color: var(--rc-ink-1);
+}
+.rc a.rc-btn--quiet {
+  color: var(--rc-ink-2);
+}
+.rc a.rc-icon-btn {
+  color: var(--rc-icon);
+}
+.rc a.rc-icon-btn:hover {
+  color: var(--rc-ink-1);
 }
 
 .rc ::-webkit-scrollbar {

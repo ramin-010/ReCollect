@@ -10,6 +10,7 @@ import { agentApi, type AgentEdit } from '@/lib/api/agentApi';
 import type { Goal, SubjectWithTopics, TopicByDoc } from '@/lib/learning/types';
 import { formatRelative, formatStampDay } from './format';
 import { RecallSheet, type RecallTarget } from '@/components/learning/recall/RecallSheet';
+import { RevisionTimeline } from './RevisionTimeline';
 
 const CYCLES = 4;
 
@@ -214,6 +215,7 @@ export function DocProperties({ docId, updatedAt, editable }: { docId: string; u
               Mastered · {done} of {CYCLES} reviews done
             </span>
           )}
+          {info.chain.length > 0 && <RevisionTimeline chain={info.chain} title={topic?.title ?? 'This doc'} editable={editable} onMoved={() => void load()} />}
         </span>
       </div>
 

@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, Pin, RefreshCw } from 'lucide-react';
+import { Paperclip, Pin, RefreshCw, Sparkles } from 'lucide-react';
 import { NoteFinder } from '@/components/learning/NoteFinder';
 import { toast } from 'sonner';
 import { TaskInput } from './task_Input';
@@ -16,13 +16,14 @@ import type { Attachment, SubjectWithTopics } from '@/lib/learning/types';
 import { CaptureComposer, type CaptureComposerHandle } from '@/components/learning/CaptureComposer';
 import { SubjectPicker } from '@/components/learning/SubjectPicker';
 import { cn } from '@/lib/utils';
+import { formatMinutes, parseSessionLog, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
 
 interface QuickTaskAddProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type PaletteMode = 'task' | 'note' | 'link' | 'find';
+type PaletteMode = 'task' | 'note' | 'link' | 'find' | 'ask';
 type Goal = 'NONE' | 'WEEKLY' | 'MONTHLY';
 
 // Theme v2: sentence case, theme tokens (light + dark), controls grouped in floating pills over a plain dim.
@@ -38,7 +39,7 @@ const iconToggle = (on: boolean) =>
   );
 /** A floating group of controls (popover surface + hairline ring + soft shadow). */
 const floatPill = 'flex items-center gap-0.5 p-[3px] rounded-[9px] bg-[hsl(var(--popover))] shadow-[0_0_0_1px_var(--border-subtle),0_6px_16px_-4px_rgba(0,0,0,0.18)]';
-const MODE_LABEL = { task: 'Task', note: 'Note', link: 'Link', find: 'Find' } as const;
+const MODE_LABEL = { task: 'Task', note: 'Note', link: 'Link', find: 'Find', ask: 'Ask' } as const;
 
 /**
  * Ctrl+K: ONE palette (LEARNING_SPEC §4). Task mode is the existing quick add (TaskInput,
@@ -54,9 +55,13 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const composerRef = useRef<CaptureComposerHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const currentDoc = useDocStore((s) => s.currentDoc);
 
   const [mode, setMode] = useState<PaletteMode>('task');
+  // On a phone the palette is a bottom sheet (ALWAYS_ON_SPEC 6.1): it rises from the bottom, near
+  // the thumb and the "+" that opens it; the keyboard hints are left out (no keyboard there).
+  const [phone] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches);
   const [revise, setRevise] = useState(false);
   const [goal, setGoal] = useState<Goal>('NONE');
   const [isPinned, setIsPinned] = useState(false);
@@ -127,7 +132,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && mode !== 'find') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && mode !== 'find' && mode !== 'ask') {
         e.preventDefault();
         setMode('find');
         setRevise(false);
@@ -170,10 +175,32 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
     onClose();
   }, [addTodo, onClose]);
 
+  /**
+   * "log 40m graphs" in Task mode logs a session instead of making a task (SYNC_SPINE_SPEC 1.2).
+   * Caught on Enter before the task input sees it; a subject named in the title files it there.
+   */
+  const logSession = async (text: string): Promise<boolean> => {
+    const parsed = parseSessionLog(text);
+    if (!parsed) return false;
+    const words = parsed.title.toLowerCase();
+    const subject = subjects.find((s) => words.includes(s.name.toLowerCase()));
+    try {
+      await learningApi.createSession({ title: parsed.title, minutes: parsed.minutes, kind: parsed.kind, subjectId: subject?._id ?? null });
+      toast.success(`Logged ${formatMinutes(parsed.minutes)} ${parsed.kind}`, { description: parsed.title });
+      window.dispatchEvent(new Event(SESSIONS_CHANGED_EVENT));
+      const learning = useLearningStore.getState();
+      if (learning.isHomeMounted) void learning.refresh();
+      onClose();
+    } catch {
+      toast.error('That session was not logged. Try again.');
+    }
+    return true;
+  };
+
   const switchMode = (next: PaletteMode) => {
     setMode(next);
-    if (next === 'task' || next === 'find') setRevise(false);
-    if (next === 'find') return;
+    if (next === 'task' || next === 'find' || next === 'ask') setRevise(false);
+    if (next === 'find' || next === 'ask') return;
     setTimeout(() => (next === 'task' ? inputRef.current?.focus() : composerRef.current?.focus()), 30);
   };
 
@@ -217,24 +244,35 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
 
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            initial={phone ? { opacity: 0, y: 24 } : { opacity: 0, scale: 0.95, y: -20 }}
+            animate={phone ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={phone ? { opacity: 0, y: 24 } : { opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-[101] px-4 sm:px-0"
+            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-[101] px-4 sm:px-0 max-sm:top-auto max-sm:bottom-0 max-sm:px-3 max-sm:pt-2.5 max-sm:pb-[calc(12px+env(safe-area-inset-bottom))] max-sm:rounded-t-[14px] max-sm:bg-[var(--ui-sidebar)] max-sm:shadow-[0_-12px_32px_-10px_rgba(0,0,0,0.3)]"
+            onKeyDownCapture={(e) => {
+              if (mode !== 'task' || e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+              const value = (e.target as HTMLInputElement).value;
+              if (e.target !== inputRef.current || !parseSessionLog(value ?? '')) return;
+              e.preventDefault();
+              e.stopPropagation();
+              void logSession(value);
+            }}
           >
+            {/* A phone's sheet: its grab line. */}
+            <div className="sm:hidden mx-auto mb-2.5 h-1 w-9 rounded-full bg-[var(--ui-ink-3)] opacity-40" aria-hidden />
             {/* Top row: mode · ↻ Revise this · goal / subject · pin + attach */}
             <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className={floatPill} role="tablist" aria-label="Capture type">
-                  {(['task', 'note', 'link', 'find'] as const).map((m) => (
+                  {(['task', 'note', 'link', 'find', 'ask'] as const).map((m) => (
                     <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={pill(mode === m)}>
                       {MODE_LABEL[m]}
                     </button>
                   ))}
                 </div>
-                {mode !== 'find' && (
+                {mode !== 'find' && mode !== 'ask' && (
                 <button
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={toggleRevise}
                   aria-pressed={revise}
                   className={cn(
@@ -249,7 +287,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                 {mode === 'task' && (
                   <div className={floatPill} title="Plan it for this week or this month">
                     {(['NONE', 'WEEKLY', 'MONTHLY'] as const).map((g) => (
-                      <button key={g} onClick={() => setGoal(g)} className={pill(goal === g)}>
+                      <button key={g} onMouseDown={(e) => e.preventDefault()} onClick={() => setGoal(g)} className={pill(goal === g)}>
                         {g === 'NONE' ? 'Anytime' : g === 'WEEKLY' ? 'This week' : 'This month'}
                       </button>
                     ))}
@@ -267,7 +305,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                       setTopicId(t);
                     }}
                   />
-                  <button onClick={() => setIsPinned((p) => !p)} aria-pressed={isPinned} className={iconToggle(isPinned)} title="Pin to top" aria-label="Pin to top">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => setIsPinned((p) => !p)} aria-pressed={isPinned} className={iconToggle(isPinned)} title="Pin to top" aria-label="Pin to top">
                     <Pin className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <button onClick={() => fileRef.current?.click()} className={iconToggle(attachments.length > 0)} title="Attach a file" aria-label="Attach a file">
@@ -289,6 +327,13 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
 
             {mode === 'find' ? (
               <NoteFinder onClose={onClose} />
+            ) : mode === 'ask' ? (
+              <AskBox
+                onAsk={(text) => {
+                  onClose();
+                  router.push(`/ask?q=${encodeURIComponent(text)}`);
+                }}
+              />
             ) : mode === 'task' ? (
               /* Task Input (unchanged quick add) */
               <TaskInput
@@ -316,12 +361,12 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
               />
             )}
 
-            {/* Keyboard hints */}
-            <div className="mt-3 flex justify-center">
+            {/* Keyboard hints (not on a phone: no keyboard there) */}
+            <div className="mt-3 flex justify-center max-sm:hidden">
               <div className={cn(floatPill, 'gap-5 px-3 h-[32px] text-[12.5px] text-[var(--ui-ink-3)]')}>
                 <span className="flex items-center gap-1.5">
                   <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded-[4px] bg-[var(--ui-kbd)] px-1 font-[inherit] text-[12px] text-[var(--ui-ink-2)]">↵</kbd>
-                  {mode === 'task' ? 'Create' : mode === 'find' ? 'Copy' : 'Save'}
+                  {mode === 'task' ? 'Create' : mode === 'find' ? 'Copy' : mode === 'ask' ? 'Ask' : 'Save'}
                 </span>
                 {mode === 'find' && (
                   <span className="flex items-center gap-1.5">
@@ -335,7 +380,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                     Find a note
                   </span>
                 )}
-                {isCapture && (
+                {(isCapture || mode === 'ask') && (
                   <span className="flex items-center gap-1.5">
                     <kbd className="grid h-[18px] place-items-center rounded-[4px] bg-[var(--ui-kbd)] px-1 font-[inherit] text-[12px] text-[var(--ui-ink-2)]">⇧↵</kbd>
                     New line
@@ -352,5 +397,38 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
       )}
     </AnimatePresence>,
     document.body
+  );
+}
+
+/** Ask mode: one message for Ask AI; Enter opens the page with it (MANAGER_AND_DOCS_PLAN §3.4). */
+function AskBox({ onAsk }: { onAsk: (text: string) => void }) {
+  const [text, setText] = useState('');
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const t = setTimeout(() => ref.current?.focus(), 30);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="rounded-xl bg-[hsl(var(--popover))] shadow-[0_0_0_1px_var(--border-subtle),0_10px_30px_-5px_rgba(0,0,0,0.3)]">
+      <div className="flex items-start gap-3 px-4 pt-3 pb-2">
+        <Sparkles className="mt-[3px] h-[18px] w-[18px] shrink-0 text-[var(--ui-icon)]" strokeWidth={1.75} aria-hidden />
+        <textarea
+          ref={ref}
+          rows={1}
+          value={text}
+          aria-label="Ask AI"
+          placeholder="Ask, or tell it what to do"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              if (text.trim()) onAsk(text.trim());
+            }
+          }}
+          className="max-h-[160px] min-h-[24px] flex-1 resize-none bg-transparent text-[16px] leading-[1.5] [field-sizing:content] text-[var(--ui-ink-1)] outline-none placeholder:text-[var(--ui-ink-3)]"
+        />
+      </div>
+      <p className="px-4 pb-3 pl-[46px] text-[12.5px] text-[var(--ui-ink-3)]">Opens Ask AI and sends it. A message costs a few cents.</p>
+    </div>
   );
 }

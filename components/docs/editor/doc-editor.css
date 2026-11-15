@@ -63,6 +63,29 @@ html:not(.light) .rc {
   padding-top: 18vh;
 }
 
+/* A doc in the trash: one quiet bar across the top of the page (surface 2, ink, no alarm colour). */
+.doc-trash-bar {
+  /* Above the column, whose hidden "Add cover" row reaches up 32px (its margin collapses through
+     the column): the margin below meets that one, so the column starts at the bar's edge. */
+  position: relative;
+  z-index: 2;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px max(16px, calc((100% - 720px) / 2));
+  background: var(--rc-surface-2);
+  border-bottom: 1px solid var(--rc-line);
+  color: var(--rc-ink-1);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.doc-trash-bar > svg {
+  color: var(--rc-icon);
+}
+
 .doc-cover {
   position: relative;
   height: min(30vh, 280px);
@@ -1183,4 +1206,52 @@ button.doc-callout-kind[data-state='open'] {
   max-width: 50%;
   font-size: 13px;
   color: var(--rc-attn);
+}
+
+/* ── Phone (ALWAYS_ON_SPEC 6.1): the column fills the screen with a 16 px gutter, a smaller title,
+   a narrower label column, values that wrap. Reading and light editing; the new editor's phone
+   pass comes with the rebuild. ─────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .doc-column {
+    padding: 0 16px 30vh;
+  }
+
+  .doc-title {
+    font-size: 30px;
+    line-height: 1.25;
+  }
+
+  .doc-prop {
+    align-items: flex-start;
+    padding: 4px 0;
+  }
+
+  .doc-prop-label {
+    width: 104px;
+    min-height: 26px;
+  }
+
+  .doc-prop-value {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 767px) {
+  /* The top bar has room for the breadcrumb and the actions, not the "Saved" word. */
+  .doc-sync {
+    display: none;
+  }
+}
+
+/* ?editor=v1 after the switch: the old editor's frozen copy, read-only, with one quiet line saying so. */
+.doc-old-note {
+  margin: 4px 0 16px;
+  padding: 8px 12px;
+  border-radius: var(--rc-r-md);
+  background: var(--rc-surface-2);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--rc-ink-2);
 }

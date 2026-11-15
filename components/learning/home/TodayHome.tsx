@@ -17,8 +17,14 @@ import { WeeklyReviewDialog } from '../WeeklyReviewDialog';
 import { DayHeader } from './DayHeader';
 import { FocusLines } from './FocusLines';
 import { FromAgent } from './FromAgent';
+import { NextUpSection } from './NextUp';
+import { Suggested } from './Suggested';
+import { ThisWeek } from './ThisWeek';
+import { LookAgain } from './LookAgain';
+import { TodaySoFar } from './TodaySoFar';
 import { CoachSheet } from './CoachSheet';
-import { MessageSquareText } from 'lucide-react';
+import Link from 'next/link';
+import { ChartNoAxesColumn, MessageSquareText } from 'lucide-react';
 import { GoalSheet } from './GoalSheet';
 import { GoalsRail } from './GoalsRail';
 import { AllNotesSheet, PocketRail } from './Pocket';
@@ -77,16 +83,23 @@ export function TodayHome({ data }: { data: TodayPayload }) {
 
         <div className={cn(columns, 'mt-7 lg:mt-8')}>
           <div className="flex min-w-0 flex-col gap-9">
-            <TodaySlip
-              plan={data.plan}
-              today={data.today}
-              firstRun={data.stats.totalTopics === 0 && data.revisions.doneToday.length === 0 && (data.plan?.doneToday.length ?? 0) === 0}
-              onRetry={retry}
-              onOpenSettings={() => openSettings(true)}
-            />
-            <FromAgent />
+            <div>
+              <TodaySlip
+                plan={data.plan}
+                today={data.today}
+                firstRun={data.stats.totalTopics === 0 && data.revisions.doneToday.length === 0 && (data.plan?.doneToday.length ?? 0) === 0}
+                onRetry={retry}
+                onOpenSettings={() => openSettings(true)}
+              />
+              <TodaySoFar today={data.today} />
+              <Suggested />
+            </div>
+            <LookAgain />
             <FocusLines focus={data.focus} onRetry={retry} />
+            <ThisWeek />
+            <NextUpSection next={data.next} />
             <TasksToday groups={groups} today={data.today} timezone={data.timezone} reviewCount={reviewCount} onPlanWeek={() => setReviewOpen(true)} />
+            <FromAgent />
           </div>
           <aside className="flex min-w-0 flex-col gap-9" aria-label="Goals and pocket">
             <div>
@@ -106,6 +119,11 @@ export function TodayHome({ data }: { data: TodayPayload }) {
                 <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">Your week</span>
                 <span className="rc-meta">a look back from the coach</span>
               </button>
+              <Link href="/mirror" className="rc-row rc-hoverable flex w-full items-center gap-2 rounded-[6px] px-2 py-[7px] text-left">
+                <ChartNoAxesColumn className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
+                <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">Where you stand</span>
+                <span className="rc-meta">pace and hours, worked out</span>
+              </Link>
             </div>
             <PocketRail notes={data.quickNotes} onOpenAll={() => setNotesOpen(true)} />
           </aside>

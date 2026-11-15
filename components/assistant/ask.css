@@ -1,0 +1,579 @@
+/*
+ * Ask AI (MANAGER_AND_DOCS_PLAN §3.4), theme v2. A quiet chat: conversations on the left a size
+ * smaller than the page, the conversation in a 720 column like a doc, the composer docked below.
+ * The one authored moment: a tool row settles in as the manager finishes it (4 px rise, 220 ms).
+ */
+@layer components {
+  .ask {
+    position: relative;
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    background: var(--rc-ground);
+    color: var(--rc-ink-1);
+  }
+
+  /* ── Conversations ─────────────────────────────────────────────────── */
+  .ask-threads {
+    width: 248px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 8px 24px;
+    border-right: 1px solid var(--rc-line);
+    overflow-y: auto;
+  }
+  .ask-threads-head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ask-new {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: var(--rc-r-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--rc-ink-2);
+    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+  }
+  .ask-new svg {
+    color: var(--rc-icon);
+  }
+  .ask-new:hover {
+    background: var(--rc-hover);
+    color: var(--rc-ink-1);
+  }
+  .ask-threads-close {
+    display: none;
+  }
+  .ask-group-label {
+    padding: 16px 8px 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--rc-ink-3);
+  }
+  .ask-threads-empty {
+    padding: 16px 8px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--rc-ink-3);
+  }
+  .ask-thread {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    border-radius: var(--rc-r-sm);
+    color: var(--rc-ink-2);
+    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+  }
+  .ask-thread:hover {
+    background: var(--rc-hover);
+    color: var(--rc-ink-1);
+  }
+  .ask-thread[aria-current='page'] {
+    background: var(--rc-selected);
+    color: var(--rc-ink-1);
+  }
+  .ask-thread-open {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 4px 0 8px;
+    text-align: left;
+    font-size: 14px;
+    border-radius: var(--rc-r-sm);
+  }
+  .ask-thread[aria-current='page'] .ask-thread-open {
+    font-weight: 500;
+  }
+  .ask-thread-del {
+    margin-right: 2px;
+    opacity: 0;
+    transition: opacity var(--rc-fast) ease;
+  }
+  .ask-thread:hover .ask-thread-del,
+  .ask-thread:focus-within .ask-thread-del {
+    opacity: 1;
+  }
+  .ask-threads-scrim {
+    display: none;
+  }
+
+  /* ── The conversation ──────────────────────────────────────────────── */
+  .ask-main {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .ask-narrow-bar {
+    display: none;
+  }
+  .ask-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .ask-column {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px 40px 32px;
+  }
+  .ask-turns {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .ask-user {
+    align-self: flex-end;
+    max-width: min(82%, 600px);
+    padding: 8px 14px;
+    border-radius: var(--rc-r-xl);
+    background: var(--rc-surface-2);
+    font-size: 15px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .ask-answer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .ask-meta {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--rc-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tool rows: a read is a quiet line; a change says what changed and offers Undo. */
+  .ask-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ask-tool {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 28px;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--rc-ink-2);
+  }
+  .ask-tool-icon {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--rc-icon);
+  }
+  .ask-tool--read {
+    min-height: 24px;
+    padding: 2px 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--rc-ink-3);
+  }
+  .ask-tool--read .ask-tool-icon {
+    width: 14px;
+    height: 14px;
+    margin: 3px 1px 0;
+  }
+  .ask-tool--failed .ask-tool-icon {
+    color: var(--rc-attn-mark);
+  }
+  .ask-tool--undone {
+    color: var(--rc-ink-3);
+  }
+  .ask-tool-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .ask-tool-undo {
+    flex-shrink: 0;
+    margin: -4px 0;
+  }
+  .ask-tool-state {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--rc-ink-3);
+  }
+
+  /* An action that needs his tap: the card Home shows, in the conversation. */
+  .ask-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 12px 14px;
+    border-radius: var(--rc-r-lg);
+    background: var(--rc-surface);
+    box-shadow: var(--rc-card-shadow);
+  }
+  .ask-card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--rc-ink-3);
+  }
+  .ask-card-head svg {
+    color: var(--rc-icon);
+  }
+  .ask-card-text {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .ask-card[data-status='dismissed'] .ask-card-text,
+  .ask-card[data-status='gone'] .ask-card-text {
+    color: var(--rc-ink-2);
+    font-weight: 400;
+  }
+  .ask-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .ask-card-done {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--rc-good);
+  }
+
+  .ask-tool[data-arrive],
+  .ask-card[data-arrive] {
+    animation: ask-arrive 220ms var(--rc-ease-out) both;
+  }
+
+  .ask-working {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 24px;
+    font-size: 13px;
+    color: var(--rc-ink-3);
+  }
+  .ask-working-icon {
+    width: 14px;
+    height: 14px;
+    margin: 0 1px;
+    color: var(--rc-icon);
+    animation: ask-spin 900ms linear infinite;
+  }
+  .ask-failed {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px;
+    border-radius: var(--rc-r-lg);
+    background: var(--rc-attn-tint);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--rc-ink-1);
+  }
+  .ask-failed-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--rc-attn);
+  }
+
+  /* ── The answer's text (Markdown) ──────────────────────────────────── */
+  .ask-md {
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .ask-md > * + * {
+    margin-top: 10px;
+  }
+  .ask-md-h {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .ask-md > * + .ask-md-h {
+    margin-top: 18px;
+  }
+  .ask-md strong {
+    font-weight: 600;
+  }
+  .ask-md ul,
+  .ask-md ol {
+    padding-left: 22px;
+  }
+  .ask-md ul {
+    list-style: disc;
+  }
+  .ask-md ol {
+    list-style: decimal;
+  }
+  .ask-md li + li {
+    margin-top: 4px;
+  }
+  .ask-md li::marker {
+    color: var(--rc-ink-3);
+  }
+  .ask-md li > ul,
+  .ask-md li > ol {
+    margin-top: 4px;
+  }
+  .ask-md li > ul {
+    list-style: circle;
+  }
+  .ask-md code {
+    padding: 1px 5px;
+    border-radius: var(--rc-r-xs);
+    background: var(--rc-surface-2);
+    font-family: var(--rc-font-code);
+    font-size: 13px;
+  }
+  .ask-md pre {
+    padding: 10px 12px;
+    border-radius: var(--rc-r-md);
+    background: var(--rc-surface-2);
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .ask-md pre code {
+    padding: 0;
+    background: none;
+  }
+  .ask-md blockquote {
+    padding-left: 12px;
+    border-left: 2px solid var(--rc-line-strong);
+    color: var(--rc-ink-2);
+  }
+  .ask-md a {
+    color: var(--rc-accent);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--rc-accent) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+  .ask-md a:hover {
+    text-decoration-color: currentColor;
+  }
+  .ask-md hr {
+    border: 0;
+    border-top: 1px solid var(--rc-line);
+  }
+  .ask-md-table {
+    overflow-x: auto;
+  }
+  .ask-md table {
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .ask-md th,
+  .ask-md td {
+    padding: 6px 12px 6px 0;
+    border-bottom: 1px solid var(--rc-line);
+    text-align: left;
+    vertical-align: top;
+  }
+  .ask-md th {
+    font-weight: 600;
+    color: var(--rc-ink-2);
+    border-bottom-color: var(--rc-line-strong);
+  }
+
+  /* ── The composer ──────────────────────────────────────────────────── */
+  .ask-dock {
+    flex-shrink: 0;
+    padding: 0 40px 16px;
+  }
+  .ask-composer-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .ask-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 8px 8px 14px;
+    border-radius: var(--rc-r-xl);
+    background: var(--rc-surface);
+    box-shadow: var(--rc-card-shadow), 0 8px 24px -12px rgba(0, 0, 0, 0.16);
+    transition: box-shadow var(--rc-fast) ease;
+  }
+  .ask-composer:focus-within {
+    box-shadow: 0 0 0 1px var(--rc-line-strong), 0 8px 24px -12px rgba(0, 0, 0, 0.2);
+  }
+  .ask-input {
+    flex: 1;
+    min-width: 0;
+    max-height: 208px;
+    padding: 6px 0;
+    border: 0;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--rc-ink-1);
+    caret-color: var(--rc-accent-fill);
+  }
+  .ask-input::placeholder {
+    color: var(--rc-ink-3);
+    opacity: 1;
+  }
+  .ask-send {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: var(--rc-r-md);
+    background: var(--rc-main);
+    color: var(--rc-on-main);
+    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+  }
+  .ask-send:hover:not(:disabled) {
+    background: var(--rc-main-hover);
+  }
+  .ask-send:disabled {
+    background: var(--rc-surface-2);
+    color: var(--rc-ink-3);
+    cursor: default;
+  }
+  .ask-spend {
+    margin-top: 6px;
+    padding-right: 4px;
+    text-align: right;
+    font-size: 12.5px;
+    color: var(--rc-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── A new chat ────────────────────────────────────────────────────── */
+  .ask-empty {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: max(48px, 16vh) 40px 48px;
+  }
+  .ask-empty-sub {
+    margin: 8px 0 24px;
+    max-width: 60ch;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--rc-ink-2);
+  }
+  .ask-starters {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ask-starter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 8px;
+    border-radius: var(--rc-r-sm);
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--rc-ink-2);
+    transition: background-color var(--rc-fast) ease, color var(--rc-fast) ease;
+  }
+  .ask-starter svg {
+    flex-shrink: 0;
+    color: var(--rc-icon);
+  }
+  .ask-starter:hover {
+    background: var(--rc-hover);
+    color: var(--rc-ink-1);
+  }
+
+  /* ── Narrow: the conversations become a panel over the page ───────── */
+  @media (max-width: 1099px) {
+    .ask-threads {
+      display: none;
+    }
+    .ask-threads[data-open] {
+      display: flex;
+      position: absolute;
+      inset: 0 auto 0 0;
+      z-index: 30;
+      width: min(300px, 86vw);
+      background: var(--rc-surface-float);
+      box-shadow: var(--rc-shadow-float);
+      border-right: 0;
+    }
+    .ask-threads-close {
+      display: inline-flex;
+    }
+    .ask-threads-scrim {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 29;
+      background: var(--rc-overlay);
+    }
+    .ask-narrow-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 12px 0;
+    }
+  }
+  @media (max-width: 640px) {
+    .ask-column {
+      padding: 12px 16px 24px;
+    }
+    .ask-dock {
+      padding: 0 16px 12px;
+    }
+    .ask-empty {
+      padding: 32px 16px 32px;
+    }
+  }
+}
+
+@keyframes ask-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ask-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Outside the layer: the box itself shows focus (its ring), so the field draws no ring of its own
+   over the app-wide `.rc :focus-visible` one. */
+.ask .ask-input:focus,
+.ask .ask-input:focus-visible {
+  outline: none;
+}

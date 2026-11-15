@@ -10,6 +10,8 @@ export interface ApiToken {
   lastUsedAt: string | null;
   createdAt: string;
   revokedAt: string | null;
+  /** Made by an app's sign-in (claude.ai, Claude Code): it renews itself; revoking ends the connection. */
+  signIn: boolean;
 }
 
 export interface AgentEdit {
@@ -38,6 +40,7 @@ const toToken = (t: Raw): ApiToken => ({
   lastUsedAt: (t.lastUsedAt as string | null) ?? null,
   createdAt: String(t.createdAt ?? ''),
   revokedAt: (t.revokedAt as string | null) ?? null,
+  signIn: t.signIn === true,
 });
 
 const toEdit = (e: Raw): AgentEdit => ({
@@ -78,6 +81,11 @@ export const agentApi = {
   async docMarkdown(docId: string): Promise<string> {
     const d = unwrap<Raw>(await axiosInstance.get(`/api/agent/docs/${docId}`));
     return String(d.markdown ?? '');
+  },
+  /** Markdown → the new editor's blocks and their canvases' boards (the server's dialect), for a paste. */
+  async markdownToEditorBlocks(markdown: string): Promise<{ blocks: Record<string, unknown>[]; boards: Record<string, unknown> }> {
+    const d = unwrap<Raw>(await axiosInstance.post('/api/agent/markdown', { markdown, as: 'blocks' }));
+    return { blocks: Array.isArray(d.blocks) ? (d.blocks as Record<string, unknown>[]) : [], boards: (d.boards ?? {}) as Record<string, unknown> };
   },
   /** Markdown → the doc's blocks (the server's dialect), for pasting Markdown into the editor. */
   async markdownToBlocks(markdown: string): Promise<Record<string, unknown>[]> {

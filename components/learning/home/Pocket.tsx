@@ -448,7 +448,9 @@ function InboxRow({ item }: { item: Capture }) {
             {item.url}
           </a>
         )}
-        {item.category && <p className="rc-meta mt-0.5">{item.category.replace('#', '')}</p>}
+        {(item.subject || item.category) && (
+          <p className="rc-meta mt-0.5">{[item.subject?.name, item.category?.replace('#', '')].filter(Boolean).join(' · ')}</p>
+        )}
       </div>
       <RcMenu
         label="Inbox item actions"
@@ -551,7 +553,7 @@ export function AllNotesSheet({
               ))}
             </ul>
           ) : (
-            <p className="px-3.5 py-4 text-[15px] rc-ink-2">{q ? `Nothing in the inbox matches “${query.trim()}”.` : 'The inbox is empty. Notes saved with Ctrl K and no subject land here.'}</p>
+            <p className="px-3.5 py-4 text-[15px] rc-ink-2">{q ? `Nothing in the inbox matches “${query.trim()}”.` : 'The inbox is empty. Notes and links saved with Ctrl K land here, until you revise them.'}</p>
           )
         ) : visible.length ? (
           <ul>

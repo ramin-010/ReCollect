@@ -24,6 +24,8 @@ export function BulkActionBar({
   hideAssignees = false
 }: BulkActionBarProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  // Deleting several tasks asks once: the first press turns the button into "Delete N?", the second deletes.
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
   const [isUpdatingDate, setIsUpdatingDate] = useState(false);
@@ -33,6 +35,11 @@ export function BulkActionBar({
   const taskIds = Array.from(selectedTasks);
 
   const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setConfirmDelete(false);
     setIsDeleting(true);
     await onDelete(taskIds);
     setIsDeleting(false);
@@ -49,7 +56,7 @@ export function BulkActionBar({
       >
         <div className="flex items-center gap-3 pr-4 border-r border-[hsl(var(--border))]">
           <div className="flex items-center justify-center h-6 px-2 rounded-md bg-[hsl(var(--muted))]/20 text-[12px] font-bold text-[hsl(var(--foreground))]">
-            {selectedTasks.size} Tasks selected
+            {selectedTasks.size} {selectedTasks.size === 1 ? 'task' : 'tasks'} selected
           </div>
           <button 
             onClick={onClearSelection}
@@ -137,10 +144,11 @@ export function BulkActionBar({
           <button 
             disabled={isDeleting}
             onClick={handleDelete}
+            onBlur={() => setConfirmDelete(false)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 rounded-lg transition-colors outline-none cursor-pointer"
           >
             {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            Delete
+            {confirmDelete ? `Delete ${taskIds.length} ${taskIds.length === 1 ? 'task' : 'tasks'}?` : 'Delete'}
           </button>
         </div>
       </motion.div>

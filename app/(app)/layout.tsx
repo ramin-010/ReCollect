@@ -9,6 +9,7 @@ import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useDocStore } from '@/lib/store/docStore';
 import { authApi } from '@/lib/api/auth';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { PhoneTabBar } from '@/components/layout/PhoneTabBar';
 import { Navbar } from '@/components/layout/Navbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateNoteProvider } from '@/lib/context/CreateNoteContext';
@@ -107,7 +108,7 @@ export default function AppLayout({
     <CreateNoteProvider>
       <div className="h-screen overflow-hidden flex bg-[hsl(var(--background))]">
         {!hideSidebar && <Sidebar />}
-        <div className="flex-1 flex flex-col bg-[hsl(var(--background))]">
+        <div className="flex-1 min-w-0 flex flex-col bg-[hsl(var(--background))]">
           <AnimatePresence>
             {!hideNavbar && (
               <motion.div
@@ -120,9 +121,10 @@ export default function AppLayout({
               </motion.div>
             )}
           </AnimatePresence>
-          <main className="flex-1 overflow-y-auto custom-scrollbar bg-[hsl(var(--background))] relative">
+          <main className={`flex-1 overflow-y-auto custom-scrollbar bg-[hsl(var(--background))] relative${hideSidebar ? '' : ' phone-tabs-pad'}`}>
             {children}
           </main>
+          {!hideSidebar && <PhoneTabBar />}
         </div>
       </div>
       

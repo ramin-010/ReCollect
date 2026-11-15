@@ -128,7 +128,9 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
           attachments: attachments.length ? attachments : undefined,
           revise,
         });
-        toast.success(revise ? 'Saved · revisions scheduled' : asLink ? 'Link saved!' : 'Note saved!');
+        const what = asLink ? 'Link' : 'Note';
+        if (revise) toast.success('Saved · revisions scheduled', { description: 'It comes up in your list on its first review day.' });
+        else toast.success(`${what} saved to the inbox`, { description: 'Find it on Home under All notes › Inbox.' });
       }
       const store = useLearningStore.getState();
       if (store.isHomeMounted) void store.refresh();
@@ -151,7 +153,7 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
   const revisionDays = revise ? revisionDaysFrom(todayIn(tz)) : [];
 
   return (
-    <div className="relative bg-[#2a2a2a] rounded-xl border border-[color:var(--border-subtle)] shadow-[0_10px_30px_-5px_rgba(0,0,0,0.3)]">
+    <div className="relative bg-[hsl(var(--popover))] rounded-xl shadow-[0_0_0_1px_var(--border-subtle),0_10px_30px_-5px_rgba(0,0,0,0.3)]">
       <div className="px-4 pt-3 pb-2 flex flex-col gap-3">
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -160,7 +162,7 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
                 <div key={`${a.url}-${i}`} className="relative w-14 h-14 rounded-md group/img shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={a.url} alt={a.fileName} className="w-full h-full object-cover rounded-md border border-[color:var(--border-subtle)]" />
-                  <button onClick={() => onRemoveAttachment(i)} className="absolute -top-1.5 -right-1.5 p-0.5 bg-[#1e1e1e] border border-[color:var(--border-subtle)] rounded-full text-[var(--ui-ink-2)] hover:text-red-400 opacity-0 group-hover/img:opacity-100">
+                  <button onClick={() => onRemoveAttachment(i)} className="absolute -top-1.5 -right-1.5 p-0.5 bg-[hsl(var(--popover))] border border-[color:var(--border-subtle)] rounded-full text-[var(--ui-ink-2)] hover:text-red-400 opacity-0 group-hover/img:opacity-100">
                     <X className="w-3 h-3" />
                   </button>
                 </div>
@@ -184,7 +186,7 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
 
         <div className="relative">
           {overlay}
-          <style>{`.capture-title-input::selection { background-color: rgba(59,130,246,0.4) !important; color: white !important; }`}</style>
+          <style>{`.capture-title-input::selection { background-color: rgba(35,131,226,0.28) !important; }`}</style>
           <TextareaAutosize
             ref={titleRef}
             value={title}
@@ -221,11 +223,11 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
             placeholder={mode === 'link' ? 'Paste a link, or name the resource… #category' : "Save a note, or type a date like 'tomorrow'… #category"}
             className={cn(
               'capture-title-input w-full bg-transparent placeholder:text-[var(--ui-ink-3)] focus:outline-none font-medium relative resize-none overflow-hidden block p-0 m-0 border-none leading-normal text-[15px]',
-              overlay ? 'text-transparent caret-white' : 'text-[var(--ui-ink-1)]',
+              overlay ? 'text-transparent caret-[var(--ui-ink-1)]' : 'text-[var(--ui-ink-1)]',
             )}
           />
           {showTags && (
-            <div className="absolute left-0 top-full mt-1 z-[120] min-w-[180px] bg-[#1e1e1e] border border-[color:var(--border-subtle)] rounded-lg shadow-xl p-1">
+            <div className="absolute left-0 top-full mt-1 z-[120] min-w-[180px] bg-[hsl(var(--popover))] border border-[color:var(--border-subtle)] rounded-lg shadow-xl p-1">
               {suggestions.map((s, i) => (
                 <button
                   key={s}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · Recollect</title>
+    <style>
+      :root {
+        --page: #ffffff;
+        --ink-1: #2c2c2b;
+        --ink-2: #5f5e59;
+        --line: #e3e2df;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #191919;
+          --ink-1: #f0efed;
+          --ink-2: #ada9a3;
+          --line: #383836;
+        }
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--page);
+        color: var(--ink-1);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica, Arial, sans-serif;
+      }
+      main {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 28vh 24px 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+      p {
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--ink-2);
+        margin: 0 0 20px;
+      }
+      button {
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 0;
+        background: var(--ink-1);
+        color: var(--page);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>You're offline</h1>
+      <p>Recollect needs the connection to load this page. It will open as soon as you're back.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

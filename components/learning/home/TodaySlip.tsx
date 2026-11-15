@@ -168,6 +168,9 @@ export function TodaySlip({
   onOpenSettings: () => void;
 }) {
   const nextDue = useLearningStore((s) => s.nextDue);
+  // Spreading only moves late reviews: offer it only when some of the waiting ones are late.
+  const overdue = useLearningStore((s) => s.data?.revisions.overdue);
+  const lateWaiting = plan && overdue ? overdue.filter((r) => !plan.planned.some((p) => p._id === r._id)).length : 0;
   const [pressed, setPressed] = useState<Set<string>>(() => new Set());
   const [ticked, setTicked] = useState<Set<string>>(() => new Set());
   const [showDone, setShowDone] = useState(false);
@@ -341,9 +344,11 @@ export function TodaySlip({
           <p className="text-[14px] rc-ink-2 min-w-0">
             {plan.waitingCount} more {plan.waitingCount === 1 ? 'is' : 'are'} waiting. They come in as room frees up.
           </p>
-          <RcButton variant="outline" size="sm" onClick={() => void openFresh()}>
-            Spread them out
-          </RcButton>
+          {lateWaiting > 0 && (
+            <RcButton variant="outline" size="sm" onClick={() => void openFresh()}>
+              Spread them out
+            </RcButton>
+          )}
         </div>
       )}
 

@@ -1,0 +1,107 @@
+/* A topic's revision timeline (RevisionTimeline.tsx): reviews 1-4 on a thin rail. */
+@layer components {
+  .rt-pop {
+    z-index: 110;
+    width: 300px;
+    padding: 14px 14px 12px;
+    border-radius: var(--rc-r-lg);
+  }
+  .rt-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rc-ink-1);
+  }
+  .rt-meta {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--rc-ink-3);
+  }
+  .rt-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+  }
+  .rt-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0 7px;
+  }
+  /* The rail between marks. */
+  .rt-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 8.5px;
+    top: 25px;
+    bottom: -5px;
+    width: 1px;
+    background: var(--rc-line-strong);
+  }
+  .rt-mark {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    border-radius: 999px;
+    color: var(--rc-ink-3);
+  }
+  .rt-mark svg {
+    width: 16px;
+    height: 16px;
+  }
+  .rt-item--done .rt-mark {
+    background: var(--rc-good-tint);
+    color: var(--rc-good);
+  }
+  .rt-item--done .rt-mark svg {
+    width: 12px;
+    height: 12px;
+  }
+  .rt-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--rc-ink-1);
+    box-shadow: 0 0 0 3px var(--rc-surface-float), 0 0 0 4px var(--rc-ink-1);
+  }
+  .rt-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .rt-cycle {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--rc-ink-1);
+  }
+  .rt-item:not(.rt-item--next):not(.rt-item--done) .rt-cycle {
+    color: var(--rc-ink-2);
+  }
+  .rt-gap {
+    margin-left: 4px;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--rc-ink-3);
+  }
+  .rt-when {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--rc-ink-3);
+  }
+  .rt-item--next .rt-when {
+    color: var(--rc-ink-2);
+  }
+  .rt-when--late {
+    color: var(--rc-attn);
+  }
+  .rt-move {
+    margin-top: 8px;
+    width: 100%;
+  }
+}

@@ -475,6 +475,7 @@ export function UserSettings() {
 
   return (
     <>
+      <SettingsEscape open={isOpen} onClose={() => setIsOpen(false)} />
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -643,7 +644,18 @@ export function UserSettings() {
                           <div className="flex items-center gap-2">
                             <input 
                               value={formData.name} 
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                  e.preventDefault();
+                                  handleSaveProfile();
+                                  setIsEditing(false);
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  setFormData({ ...formData, name: user?.name || '' });
+                                  setIsEditing(false);
+                                }
+                              }}
                               className="bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded px-2.5 py-1 text-[14px] flex-1 outline-none focus:border-[hsl(var(--muted-foreground))]/50 transition-colors text-[hsl(var(--foreground))]"
                               autoFocus
                             />
@@ -705,11 +717,11 @@ export function UserSettings() {
                       <div>
                         <div className="text-[14px] font-medium text-[hsl(var(--foreground))]">Password</div>
                         <div className="text-[13px] text-[hsl(var(--muted-foreground))] mt-0.5">
-                          Set a password for your account
+                          To change it, we first email a 4-digit code to {user?.email}.
                         </div>
                       </div>
                       <button onClick={handleSendOtp} className="mt-2 sm:mt-0 h-7 text-[12px] px-3 font-medium bg-[hsl(var(--background))] border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))] rounded transition-colors">
-                        Change password
+                        Email me a code
                       </button>
                     </div>
 
@@ -1230,4 +1242,17 @@ export function UserSettings() {
   </AnimatePresence>
 </>
   );
+}
+
+/** Esc closes the settings dialog, unless something inside (the name edit, a code step) handled it first. */
+function SettingsEscape({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  return null;
 }

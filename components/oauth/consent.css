@@ -1,0 +1,138 @@
+/* An app's sign-in (ConsentPage.tsx): one quiet column on the page colour, Notion's consent pattern in
+   our tokens. The title at the page heading's size, the abilities as a plain list, one note on surface 2,
+   the redirect's host said in words, Deny outlined and Allow the one dark button. */
+@layer components {
+  .oauth-page {
+    min-height: 100vh;
+    background: var(--rc-ground);
+    color: var(--rc-ink-1);
+  }
+  .oauth-col {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 14vh 24px 64px;
+  }
+  .rc a.oauth-brand,
+  .oauth-brand {
+    display: inline-flex;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+  .oauth-brand img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  .oauth-title {
+    font-size: 26px;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  .oauth-title b {
+    font-weight: 700;
+  }
+  .oauth-sub {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--rc-ink-3);
+    overflow-wrap: anywhere;
+  }
+  .oauth-label {
+    margin-top: 28px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rc-ink-2);
+  }
+  .oauth-scopes {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .oauth-scopes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 15px;
+    line-height: 22px;
+  }
+  .oauth-scope-icon {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    color: var(--rc-icon);
+  }
+  .oauth-note {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--rc-surface-2);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--rc-ink-2);
+  }
+  .oauth-note-icon {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    color: var(--rc-icon);
+  }
+  .oauth-where {
+    margin-top: 20px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--rc-ink-2);
+    overflow-wrap: anywhere;
+  }
+  .oauth-where b {
+    font-weight: 600;
+    color: var(--rc-ink-1);
+  }
+  .oauth-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .oauth-problem {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--rc-ink-2);
+  }
+  .oauth-problem-icon {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--rc-attn-mark);
+  }
+  .oauth-skel {
+    margin-top: 4px;
+  }
+
+  @media (max-width: 520px) {
+    .oauth-col {
+      padding: 10vh 16px 48px;
+    }
+    .oauth-title {
+      font-size: 24px;
+    }
+    .oauth-actions {
+      flex-direction: column-reverse;
+    }
+    .oauth-actions .rc-btn {
+      width: 100%;
+    }
+  }
+}

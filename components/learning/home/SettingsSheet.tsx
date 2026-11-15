@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { FolderPlus, RotateCw, Sparkles } from 'lucide-react';
+import { disablePush, enablePush, pushState, sendTestPush, type PushState } from '@/lib/push';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { addDays, type DayString } from '@/lib/learning/engine';
 import { BUDGET_MAX, BUDGET_MIN } from '@/lib/learning/types';
@@ -17,6 +19,19 @@ const NUDGE_TIMES: SelectOption[] = Array.from({ length: 29 }, (_, i) => {
   return { value: `${hh}:${mm}`, label: `${h12}:${mm} ${minutes < 720 ? 'am' : 'pm'}` };
 });
 
+const MODERN_ZONE: Record<string, string> = {
+  'Asia/Calcutta': 'Asia/Kolkata',
+  'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+  'Asia/Katmandu': 'Asia/Kathmandu',
+  'Asia/Rangoon': 'Asia/Yangon',
+  'Europe/Kiev': 'Europe/Kyiv',
+  'America/Godthab': 'America/Nuuk',
+  'Atlantic/Faeroe': 'Atlantic/Faroe',
+  'Pacific/Truk': 'Pacific/Chuuk',
+  'Pacific/Ponape': 'Pacific/Pohnpei',
+  'Pacific/Enderbury': 'Pacific/Kanton',
+};
+
 function timeZones(current: string): SelectOption[] {
   let zones: string[] = [];
   try {
@@ -24,8 +39,58 @@ function timeZones(current: string): SelectOption[] {
   } catch {
     zones = [];
   }
+  // Chromium lists some zones by their old names (Asia/Calcutta); show today's IANA names instead.
+  zones = Array.from(new Set(zones.map((z) => MODERN_ZONE[z] ?? z)));
   if (!zones.includes(current)) zones = [current, ...zones];
   return zones.map((z) => ({ value: z, label: z.replace(/_/g, ' ') }));
+}
+
+/** The morning notification on this device (ALWAYS_ON_SPEC 6.3): the same time as the email. */
+function PushRow({ time }: { time: string }) {
+  const [state, setState] = useState<PushState | 'busy' | null>(null);
+  useEffect(() => {
+    void pushState().then(setState);
+  }, []);
+  const toggle = async (on: boolean) => {
+    setState('busy');
+    try {
+      setState(on ? await enablePush() : await disablePush());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Notifications could not be switched on. Try again.');
+      setState(await pushState());
+    }
+  };
+  if (state === null || state === 'unsupported') return null;
+  const help =
+    state === 'blocked'
+      ? 'Notifications are blocked for this site. Allow them in the browser’s site settings, then switch this on.'
+      : `One quiet line about today at ${time}, on this device. Nothing on an empty day.`;
+  return (
+    <>
+      <Row
+        id="set-push"
+        title="Morning notification"
+        help={help}
+        control={<RcSwitch id="set-push" label="Morning notification" checked={state === 'on'} disabled={state === 'busy' || state === 'blocked'} onChange={(on) => void toggle(on)} />}
+      />
+      {state === 'on' && (
+        <div className="-mt-2 pb-4 flex items-center justify-between gap-4">
+          <span className="text-[14px] rc-ink-2">See how it looks</span>
+          <RcButton
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void sendTestPush()
+                .then((r) => (r.sent > 0 ? toast.success('Sent. It arrives in a moment.') : toast('Nothing was sent: switch it off and on again.')))
+                .catch(() => toast.error('The test was not sent. Try again.'))
+            }
+          >
+            Send a test
+          </RcButton>
+        </div>
+      )}
+    </>
+  );
 }
 
 function Row({ title, help, control, id }: { title: string; help: React.ReactNode; control: React.ReactNode; id: string }) {
@@ -144,6 +209,7 @@ export function SettingsSheet({
               />
             </div>
           )}
+          <PushRow time={settings.nudgeTime} />
           <Row
             id="set-routine"
             title="Time blocks and day review"

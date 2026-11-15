@@ -1,11 +1,12 @@
 'use client';
 
 import { EditorContent } from '@tiptap/react';
+import dynamic from 'next/dynamic';
 import type { HocuspocusProvider } from '@hocuspocus/provider';
 import type * as Y from 'yjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, ImagePlus, Link2, MoreHorizontal, Share2, Trash2 } from 'lucide-react';
+import { FileDown, ImagePlus, Link2, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSkel } from '@/components/rc-ui';
@@ -15,19 +16,27 @@ import { useTopBar } from '@/lib/store/topBarStore';
 import { docApi } from '@/lib/api/docApi';
 import { agentApi } from '@/lib/api/agentApi';
 import { trackVisit } from '@/lib/services/recentVisits';
-import { DOC_IMAGE_EVENT } from '@/lib/editor/blockTypes';
-import { templateById } from '@/lib/docs/templates';
 import { useCollaboration } from '@/components/docs/doc_editor/useCollaboration';
 import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
-import { ImageUploadDialog } from '@/components/docs/ImageUploadDialog';
-import { ShareDialog } from '@/components/docs/ShareDialog';
-import { BlockHandle } from '@/components/docs/editor/BlockHandle';
-import { FormatBar } from '@/components/docs/editor/FormatBar';
+import { SharePopover } from './SharePopover';
 import { useLiveDocEditor } from '@/components/docs/editor/useLiveDocEditor';
 import { DocProperties } from './DocProperties';
+import type { DocEditor } from '@/lib/blocks/schema';
 import '@/components/docs/editor/doc-editor.css';
 
 const CARET_COLORS = ['#2383e2', '#d9730d', '#0f7b6c', '#9065b0', '#c14c8a', '#dfab01', '#e03e3e', '#64473a'];
+
+/** The doc's editor (BlockNote, the "blocks" fragment; DOCS_EDITOR_V2_PLAN). Client only. */
+const LabEditor = dynamic(() => import('@/components/docs/v2/LabEditor').then((m) => m.LabEditor), { ssr: false });
+
+/** What the page asks of the body, whichever editor draws it: the title's Enter and ↓, and "is it empty". */
+interface BodyApi {
+  /** Enter in the title: a new first line holding `tail` (the title's text after the caret), the caret in it. */
+  enterFromTitle(tail: string): void;
+  /** ↓ at the end of the title: the caret at the start of the body. */
+  focusStart(): void;
+  isEmpty(): boolean;
+}
 
 function caretColor(userId: string): string {
   let h = 0;
@@ -62,7 +71,7 @@ export function DocPage({ id }: { id: string }) {
       .then((d) => {
         if (cancelled) return;
         if (!d) setMissing(true);
-        else setDoc((prev) => ({ ...(prev ?? {}), ...(d as unknown as Doc), docType: (d as unknown as Doc).docType ?? 'notes' }));
+        else setDoc((prev) => ({ ...(prev ?? {}), ...(d as unknown as Doc) }));
       })
       .catch(() => !cancelled && setMissing(true));
     return () => {
@@ -80,7 +89,7 @@ export function DocPage({ id }: { id: string }) {
     [user?._id, user?.name, user?.avatar],
   );
 
-  const { ydoc, provider, collaborators, connect, disconnect, wasRemovedByOwner } = useCollaboration({
+  const { ydoc, provider, collaborators, connect, disconnect, wasRemovedByOwner, readOnly: liveReadOnly } = useCollaboration({
     documentName: `doc_${id}`,
     token: token ?? '',
     user: me,
@@ -95,7 +104,8 @@ export function DocPage({ id }: { id: string }) {
   }, [token, connect]);
   useEffect(() => () => disconnect(), [disconnect]);
 
-  const role: Role = (doc?.role as Role | undefined) ?? 'owner';
+  // The server says the role (GET /api/docs/:id); never assume the owner's rights.
+  const role: Role = (doc?.role as Role | undefined) ?? 'viewer';
 
   if (missing || wasRemovedByOwner) {
     return (
@@ -138,7 +148,7 @@ export function DocPage({ id }: { id: string }) {
     <DocSurface
       key={doc._id}
       doc={doc}
-      role={role}
+      role={liveReadOnly && role === 'editor' ? 'viewer' : role}
       ydoc={ydoc}
       provider={provider}
       me={me}
@@ -169,19 +179,24 @@ function DocSurface({
 }) {
   const editable = role !== 'viewer';
   const isOwner = role === 'owner';
-  const editor = useLiveDocEditor({ ydoc, provider, user: { name: me.name, color: me.color }, docId: doc._id, editable });
+  // The new editor draws the body; ?editor=v1 shows the old one, read-only, for a while after the switch.
+  const oldEditor = useSearchParams().get('editor') === 'v1';
+  const [body, setBody] = useState<BodyApi | null>(null);
   const updateStoreDoc = useDocStore((s) => s.updateDoc);
   const removeStoreDoc = useDocStore((s) => s.removeDoc);
   const setTopBar = useTopBar((s) => s.setTopBar);
   const clearTopBar = useTopBar((s) => s.clearTopBar);
   const meta = useMemo(() => ydoc.getMap('metadata'), [ydoc]);
-  const [title, setTitle] = useState<string>(() => (meta.get('title') as string | undefined) ?? doc.title ?? '');
+  // A doc just made from "New doc" (?new=1) starts with an empty title: the placeholder says
+  // "Untitled" and the caret waits there, so typing names it (the server's default stays until then).
+  const isNewDoc = useSearchParams().get('new') === '1' && (doc.title ?? '') === 'Untitled';
+  const [title, setTitle] = useState<string>(() => (meta.get('title') as string | undefined) ?? (isNewDoc ? '' : doc.title ?? ''));
   const [cover, setCover] = useState<string | null>(() => (meta.get('coverImage') as string | null | undefined) ?? doc.coverImage ?? null);
   const [synced, setSynced] = useState(provider.isSynced);
-  const [shareOpen, setShareOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
-  const [imageOpen, setImageOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // In the trash: the bar at the top says so (Restore, Delete for good); the doc still opens.
+  const [trashedAt, setTrashedAt] = useState<string | null>(doc.trashedAt ?? null);
   const [deleting, setDeleting] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -192,7 +207,7 @@ function DocSurface({
       setSynced(true);
       if (isOwner && meta.get('title') === undefined) {
         ydoc.transact(() => {
-          meta.set('title', doc.title || '');
+          meta.set('title', isNewDoc ? '' : doc.title || '');
           meta.set('coverImage', doc.coverImage ?? null);
         });
       }
@@ -202,7 +217,7 @@ function DocSurface({
     return () => {
       provider.off('synced', onSync);
     };
-  }, [provider, meta, ydoc, isOwner, doc.title, doc.coverImage]);
+  }, [provider, meta, ydoc, isOwner, isNewDoc, doc.title, doc.coverImage]);
 
   useEffect(() => {
     const observe = () => {
@@ -222,6 +237,14 @@ function DocSurface({
     updateStoreDoc(doc._id, { title: v });
   };
 
+  // The sidebar's Recent list follows a renamed doc (it keeps the title from the visit otherwise).
+  useEffect(() => {
+    const t = title.trim();
+    if (!t) return;
+    const timer = setTimeout(() => trackVisit({ itemId: doc._id, itemType: 'doc', title: t, route: `/docs/${doc._id}` }), 1500);
+    return () => clearTimeout(timer);
+  }, [title, doc._id]);
+
   const changeCover = (url: string | null) => {
     setCover(url);
     meta.set('coverImage', url);
@@ -236,32 +259,24 @@ function DocSurface({
     el.style.height = `${el.scrollHeight}px`;
   }, [title]);
 
-  useEffect(() => {
-    const onImage = () => setImageOpen(true);
-    window.addEventListener(DOC_IMAGE_EVENT, onImage);
-    return () => window.removeEventListener(DOC_IMAGE_EVENT, onImage);
-  }, []);
-
-  // A doc made from a template (/docs/:id?template=dsa) gets its sections once, while still empty.
+  // A template is filled in when the doc is made (POST /api/docs with its content), as blocks.
   const params = useSearchParams();
   const router = useRouter();
-  const templateId = params.get('template');
+  // ?share=1 (a request's notification or email) opens the Share popover once; the address drops it.
+  const [shareAtStart] = useState(() => params.get('share') === '1');
   useEffect(() => {
-    if (!editor || !synced || !templateId) return;
-    const t = templateById(templateId);
-    // Deferred: node views render with flushSync, which React refuses inside an effect.
-    const timer = setTimeout(() => {
-      if (t && editable && editor.isEmpty) editor.commands.setContent({ type: 'doc', content: t.content });
-      router.replace(`/docs/${doc._id}`);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [editor, synced, templateId, editable, router, doc._id]);
-
+    if (!shareAtStart) return;
+    const next = new URLSearchParams(params.toString());
+    next.delete('share');
+    const q = next.toString();
+    router.replace(`/docs/${doc._id}${q ? `?${q}` : ''}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once
+  }, []);
   // An empty new doc starts in the title; otherwise focus stays where the reader puts it.
   useEffect(() => {
-    if (editable && synced && !title && editor?.isEmpty) titleRef.current?.focus();
+    if (editable && synced && !title && body?.isEmpty()) titleRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, after the first sync
-  }, [synced, editor]);
+  }, [synced, body]);
 
   const others = collaborators.filter((c) => !c.isCurrentUser);
 
@@ -289,11 +304,45 @@ function DocSurface({
     try {
       await docApi.deleteDoc(doc._id);
       removeStoreDoc(doc._id);
-      toast.success('Doc deleted');
+      toast.success('Deleted for good');
       onDeleted();
     } catch {
       toast.error('The doc was not deleted. Try again.');
       setDeleting(false);
+    }
+  };
+
+  const moveToTrash = useCallback(async () => {
+    const at = new Date().toISOString();
+    setTrashedAt(at);
+    try {
+      await docApi.trashDoc(doc._id);
+      toast('Moved to the trash', {
+        description: 'Deleted for good after 30 days.',
+        action: {
+          label: 'Undo',
+          onClick: () =>
+            void docApi
+              .restoreDoc(doc._id)
+              .then(() => setTrashedAt(null))
+              .catch(() => toast.error('It did not come back. Try again.')),
+        },
+      });
+    } catch {
+      setTrashedAt(null);
+      toast.error('It did not move to the trash. Try again.');
+    }
+  }, [doc._id]);
+
+  const restore = async () => {
+    const was = trashedAt;
+    setTrashedAt(null);
+    try {
+      await docApi.restoreDoc(doc._id);
+      toast.success('Restored');
+    } catch {
+      setTrashedAt(was);
+      toast.error('It did not come back. Try again.');
     }
   };
 
@@ -315,18 +364,14 @@ function DocSurface({
               ))}
             </span>
           )}
-          {isOwner && (
-            <RcButton size="sm" variant="quiet" icon={<Share2 className="h-4 w-4" strokeWidth={1.75} />} onClick={() => setShareOpen(true)}>
-              Share
-            </RcButton>
-          )}
+          <SharePopover docId={doc._id} isOwner={isOwner} meId={me.id === 'guest' ? null : me.id} openAtStart={shareAtStart} />
           <RcMenu
             label="Doc options"
             actions={[
               { label: 'Copy link', icon: <Link2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: copyLink },
               { label: 'Copy as Markdown', icon: <FileDown className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void copyMarkdown() },
               ...(editable ? [{ label: cover ? 'Change cover' : 'Add cover', icon: <ImagePlus className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => setCoverOpen(true) }] : []),
-              ...(isOwner ? [{ label: 'Delete doc', icon: <Trash2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => setConfirmDelete(true), danger: true, separatorBefore: true }] : []),
+              ...(isOwner && !trashedAt ? [{ label: 'Move to trash', icon: <Trash2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void moveToTrash(), danger: true, separatorBefore: true }] : []),
             ]}
           >
             <RcIconButton label="Doc options" size="sm">
@@ -336,12 +381,32 @@ function DocSurface({
         </div>
       ),
     });
-  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others]);
+  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart]);
 
   useEffect(() => () => clearTopBar(), [clearTopBar]);
 
   return (
     <div ref={scrollRef} className={cn(rcScope, 'doc-page')}>
+      {trashedAt && (
+        <div className="doc-trash-bar" role="status">
+          <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          <p className="min-w-0 flex-1">
+            {isOwner
+              ? `In the trash. It is deleted for good on ${new Date(new Date(trashedAt).getTime() + 30 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
+              : 'The owner moved this doc to the trash.'}
+          </p>
+          {isOwner && (
+            <>
+              <RcButton size="sm" variant="outline" icon={<RotateCcw className="h-4 w-4" strokeWidth={1.75} />} onClick={() => void restore()}>
+                Restore
+              </RcButton>
+              <RcButton size="sm" variant="danger" onClick={() => setConfirmDelete(true)}>
+                Delete for good
+              </RcButton>
+            </>
+          )}
+        </div>
+      )}
       {cover && (
         <div className="doc-cover">
           {/* eslint-disable-next-line @next/next/no-img-element -- covers come from any host */}
@@ -375,59 +440,38 @@ function DocSurface({
           rows={1}
           placeholder="Untitled"
           aria-label="Title"
-          readOnly={!editable}
+          readOnly={!editable || !!trashedAt}
           onChange={(e) => changeTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (!editor) return;
+            if (!body) return;
             const el = e.currentTarget;
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
               // As in Notion: Enter starts a new first line (taking any text after the caret with
-              // it), unless the body already starts with an empty one.
+              // it), unless the body already starts with an empty one. Focus moves synchronously, so
+              // the very next keystroke lands in the body, not the title.
               e.preventDefault();
               const at = el.selectionStart ?? el.value.length;
               const tail = el.value.slice(at);
               if (tail) changeTitle(el.value.slice(0, at).trimEnd());
-              const first = editor.state.doc.firstChild;
-              const emptyFirst = first?.type.name === 'paragraph' && first.content.size === 0;
-              // Focus synchronously so the very next keystroke lands in the body, not the title.
-              editor.view.focus();
-              if (emptyFirst && !tail) editor.commands.focus('start');
-              else
-                editor
-                  .chain()
-                  .insertContentAt(0, { type: 'paragraph', content: tail.trim() ? [{ type: 'text', text: tail.trim() }] : [] })
-                  .setTextSelection(1)
-                  .focus()
-                  .run();
+              body.enterFromTitle(tail.trim());
             } else if (e.key === 'ArrowDown' && el.selectionStart === el.value.length) {
               e.preventDefault();
-              editor.view.focus();
-              editor.commands.focus('start');
+              body.focusStart();
             }
           }}
         />
 
         <DocProperties docId={doc._id} updatedAt={doc.updatedAt} editable={editable} />
 
-        <div className="doc-body">
-          {editor && editable && <BlockHandle editor={editor} />}
-          {editor && editable && <FormatBar editor={editor} />}
-          <EditorContent editor={editor} />
-          {/* The empty space below the doc: a click puts the caret at the end, as in Notion. */}
-          {editor && editable && (
-            <div
-              className="doc-tail"
-              aria-hidden
-              onMouseDown={(e) => {
-                e.preventDefault();
-                editor.commands.focus('end');
-              }}
-            />
-          )}
-        </div>
+        {/* The switch (DOCS_EDITOR_V2_PLAN phase 4, 2026-11-15): the new editor edits the doc's "blocks"
+            fragment; the old one shows its frozen copy ("default"), read-only, behind ?editor=v1. */}
+        {oldEditor ? (
+          <OldBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} onReady={setBody} />
+        ) : (
+          <NewBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} editable={editable && !trashedAt} onReady={setBody} />
+        )}
       </div>
 
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} docId={doc._id} docTitle={title || 'Untitled'} />
       <CoverPicker
         show={coverOpen}
         onClose={() => setCoverOpen(false)}
@@ -437,24 +481,83 @@ function DocSurface({
           setCoverOpen(false);
         }}
       />
-      <ImageUploadDialog
-        open={imageOpen}
-        onOpenChange={setImageOpen}
-        onImageUpload={(url) => {
-          editor?.chain().focus().insertContent({ type: 'resizableImage', attrs: { src: url } }).run();
-          setImageOpen(false);
-        }}
-      />
       <RcConfirm
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Delete this doc?"
-        body="It leaves Docs for everyone it is shared with. Its revision history stays."
-        confirmLabel="Delete doc"
+        title="Delete this doc for good?"
+        body="It can't be brought back. It leaves Docs for everyone it is shared with; its revision history stays."
+        confirmLabel="Delete for good"
         danger
         busy={deleting}
         onConfirm={deleteDoc}
       />
+    </div>
+  );
+}
+
+type BodyProps = {
+  ydoc: Y.Doc;
+  provider: HocuspocusProvider;
+  user: { name: string; color: string };
+  docId: string;
+  onReady: (api: BodyApi) => void;
+};
+
+/** The new editor (BlockNote) and what the title asks of it. */
+function NewBody({ editable, onReady, ...rest }: BodyProps & { editable: boolean }) {
+  const onEditor = useCallback(
+    (ed: DocEditor) => {
+      const isEmptyParagraph = (b: DocEditor['document'][number] | undefined) =>
+        !!b && b.type === 'paragraph' && Array.isArray(b.content) && b.content.length === 0 && b.children.length === 0;
+      onReady({
+        enterFromTitle(tail) {
+          const first = ed.document[0];
+          ed.focus();
+          if (!first) return;
+          if (!tail && isEmptyParagraph(first)) {
+            ed.setTextCursorPosition(first, 'start');
+            return;
+          }
+          const [made] = ed.insertBlocks([{ type: 'paragraph', content: tail } as never], first, 'before');
+          if (made) ed.setTextCursorPosition(made, 'start');
+        },
+        focusStart() {
+          const first = ed.document[0];
+          ed.focus();
+          if (first) ed.setTextCursorPosition(first, 'start');
+        },
+        isEmpty() {
+          const d = ed.document;
+          return d.length === 0 || (d.length === 1 && isEmptyParagraph(d[0]));
+        },
+      });
+    },
+    [onReady],
+  );
+  return (
+    <div className="doc-body doc-body-v2">
+      <LabEditor ydoc={rest.ydoc} provider={rest.provider} user={rest.user} editable={editable} docId={rest.docId} onEditor={onEditor} />
+    </div>
+  );
+}
+
+/** The old editor (TipTap, the "default" fragment), read-only since the switch: what the doc held before it. */
+function OldBody({ ydoc, provider, user, docId, onReady }: BodyProps) {
+  const editor = useLiveDocEditor({ ydoc, provider, user, docId, editable: false });
+  useEffect(() => {
+    if (!editor) return;
+    onReady({
+      enterFromTitle: () => editor.commands.focus('start'),
+      focusStart: () => editor.commands.focus('start'),
+      isEmpty: () => editor.isEmpty,
+    });
+  }, [editor, onReady]);
+  return (
+    <div className="doc-body">
+      <p className="doc-old-note">
+        The old editor, read-only: the doc as it was when it moved to the new editor (15 Nov 2026). <a href={`/docs/${docId}`}>Open it in the new editor</a>.
+      </p>
+      <EditorContent editor={editor} />
     </div>
   );
 }

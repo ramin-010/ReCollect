@@ -1,16 +1,20 @@
 // lib/store/docStore.ts
 import { create } from 'zustand';
 
-export type DocType = 'notes' | 'meeting' | 'project' | 'personal';
 
 export interface Doc {
   _id: string;
   title: string;
   yjsState?: string;
   previewState?: string;
-  docType: DocType;
   isPinned: boolean;
   isArchived: boolean;
+  /** In the trash since then (the library's Trash view, the doc page's bar), or null. */
+  trashedAt?: string | null;
+  /** Published to the web since then (the library's Shared view), or null. */
+  publishedAt?: string | null;
+  /** Who owns it (GET /api/docs). */
+  owner?: { _id: string; name: string; email: string; avatar?: string };
   createdAt: string;
   updatedAt: string;
   coverImage?: string | null;
@@ -76,22 +80,15 @@ export const useDocStore = create<DocState>((set) => ({
   fetchDocs: async () => {
     try {
       set({ isLoading: true });
-      // Dynamic imports to manage dependencies
       const { default: axiosInstance } = await import('@/lib/utils/axios');
-      const { offlineStorage } = await import('@/lib/utils/offlineStorage');
-      const { mergeDocsWithOffline } = await import('@/lib/utils/docSyncHelpers');
-
       const response = await axiosInstance.get('/api/docs');
-      const serverDocs = response.data.success ? response.data.data : [];
-      
-      const allOfflineDocs = await offlineStorage.getAllOfflineDocs();
-      const mergedDocs = mergeDocsWithOffline(serverDocs, allOfflineDocs);
+      // Every doc is live on the server (one live editor for every doc): no offline copies to merge (D1).
+      const mergedDocs = response.data.success ? response.data.data : [];
 
       set({ docs: mergedDocs, isInitialized: true, isLoading: false });
     } catch (error) {
       console.error('Failed to fetch docs:', error);
       set({ isLoading: false });
-      // Even in error, we might have offline docs? For now just stop loading.
     }
   }
 }));

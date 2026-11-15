@@ -142,6 +142,9 @@ function insertBySubject(list: RevisionItem[], item: RevisionItem): RevisionItem
 
 const withoutRevision = (list: RevisionItem[], id: string) => list.filter((r) => r._id !== id);
 
+/** Where a ticked row sat in today's plan, so an untick puts it back in its place (not at the end). */
+const plannedPlace = new Map<string, number>();
+
 /** §5 today is active with ≥ 1 revision done or a focus line done; recomputed after local changes. */
 function withTodayRhythm(d: TodayPayload): TodayStats {
   const rhythm = d.stats.rhythm;
@@ -238,6 +241,8 @@ export const useLearningStore = create<LearningState>((set, get) => {
       const row =
         before.plan?.planned.find((r) => r._id === id) ?? [...before.revisions.dueToday, ...before.revisions.overdue].find((r) => r._id === id);
       if (!row) return;
+      const place = before.plan?.planned.findIndex((r) => r._id === id) ?? -1;
+      if (place >= 0) plannedPlace.set(id, place);
       const done: RevisionItem = { ...row, status: 'done', completedAt: new Date(), canUndo: true, daysLate: undefined };
       // The stamp shows the next date straight away; the server's chain confirms it below.
       set({ nextDue: { ...get().nextDue, [id]: nextReviewDay(before.today, row.cycleNumber) } });
@@ -309,7 +314,12 @@ export const useLearningStore = create<LearningState>((set, get) => {
           plan: d.plan
             ? {
                 ...d.plan,
-                planned: [...withoutRevision(d.plan.planned, id), backLate],
+                planned: (() => {
+                  const rest = withoutRevision(d.plan.planned, id);
+                  const at = plannedPlace.get(id);
+                  plannedPlace.delete(id);
+                  return at === undefined ? [...rest, backLate] : [...rest.slice(0, at), backLate, ...rest.slice(at)];
+                })(),
                 doneToday: withoutRevision(d.plan.doneToday, id),
                 estMinutes: d.plan.estMinutes + estimateMinutes(row),
               }

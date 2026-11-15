@@ -1,4 +1,4 @@
-// ReCollect - Root Layout
+// Recollect - Root Layout
 import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
@@ -7,6 +7,7 @@ import './theme-v2.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';
+import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister';
 
 // Using Outfit for a modern, clean look
 const outfit = Outfit({ 
@@ -24,11 +25,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL('https://re-collect.in'),
   title: {
-    default: 'ReCollect',
-    template: '%s | ReCollect',
+    default: 'Recollect',
+    template: '%s | Recollect',
   },
   description:
-    'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion for notes, ideas, and productivity.',
+    'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion for notes, ideas, and productivity.',
   keywords: [
     'knowledge management',
     'notes',
@@ -40,23 +41,23 @@ export const metadata: Metadata = {
     'knowledge base',
     'dashboard',
   ],
-  authors: [{ name: 'ReCollect' }],
-  creator: 'ReCollect',
-  publisher: 'ReCollect',
+  authors: [{ name: 'Recollect' }],
+  creator: 'Recollect',
+  publisher: 'Recollect',
   icons: {
     icon: [
       { url: '/logo3.webp', type: 'image/webp' },
     ],
     apple: [
-      { url: '/logo3.webp', type: 'image/webp' },
+      { url: '/icons/apple-touch-icon.png', type: 'image/png', sizes: '180x180' },
     ],
     shortcut: '/logo3.webp',
   },
   openGraph: {
-    title: 'ReCollect',
+    title: 'Recollect',
     description:
-      'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion.',
-    siteName: 'ReCollect',
+      'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion.',
+    siteName: 'Recollect',
     type: 'website',
     locale: 'en_US',
     images: [
@@ -64,15 +65,15 @@ export const metadata: Metadata = {
         url: '/logo3.webp',
         width: 512,
         height: 512,
-        alt: 'ReCollect Logo',
+        alt: 'Recollect Logo',
       },
     ],
   },
   twitter: {
     card: 'summary',
-    title: 'ReCollect',
+    title: 'Recollect',
     description:
-      'Organize, connect, and recall your thoughts with ReCollect — your professional knowledge companion.',
+      'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion.',
     images: ['/logo3.webp'],
   },
   robots: {
@@ -86,7 +87,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  applicationName: 'ReCollect',
+  applicationName: 'Recollect',
   category: 'productivity',
 };
 
@@ -102,7 +103,8 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             {children}
-            <Toaster 
+            <ServiceWorkerRegister />
+            <Toaster
               position="bottom-right"
               richColors
               closeButton

@@ -40,6 +40,8 @@ export interface UseCollaborationReturn {
   wasRemovedByOwner: boolean;
   leftVoluntarily: boolean;
   collaboratorLeftEvent: CollaboratorLeftEvent | null;
+  /** The live server let this connection read only (a viewer, or an editor just made one: D6). */
+  readOnly: boolean;
 }
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -130,6 +132,7 @@ export function useCollaboration({
   const [wasRemovedByOwner, setWasRemovedByOwner] = useState(false);
   const [leftVoluntarily, setLeftVoluntarily] = useState(false);
   const [collaboratorLeftEvent, setCollaboratorLeftEvent] = useState<CollaboratorLeftEvent | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
 
   // Refs — used inside stable callbacks to avoid stale closures
   const providerRef = useRef<HocuspocusProvider | null>(null);
@@ -168,8 +171,12 @@ export function useCollaboration({
     const localClientId = providerRef.current?.awareness?.clientID;
     const users = parseCollaboratorsFromStates(states, localClientId);
 
-    setCollaborators(prev =>
-      JSON.stringify(prev) === JSON.stringify(users) ? prev : users,
+    // An editor sets its awareness while it is created, inside another component's render
+    // (BlockNote's collaboration): update this state after that render, not during it.
+    queueMicrotask(() =>
+      setCollaborators(prev =>
+        JSON.stringify(prev) === JSON.stringify(users) ? prev : users,
+      ),
     );
   }, []);
 
@@ -249,6 +256,9 @@ export function useCollaboration({
           onStatusChangeRef.current?.('connecting');
         }
       },
+      // Each (re)connection says what it may do: a role change closes the connection and the
+      // server answers the reconnect with the new scope (D6).
+      onAuthenticated: ({ scope }) => setReadOnly(scope === 'readonly'),
       onAwarenessUpdate: handleAwarenessUpdate,
       onClose: handleClose,
       onStateless: handleStateless,
@@ -302,6 +312,7 @@ export function useCollaboration({
     wasRemovedByOwner,
     leftVoluntarily,
     collaboratorLeftEvent,
+    readOnly,
   };
 }
 

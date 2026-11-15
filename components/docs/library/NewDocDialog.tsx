@@ -101,17 +101,19 @@ export function NewDocDialog({
     if (solved) return void writeNote();
     setBusy(true);
     try {
-      const res = await docApi.createDoc({ title: template.title });
+      // The template's sections arrive as the new doc's blocks (made by the server).
+      const res = await docApi.createDoc({ title: template.title, ...(template.id === 'blank' ? {} : { content: { type: 'doc', content: template.content } }) });
       const created = res.data;
       if (!res.success || !created?._id) throw new Error('create failed');
-      addDoc({ ...(created as unknown as Doc), docType: (created as unknown as Doc).docType ?? 'notes', role: 'owner' });
+      addDoc({ ...(created as unknown as Doc), role: 'owner' });
       if (subjectId) {
         await learningApi.createTopic({ docId: created._id, subjectId, startRevisions: revise }).catch(() => {
           toast.error('The doc was created, but filing it under the subject failed. Pick the subject on the doc.');
         });
       }
       onOpenChange(false);
-      router.push(template.id === 'blank' ? `/docs/${created._id}` : `/docs/${created._id}?template=${template.id}`);
+      // ?new=1: the page opens on an empty title (the "Untitled" placeholder) with the caret in it.
+      router.push(`/docs/${created._id}?new=1`);
     } catch {
       toast.error('The doc was not created. Check your connection and try again.');
       setBusy(false);
@@ -281,9 +283,14 @@ export function NewDocDialog({
                 Revise this
               </label>
             </div>
-            <RcButton variant="main" busy={busy} disabled={solved && (!problem.trim() || !solution.trim())} onClick={() => void create()}>
-              {solved ? (busy ? 'Writing your note…' : 'Write my note') : 'Create doc'}
-            </RcButton>
+            <div className="flex items-center gap-2">
+              <RcButton variant="quiet" onClick={() => onOpenChange(false)} disabled={busy}>
+                Cancel
+              </RcButton>
+              <RcButton variant="main" busy={busy} disabled={solved && (!problem.trim() || !solution.trim())} onClick={() => void create()}>
+                {solved ? (busy ? 'Writing your note…' : 'Write my note') : 'Create doc'}
+              </RcButton>
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

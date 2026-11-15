@@ -352,11 +352,13 @@ export interface LearningSettings {
   lastSeenDay?: DayString | null;
   timezone: string;
   routineMode?: RoutineMode;
+  /** About you, for your agents (the brief starts with it). */
+  agentProfile?: string | null;
 }
 
 /** `PATCH /api/learning/settings` accepts any subset. */
 export type LearningSettingsPatch = Partial<
-  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode'>
+  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile'>
 >;
 
 export const BUDGET_MIN = 5;
@@ -411,6 +413,184 @@ interface TodayPayloadBase<R, C, Q> {
   plan?: TodayPlan<R> | null;
   focus?: TodayFocus | null;
   goals?: TodayGoal[] | null;
+  /** Each path's next topic, at most 3, goal-linked first (SYNC_SPINE_SPEC 1.1). */
+  next?: NextUp[];
+}
+
+// ─── Paths (BUDDY_PLAN B1, SYNC_SPINE_SPEC 1.1) ─────────────────────────────
+
+export type PathStatus = 'planned' | 'in_progress' | 'done' | 'skipped';
+
+/** A topic on its subject's path (GET /api/subjects/:id/path). */
+export interface PathTopic {
+  _id: string;
+  title: string;
+  status: PathStatus;
+  /** 1-based place on the path. */
+  position: number;
+  docId: string | null;
+  nextStep: string | null;
+  startedAt: string | null;
+  doneAt: string | null;
+  /** The topic's open weak spots (GET only). */
+  weakSpots?: { _id: string; text: string }[];
+}
+
+export interface SubjectPath {
+  subject: { _id: string; name: string };
+  topics: PathTopic[];
+  /** The first topic in progress, else the first planned one. */
+  next: PathTopic | null;
+  done: number;
+  total: number;
+}
+
+/** One path's next topic, for Home. */
+export interface NextUp {
+  subject: { _id: string; name: string; color?: string | null };
+  topic: { _id: string; title: string; position: number; status: PathStatus };
+  done: number;
+  total: number;
+  nextStep: string | null;
+}
+
+// ─── The record: sessions (SYNC_SPINE_SPEC 1.2) ─────────────────────────────
+
+export type SessionKind = 'study' | 'practice' | 'build' | 'review';
+
+export interface WorkSession {
+  _id: string;
+  key: string | null;
+  kind: SessionKind;
+  day: DayString;
+  startedAt: string;
+  endedAt: string | null;
+  minutes: number | null;
+  subject: { _id: string; name: string; color: string | null } | null;
+  topic: { _id: string; title: string } | null;
+  project: { _id: string; key: string; name: string } | null;
+  title: string;
+  score: { done: number; total: number } | null;
+  outcome: 'alone' | 'hints' | 'after_answer' | null;
+  problem: string | null;
+  url: string | null;
+  nextStep: string | null;
+  source: 'agent' | 'hook' | 'user';
+  agentName: string | null;
+}
+
+export interface SessionList {
+  sessions: WorkSession[];
+  /** One per day with sessions, newest first. */
+  days: { day: DayString; minutes: Record<SessionKind, number>; count: number }[];
+}
+
+// ─── The week and suggestions (LOOP_COMPLETE_SPEC 1.6) ──────────────────────
+
+export const WEEK_TARGETS_MAX = 5;
+export const WEEK_TARGET_MAX_CHARS = 140;
+
+export interface WeekTarget {
+  _id: string;
+  weekStart: DayString;
+  text: string;
+  status: 'open' | 'done' | 'dropped';
+  /** Ticked, or what it points at is done, or its count is reached. */
+  done: boolean;
+  progress: { done: number; total: number } | null;
+  topic: { _id: string; title: string; status: PathStatus } | null;
+  milestone: { _id: string; title: string; done: boolean } | null;
+  task: { _id: string; title: string; status: string } | null;
+  measure: 'practice' | 'minutes' | 'topics' | null;
+  amount: number | null;
+  subject: { _id: string; name: string } | null;
+  project: { _id: string; key: string; name: string } | null;
+  createdBy: 'user' | 'agent';
+  agentName: string | null;
+}
+
+export interface WeekSummary {
+  weekStart: DayString;
+  targets: { done: number; total: number };
+  minutes: Record<SessionKind, number>;
+  topicsDone: number;
+  revisionsDone: number;
+}
+
+export interface WeekData {
+  weekStart: DayString;
+  weekEnd: DayString;
+  targets: WeekTarget[];
+  lastWeek: WeekSummary;
+  review: { due: boolean; weekStart: DayString };
+}
+
+export type SuggestionKind = 'week_target' | 'focus_line' | 'profile_edit' | 'action';
+
+export interface Suggestion {
+  _id: string;
+  kind: SuggestionKind;
+  text: string;
+  reason: string | null;
+  payload: Record<string, unknown>;
+  proposedBy: 'app' | 'coach' | 'agent' | 'ask_ai';
+  agentName: string | null;
+  batch: string | null;
+  status: 'pending' | 'accepted' | 'dismissed';
+  /** After accepting an action: what it did, in words. */
+  result?: string;
+}
+
+// ─── The mirror (LOOP_COMPLETE_SPEC 1.7): numbers worked out by the app ──────
+
+export interface PathPace {
+  done: number;
+  total: number;
+  remaining: number;
+  perWeek: number;
+  requiredPerWeek: number | null;
+  landsOn: DayString | null;
+  status: 'done' | 'overdue' | 'no_data' | 'behind' | 'ahead' | 'on_track';
+  fix: { extraPerWeek: number; orLandsOn: DayString | null } | null;
+}
+
+export type KindMinutes = Record<SessionKind, number>;
+
+export interface MirrorData {
+  today: DayString;
+  goals: Array<{
+    _id: string;
+    title: string;
+    deadline: DayString;
+    daysLeft: number;
+    milestones: { done: number; total: number };
+    forecast: { status: string; behindDays: number | null };
+    paths: Array<PathPace & { subject: { _id: string; name: string; color: string | null } }>;
+    hoursPerWeek: Array<{ weekStart: DayString; minutes: KindMinutes }>;
+  }>;
+  subjects: Array<{
+    _id: string;
+    name: string;
+    color: string | null;
+    path: PathPace | null;
+    quiz: Array<{ day: DayString; done: number; total: number }>;
+    weakSpots: { open: number; clearedIn30: number };
+    practice: { alone: number; hints: number; after_answer: number };
+    minutesPerTopic: number | null;
+  }>;
+  weeks: Array<{ weekStart: DayString; minutes: KindMinutes; targets: { done: number; total: number } }>;
+}
+
+/** Fired when the week, its targets or a suggestion changed (Home's sections reload). */
+export const WEEK_CHANGED_EVENT = 'recollect:week-changed';
+
+export interface TopicPathPatch {
+  title?: string;
+  status?: PathStatus;
+  /** null clears it. */
+  nextStep?: string | null;
+  /** A topic id to go after; null puts it first. */
+  after?: string | null;
 }
 
 export type RawTodayPayload = TodayPayloadBase<RawRevisionItem, RawCapture, RawQuickNote>;
@@ -464,6 +644,20 @@ export interface TopicStatus {
   next: ChainRevision | null;
   done: number;
   total: number;
+}
+
+/** GET /api/revisions/calendar: each day's load, for picking where a review goes. */
+export interface RevisionCalendarDay {
+  day: DayString;
+  minutes: number;
+  revisions: Array<{ _id: string; title: string; cycleNumber: number; minutes: number; subject: { name: string; color: string | null } | null }>;
+  tasks: Array<{ _id: string; title: string }>;
+}
+
+export interface RevisionCalendar {
+  today: DayString;
+  budgetMin: number;
+  days: RevisionCalendarDay[];
 }
 
 export interface TopicByDoc {

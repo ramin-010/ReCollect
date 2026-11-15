@@ -12,6 +12,8 @@ export interface PickerOption {
   /** Small grey text after the label (a count, a date). */
   hint?: string;
   icon?: React.ReactNode;
+  /** Other words the search finds it by (a language's aliases: "ts" finds TypeScript). */
+  keywords?: string[];
 }
 
 /**
@@ -65,7 +67,21 @@ export function RcPicker({
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return t ? options.filter((o) => o.label.toLowerCase().includes(t) || o.value.toLowerCase().includes(t)) : options;
+    if (!t) return options;
+    // Best match first: the exact name or a keyword ("ts" → TypeScript), then names that start with it, then the rest.
+    const rank = (o: PickerOption) => {
+      const label = o.label.toLowerCase();
+      const words = [o.value.toLowerCase(), ...(o.keywords ?? []).map((k) => k.toLowerCase())];
+      if (label === t || words.includes(t)) return 0;
+      if (label.startsWith(t)) return 1;
+      if (label.includes(t) || words.some((w) => w.includes(t))) return 2;
+      return -1;
+    };
+    return options
+      .map((o, i) => ({ o, i, r: rank(o) }))
+      .filter((x) => x.r >= 0)
+      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .map((x) => x.o);
   }, [options, q]);
   const query = q.trim();
   const canCreate = !!onCreate && query.length > 0 && !options.some((o) => o.label.toLowerCase() === query.toLowerCase());

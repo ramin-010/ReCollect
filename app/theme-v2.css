@@ -169,3 +169,60 @@ body {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
 }
+
+/* ── The phone's bottom bar (ALWAYS_ON_SPEC 6.1): Home, Docs, Ask AI and capture. Under 768 px. ── */
+.phone-tabs {
+  display: none;
+}
+@media (max-width: 767px) {
+  .phone-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) 72px;
+    align-items: center;
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
+    background: hsl(var(--background));
+    box-shadow: 0 -1px 0 var(--border-subtle);
+  }
+  .phone-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 52px;
+    border-radius: 10px;
+    color: var(--ui-ink-3);
+    font-size: 12px;
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .phone-tab svg {
+    width: 22px;
+    height: 22px;
+  }
+  .phone-tab--on {
+    color: var(--ui-ink-1);
+  }
+  .phone-tab:active {
+    background: var(--ui-hover);
+  }
+  .phone-tab-plus {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--ui-ink-1);
+    color: hsl(var(--background));
+  }
+  /* room for the bar under every page's content */
+  .phone-tabs-pad {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
