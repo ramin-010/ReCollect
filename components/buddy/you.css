@@ -58,6 +58,13 @@
   font-weight: 500;
 }
 
+/* The time a logged line took ("10:15–11:40", B10): before it, in the second ink, figures even. */
+.you-work-at {
+  color: var(--rc-ink-2);
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.5em;
+}
+
 .you-edit {
   font-size: var(--rc-fs-body);
 }

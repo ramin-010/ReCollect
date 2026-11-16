@@ -393,6 +393,7 @@ function WorkLog({ on }: { on: boolean }) {
                     {p.lines.map((l) => (
                       <li key={l._id} className="rc-row rc-hoverable you-row">
                         <p className="you-text min-w-0 flex-1">
+                          {l.at && <span className="you-work-at">{l.at}</span>}
                           {WORK_KIND[l.kind] && <span className="you-work-kind">{WORK_KIND[l.kind]}: </span>}
                           {l.text}
                         </p>

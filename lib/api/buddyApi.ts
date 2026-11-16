@@ -113,7 +113,7 @@ export interface BuddyToday {
 export type WorkKind = 'did' | 'decided' | 'stuck' | 'next';
 export interface WorkDay {
   day: string;
-  projects: Array<{ project: string; office: boolean; minutes: number; sessions: number; commits: string[]; lines: Array<{ _id: string; kind: WorkKind; text: string }> }>;
+  projects: Array<{ project: string; office: boolean; minutes: number; sessions: number; commits: string[]; lines: Array<{ _id: string; kind: WorkKind; text: string; at?: string | null; source?: 'summary' | 'agent' }> }>;
 }
 
 const unwrap = <T>(r: { data: { data?: T } }): T => r.data.data as T;
