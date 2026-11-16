@@ -15,7 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { useNotificationStore } from '@/lib/store/notificationStore';
 
-const POLL_INTERVAL_MS =  1 * 60 * 1000; // 2 minutes
+const POLL_INTERVAL_MS = 1 * 60 * 1000; // a minute, while the tab is visible
 
 // ── Tab filter types ──
 type TabFilter = 'all' | 'unread' | 'actionable';
@@ -136,11 +136,35 @@ export function NotificationsPopover({ children, open: externalOpen, onOpenChang
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Initial unread count on mount + 2min polling ──
+  // ── The unread count: on mount, then every minute while the tab is visible ──
+  // A hidden tab asks nothing (a hosted database that sleeps when idle stays asleep; hosting P1-16);
+  // the moment it is shown again, the count is fetched and the minute's poll starts over.
   useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval === null) interval = setInterval(fetchUnreadCount, POLL_INTERVAL_MS);
+    };
+    const stop = () => {
+      if (interval !== null) clearInterval(interval);
+      interval = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        stop();
+      } else {
+        fetchUnreadCount();
+        start();
+      }
+    };
+    if (document.visibilityState !== 'hidden') {
+      fetchUnreadCount();
+      start();
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [fetchUnreadCount]);
 
   // ── Tab change ──
