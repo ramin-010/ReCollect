@@ -343,7 +343,7 @@ function SignupForm() {
                   <Input
                     type="text"
                     label="Enter OTP"
-                    placeholder="Enter 4-digit code"
+                    placeholder="Enter 6-digit code"
                     leftIcon={<KeyRound className="w-5 h-5" />}
                     {...otpForm.register('otp')}
                     disabled={isLoading}

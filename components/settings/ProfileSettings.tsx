@@ -123,7 +123,7 @@ export function ProfileSettings() {
         <li className="set-row">
           <span className="min-w-0">
             <span className="block font-medium">Password</span>
-            <span className="rc-meta">To change it, we first email a 4-digit code to your address.</span>
+            <span className="rc-meta">To change it, we first email a {CODE_LENGTH}-digit code to your address.</span>
           </span>
           <RcButton size="sm" variant="outline" onClick={() => setPasswordOpen(true)}>
             Change password
@@ -172,7 +172,7 @@ function MorningEmailRow() {
   };
 
   const verify = async (value = code) => {
-    if (value.length !== 4) return void toast.error('Enter all 4 digits.');
+    if (value.length !== CODE_LENGTH) return void toast.error(`Enter all ${CODE_LENGTH} digits.`);
     setBusy(true);
     try {
       await axiosInstance.post('/api/otp/verify', { email: address.trim(), otp: value });
@@ -230,7 +230,7 @@ function MorningEmailRow() {
       )}
       {step === 'code' && (
         <div className="mt-2 w-full pb-1">
-          <p className="rc-meta">Enter the 4-digit code we sent to {address.trim()}.</p>
+          <p className="rc-meta">Enter the {CODE_LENGTH}-digit code we sent to {address.trim()}.</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <CodeBoxes value={code} onChange={setCode} onComplete={(v) => void verify(v)} disabled={busy} label="The code from the email" />
             <RcButton size="sm" variant="main" busy={busy} onClick={() => void verify()}>
@@ -301,7 +301,7 @@ function PasswordDialog({ onClose, email }: { onClose: () => void; email: string
   const open = true;
 
   const verify = async (value = code) => {
-    if (value.length !== 4) return void toast.error('Enter all 4 digits.');
+    if (value.length !== CODE_LENGTH) return void toast.error(`Enter all ${CODE_LENGTH} digits.`);
     setBusy(true);
     try {
       await axiosInstance.post('/api/otp/verify', { email, otp: value });
@@ -358,7 +358,7 @@ function PasswordDialog({ onClose, email }: { onClose: () => void; email: string
           {step === 'code' && (
             <>
               <DialogPrimitive.Description className="mt-2 text-[15px] leading-[1.45] rc-ink-2">
-                Enter the 4-digit code we sent to {email}. It works for 3 minutes.
+                Enter the {CODE_LENGTH}-digit code we sent to {email}. It works for 3 minutes.
               </DialogPrimitive.Description>
               <div className="mt-4">
                 <CodeBoxes value={code} onChange={setCode} onComplete={(v) => void verify(v)} disabled={busy} label="The code from the email" autoFocus />
