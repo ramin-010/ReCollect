@@ -415,16 +415,18 @@ function PasswordDialog({ onClose, email }: { onClose: () => void; email: string
   );
 }
 
-// ─── Four boxes for a code ─────────────────────────────────────────────────
+// ─── Six boxes for a code (the server sends six digits) ───────────────────────
+
+const CODE_LENGTH = 6;
 
 function CodeBoxes({ value, onChange, onComplete, disabled, label, autoFocus }: { value: string; onChange: (v: string) => void; onComplete: (v: string) => void; disabled?: boolean; label: string; autoFocus?: boolean }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const digits = Array.from({ length: 4 }, (_, i) => value[i] ?? '');
+  const digits = Array.from({ length: CODE_LENGTH }, (_, i) => value[i] ?? '');
 
   const set = (next: string) => {
-    const clean = next.replace(/\D/g, '').slice(0, 4);
+    const clean = next.replace(/\D/g, '').slice(0, CODE_LENGTH);
     onChange(clean);
-    if (clean.length === 4) onComplete(clean);
+    if (clean.length === CODE_LENGTH) onComplete(clean);
     return clean;
   };
 
@@ -440,7 +442,7 @@ function CodeBoxes({ value, onChange, onComplete, disabled, label, autoFocus }: 
           inputMode="numeric"
           autoComplete={i === 0 ? 'one-time-code' : 'off'}
           aria-label={`Digit ${i + 1}`}
-          maxLength={4}
+          maxLength={CODE_LENGTH}
           value={d}
           disabled={disabled}
           autoFocus={autoFocus && i === 0}
@@ -448,13 +450,13 @@ function CodeBoxes({ value, onChange, onComplete, disabled, label, autoFocus }: 
             const typed = e.target.value.replace(/\D/g, '');
             if (typed.length > 1) {
               // A pasted or autofilled code fills the boxes from here.
-              const clean = set((value.slice(0, i) + typed).slice(0, 4));
-              refs.current[Math.min(3, clean.length)]?.focus();
+              const clean = set((value.slice(0, i) + typed).slice(0, CODE_LENGTH));
+              refs.current[Math.min(CODE_LENGTH - 1, clean.length)]?.focus();
               return;
             }
-            const next = (value.slice(0, i) + typed + value.slice(i + 1)).slice(0, 4);
+            const next = (value.slice(0, i) + typed + value.slice(i + 1)).slice(0, CODE_LENGTH);
             set(next);
-            if (typed && i < 3) refs.current[i + 1]?.focus();
+            if (typed && i < CODE_LENGTH - 1) refs.current[i + 1]?.focus();
           }}
           onKeyDown={(e) => {
             if (e.key === 'Backspace' && !d && i > 0) refs.current[i - 1]?.focus();

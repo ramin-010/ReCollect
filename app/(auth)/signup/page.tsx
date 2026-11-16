@@ -25,7 +25,7 @@ const signupSchema = z.object({
 });
 
 const otpSchema = z.object({
-  otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+  otp: z.string().length(6, 'The code is 6 digits'),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -349,7 +349,7 @@ function SignupForm() {
                     disabled={isLoading}
                     error={otpForm.formState.errors.otp?.message}
                     inputSize="md"
-                    maxLength={4}
+                    maxLength={6}
                     autoComplete="off"
                   />
 

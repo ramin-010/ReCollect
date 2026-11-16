@@ -27,7 +27,7 @@ const emailSchema = z.object({
 });
 
 const resetSchema = z.object({
-  otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+  otp: z.string().length(6, 'The code is 6 digits'),
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
@@ -377,7 +377,7 @@ function LoginForm() {
                     disabled={isLoading}
                     error={resetForm.formState.errors.otp?.message}
                     inputSize="md"
-                    maxLength={4}
+                    maxLength={6}
                     autoComplete="off"
                   />
 
