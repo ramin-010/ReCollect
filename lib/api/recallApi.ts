@@ -50,6 +50,8 @@ export interface AiUsage {
   calls: number;
   byFeature: Record<string, number>;
   model: string;
+  /** The database's awake hours this month: only on a server whose database sleeps when idle, for its owner. */
+  awake?: { month: string; hours: number; allowanceHours: number; percent: number; projectedHours: number };
 }
 
 /** Why recall can't run: no API key on the server, the monthly cap, an empty doc, a finished review, or a failure. */

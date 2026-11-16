@@ -105,6 +105,11 @@ export function AiSettings() {
       <div className="rc-meter set-meter mt-3" role="meter" aria-valuemin={0} aria-valuemax={usage.capUsd} aria-valuenow={usage.spentUsd} aria-label="AI spend this month">
         <span className="rc-meter-fill" style={{ width: `${share * 100}%` }} />
       </div>
+      {usage.awake && (
+        <p className="rc-meta rc-num mt-3">
+          Database awake {usage.awake.hours} h of {usage.awake.allowanceHours} free this month ({usage.awake.percent}%) · on pace for {usage.awake.projectedHours} h
+        </p>
+      )}
 
       {features.length > 0 && (
         <ul className="set-list mt-5">
