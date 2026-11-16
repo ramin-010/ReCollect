@@ -52,6 +52,12 @@
   color: var(--rc-ink-2);
 }
 
+/* A work line's kind ("Decided:", "Next:"), quieter than its words. */
+.you-work-kind {
+  color: var(--rc-ink-2);
+  font-weight: 500;
+}
+
 .you-edit {
   font-size: var(--rc-fs-body);
 }

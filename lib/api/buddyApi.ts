@@ -36,6 +36,8 @@ export interface BuddySettings {
   name: string | null;
   tone: 'candid' | 'gentle';
   capUsd: number;
+  /** B9: it keeps a log of what he works on. */
+  workLog: boolean;
   portrait: { who: string | null; heading: string | null; now: string | null };
   lastNightDay: string | null;
   lastStepAt: string | null;
@@ -107,6 +109,13 @@ export interface BuddyToday {
   day: { _id: string; day: string; lines: unknown; note: string | null; followUp: string | null } | null;
 }
 
+/** GET /api/buddy/work: his work log, newest day first (B9). */
+export type WorkKind = 'did' | 'decided' | 'stuck' | 'next';
+export interface WorkDay {
+  day: string;
+  projects: Array<{ project: string; office: boolean; minutes: number; sessions: number; commits: string[]; lines: Array<{ _id: string; kind: WorkKind; text: string }> }>;
+}
+
 const unwrap = <T>(r: { data: { data?: T } }): T => r.data.data as T;
 
 export const buddyApi = {
@@ -114,7 +123,7 @@ export const buddyApi = {
   addMemory: async (input: { text: string; kind: MemoryKind; private?: boolean }): Promise<Memory> => unwrap(await axiosInstance.post('/api/buddy/memories', input)),
   updateMemory: async (id: string, patch: MemoryPatch): Promise<Memory> => unwrap(await axiosInstance.patch(`/api/buddy/memories/${encodeURIComponent(id)}`, patch)),
   forgetMemory: async (id: string): Promise<{ deleted: true; notes: number }> => unwrap(await axiosInstance.delete(`/api/buddy/memories/${encodeURIComponent(id)}`)),
-  updateSettings: async (patch: Partial<Pick<BuddySettings, 'enabled' | 'paused' | 'name' | 'tone' | 'capUsd'>>): Promise<BuddySettings> =>
+  updateSettings: async (patch: Partial<Pick<BuddySettings, 'enabled' | 'paused' | 'name' | 'tone' | 'capUsd' | 'workLog'>>): Promise<BuddySettings> =>
     unwrap(await axiosInstance.patch('/api/buddy/settings', patch)),
   /** Think now (the night step again today); 409 when it is off, paused or at its cap. */
   thinkNow: async (): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/think')),
@@ -124,6 +133,10 @@ export const buddyApi = {
   feedback: async (input: { buddyDayId: string; target: string; verdict: 'more' | 'less' }): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/feedback', input)),
   setRoutine: async (id: string, enabled: boolean): Promise<Routine> => unwrap(await axiosInstance.patch(`/api/buddy/routines/${encodeURIComponent(id)}`, { enabled })),
   answer: async (memoryId: string, answer: 'yes' | 'no'): Promise<unknown> => unwrap(await axiosInstance.post('/api/buddy/questions', { memoryId, answer })),
+  /** His work log (the last 7 days, or what matches `q`). */
+  work: async (params: { q?: string; from?: string; to?: string; project?: string } = {}): Promise<WorkDay[]> => unwrap(await axiosInstance.get('/api/buddy/work', { params })),
+  /** He removes a line: hidden for good (it is never written again). */
+  hideWork: async (id: string): Promise<unknown> => unwrap(await axiosInstance.delete(`/api/buddy/work/${encodeURIComponent(id)}`)),
   /** Everything as JSON, for a file download. */
   exportAll: async (): Promise<unknown> => unwrap(await axiosInstance.get('/api/buddy/export')),
 };

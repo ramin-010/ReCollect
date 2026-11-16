@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Lock, MoreHorizontal, Pin, PinOff, Plus, Search } from 'lucide-react';
+import { Download, Lock, MoreHorizontal, Pin, PinOff, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSheet, RcSkel, RcSwitch, rcScope, type MenuAction } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
-import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPatch, type Routine, type YouData } from '@/lib/api/buddyApi';
+import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPatch, type Routine, type WorkDay, type WorkKind, type YouData } from '@/lib/api/buddyApi';
 import './you.css';
 
 /**
@@ -203,6 +203,7 @@ export function YouPage() {
             </div>
 
             <Chapters chapters={data.chapters} />
+            <WorkLog on={data.settings.workLog} />
             <Learning data={data} onPaused={setPaused} onChanged={reload} />
           </>
         )}
@@ -298,6 +299,142 @@ function Chapters({ chapters }: { chapters: YouData['chapters'] }) {
         ))}
       </div>
     </section>
+  );
+}
+
+const WORK_KIND: Record<WorkKind, string | null> = { did: null, decided: 'Decided', stuck: 'Stuck on', next: 'Next' };
+const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/** "Today", "Yesterday", else "Sat 14 Nov" (his own clock decides which day is today). */
+function workDay(day: string): string {
+  const today = new Date().toLocaleDateString('en-CA');
+  const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString('en-CA');
+  return day === today ? 'Today' : day === yesterday ? 'Yesterday' : WEEKDAY.format(new Date(`${day}T00:00:00Z`)).replace(',', '');
+}
+
+const minutesText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
+
+/**
+ * His work log (B9): what he got done, by day and project, from his chats with agents; each line can
+ * be removed (it is never written again). Shown only while the log is on.
+ */
+function WorkLog({ on }: { on: boolean }) {
+  const [days, setDays] = useState<WorkDay[] | null | 'failed'>(null);
+  const [query, setQuery] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (!on) return;
+    let alive = true;
+    const q = query.trim();
+    const t = setTimeout(
+      () =>
+        buddyApi.work(q ? { q } : {}).then(
+          (d) => alive && setDays(d),
+          () => alive && setDays('failed'),
+        ),
+      q ? 250 : 0,
+    );
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [on, query, attempt]);
+  if (!on) return null;
+  const remove = async (id: string) => {
+    try {
+      await buddyApi.hideWork(id);
+      setDays((cur) =>
+        Array.isArray(cur)
+          ? cur
+              .map((d) => ({ ...d, projects: d.projects.map((p) => ({ ...p, lines: p.lines.filter((l) => l._id !== id) })).filter((p) => p.lines.length) }))
+              .filter((d) => d.projects.length)
+          : cur,
+      );
+      toast.success('Removed from your log. It won’t be written again.');
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    }
+  };
+  return (
+    <section aria-labelledby="you-work" className="mt-12">
+      <div className="you-filters">
+        <h2 id="you-work" className="rc-h2 mr-auto">
+          Your work
+        </h2>
+        <label className="you-search">
+          <Search aria-hidden className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} />
+          <input className="rc-input" type="search" value={query} placeholder="Search your work" aria-label="Search your work log" onChange={(e) => setQuery(e.target.value)} />
+        </label>
+      </div>
+      <p className="rc-meta mt-1.5 max-w-[560px]">What you got done, by day and project, from your chats with agents. Kept apart from what it knows about you, and never on your lock screen.</p>
+      {days === null && (
+        <div className="mt-4 flex flex-col gap-2" aria-busy aria-label="Loading your work log">
+          <RcSkel className="h-5 w-[120px] rounded-[6px]" />
+          <RcSkel className="h-[40px] w-full rounded-[6px]" />
+          <RcSkel className="h-[40px] w-full rounded-[6px]" />
+        </div>
+      )}
+      {days === 'failed' && <SectionFailed className="mt-4" what="your work log" onRetry={() => setAttempt((n) => n + 1)} />}
+      {Array.isArray(days) && days.length === 0 && (
+        <p className="rc-body rc-ink-2 mt-4">{query.trim() ? 'Nothing in your log matches that.' : 'Nothing logged in the last 7 days. What you build, fix and decide in your chats shows up here a few minutes later.'}</p>
+      )}
+      {Array.isArray(days) && days.length > 0 && (
+        <div className="mt-5 flex flex-col gap-6">
+          {days.map((d) => (
+            <div key={d.day}>
+              <h3 className="text-[14px] font-medium text-[var(--rc-ink-2)]">{workDay(d.day)}</h3>
+              {d.projects.map((p) => (
+                <div key={p.project} className="mt-2">
+                  <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">
+                    {p.project}
+                    {(p.minutes > 0 || p.office) && <span className="rc-meta font-normal"> · {[p.minutes > 0 ? minutesText(p.minutes) : null, p.office ? 'work folder' : null].filter(Boolean).join(' · ')}</span>}
+                  </p>
+                  <ul className="mt-0.5 flex flex-col">
+                    {p.lines.map((l) => (
+                      <li key={l._id} className="rc-row rc-hoverable you-row">
+                        <p className="you-text min-w-0 flex-1">
+                          {WORK_KIND[l.kind] && <span className="you-work-kind">{WORK_KIND[l.kind]}: </span>}
+                          {l.text}
+                        </p>
+                        <RcIconButton size="sm" label="Remove from your log" onClick={() => void remove(l._id)}>
+                          <X />
+                        </RcIconButton>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Whether it keeps a log of his work (B9). */
+function WorkLogSwitch({ on, onChanged }: { on: boolean; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async (next: boolean) => {
+    setBusy(true);
+    try {
+      await buddyApi.updateSettings({ workLog: next });
+      toast.success(next ? 'It keeps a log of your work now' : 'It no longer logs your work. What’s there stays.');
+      onChanged();
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Keep a log of what I work on</p>
+        <p className="rc-meta mt-0.5">What you build, fix and decide in your chats, by project and day, work folders too, so you can ask what you did yesterday. Kept apart from what it knows about you. A few cents a day.</p>
+      </div>
+      <RcSwitch checked={on} disabled={busy} onChange={(v) => void toggle(v)} label="Keep a log of what I work on" />
+    </div>
   );
 }
 
@@ -675,6 +812,7 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
         <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
       </div>
       <Thinking enabled={data.settings.enabled} onChanged={onChanged} />
+      <WorkLogSwitch on={data.settings.workLog} onChanged={onChanged} />
       {data.routines.map((r) => (
         <RoutineRow key={r._id} routine={r} onChanged={onChanged} />
       ))}
@@ -713,7 +851,7 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
         <div className="min-w-0">
           <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Export everything</p>
           <p className="rc-meta mt-0.5">
-            {total === 1 ? '1 memory' : `${total} memories`} and {data.counts.notes === 1 ? 'the 1 note' : `the ${data.counts.notes} notes`} behind them, as a JSON file.
+            {total === 1 ? '1 memory' : `${total} memories`} and {data.counts.notes === 1 ? 'the 1 note' : `the ${data.counts.notes} notes`} behind them{data.settings.workLog ? ', and your work log' : ''}, as a JSON file.
           </p>
         </div>
         <RcButton size="sm" icon={<Download />} busy={exporting} onClick={() => void download()}>
