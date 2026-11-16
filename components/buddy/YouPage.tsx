@@ -291,7 +291,8 @@ function Chapters({ chapters }: { chapters: YouData['chapters'] }) {
       <div className="flex flex-col gap-4">
         {chapters.map((c) => (
           <div key={c._id}>
-            <p className="text-[14px] font-medium text-[var(--rc-ink-2)]">{MONTH.format(new Date(`${c.period}-01T00:00:00Z`))}</p>
+            {/* A month ("2026-11") or, from January, a whole year ("2026"). */}
+            <p className="text-[14px] font-medium text-[var(--rc-ink-2)]">{/^\d{4}$/.test(c.period) ? `The year ${c.period}` : MONTH.format(new Date(`${c.period}-01T00:00:00Z`))}</p>
             <p className="rc-body mt-0.5 text-[var(--rc-ink-1)]">{c.text}</p>
           </div>
         ))}
