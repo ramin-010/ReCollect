@@ -71,7 +71,16 @@ export interface YouData {
   /** The months, newest first, each with its "Still true?" questions still unanswered (B7). */
   chapters: Array<{ _id: string; period: string; text: string; questions: Array<{ memoryId: string; question: string }> }>;
   /** The last 30 days: how much of what it knows he confirmed, his thumbs, what the guards threw out. */
-  health: { confirmedShare: number; thumbs: { more: number; less: number }; dropped: number; steps: number };
+  health: {
+    confirmedShare: number;
+    thumbs: { more: number; less: number };
+    dropped: number;
+    steps: number;
+    /** Active memories by their first day: this month, the two before, older. */
+    byAge?: { month: number; quarter: number; older: number };
+    /** The last three calendar months, newest first. */
+    months?: Array<{ month: string; more: number; less: number; dropped: number; costUsd: number }>;
+  };
 }
 
 export interface MemoryPatch {

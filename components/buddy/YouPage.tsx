@@ -694,6 +694,18 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
                 .join(' · ')}{' '}
               · the last 30 days
             </p>
+            {data.health.byAge && (
+              <p className="rc-meta mt-0.5">
+                By age: {data.health.byAge.month} from this month, {data.health.byAge.quarter} from the two before, {data.health.byAge.older} older
+              </p>
+            )}
+            {(data.health.months ?? [])
+              .filter((m) => m.more + m.less + m.dropped > 0 || m.costUsd > 0)
+              .map((m) => (
+                <p key={m.month} className="rc-meta mt-0.5">
+                  {MONTH.format(new Date(`${m.month}-01T00:00:00Z`))}: {m.more} more like this, {m.less} not this, {m.dropped} thrown out, ${m.costUsd.toFixed(2)}
+                </p>
+              ))}
           </div>
         </div>
       )}
