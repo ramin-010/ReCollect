@@ -1,7 +1,7 @@
 /**
  * Home's date and number words (DESIGN.md "Words"). Days are 'YYYY-MM-DD' in the user's zone and
  * are formatted at UTC midnight with timeZone 'UTC', so labels never shift by the browser's offset.
- * Day-first order ("Saturday, 14 November"), as Ramin writes dates.
+ * Day-first order ("Saturday, 14 November"), the way the owner writes dates.
  */
 import { diffDays, type DayString } from '@/lib/learning/engine';
 

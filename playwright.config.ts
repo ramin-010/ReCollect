@@ -1,7 +1,7 @@
 /**
  * The editor's acceptance tests (DOCS_EDITOR_V2_PLAN §7): one test per NB- item of
  * context/research/notion-editor-behaviour.md, driven like a person (the pointer glides, drags are
- * slow, keys have pauses), on the QA account (qa@recollect.local; never Ramin's).
+ * slow, keys have pauses), on the QA account (qa@recollect.local; never the owner's).
  *
  * Needs the app running locally (backend :8002, live editing :1234, frontend :3005):
  * `npm run test:editor`. The browser: CHROME_EXE, else the newest Chromium Playwright has

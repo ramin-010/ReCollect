@@ -91,7 +91,7 @@ export function normaliseHref(raw: string): string {
 }
 
 /**
- * Collapses a URL into something readable: `github.com/ramin-010/revise`
+ * Collapses a URL into something readable: `github.com/acme/notes`
  * rather than 120 characters of query string.
  */
 export function prettyUrl(raw: string): string {
@@ -374,7 +374,7 @@ const CONTINUATION_RE =
 
 /**
  * The first line of a note is almost always its title — "Strings Methods",
- * "Test erp-api", "sort an 2d array" — so it is promoted to a heading even
+ * "Test the api", "sort an 2d array" — so it is promoted to a heading even
  * when the lines beneath it belong to the same paragraph block.
  */
 function promoteTitle(nodes: NoteNode[]): NoteNode[] {

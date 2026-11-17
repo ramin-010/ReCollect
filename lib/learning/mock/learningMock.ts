@@ -517,7 +517,7 @@ function createMock() {
         today,
         timezone,
         needsEnsure: false,
-        user: { _id: 'mock-user', name: 'Ramin' },
+        user: { _id: 'mock-user', name: 'Alex' },
         stats: {
           streak: db.streak.current,
           longestStreak: db.streak.longest,

@@ -10,7 +10,7 @@ import { buddyApi, type BuddyUsage, type Memory, type MemoryKind, type MemoryPat
 import './you.css';
 
 /**
- * "About you" (BUDDY_MEMORY_PLAN §3.2, §4.4): everything the buddy knows about Ramin, where each
+ * "About you" (BUDDY_MEMORY_PLAN §3.2, §4.4): everything the buddy knows about the user, where each
  * thing came from, and his say over all of it: edit, pin, make private, mark wrong, forget; pause
  * the learning; export it all. Job: see what it knows and fix any of it in one place.
  */
@@ -582,7 +582,7 @@ function MemoryRow({ memory: m, onChange, onForget }: { memory: Memory; onChange
 function olderWords(m: Memory): string {
   if (m.status === 'wrong') return 'Marked wrong';
   if (m.status === 'faded') return 'Faded';
-  return m.closeReason && !/Ramin\)?$/.test(m.closeReason) ? `No longer true: ${m.closeReason}` : 'No longer true';
+  return m.closeReason && !m.byUser ? `No longer true: ${m.closeReason}` : 'No longer true';
 }
 
 function AddSheet({ open, onOpenChange, onAdded }: { open: boolean; onOpenChange: (o: boolean) => void; onAdded: (m: Memory) => void }) {

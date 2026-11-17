@@ -19,7 +19,7 @@ import {
 
 const NO_KIND = 'none';
 
-/** "What is it": the icon a box shows (an agent sets it with `kind`; Ramin picks it here). */
+/** "What is it": the icon a box shows (an agent sets it with `kind`; the user picks it here). */
 const KIND_OPTIONS: PickerOption[] = [
   { value: NO_KIND, label: 'No icon' },
   ...CANVAS_KINDS.map((k) => {

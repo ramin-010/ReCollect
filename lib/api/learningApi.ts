@@ -429,7 +429,7 @@ export const learningApi = {
     return call(() => axiosInstance.delete(`/api/sessions/${id}`));
   },
 
-  /** Where Ramin stands (LOOP_COMPLETE_SPEC 1.7): pace per path, hours per week, per-subject numbers. */
+  /** Where the user stands (LOOP_COMPLETE_SPEC 1.7): pace per path, hours per week, per-subject numbers. */
   /** Each day's pending reviews and open tasks against the budget (the Move calendar). */
   async revisionCalendar(from: DayString, days = 42): Promise<RevisionCalendar> {
     return call(() => axiosInstance.get('/api/revisions/calendar', { params: { from, days } }));

@@ -29,7 +29,7 @@ export function RescheduleDialog({ today, timezone }: { today: DayString; timezo
   useEffect(() => setError(null), [target]);
 
   if (!target) return null;
-  // A review moves on the month calendar, each day's load beside it (Ramin's Revise "Move here").
+  // A review moves on the month calendar, each day's load beside it (Revise's "Move here").
   if (target.kind === 'revision') {
     return (
       <MoveCalendar

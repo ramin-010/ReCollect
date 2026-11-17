@@ -13,7 +13,7 @@ export function MockTaskInput() {
   const [typedText, setTypedText] = useState('');
   
   // Shorter, more readable prompt per user's request
-  const aiPrompt = "@ai Tell @Ramin to review the new auth flow before tomorrow";
+  const aiPrompt = "@ai Tell @Sam to review the new auth flow before tomorrow";
 
   const renderTypedText = (text: string) => {
     const parts = text.split(/(@\w+)/g);
@@ -64,7 +64,7 @@ export function MockTaskInput() {
         
         // Ensure prompt logic is safely matched from source
         const atAi = "@ai ";
-        const promptRem = aiPrompt.replace('@ai ', '') || "Tell @Ramin to review the new auth flow before tomorrow";
+        const promptRem = aiPrompt.replace('@ai ', '') || "Tell @Sam to review the new auth flow before tomorrow";
         
         // 1. Type "@ai " exactly and safely
         for (let i = 1; i <= atAi.length; i++) {
@@ -218,7 +218,7 @@ export function MockTaskInput() {
                 {/* Generated Description */}
                 <div className="text-[14px] leading-[1.6] font-normal text-white/70 space-y-[10px] text-left">
                   <p className="text-left">
-                    <span className="text-indigo-300 font-medium bg-indigo-500/15 px-1 py-0.5 rounded mr-1 inline-flex text-[13px] align-baseline">@Ramin</span> 
+                    <span className="text-indigo-300 font-medium bg-indigo-500/15 px-1 py-0.5 rounded mr-1 inline-flex text-[13px] align-baseline">@Sam</span> 
                     <span>, please review the new authentication flow to ensure it meets our requirements and functions as expected.</span>
                   </p>
                   

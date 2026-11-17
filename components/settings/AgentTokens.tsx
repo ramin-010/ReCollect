@@ -102,8 +102,8 @@ export function AgentTokens() {
   };
 
   const active = (tokens ?? []).filter((t) => !t.revokedAt);
-  // The MCP server lives in second_brain/mcp (built to dist/). `-s user` makes it available in every project.
-  const serverPath = process.env.NEXT_PUBLIC_MCP_SERVER_PATH ?? 'E:/PERSONAL_PROJECTS/second_brain/mcp/dist/index.js';
+  // The MCP server lives in mcp/ (built to dist/); NEXT_PUBLIC_MCP_SERVER_PATH says where on this computer. `-s user` makes it available in every project.
+  const serverPath = process.env.NEXT_PUBLIC_MCP_SERVER_PATH ?? '/path/to/recollect/mcp/dist/index.js';
   const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8002';
   const setup = fresh ? `claude mcp add recollect -s user -e RECOLLECT_URL=${apiUrl} -e RECOLLECT_TOKEN=${fresh.token} -- node ${serverPath}` : '';
 

@@ -10,7 +10,7 @@ import type { ChainRevision, DayString } from '@/lib/learning/types';
 import './revision-timeline.css';
 
 /**
- * A topic's revision timeline (Ramin's Revise showed it: each cycle with its day, what comes next).
+ * A topic's revision timeline (Revise showed it: each cycle with its day, what comes next).
  * Opened from the doc's Revision property: reviews 1–4 with the day each was done or is planned,
  * the next one marked, and "Move the next review…" (the Move calendar).
  */

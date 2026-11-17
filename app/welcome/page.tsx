@@ -9,7 +9,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Sparkles,
   Keyboard,
-  Github,
   FileText,
   CheckSquare,
   LayoutList,
@@ -144,11 +143,10 @@ export default function WelcomePage() {
                     <Button
                       variant="outline"
                       size="lg"
-                      onClick={() => window.open('https://github.com/ramin-010', '_blank')}
+                      href="/login"
                       className="rounded-md px-6 h-12 text-base font-semibold border-border hover:bg-muted/50 transition-colors gap-2 w-full sm:w-auto"
                     >
-                      <Github className="w-5 h-5" />
-                      View on GitHub
+                      Log in
                     </Button>
                   </div>
                </div>
@@ -388,7 +386,6 @@ export default function WelcomePage() {
                 <span>© 2026 Recollect</span>
                 <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-                <a href="https://www.linkedin.com/in/rinkal-kumar-46130a329" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
             </div>
          </div>
       </section>

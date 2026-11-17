@@ -751,7 +751,7 @@ export function LabEditor({
   const getItems = async (query: string): Promise<SlashItem[]> => {
     // BlockNote's own items, renamed to Notion's words with the Markdown start as the hint (0a),
     // in Notion's order. Heading 4 and the toggle headings are in (H5–H6 come only from Markdown);
-    // video, audio, file and emoji are left out (Ramin, 11-15: later, or not at all).
+    // video, audio, file and emoji are left out (the owner, 11-15: later, or not at all).
     const byKey = new Map((getDefaultSlashMenuItems(editor) as SlashItem[]).map((i) => [i.key, i]));
     const take = (key: string, title: string, group: string, badge?: string, aliases: string[] = []): SlashItem[] => {
       const item = byKey.get(key);

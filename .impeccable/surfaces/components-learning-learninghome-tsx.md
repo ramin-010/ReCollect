@@ -9,7 +9,7 @@ related_targets: ["app/(app)/page.tsx"]
 Home / Today (`/`, components/learning/home/*), its sheets (learning settings, goal) and the Ctrl+K note finder. Mode: Operate.
 
 ## Audience and job
-Ramin, a working software engineer, at the start of the workday on a laptop (sometimes a phone). Job: see today's few revisions and focus lines, do them, leave; glance at goal pace and the pinned pocket. Nothing opens by itself.
+The owner, a working software engineer, at the start of the workday on a laptop (sometimes a phone). Job: see today's few revisions and focus lines, do them, leave; glance at goal pace and the pinned pocket. Nothing opens by itself.
 
 ## Constraints
 Inside the existing app shell (sidebar, navbar, themes light / dark / dark-gray). Tokens scoped to `.rc` for now, built to go app-wide. Routine features render only when routineEnabled.

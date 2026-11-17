@@ -1,5 +1,5 @@
 /**
- * MOCK MODE fixtures (NEXT_PUBLIC_LEARNING_MOCK=1): a realistic day for Ramin's learning
+ * MOCK MODE fixtures (NEXT_PUBLIC_LEARNING_MOCK=1): a realistic day of learning
  * dashboard, generated relative to the real "today" so the buckets are always meaningful.
  * Only imported by learningMock.ts, which learningApi loads behind the inline env check.
  */

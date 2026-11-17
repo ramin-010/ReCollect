@@ -52,7 +52,7 @@ const from = (s: Suggestion): string | null =>
  * Suggested (LOOP_COMPLETE_SPEC 1.6, ECOSYSTEM_PLAN change 9): the one place for every proposal, from
  * the weekly review, the coach or an agent. Shown only when something waits. When the weekly review
  * is due it opens as a card ("Plan next week" on Sunday): last week in a line, the proposals, Add all
- * or Skip. Otherwise it is one quiet line that opens. Nothing changes until Ramin accepts.
+ * or Skip. Otherwise it is one quiet line that opens. Nothing changes until the user accepts.
  */
 export function Suggested() {
   const [items, setItems] = useState<Suggestion[]>([]);

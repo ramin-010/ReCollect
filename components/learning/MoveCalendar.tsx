@@ -11,7 +11,7 @@ import type { DayString, RevisionCalendar, RevisionCalendarDay } from '@/lib/lea
 import './move-calendar.css';
 
 /**
- * Move a review to another day, seeing each day's load first (Ramin's Revise had it: a month,
+ * Move a review to another day, seeing each day's load first (Revise had it: a month,
  * the chosen day's reviews and tasks beside it, "Move here"). The month marks each day's minutes
  * against his budget; the side shows what is already there. Moving keeps the later cycles' gaps.
  */

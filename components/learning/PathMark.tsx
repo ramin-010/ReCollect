@@ -46,7 +46,7 @@ export function PathMark({ status, className }: { status: PathStatus; className?
 
 /**
  * The prompt that starts a study chat on a topic (Home's Next up, the path's menu). The chat's
- * first call is get_brief (where Ramin stands, the topic's last session and weak spots, a session
+ * first call is get_brief (where the user stands, the topic's last session and weak spots, a session
  * key); the recollect-study skill takes it from there (SYNC_SPINE_SPEC 1.3).
  */
 export function studyPrompt(subject: string, topic: { position: number; title: string }, nextStep: string | null): string {

@@ -1,14 +1,14 @@
 # PRODUCT.md — Recollect
 
-_Written 2026-11-14 by the design lead (Claude) from 2–3 months of Ramin's real use of his own app "Revise". Change it when reality says otherwise._
+_Written 2026-11-14 by the design lead (Claude) from 2–3 months of the owner's real use of an earlier app, "Revise". Change it when reality says otherwise._
 
 ## What it is
 Recollect is where a working software engineer keeps what he is learning alive, and where the things he needs again live: revisions due today, his goals, and the notes and commands he reaches for every day.
 
-**Direction (Ramin, 2026-11-14):** a buddy that keeps him organised (learning, goals, tasks, decisions, schedule), in sync with the coding agents he spends his day in, on PC and phone; first for him, later for students, office learners and coders. His chats and editor do the work; Recollect holds the plan and the record, and agents keep it up to date. Nothing may ever be a required log. The plan: `context/specs/BUDDY_PLAN.md`.
+**Direction (the owner, 2026-11-14):** a buddy that keeps him organised (learning, goals, tasks, decisions, schedule), in sync with the coding agents he spends his day in, on PC and phone; first for him, later for students, office learners and coders. His chats and editor do the work; Recollect holds the plan and the record, and agents keep it up to date. Nothing may ever be a required log. The plan: `context/specs/BUDDY_PLAN.md`.
 
 ## Who uses it
-**Ramin, first and for now only.** He's a software engineer at a small company in India, earning about ₹30k a month, and wants to grow fast while AI reshapes the field.
+**The owner, first and for now only.** A working software engineer who wants to grow fast while AI reshapes the field.
 - He learns mostly DSA, plus backend, system design and AI.
 - He uses Claude Code all day at work.
 - Making it a SaaS comes later, and only if it truly works for him.
@@ -16,7 +16,7 @@ Recollect is where a working software engineer keeps what he is learning alive, 
 ## His moment
 - **The start of the day, on a laptop** (1366–1920 wide). It's the browser's start page or the first tab, opened before or at the start of work. He has a couple of minutes, wants to see what matters today, and then gets on with it.
 - **During the day, a quick return** to copy a pinned command (e.g. the ssh/update-server command) or jot something down. Instinctive, a few seconds.
-- **Sometimes on the phone** (390 wide), to tick off a revision or read a note. _(Assumed. Ramin to confirm.)_
+- **Sometimes on the phone** (390 wide), to tick off a revision or read a note. _(Assumed. The owner to confirm.)_
 
 ## What he learned the hard way (the design must respect this)
 - **Rigid time blocks plus "Action Required" logs made him stop opening the app.** Logging every missed block felt like failure, then guilt, then avoidance.
