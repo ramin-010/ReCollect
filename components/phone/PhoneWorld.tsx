@@ -54,6 +54,12 @@ export function PhoneWorld({ fontClass, children }: { fontClass: string; childre
     if (!isLoading && !isAuthenticated) router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
   }, [isLoading, isAuthenticated, pathname, router]);
 
+  // Every tab fetched ahead once signed in (the owner, 11-21: a tap showed the old page for a second or two while the
+  // new one came over the network), so a tap swaps the page at once.
+  useEffect(() => {
+    if (isAuthenticated) for (const t of TABS) router.prefetch(t.href);
+  }, [isAuthenticated, router]);
+
   // The look on <html>, and the phone's own bars in its ground colour.
   useEffect(() => {
     if (!ready) return;
