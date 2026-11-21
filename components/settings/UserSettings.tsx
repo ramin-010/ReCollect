@@ -6,13 +6,15 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
 import { useSettingsStore } from '@/lib/store/settingsStore';
 import { ContentCard } from '@/components/content/ContentCard';
-import { User, Archive, Heart, X, LogOut, Bot, Gauge, Smartphone } from 'lucide-react';
+import { User, Archive, Heart, X, LogOut, Bot, Gauge, Smartphone, MessageSquare, Database } from 'lucide-react';
 import { rcScope, RcConfirm, RcIconButton } from '@/components/rc-ui';
 import { cn } from '@/lib/utils';
 import { AgentTokens } from './AgentTokens';
 import { AiSettings } from './AiSettings';
 import { PhoneAppSettings } from './PhoneAppSettings';
 import { ProfileSettings } from './ProfileSettings';
+import { SendFeedback } from './SendFeedback';
+import { YourData } from './YourData';
 import { toast } from 'sonner';
 import { userApi } from '@/lib/api/user';
 import { authApi } from '@/lib/api/auth';
@@ -20,7 +22,7 @@ import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
 import { features } from '@/lib/features';
 
-type TabType = 'profile' | 'agents' | 'ai' | 'phone' | 'archived' | 'favorites';
+type TabType = 'profile' | 'agents' | 'ai' | 'phone' | 'data' | 'feedback' | 'archived' | 'favorites';
 
 export function UserSettings() {
   const router = useRouter();
@@ -160,6 +162,9 @@ export function UserSettings() {
     { id: 'agents' as TabType, label: 'Agents', icon: Bot },
     { id: 'ai' as TabType, label: 'AI', icon: Gauge },
     { id: 'phone' as TabType, label: 'Phone app', icon: Smartphone },
+    // Stage 11 (§9.6): everything in one file, deleting the account; a few words to whoever runs this server.
+    { id: 'data' as TabType, label: 'Your data', icon: Database },
+    { id: 'feedback' as TabType, label: 'Send feedback', icon: MessageSquare },
     // Archived / Favorites list legacy content notes: hidden while `content` is off (lib/features.ts).
     ...(features.content
       ? [
@@ -283,6 +288,8 @@ export function UserSettings() {
                         {activeTab === 'agents' && 'Tokens for Claude Code and other agents'}
                         {activeTab === 'ai' && 'Recall questions and grading, and what they cost'}
                         {activeTab === 'phone' && 'Your day on your Android home and lock screen'}
+                        {activeTab === 'feedback' && 'Tell the person who runs this server what you think'}
+                        {activeTab === 'data' && 'Everything that is yours, in one file, and deleting your account'}
                         {activeTab === 'archived' && `${archivedNotes.length} ${archivedNotes.length === 1 ? 'note' : 'notes'} archived`}
                         {activeTab === 'favorites' && `${favoriteNotes.length} ${favoriteNotes.length === 1 ? 'note' : 'notes'} pinned`}
                       </p>
@@ -436,6 +443,18 @@ export function UserSettings() {
               {activeTab === 'ai' && (
                 <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                   <AiSettings />
+                </motion.div>
+              )}
+
+              {activeTab === 'feedback' && (
+                <motion.div key="feedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <SendFeedback />
+                </motion.div>
+              )}
+
+              {activeTab === 'data' && (
+                <motion.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <YourData />
                 </motion.div>
               )}
             </AnimatePresence>

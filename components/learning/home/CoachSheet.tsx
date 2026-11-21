@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { RcButton, RcSheet, RcSkel } from '@/components/rc-ui';
 import { aiApi, type CoachNote } from '@/lib/api/aiApi';
-import { recallErrorKind } from '@/lib/api/recallApi';
+import { AI_PAUSED_WORDS, recallErrorKind } from '@/lib/api/recallApi';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { formatStampDay } from '@/components/docs/page/format';
 
@@ -50,8 +50,10 @@ export function CoachSheet({ open, onOpenChange }: { open: boolean; onOpenChange
       toast.error(
         kind === 'cap-reached'
           ? 'This month’s AI budget is used up (Settings → AI).'
-          : kind === 'not-configured'
-            ? 'The AI isn’t set up on the server yet.'
+          : kind === 'paused'
+            ? AI_PAUSED_WORDS
+            : kind === 'not-configured'
+            ? 'The coach needs AI: add your own Claude key in Settings › AI.'
             : 'The coach didn’t answer. Try again in a moment.',
       );
     } finally {

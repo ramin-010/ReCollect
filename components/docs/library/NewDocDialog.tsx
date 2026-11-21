@@ -14,7 +14,7 @@ import { useDocStore, type Doc } from '@/lib/store/docStore';
 import { DOC_TEMPLATES, type DocTemplate } from '@/lib/docs/templates';
 import type { Subject } from '@/lib/learning/types';
 import { aiApi } from '@/lib/api/aiApi';
-import { recallErrorKind } from '@/lib/api/recallApi';
+import { AI_PAUSED_WORDS, recallErrorKind } from '@/lib/api/recallApi';
 import { CODE_LANGUAGES } from '@/lib/editor/codeLanguages';
 
 const ICONS: Record<DocTemplate['id'], typeof File> = {
@@ -89,8 +89,10 @@ export function NewDocDialog({
       toast.error(
         kind === 'cap-reached'
           ? 'This month’s AI budget is used up (Settings → AI).'
-          : kind === 'not-configured'
-            ? 'The AI isn’t set up on the server yet.'
+          : kind === 'paused'
+            ? AI_PAUSED_WORDS
+            : kind === 'not-configured'
+            ? 'This needs AI: add your own Claude key in Settings › AI.'
             : 'The note wasn’t written. Try again in a moment.',
       );
       setBusy(false);

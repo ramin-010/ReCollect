@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { authApi } from '@/lib/api/auth';
 import { dashboardApi } from '@/lib/api/dashboard';
+import axiosInstance from '@/lib/utils/axios';
 import { useAuthStore } from '@/lib/store/authStore';
 import { Button } from '@/components/ui-base/Button';
 import { Input } from '@/components/ui-base/Input';
@@ -17,6 +18,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { features } from '@/lib/features';
+import { ownerApi, type InviteView } from '@/lib/api/ownerApi';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -34,15 +36,44 @@ type OtpFormData = z.infer<typeof otpSchema>;
 function SignupForm() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
-  
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get('invite');
+
   const [isLoading, setIsLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState<'select' | 'email'>('select');
   const [step, setStep] = useState<'signup' | 'otp'>('signup');
   const [signupData, setSignupData] = useState<SignupFormData | null>(null);
+  // Stage 11: an invite link (/signup?invite=…): who invited them, for which email, and whether it still works.
+  const [invite, setInvite] = useState<InviteView | 'unknown' | null>(null);
 
   const signupForm = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+
+  const resetForm = signupForm.reset;
+  useEffect(() => {
+    if (!inviteCode) return;
+    let live = true;
+    ownerApi.invite(inviteCode).then(
+      (v) => {
+        if (!live) return;
+        setInvite(v ?? 'unknown');
+        if (v && v.state === 'open') resetForm({ name: v.name, email: v.email, password: '' });
+      },
+      () => live && setInvite(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [inviteCode, resetForm]);
+
+  const openInvite = invite && invite !== 'unknown' && invite.state === 'open' ? invite : null;
+  const inviteProblem =
+    invite === 'unknown'
+      ? 'This invite link isn’t known here. Check the link, or ask for a new one.'
+      : invite && invite.state !== 'open'
+        ? `This invite link ${invite.state === 'used' ? 'was already used' : invite.state === 'expired' ? 'has expired' : 'was withdrawn'}. Ask ${invite.from} for a new one${invite.state === 'used' ? ', or sign in if it was yours' : ''}.`
+        : null;
 
   const otpForm = useForm<OtpFormData>({
     resolver: zodResolver(otpSchema),
@@ -92,6 +123,15 @@ function SignupForm() {
       if (response.success && response.data) {
         setUser(response.data);
         localStorage.setItem('auth_hint', '1');
+
+        // Stage 11 (ECOSYSTEM_V2_PLAN §9.6): the browser's time zone, so their days and reminders are their own from day one
+        // (the server checks the name; a failure keeps the default, which Profile can change).
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (tz) await axiosInstance.patch('/api/learning/settings', { timezone: tz });
+        } catch {
+          // best effort
+        }
 
         // Create default dashboard (legacy; skipped while dashboards are hidden, see lib/features.ts)
         if (features.dashboards) {
@@ -151,6 +191,15 @@ function SignupForm() {
           localStorage.setItem('auth_hint', '1');
 
           const isNewUser = new Date().getTime() - new Date(response.data.createdAt).getTime() < 60000;
+          // Stage 11: a new account takes the browser's time zone (best effort).
+          if (isNewUser) {
+            try {
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              if (tz) await axiosInstance.patch('/api/learning/settings', { timezone: tz });
+            } catch {
+              // best effort
+            }
+          }
 
           if (isNewUser) {
             // Legacy default dashboard; skipped while dashboards are hidden (lib/features.ts)
@@ -179,8 +228,12 @@ function SignupForm() {
           setIsLoading(false);
         }
       } catch (error: any) {
+        // Stage 11: an invite is for one address; another Google account is refused like any closed signup.
+        const wrongAccount = openInvite && error.response?.status === 403;
         toast.error('Google Sign-In failed', {
-          description: error.response?.data?.message || 'Something went wrong. Please try again.',
+          description: wrongAccount
+            ? `Use the Google account for ${openInvite.email}: the invite is for that address.`
+            : error.response?.data?.message || 'Something went wrong. Please try again.',
         });
         setIsLoading(false);
       }
@@ -189,15 +242,17 @@ function SignupForm() {
   });
 
   const heading = authMethod === 'select'
-    ? "Let's get started"
+    ? (openInvite ? "You're invited" : "Let's get started")
     : step === 'signup'
     ? "Create your account"
     : "Verify your email";
 
   const subheading = authMethod === 'select'
-    ? "Sign up to get things done - your tasks, notes, and meetings all in one place."
+    ? openInvite
+      ? `${openInvite.from} invited you to Recollect${openInvite.allowanceUsd > 0 ? `, with $${openInvite.allowanceUsd.toFixed(0)} of free AI to start` : ''}. Use ${openInvite.email} to make your account.`
+      : inviteProblem ?? "Sign up to get things done - your tasks, notes, and meetings all in one place."
     : step === 'signup'
-    ? "Start organizing your knowledge today."
+    ? openInvite ? `The invite is for ${openInvite.email}.` : "Start organizing your knowledge today."
     : `We sent a code to ${signupData?.email}`;
 
   return (
@@ -298,6 +353,7 @@ function SignupForm() {
                     placeholder="you@example.com"
                     leftIcon={<Mail className="w-5 h-5" />}
                     {...signupForm.register('email')}
+                    readOnly={!!openInvite}
                     disabled={isLoading}
                     error={signupForm.formState.errors.email?.message}
                     inputSize="md"

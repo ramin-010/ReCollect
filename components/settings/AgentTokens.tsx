@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, KeyRound } from 'lucide-react';
+import { ConnectChats } from './ConnectChats';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcSkel } from '@/components/rc-ui';
@@ -112,6 +113,7 @@ export function AgentTokens() {
       <p className="rc-body rc-ink-2">
         Let a coding agent write learning docs, set goals and plan your week through the Recollect MCP server. Its changes are labelled “From your agent” on Home, and each one can be undone.
       </p>
+      <ConnectChats apiUrl={apiUrl} />
 
       {fresh ? (
         <div className="set-fresh mt-5">

@@ -55,14 +55,19 @@ export interface AiUsage {
 }
 
 /** Why recall can't run: no API key on the server, the monthly cap, an empty doc, a finished review, or a failure. */
-export type RecallUnavailable = 'not-configured' | 'cap-reached' | 'no-content' | 'already-done' | 'failed';
+export type RecallUnavailable = 'not-configured' | 'paused' | 'cap-reached' | 'no-content' | 'already-done' | 'failed';
+
+/** A paused key (stage 2): out of credit or not accepted; the rest of the app works. */
+export const AI_PAUSED_WORDS = 'The AI is paused right now. Everything else works.';
 
 export function recallErrorKind(err: unknown): RecallUnavailable {
   const res = (err as { response?: { status?: number; data?: { code?: string } } })?.response;
   const status = res?.status;
   const code = res?.data?.code;
+  if (code === 'AI_PAUSED') return 'paused';
   if (code === 'AI_CAP_REACHED' || status === 402) return 'cap-reached';
-  if (code === 'AI_NOT_CONFIGURED' || status === 503) return 'not-configured';
+  // Stage 10: an account the server's AI is not for reads the same calm way (its own key is the way in).
+  if (code === 'AI_NOT_CONFIGURED' || code === 'AI_NOT_ALLOWED' || status === 503) return 'not-configured';
   if (code === 'NO_CONTENT' || status === 422) return 'no-content';
   if (code === 'NOT_PENDING' || status === 409) return 'already-done';
   // 404 without a code is a missing route (an old API); with one it is a missing revision.

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { BuddyCard } from '@/components/buddy/BuddyCard';
+import { FirstRun } from './FirstRun';
 import { cn } from '@/lib/utils';
 import { PersonalTaskDetailModal } from '@/components/todo/PersonalTaskDetailModal';
 import { isLearningMock } from '@/lib/api/learningApi';
@@ -22,6 +23,7 @@ import { NextUpSection } from './NextUp';
 import { Suggested } from './Suggested';
 import { ThisWeek } from './ThisWeek';
 import { LookAgain } from './LookAgain';
+import { RemindersToday } from './RemindersToday';
 import { TodaySoFar } from './TodaySoFar';
 import { CoachSheet } from './CoachSheet';
 import Link from 'next/link';
@@ -33,6 +35,7 @@ import { RoutinePanel } from './RoutinePanel';
 import { SettingsSheet } from './SettingsSheet';
 import { TasksToday } from './TasksToday';
 import { TodaySlip } from './TodaySlip';
+import { AiPausedNotice } from '@/components/ai/AiPausedNotice';
 import { openCapturePalette } from './parts';
 
 /** The page frame: centred, never edge to edge (max 1160, 1200 on wide screens). */
@@ -85,6 +88,7 @@ export function TodayHome({ data }: { data: TodayPayload }) {
 
         <div className={cn(columns, 'mt-7 lg:mt-8')}>
           <div className="flex min-w-0 flex-col gap-9">
+            <FirstRun />
             <div>
               <TodaySlip
                 plan={data.plan}
@@ -96,8 +100,10 @@ export function TodayHome({ data }: { data: TodayPayload }) {
               <TodaySoFar today={data.today} />
               <Suggested />
             </div>
+            <AiPausedNotice />
             <BuddyCard />
             <LookAgain />
+            <RemindersToday />
             <FocusLines focus={data.focus} onRetry={retry} />
             <ThisWeek />
             <NextUpSection next={data.next} />

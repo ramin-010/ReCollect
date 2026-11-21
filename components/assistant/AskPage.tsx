@@ -1,5 +1,9 @@
 'use client';
 
+import { buddyApi, type BuddyAskItem } from '@/lib/api/buddyApi';
+import { firstRunApi } from '@/lib/api/firstRunApi';
+import { AiPausedNotice } from '@/components/ai/AiPausedNotice';
+import { NoAiNotice, useNoAi } from '@/components/ai/NoAiNotice';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -41,6 +45,36 @@ const STARTERS = [
   { icon: MessageSquareText, text: "Move tomorrow's reviews to Sunday" },
 ];
 
+/** Stage 11: the buddy's first words: its lines, the three questions as a quiet list. */
+function FirstWords({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const asks = lines.filter((l) => l.startsWith('- ')).map((l) => l.slice(2));
+  const said = lines.filter((l) => !l.startsWith('- '));
+  return (
+    <div className="ask-empty-sub text-[var(--rc-ink-1)]">
+      {said.map((l) => (
+        <p key={l} className="mt-1 first:mt-0">
+          {l}
+        </p>
+      ))}
+      {asks.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-[var(--rc-ink-2)]">
+          {asks.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Stage 11: the first chat's starters begin an answer to the buddy's three questions; the person finishes it. */
+const FIRST_STARTERS = [
+  { icon: MessageSquareText, text: 'Right now I’m learning ', fill: true },
+  { icon: CalendarCheck, text: 'A good week for me is ', fill: true },
+  { icon: ChartNoAxesColumn, text: 'Coming up soon: ', fill: true },
+];
+
 
 /**
  * Ask AI (MANAGER_AND_DOCS_PLAN §3.4): he asks, the manager acts through the same tools his agents
@@ -51,8 +85,32 @@ const STARTERS = [
 export function AskPage() {
   const router = useRouter();
   const params = useSearchParams();
+  // Stage 10: an account without AI (its composer is one quiet line; no starters).
+  const noAi = useNoAi();
   const urlThread = params.get('t');
   const urlAsk = params.get('q');
+  // Stage 3: a reply to one of the buddy's questions (Home → Reply) opens a new chat with that question.
+  const replyTo = params.get('ask');
+  const [opening, setOpening] = useState<BuddyAskItem | null>(null);
+  // Stage 11 (§9.6 item 2): a person who has never talked to the buddy: its first words open the chat.
+  const [firstWords, setFirstWords] = useState<string | null>(null);
+  useEffect(() => {
+    firstRunApi.get().then(
+      (f) => setFirstWords(f.opening),
+      () => undefined,
+    );
+  }, []);
+  // Stage 5: the chat is the buddy's, so it carries the buddy's name when he gave it one.
+  const [buddyName, setBuddyName] = useState<string | null>(null);
+  useEffect(() => {
+    buddyApi.today().then(
+      (d) => {
+        setBuddyName(d.enabled && d.name ? d.name : null);
+        if (replyTo) setOpening((d.asks ?? []).find((a) => a._id === replyTo) ?? null);
+      },
+      () => undefined,
+    );
+  }, [replyTo]);
 
   const threads = useAskThreads((s) => s.threads);
   const loadThreads = useAskThreads((s) => s.load);
@@ -149,12 +207,15 @@ export function AskPage() {
       if (!text || sending.current) return;
       sending.current = true;
       if (!opts.retry) setDraft('');
+      // Stage 11: the first chat keeps the buddy's first words above the answer (the server keeps them too).
+      const sentFirst = !activeId && !opening && !!firstWords;
+      if (sentFirst) setMessages([{ _id: 'first-words', role: 'assistant', text: firstWords!, tools: [], costUsd: null, createdAt: new Date().toISOString() }]);
       setPending({ text, tools: [], error: null, kept: false });
       requestAnimationFrame(() => scrollToEnd(false));
       let threadId = activeId;
       try {
         await assistantApi.send(
-          { ...(threadId ? { threadId } : {}), text },
+          { ...(threadId ? { threadId } : {}), text, ...(!threadId && opening ? { askId: opening._id } : !threadId && firstWords ? { first: true as const } : {}) },
           {
             onThread: (t) => {
               setPending((p) => (p ? { ...p, kept: true, threadId: t._id } : p));
@@ -182,6 +243,7 @@ export function AskPage() {
               const mine: AssistantMessage = { _id: `you-${message._id}`, role: 'user', text, tools: [], costUsd: null, createdAt: message.createdAt };
               setMessages((m) => [...(Array.isArray(m) ? m : []), mine, message]);
               setPending(null);
+              if (sentFirst) setFirstWords(null);
               refreshUsage();
               if (follow) requestAnimationFrame(() => scrollToEnd(true));
             },
@@ -195,7 +257,7 @@ export function AskPage() {
         focusInput();
       }
     },
-    [activeId, refreshUsage, router, scrollToEnd, upsertThread],
+    [activeId, opening, firstWords, refreshUsage, router, scrollToEnd, upsertThread],
   );
 
   // Ctrl K → "Ask": /ask?q=… starts a new conversation with it.
@@ -283,11 +345,18 @@ export function AskPage() {
         {isEmpty ? (
           <div className="ask-scroll">
             <div className="ask-empty">
-              <h1 className="rc-h1">Ask AI</h1>
-              <p className="ask-empty-sub">It reads and changes your plan, notes and tasks for you. You can undo every change, and anything final waits for your tap.</p>
+              <h1 className="rc-h1">{buddyName ?? 'Ask AI'}</h1>
+              {opening ? (
+                <p className="ask-empty-sub text-[var(--rc-ink-1)]">{opening.text}</p>
+              ) : firstWords ? (
+                <FirstWords text={firstWords} />
+              ) : (
+                <p className="ask-empty-sub">It reads and changes your plan, notes and tasks for you. You can undo every change, and anything final waits for your tap.</p>
+              )}
               {composer}
-              <ul className="ask-starters" aria-label="Ideas to start with">
-                {STARTERS.map((s) => (
+              {/* Stage 10: no starters without AI (they would fill a box that isn't there). */}
+              {noAi === false && <ul className="ask-starters" aria-label="Ideas to start with">
+                {(firstWords && !opening ? FIRST_STARTERS : STARTERS).map((s) => (
                   <li key={s.text}>
                     <button
                       type="button"
@@ -305,7 +374,7 @@ export function AskPage() {
                     </button>
                   </li>
                 ))}
-              </ul>
+              </ul>}
             </div>
           </div>
         ) : (
@@ -491,8 +560,18 @@ function Composer({
   }, [value, inputRef]);
 
   const canSend = !!value.trim() && !disabled;
+  // Stage 10: an account without AI gets one quiet line, never a box that would only fail.
+  const noAi = useNoAi();
+  if (noAi) {
+    return (
+      <div className="ask-composer-wrap">
+        <NoAiNotice what="Ask AI" />
+      </div>
+    );
+  }
   return (
     <div className="ask-composer-wrap">
+      <AiPausedNotice className="mb-2" />
       <div className="ask-composer">
         <textarea
           ref={inputRef}

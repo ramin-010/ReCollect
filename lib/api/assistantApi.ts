@@ -74,6 +74,7 @@ const data = <T>(r: { data: { data?: T } }) => r.data.data as T;
 
 /** Words for an HTTP failure before the stream began. */
 function failureWords(status: number, body: { message?: string; code?: string } | null): string {
+  if (body?.code === 'AI_PAUSED') return body.message || 'The AI is paused right now. Everything else works.';
   if (body?.code === 'AI_NOT_CONFIGURED' || status === 503) return 'Ask AI needs the Claude key on the server (CLAUDE_API_KEY), and it is not set.';
   if (body?.code === 'AI_CAP_REACHED' || status === 402) return "This month's AI spend has reached your cap. Raise it in Settings → AI.";
   if (status === 401) return 'You were signed out. Sign in again, then send it again.';
@@ -102,7 +103,7 @@ export const assistantApi = {
    * `docId` it is asked from inside that doc (DOCS_EDITOR_V2_PLAN phase 5): the doc and his focus
    * go to the model, and the thread stays with the doc.
    */
-  async send(body: { threadId?: string; text: string; docId?: string; focus?: DocAskFocus }, handlers: StreamHandlers, signal?: AbortSignal): Promise<void> {
+  async send(body: { threadId?: string; text: string; docId?: string; focus?: DocAskFocus; askId?: string; first?: true }, handlers: StreamHandlers, signal?: AbortSignal): Promise<void> {
     let res: Response;
     try {
       res = await fetch(`${BASE}/api/assistant/messages`, {

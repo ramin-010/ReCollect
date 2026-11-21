@@ -27,9 +27,35 @@ export interface CoachNote {
   createdAt: string;
 }
 
+/** The account's AI now (ECOSYSTEM_V2_PLAN stage 2): whose key pays, and whether it works. */
+export interface AiAccess {
+  source: 'none' | 'own_key' | 'house';
+  /** `allowance` (stage 11): a friend's free AI waits; `allowance.reason` says why. */
+  state: 'ok' | 'no_credit' | 'bad_key' | 'cap' | 'off' | 'allowance';
+  since: string | null;
+  /** Stage 11: free AI the owner gave this account (absent for anyone else). */
+  allowance?: {
+    grantedUsd: number;
+    usedUsd: number;
+    leftUsd: number;
+    todayUsd: number;
+    dailyCapUsd: number;
+    since: string;
+    reason: 'empty' | 'day' | 'ceiling' | null;
+  };
+}
+
 const data = <T>(r: { data: { data?: T } }) => r.data.data as T;
 
 export const aiApi = {
+  /** Whether the account's AI works now (it answers whatever the AI's state). */
+  async access(): Promise<AiAccess> {
+    return data(await axiosInstance.get('/api/ai/access'));
+  },
+  /** "Try again": asks a paused key at once, then answers the state. */
+  async retryAccess(): Promise<AiAccess> {
+    return data(await axiosInstance.post('/api/ai/access/retry', {}, { timeout: 30_000 }));
+  },
   /** Writes a DSA note from a solved problem and returns the new doc. */
   async practiceNote(body: PracticeNoteBody): Promise<PracticeNoteResult> {
     return data(await axiosInstance.post('/api/ai/practice-note', body, { timeout: 120_000 }));

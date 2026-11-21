@@ -1,0 +1,154 @@
+/* The People page (/owner, stage 11): the parts the kit doesn't have. Theme v2 tokens only. */
+
+.pp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pp-person {
+  padding: 14px 16px;
+}
+
+.pp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pp-name {
+  font-size: var(--rc-fs-title);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--rc-ink-1);
+  overflow-wrap: anywhere;
+}
+
+.pp-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: var(--rc-r-sm);
+  background: var(--rc-hover);
+  color: var(--rc-ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  vertical-align: 2px;
+}
+
+.pp-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* The facts: a label column and its line, compact and easy to scan. */
+.pp-facts {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 6px 12px;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.pp-facts dt {
+  color: var(--rc-ink-3);
+}
+
+.pp-facts dd {
+  color: var(--rc-ink-1);
+  overflow-wrap: anywhere;
+}
+
+.pp-quiet {
+  color: var(--rc-ink-2);
+}
+
+.pp-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A friend whose free AI waits: an icon and words, never colour alone. */
+.pp-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--rc-ink-2);
+}
+
+.pp-wait svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.pp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 16px;
+}
+
+.pp-row + .pp-row {
+  border-top: 1px solid var(--rc-line);
+}
+
+.pp-feedback-text {
+  margin-top: 4px;
+  font-size: var(--rc-fs-body);
+  line-height: 1.5;
+  color: var(--rc-ink-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pp-money {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pp-money output {
+  min-width: 72px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--rc-ink-1);
+}
+
+.pp-link {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 639px) {
+  .pp-head {
+    flex-wrap: wrap;
+  }
+
+  .pp-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .pp-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .pp-facts dd + dt {
+    margin-top: 6px;
+  }
+
+  /* An invite's words take the row; its buttons go under them. */
+  .pp-row > .min-w-0 {
+    flex-basis: 100%;
+  }
+}

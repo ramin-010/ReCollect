@@ -27,9 +27,11 @@ import {
   Search,
   Settings,
   Sparkles,
+  UserRound,
   Users,
   X,
 } from 'lucide-react';
+import { ownerApi } from '@/lib/api/ownerApi';
 import { NotificationsPopover } from './NotificationsPopover';
 import { SidebarChats } from './SidebarChats';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -70,6 +72,9 @@ const allPrimaryNav: NavItem[] = [
 
 // Entries for hidden features are dropped here, so the desktop sidebar and the mobile drawer both lose them.
 const primaryNav = allPrimaryNav.filter((item) => !item.feature || features[item.feature]);
+
+/** Stage 11: who uses this server and the free AI they get (the owner only). */
+const PEOPLE_ITEM: NavItem = { id: 'people', route: '/owner', label: 'People', icon: <UserRound className={ICON} strokeWidth={STROKE} /> };
 
 /** Opens the global Ctrl+K palette (the app layout owns it and listens on document). */
 function openSearch() {
@@ -206,6 +211,16 @@ const rowBase =
 function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, pathname, todoFilter, setTodoFilter, onSettingsClick }: SidebarContentProps) {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [recent, setRecent] = useState<RecentVisit[]>([]);
+  // Stage 11: the People page, for the owner of this server only (asked once a session).
+  const [isOwner, setIsOwner] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void ownerApi.isOwner().then((o) => live && setIsOwner(o));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const nav = isOwner ? [...primaryNav, PEOPLE_ITEM] : primaryNav;
   // The lower list: Chats while in Ask AI, Recent elsewhere; a click on the other tab holds until he navigates.
   const [choice, setChoice] = useState<{ path: string; tab: 'recent' | 'chats' } | null>(null);
   const onAsk = pathname === '/ask' || !!pathname?.startsWith('/ask/');
@@ -283,7 +298,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
 
       {/* ── Primary navigation ── */}
       <nav className="px-2 shrink-0 flex flex-col gap-px" aria-label="Main">
-        {primaryNav.map((item) => {
+        {nav.map((item) => {
           const current = item.id === 'inbox-notif' && unreadCount > 0 ? { ...item, badge: unreadCount > 99 ? '99+' : unreadCount } : item;
           const row = (
             <SidebarNavItem

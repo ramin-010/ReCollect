@@ -1,10 +1,13 @@
 'use client';
 
+import { AiPausedNotice } from '@/components/ai/AiPausedNotice';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcSkel } from '@/components/rc-ui';
 import { recallApi, recallErrorKind, type AiUsage } from '@/lib/api/recallApi';
+import { aiApi, type AiAccess } from '@/lib/api/aiApi';
+import { OwnKey } from './OwnKey';
 import './settings.css';
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -15,9 +18,44 @@ const FEATURE_LABEL: Record<string, string> = {
   assistant: 'Ask AI',
   doc_ask: 'Ask AI in docs',
   task_parse: 'Task line (@ai)',
+  buddy_gate: 'Buddy: sorting your chats',
+  buddy_digest: 'Buddy: understanding them',
+  buddy_think: 'Buddy: its night',
+  buddy_pulse: 'Buddy: rethinking the day',
+  buddy_check: 'Buddy: the lock-screen check',
+  buddy_work: 'Work log',
 };
 
 const usd = (n: number) => `$${n.toFixed(n < 10 ? 2 : 0)}`;
+
+/**
+ * Stage 11: a friend's free AI from the server's owner: what is left of what they were given, and today's use against
+ * their limit a day. Nothing for anyone else (their own key, the owner, an account without AI).
+ */
+function FreeAiLine() {
+  const [a, setA] = useState<AiAccess['allowance'] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    aiApi.access().then(
+      (x) => alive && setA(x.allowance ?? null),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!a) return null;
+  return (
+    <div className="mb-5">
+      <p className="rc-title rc-num">
+        {usd(a.leftUsd)} of {usd(a.grantedUsd)} free AI left
+      </p>
+      <p className="rc-meta rc-num mt-0.5">
+        Given by the person who invited you, for every AI feature · today {usd(a.todayUsd)} of {usd(a.dailyCapUsd)} a day
+      </p>
+    </div>
+  );
+}
 
 /** Settings → AI: this month's spend against the cap, by feature, and the cap itself. */
 export function AiSettings() {
@@ -79,7 +117,7 @@ export function AiSettings() {
       <div className={cn(rcScope, 'set-section')}>
         <p className="rc-body">
           {state === 'off'
-            ? 'The AI isn’t set up on the server yet. Recall questions and grading switch on once it is.'
+            ? 'The app’s AI isn’t on for your account. Add your own Claude key below, or connect your own Claude in Settings › Agents: it has the same tools.'
             : 'AI usage didn’t load. Check your connection and try again.'}
         </p>
         {state === 'failed' && (
@@ -87,6 +125,7 @@ export function AiSettings() {
             Try again
           </RcButton>
         )}
+        {state === 'off' && <OwnKey onChanged={() => void load()} />}
       </div>
     );
   }
@@ -96,6 +135,8 @@ export function AiSettings() {
 
   return (
     <div className={cn(rcScope, 'set-section')}>
+      <AiPausedNotice className="mb-4" />
+      <FreeAiLine />
       <p className="rc-title">
         {usd(usage.spentUsd)} of {usd(usage.capUsd)} this month
       </p>
@@ -135,6 +176,7 @@ export function AiSettings() {
           </RcButton>
         </div>
       </div>
+      <OwnKey onChanged={() => void load()} />
     </div>
   );
 }

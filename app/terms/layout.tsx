@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description:
-    'Read the ReCollect terms of service. Understand your rights and responsibilities when using the ReCollect knowledge management platform.',
+  title: 'Terms',
+  description: 'The terms for using Recollect, a personal app run by one person for the people they invite.',
   robots: {
     index: true,
     follow: true,

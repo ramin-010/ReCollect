@@ -28,7 +28,8 @@ const GRADE: Record<RecallGrade, { label: string; Icon: typeof CheckCircle2; cls
 };
 
 const UNAVAILABLE: Record<RecallUnavailable, string> = {
-  'not-configured': 'Questions need the AI, and it isn’t set up on the server yet.',
+  'not-configured': 'Questions need AI: add your own Claude key in Settings › AI. Reviews work without it.',
+  paused: 'The AI is paused right now, so no questions. You can still mark this review done.',
   'cap-reached': 'This month’s AI budget is used up. Raise the cap in Settings, or mark this review done.',
   'no-content': 'This doc has too little in it to ask about yet. Add your notes first.',
   'already-done': 'This review is already done. Its next date is on the doc.',

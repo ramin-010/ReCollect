@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description:
-    'Read the ReCollect privacy policy. Learn how we protect your data with local-first architecture and end-to-end encryption.',
+  title: 'Privacy',
+  description: 'What Recollect keeps about you, what its AI reads, who can see what, and how to download or delete it all.',
   robots: {
     index: true,
     follow: true,
