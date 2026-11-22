@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 const FILL = ['var(--rc-heat-0)', 'var(--rc-heat-1)', 'var(--rc-heat-2)', 'var(--rc-heat-3)', 'var(--rc-heat-4)'] as const;
 /** An inactive day in the record: a clear step off the card, so each month's shape reads (the owner, 11-22). */
-const EMPTY = 'color-mix(in srgb, var(--rc-ink-1) 10%, transparent)';
+const EMPTY = 'var(--rc-heat-empty, color-mix(in srgb, var(--rc-ink-1) 10%, transparent))';
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' });
 const GAP = 2;
 const WEEKEND_GAP = 4;

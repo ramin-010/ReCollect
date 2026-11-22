@@ -3,7 +3,7 @@
 // Nothing bounces. Tokens come from app/theme-v2.css (--ui-*).
 'use client';
 
-import { Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import {
   Bell,
   CheckSquare,
-  ChevronsUpDown,
   FileText,
   Files,
   Home,
@@ -208,39 +207,10 @@ interface SidebarContentProps {
 }
 
 /**
- * The sidebar's look while the owner picks (11-22: "a friend said it's a Notion replica; make it Recollect's own,
- * same width, same colours"): `?side=own` (Recollect's mark on top, you at the foot, a green line on the open page),
- * `?side=day` (the same, with the open page in a green tint and this week's seven days under the menu); `?side=notion`
- * (or nothing) the current one. The choice is kept in this browser while he compares.
+ * The sidebar is Recollect's own (the owner, 11-22: "a friend said it's a Notion replica"; his pick of the options):
+ * Recollect's mark on top, "Search or capture", the open page in the plain grey selection, this week's seven days under
+ * the menu, you and Settings at the foot. Same width and colours as before.
  */
-export type SideLook = 'notion' | 'own' | 'day';
-const SIDE_KEY = 'rc-side-look';
-
-function readSideLook(): SideLook {
-  try {
-    const asked = new URLSearchParams(window.location.search).get('side');
-    if (asked === 'own' || asked === 'day' || asked === 'notion') return asked;
-    const kept = localStorage.getItem(SIDE_KEY);
-    return kept === 'own' || kept === 'day' ? kept : 'notion';
-  } catch {
-    return 'notion';
-  }
-}
-const noSubscribe = () => () => undefined;
-
-function useSideLook(): SideLook {
-  // Read on the client (the server draws the default); a `?side=` is kept for the next pages.
-  const look = useSyncExternalStore(noSubscribe, readSideLook, () => 'notion' as SideLook);
-  useEffect(() => {
-    try {
-      const asked = new URLSearchParams(window.location.search).get('side');
-      if (asked === 'own' || asked === 'day' || asked === 'notion') localStorage.setItem(SIDE_KEY, asked);
-    } catch {
-      /* not kept */
-    }
-  }, []);
-  return look;
-}
 
 /** Recollect's mark (the app icon's two rings and three dots), in the ink colour. */
 function RecollectMark({ className }: { className?: string }) {
@@ -255,11 +225,10 @@ function RecollectMark({ className }: { className?: string }) {
   );
 }
 
-/** Green from the year card's heat ramp (the sidebar sits outside the .rc scope: a fallback for each theme). */
-const GREEN = 'var(--rc-heat-3, #2f9a5e)';
-const WEEK_FILL = ['var(--ui-hover)', '#1e4532', '#226c47', '#2f9a5e', '#4fcb7c'] as const;
+/** The year card's heat steps (the sidebar sits outside the .rc scope: --ui-heat-* in app/theme-v2.css and theme-paper.css). */
+const WEEK_FILL = ['var(--ui-heat-0)', 'var(--ui-heat-1)', 'var(--ui-heat-2)', 'var(--ui-heat-3)', 'var(--ui-heat-4)'] as const;
 
-/** The `day` look: this week's seven days under the menu, Monday first, in the year card's greens. */
+/** This week's seven days under the menu, Monday first, in the year card's greens. */
 function WeekStrip({ onNavigate }: { onNavigate: () => void }) {
   const stand = useYearStand('sidebar');
   if (!stand || stand === 'failed') return <div className="h-[46px]" aria-hidden />;
@@ -267,14 +236,10 @@ function WeekStrip({ onNavigate }: { onNavigate: () => void }) {
   const monday = new Date(today.getTime() - ((today.getUTCDay() + 6) % 7) * 86_400_000);
   const byDay = new Map(stand.days.map((d) => [d.day, d]));
   const week = Array.from({ length: 7 }, (_, i) => new Date(monday.getTime() + i * 86_400_000).toISOString().slice(0, 10));
-  const active = week.filter((d) => d <= stand.today && byDay.get(d)?.active).length;
   return (
     <Link href="/mirror" onClick={onNavigate} className="mx-2 mt-4 block rounded-[8px] px-2 py-2 transition-colors hover:bg-[var(--ui-hover)]" title="Where you stand">
-      <span className="flex items-baseline justify-between text-[12px] font-[500] text-[var(--ui-ink-3)]">
-        <span>This week</span>
-        <span className="tabular-nums">{active} of 7</span>
-      </span>
-      <span className="mt-2 flex items-center justify-between">
+      <span className="block text-[12px] font-[500] text-[var(--ui-ink-3)]">This week</span>
+      <span className="mt-2 flex items-center gap-[7px]">
         {week.map((d) => {
           const day = byDay.get(d);
           const future = d > stand.today;
@@ -297,8 +262,6 @@ const rowBase =
 
 function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, pathname, todoFilter, setTodoFilter, onSettingsClick }: SidebarContentProps) {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
-  const look = useSideLook();
-  const own = look !== 'notion';
   const [recent, setRecent] = useState<RecentVisit[]>([]);
   // Stage 11: the People page, for the owner of this server only (asked once a session).
   const [isOwner, setIsOwner] = useState(false);
@@ -331,33 +294,15 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
     <div className="h-full flex flex-col bg-[var(--ui-sidebar)] border-r border-[var(--ui-sidebar-edge)] text-[var(--ui-ink-2)]">
       {/* ── Workspace row ── */}
       <div className={cn('flex items-center gap-1 px-2 pt-2.5 pb-1.5 shrink-0', isCollapsed && 'flex-col')}>
-        {own ? (
-          <Link
-            href="/"
-            onClick={onNavigate}
-            title="Home"
-            className={cn('flex h-[32px] min-w-0 items-center gap-2 rounded-[6px] px-1.5 text-[var(--ui-ink-1)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)]', isCollapsed ? 'w-[30px] justify-center px-0' : 'flex-1')}
-          >
-            <RecollectMark className="h-[20px] w-[20px] shrink-0" />
-            {!isCollapsed && <span className="text-[15px] font-[650] tracking-[-0.01em]">Recollect</span>}
-          </Link>
-        ) : !isCollapsed && (
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate();
-              onSettingsClick();
-            }}
-            className={cn(rowBase, 'flex-1 min-w-0 h-[32px] px-1.5 hover:bg-[var(--ui-hover)]')}
-            title="Account and settings"
-          >
-            <span className="grid h-[22px] w-[22px] shrink-0 place-items-center overflow-hidden rounded-[5px] bg-[var(--ui-avatar-bg)] text-[12px] font-[600] text-[var(--ui-avatar-ink)]">
-              {user?.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : initialsOf(user?.name)}
-            </span>
-            <span className="ui-fade-end min-w-0 flex-1 text-left text-[14px] font-[600] text-[var(--ui-ink-1)]">{user?.name || 'You'}</span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-[var(--ui-icon)]" strokeWidth={STROKE} />
-          </button>
-        )}
+        <Link
+          href="/"
+          onClick={onNavigate}
+          title="Home"
+          className={cn('flex h-[32px] min-w-0 items-center gap-2 rounded-[6px] px-1.5 text-[var(--ui-ink-1)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)]', isCollapsed ? 'w-[30px] justify-center px-0' : 'flex-1')}
+        >
+          <RecollectMark className="h-[20px] w-[20px] shrink-0" />
+          {!isCollapsed && <span className="text-[15px] font-[650] tracking-[-0.01em]">Recollect</span>}
+        </Link>
         <button
           type="button"
           onClick={onCollapse}
@@ -382,18 +327,18 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
           className={cn(
             rowBase,
             'group/search font-[400] text-[var(--ui-ink-3)] hover:text-[var(--ui-ink-2)]',
-            own ? 'border border-[var(--ui-sidebar-edge)] hover:bg-[var(--ui-hover)]' : 'bg-[var(--ui-field)]',
+            'border border-[var(--ui-sidebar-edge)] hover:bg-[var(--ui-hover)]',
             isCollapsed && 'justify-center px-0',
           )}
         >
           <Search className="h-4 w-4 shrink-0" strokeWidth={STROKE} />
           {!isCollapsed && (
             <>
-              <span className="flex-1 text-left">{own ? 'Search or capture' : 'Search'}</span>
+              <span className="flex-1 text-left">Search or capture</span>
               <kbd
                 className={cn(
                   'grid h-[20px] place-items-center rounded-[4px] bg-[var(--ui-kbd)] px-1.5 font-[inherit] text-[12px] font-[500] text-[var(--ui-ink-3)]',
-                  own && 'opacity-0 transition-opacity group-hover/search:opacity-100',
+                  'opacity-0 transition-opacity group-hover/search:opacity-100',
                 )}
               >
                 Ctrl K
@@ -413,7 +358,6 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
               item={current}
               isActive={pathname === current.route || (current.route !== '/' && !!pathname?.startsWith(current.route + '/'))}
               isCollapsed={isCollapsed}
-              look={look}
               onClick={onNavigate}
               todoFilter={todoFilter}
               onSubItemClick={(filterId) => {
@@ -432,7 +376,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
         })}
       </nav>
 
-      {look === 'day' && !isCollapsed && <WeekStrip onNavigate={onNavigate} />}
+      {!isCollapsed && <WeekStrip onNavigate={onNavigate} />}
 
       {/* ── Recent · Chats (Notion's way: Ask AI's conversations live here, not in a column of its own) ── */}
       {!isCollapsed ? (
@@ -501,8 +445,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
       )}
 
       {/* ── Footer ── */}
-      <div className={cn('flex items-center gap-1 px-2 pb-2.5 pt-1.5 shrink-0', isCollapsed && 'flex-col', own && 'border-t border-[var(--ui-sidebar-edge)] pt-2')}>
-        {own ? (
+      <div className={cn('flex items-center gap-1 px-2 pb-2.5 pt-1.5 shrink-0', isCollapsed && 'flex-col', 'border-t border-[var(--ui-sidebar-edge)] pt-2')}>
           <button
             type="button"
             onClick={() => {
@@ -522,20 +465,6 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
               </>
             )}
           </button>
-        ) : (
-        <button
-          type="button"
-          onClick={() => {
-            onNavigate();
-            onSettingsClick();
-          }}
-          title={isCollapsed ? 'Settings' : undefined}
-          className={cn(rowBase, 'flex-1 hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]', isCollapsed && 'w-[30px] flex-none justify-center px-0')}
-        >
-          <Settings className={cn(ICON, 'shrink-0 text-[var(--ui-icon)]')} strokeWidth={STROKE} />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
-        )}
         <ThemeSwitcher />
       </div>
     </div>
@@ -547,13 +476,12 @@ interface SidebarNavItemProps {
   item: NavItem;
   isActive: boolean;
   isCollapsed: boolean;
-  look?: SideLook;
   onClick: () => void;
   todoFilter?: string;
   onSubItemClick?: (id: string) => void;
 }
 
-function SidebarNavItem({ item, isActive, isCollapsed, look = 'notion', onClick, todoFilter, onSubItemClick }: SidebarNavItemProps) {
+function SidebarNavItem({ item, isActive, isCollapsed, onClick, todoFilter, onSubItemClick }: SidebarNavItemProps) {
   const hasSubItems = !!item.subItems?.length;
   const isExpanded = isActive && hasSubItems && !isCollapsed;
   const Component = item.route === '#' ? 'button' : Link;
@@ -570,20 +498,13 @@ function SidebarNavItem({ item, isActive, isCollapsed, look = 'notion', onClick,
           rowBase,
           'group relative',
           isActive
-            ? look === 'notion'
-              ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]'
-              : look === 'day'
-                ? 'bg-[color-mix(in_srgb,var(--rc-heat-3,#2f9a5e)_16%,transparent)] text-[var(--ui-ink-1)]'
-                : 'font-[600] text-[var(--ui-ink-1)] hover:bg-[var(--ui-hover)]'
+            ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]'
             : 'hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]',
           isCollapsed && 'justify-center px-0',
         )}
       >
-        {/* The own look: the open page is a short green line at the row's edge, no grey block. */}
-        {isActive && look === 'own' && <span className="absolute -left-2 top-[7px] h-[16px] w-[3px] rounded-r-full" style={{ background: GREEN }} aria-hidden />}
         <span
           className={cn('relative shrink-0 transition-colors', isActive ? 'text-[var(--ui-ink-1)]' : 'text-[var(--ui-icon)] group-hover:text-[var(--ui-ink-2)]')}
-          style={isActive && look !== 'notion' ? { color: GREEN } : undefined}
         >
           {item.icon}
           {item.badge && isCollapsed && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--ui-accent-fill)]" />}

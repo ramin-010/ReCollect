@@ -84,6 +84,11 @@ html.light {
   --ui-avatar-ink: #2c2c2b;
   --ui-stamp-tint: #f3ebf9;
   --ui-stamp-ink: #553b69;
+  --ui-heat-0: #ebeae7;
+  --ui-heat-1: #b5e2c2;
+  --ui-heat-2: #6cc48c;
+  --ui-heat-3: #34985c;
+  --ui-heat-4: #1f6a40;
 
   /* Folded in from globals.css's legacy theme blocks (11-15); older parts still read them. */
   --brand-secondary: 259 84% 55%;
@@ -162,6 +167,11 @@ html.theme-dark-gray {
   --ui-avatar-ink: #f0efed;
   --ui-stamp-tint: #3c2d47;
   --ui-stamp-ink: #f3ebf9;
+  --ui-heat-0: #2a2a28;
+  --ui-heat-1: #1e4532;
+  --ui-heat-2: #226c47;
+  --ui-heat-3: #2f9a5e;
+  --ui-heat-4: #4fcb7c;
 
   /* Folded in from globals.css's legacy theme blocks (11-15); older parts still read them. */
   --brand-secondary: 0 0% 70%;

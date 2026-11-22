@@ -4,6 +4,9 @@ import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
 // Theme v2 (Notion-grade tokens + the OS font). Unlayered, so it wins over the legacy blocks in globals.css.
 import './theme-v2.css';
+// Paper, the phone app's look, beside Slate (data-look="paper" on <html>, set before the first paint).
+import './theme-paper.css';
+import { WEB_LOOK_SCRIPT } from '@/lib/webLookScript';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';
@@ -99,6 +102,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning >
         <body className={`${outfit.variable} ${inter.variable} font-sans antialiased`}>
+        <script dangerouslySetInnerHTML={{ __html: WEB_LOOK_SCRIPT }} />
 
         <ThemeProvider>
           <AuthProvider>

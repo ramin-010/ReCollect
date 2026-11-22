@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleAlert, Download, Lock, MoreHorizontal, Pin, PinOff, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
+import { useWebLook, type WebLook } from '@/lib/webLook';
 import { cn } from '@/lib/utils';
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSheet, RcSkel, RcSwitch, rcScope, type MenuAction } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
@@ -79,6 +81,7 @@ const SETTING_GROUPS = [
   { id: 'phone', title: 'Your phone' },
   { id: 'usage', title: 'Usage' },
   { id: 'data', title: 'Your data' },
+  { id: 'look', title: 'Appearance' },
 ] as const;
 type SettingGroup = (typeof SETTING_GROUPS)[number]['id'];
 
@@ -630,6 +633,48 @@ function VoiceSetting({ tone, onChanged }: { tone: (typeof VOICES)[number]['valu
       </div>
       <RcSegmented label="Its voice" value={tone} onChange={(v) => void pick(v)} options={VOICES.map((v) => ({ value: v.value, label: v.label }))} />
     </div>
+  );
+}
+
+/** The theme and the look on this device (the owner, 11-22: Paper beside Slate, as on the phone); the sidebar's theme menu sets the same. */
+function Appearance() {
+  const { theme, setTheme } = useTheme();
+  const [look, setLook] = useWebLook();
+  const mode = theme === 'light' || theme === 'system' ? theme : 'dark';
+  return (
+    <>
+      <div className="you-setting">
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Theme</p>
+          <p className="rc-meta mt-0.5">Light, dark, or as your system is. Kept on this device.</p>
+        </div>
+        <RcSegmented
+          label="Theme"
+          value={mode}
+          onChange={(v) => setTheme(v)}
+          options={[
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'system', label: 'System' },
+          ]}
+        />
+      </div>
+      <div className="you-setting">
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Look</p>
+          <p className="rc-meta mt-0.5">{look === 'paper' ? 'Paper: cream pages and warm ink, as on the phone app.' : 'Slate: clean greys.'}</p>
+        </div>
+        <RcSegmented
+          label="Look"
+          value={look}
+          onChange={(v) => setLook(v as WebLook)}
+          options={[
+            { value: 'slate', label: 'Slate' },
+            { value: 'paper', label: 'Paper' },
+          ]}
+        />
+      </div>
+    </>
   );
 }
 
@@ -1229,6 +1274,9 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
       <SettingsGroup id="data">
         {loop && <ImportChats />}
         {exportRow}
+      </SettingsGroup>
+      <SettingsGroup id="look">
+        <Appearance />
       </SettingsGroup>
     </div>
   );

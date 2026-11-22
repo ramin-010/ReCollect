@@ -1,0 +1,277 @@
+/*
+ * Paper, the phone app's look, on the web (the owner, 11-22): beside Slate (theme v2, the default), in light and dark.
+ * The colours are the phone's own (app/(phone)/m/phone.css: cream paper, warm ink, ink-blue for what can be tapped),
+ * mapped onto the shell's tokens (app/theme-v2.css) and Home's (components/rc-ui/rc-ui.css, the heat greens included).
+ * It is on when <html> carries data-look="paper" (lib/webLook.ts; set before the first paint, kept per device like the
+ * theme). Only colours change: the type stays the OS face.
+ * The selectors outrank theme-v2's (html.dark) and rc-ui's (html.light .rc), whichever stylesheet loads first.
+ */
+
+/* ── Paper, light: page #F5F0E6 · sidebar #EEE7DA · floating #FCF9F3 · ink #23201B ── */
+html[data-look="paper"]:not(.dark):not(.theme-dark-gray) {
+  --background: 40 42.9% 93.1%;
+  --foreground: 37 12.9% 12.2%;
+  --card: 40 60% 97.1%;
+  --card-bg: 39 37% 89.4%;
+  --card-foreground: 37 12.9% 12.2%;
+  --popover: 40 60% 97.1%;
+  --popover-foreground: 37 12.9% 12.2%;
+  --primary: 37 12.9% 12.2%;
+  --primary-foreground: 40 60% 97.1%;
+  --secondary: 40 38.7% 87.8%;
+  --secondary-foreground: 37 12.9% 12.2%;
+  --muted: 39 38.5% 89.8%;
+  --muted-foreground: 35 11.5% 37.6%;
+  --accent: 40 38.7% 87.8%;
+  --accent-foreground: 37 12.9% 12.2%;
+  --border: 38 30.9% 84.1%;
+  --input: 38 30.9% 84.1%;
+  --ring: 223 58.8% 44.7%;
+  --brand-primary: 223 58.8% 44.7%;
+  --text-secondary: 37 11.7% 30.2%;
+  --text-tertiary: 35 11.5% 37.6%;
+  --divider: 38 30.9% 84.1%;
+  --border-light: 38 30.9% 84.1%;
+  --sidebar-bg: 39 37% 89.4%;
+  --sidebar-hover: 39 34.2% 85.1%;
+  --sidebar-active: 39 33.3% 82.9%;
+  --sidebar-foreground: 37 11.7% 30.2%;
+  --task-input-bg: 40 60% 97.1%;
+  --task-input-border: 38 30.9% 84.1%;
+  --task-input-text: 37 12.9% 12.2%;
+  --task-input-placeholder: 35 11.5% 37.6%;
+  --task-key-bg: 40 38.7% 87.8%;
+  --task-key-text: 35 11.5% 37.6%;
+  --surface-elevated: rgba(35, 32, 27, 0.02);
+  --surface-raised: rgba(35, 32, 27, 0.035);
+  --surface-overlay: rgba(35, 32, 27, 0.06);
+  --surface-inset: rgba(35, 32, 27, 0.04);
+  --border-subtle: rgba(35, 32, 27, 0.1);
+  --border-strong: rgba(35, 32, 27, 0.17);
+  --hover-bg: rgba(35, 32, 27, 0.055);
+  --active-bg: rgba(35, 32, 27, 0.085);
+  --overlay-mask: rgba(35, 32, 27, 0.38);
+  --new-bg-color: #eee7da;
+
+  --ui-ink-1: #23201b;
+  --ui-ink-2: #564f44;
+  --ui-ink-3: #6b6255;
+  --ui-icon: #857b6b;
+  --ui-sidebar: #eee7da;
+  --ui-sidebar-edge: rgba(35, 32, 27, 0.07);
+  --ui-hover: rgba(35, 32, 27, 0.055);
+  --ui-selected: rgba(35, 32, 27, 0.085);
+  --ui-field: rgba(35, 32, 27, 0.045);
+  --ui-kbd: rgba(35, 32, 27, 0.07);
+  --ui-accent-fill: #2f55b5;
+  --ui-avatar-bg: #e2d8c5;
+  --ui-avatar-ink: #23201b;
+  --ui-stamp-tint: #e9dfec;
+  --ui-stamp-ink: #553b69;
+  --slide-bg: #ece4d4;
+  --ui-heat-0: #d3c7b0;
+  --ui-heat-1: #8fc485;
+  --ui-heat-2: #4f9c60;
+  --ui-heat-3: #2e7d4a;
+  --ui-heat-4: #1b5232;
+  --welcome-bg: 40 38% 93%;
+  color-scheme: light;
+}
+
+/* ── Paper, dark: page #181613 · sidebar #1F1C18 · floating #24211C · ink #F0EADF ── */
+html[data-look="paper"].dark,
+html[data-look="paper"].theme-dark-gray {
+  --background: 36 11.6% 8.4%;
+  --foreground: 39 36.2% 90.8%;
+  --card: 34 12.3% 11.2%;
+  --card-bg: 38 12.5% 12.5%;
+  --card-foreground: 39 36.2% 90.8%;
+  --popover: 38 12.5% 12.5%;
+  --popover-foreground: 39 36.2% 90.8%;
+  --primary: 39 30.3% 87.1%;
+  --primary-foreground: 36 11.6% 8.4%;
+  --secondary: 38 13.6% 15.9%;
+  --secondary-foreground: 39 36.2% 90.8%;
+  --muted: 38 12.5% 12.5%;
+  --muted-foreground: 37 11.6% 56.1%;
+  --accent: 36 13.5% 14.5%;
+  --accent-foreground: 39 36.2% 90.8%;
+  --border: 35 14% 16.9%;
+  --input: 35 14% 16.9%;
+  --ring: 224 59.2% 60.6%;
+  --brand-primary: 224 59.2% 60.6%;
+  --text-secondary: 38 15.9% 69.2%;
+  --text-tertiary: 37 11.6% 56.1%;
+  --divider: 35 14% 16.9%;
+  --border-light: 37 12.6% 20.2%;
+  --sidebar-bg: 34 12.7% 10.8%;
+  --sidebar-hover: 36 13.5% 14.5%;
+  --sidebar-active: 35 14.3% 16.5%;
+  --sidebar-foreground: 38 18.8% 73.9%;
+  --task-input-bg: 34 12.3% 11.2%;
+  --task-input-border: 37 12.6% 20.2%;
+  --task-input-text: 39 36.2% 90.8%;
+  --task-input-placeholder: 37 11.6% 56.1%;
+  --task-key-bg: 38 13.6% 15.9%;
+  --task-key-text: 38 15.9% 69.2%;
+  --surface-elevated: rgba(240, 234, 223, 0.035);
+  --surface-raised: rgba(240, 234, 223, 0.055);
+  --surface-overlay: rgba(240, 234, 223, 0.085);
+  --surface-inset: rgba(0, 0, 0, 0.2);
+  --border-subtle: rgba(240, 234, 223, 0.065);
+  --border-strong: rgba(240, 234, 223, 0.12);
+  --hover-bg: rgba(240, 234, 223, 0.055);
+  --active-bg: rgba(240, 234, 223, 0.085);
+  --overlay-mask: rgba(0, 0, 0, 0.55);
+  --new-bg-color: #24211c;
+
+  --ui-ink-1: #f0eadf;
+  --ui-ink-2: #bdb4a4;
+  --ui-ink-3: #9c9282;
+  --ui-icon: #8b8273;
+  --ui-sidebar: #1f1c18;
+  --ui-sidebar-edge: transparent;
+  --ui-hover: rgba(240, 234, 223, 0.055);
+  --ui-selected: rgba(240, 234, 223, 0.085);
+  --ui-field: rgba(240, 234, 223, 0.055);
+  --ui-kbd: rgba(240, 234, 223, 0.075);
+  --ui-accent-fill: #5f7fd6;
+  --ui-avatar-bg: #4a4338;
+  --ui-avatar-ink: #f0eadf;
+  --ui-stamp-tint: #3f3148;
+  --ui-stamp-ink: #e8dbf0;
+  --slide-bg: #2a2620;
+  --ui-heat-0: #2a2620;
+  --ui-heat-1: #213e2d;
+  --ui-heat-2: #2e6646;
+  --ui-heat-3: #4a9867;
+  --ui-heat-4: #7cc495;
+  --welcome-bg: 36 12% 10%;
+  color-scheme: dark;
+}
+
+html[data-look="paper"]:not(.dark):not(.theme-dark-gray) .rc {
+  --rc-heat-0: #d3c7b0;
+  --rc-heat-empty: #d3c7b0;
+  --rc-heat-1: #8fc485;
+  --rc-heat-2: #4f9c60;
+  --rc-heat-3: #2e7d4a;
+  --rc-heat-4: #1b5232;
+  --rc-surface: #fcf9f3;
+  --rc-surface-2: #ece4d4;
+  --rc-surface-float: #fcf9f3;
+  --rc-hover: rgba(35, 32, 27, 0.055);
+  --rc-selected: rgba(35, 32, 27, 0.085);
+  --rc-line: #e3daca;
+  --rc-line-strong: #cec2ab;
+  --rc-ink-1: #23201b;
+  --rc-ink-2: #564f44;
+  --rc-ink-3: #6b6255;
+  --rc-ink-rail: #3d3830;
+  --rc-icon: #857b6b;
+  --rc-ctl: #857b6b;
+  --rc-field: #efe8db;
+  --rc-field-ring: rgba(35, 32, 27, 0.1);
+  --rc-btn-bg: #fcf9f3;
+  --rc-btn-hover: #f2ece0;
+  --rc-btn-ring: inset 0 0 0 1px rgba(35, 32, 27, 0.12), 0 1px 2px rgba(35, 32, 27, 0.07);
+  --rc-switch-off: #cec2ab;
+  --rc-accent: #28489b;
+  --rc-accent-hover: #213c82;
+  --rc-accent-fill: #2f55b5;
+  --rc-accent-tint: #dbe2f2;
+  --rc-on-accent: #ffffff;
+  --rc-stamp: #553b69;
+  --rc-stamp-tint: #e9dfec;
+  --rc-stamp-mark: #857b6b;
+  --rc-good: #2b6443;
+  --rc-good-mark: #4e8a62;
+  --rc-good-tint: #dce8d9;
+  --rc-attn: #84490f;
+  --rc-attn-mark: #b98535;
+  --rc-attn-tint: #f3e1c6;
+  --rc-danger: #a33a33;
+  --rc-danger-tint: #f4ddd6;
+  --rc-main: #23201b;
+  --rc-main-hover: #3a352d;
+  --rc-on-main: #fcf9f3;
+  --rc-card-shadow: 0 0 0 1px rgba(35, 32, 27, 0.08), 0 2px 4px rgba(35, 32, 27, 0.05);
+  --rc-shadow-float: 0 0 0 1px rgba(35, 32, 27, 0.08), 0 14px 28px -6px rgba(35, 32, 27, 0.14), 0 2px 6px rgba(35, 32, 27, 0.06);
+  --rc-overlay: rgba(35, 32, 27, 0.3);
+  --rc-selection: rgba(47, 85, 181, 0.2);
+  --rc-scroll-thumb: rgba(133, 123, 107, 0.3);
+  --c-gray-bg: #ece4d4;
+  --c-brown-bg: #efe2d6;
+  --c-orange-bg: #f3e1c6;
+  --c-yellow-bg: #f2e9cc;
+  --c-green-bg: #dce8d9;
+  --c-blue-bg: #dbe2f2;
+  --c-purple-bg: #e9dfec;
+  --c-pink-bg: #f1dde4;
+  --c-red-bg: #f4ddd6;
+}
+
+html[data-look="paper"].dark .rc,
+html[data-look="paper"].theme-dark-gray .rc {
+  --rc-heat-0: #2a2620;
+  --rc-heat-1: #213e2d;
+  --rc-heat-2: #2e6646;
+  --rc-heat-3: #4a9867;
+  --rc-heat-4: #7cc495;
+  --rc-surface: #201d19;
+  --rc-surface-2: #2a2620;
+  --rc-surface-float: #24211c;
+  --rc-hover: rgba(240, 234, 223, 0.055);
+  --rc-selected: rgba(240, 234, 223, 0.085);
+  --rc-line: #312c25;
+  --rc-line-strong: #4a4338;
+  --rc-ink-1: #f0eadf;
+  --rc-ink-2: #bdb4a4;
+  --rc-ink-3: #9c9282;
+  --rc-ink-rail: #d8d1c5;
+  --rc-icon: #8b8273;
+  --rc-ctl: #857c6e;
+  --rc-field: rgba(240, 234, 223, 0.045);
+  --rc-field-ring: rgba(240, 234, 223, 0.085);
+  --rc-btn-bg: #24211c;
+  --rc-btn-hover: #2e2a23;
+  --rc-btn-ring: inset 0 0 0 1px rgba(240, 234, 223, 0.075), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --rc-switch-off: #4a4338;
+  --rc-accent: #a9bcf2;
+  --rc-accent-hover: #c2d0f6;
+  --rc-accent-fill: #5f7fd6;
+  --rc-accent-tint: #283150;
+  --rc-on-accent: #ffffff;
+  --rc-stamp: #e8dbf0;
+  --rc-stamp-tint: #3f3148;
+  --rc-stamp-mark: #bdb4a4;
+  --rc-good: #86c29d;
+  --rc-good-mark: #5e9c74;
+  --rc-good-tint: #25382c;
+  --rc-attn: #e2a566;
+  --rc-attn-mark: #c8913e;
+  --rc-attn-tint: #47321c;
+  --rc-danger: #ec8a80;
+  --rc-danger-tint: #4a2a26;
+  --rc-main: #f0eadf;
+  --rc-main-hover: #faf6ee;
+  --rc-on-main: #181613;
+  --rc-card-shadow: 0 0 0 1px #312c25, 0 2px 4px rgba(0, 0, 0, 0.14);
+  --rc-shadow-float: 0 0 0 1px #4a4338, 0 14px 28px -6px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --rc-overlay: rgba(0, 0, 0, 0.5);
+  --rc-selection: rgba(95, 127, 214, 0.32);
+  --rc-scroll-thumb: rgba(189, 180, 164, 0.25);
+  --c-gray-bg: #38332a;
+  --c-brown-bg: #44362b;
+  --c-orange-bg: #47321c;
+  --c-yellow-bg: #4a3f22;
+  --c-green-bg: #25382c;
+  --c-blue-bg: #283150;
+  --c-purple-bg: #3f3148;
+  --c-pink-bg: #4a2b38;
+  --c-red-bg: #4a2a26;
+}
+
+html[data-look="paper"] ::selection {
+  background-color: rgba(47, 85, 181, 0.24);
+}
