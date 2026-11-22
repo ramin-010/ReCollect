@@ -35,10 +35,22 @@ interface PictureStyle {
 }
 
 type Screen = 'lock' | 'home';
+type Layout = 'classic' | 'glass' | 'stack';
 
-/** The preview's address for one screen in a style (the server draws it small for this phone). */
-function previewSrc(shell: ShellState, screen: Screen, style: string, color: string | null): string {
-  const q = new URLSearchParams({ screen, w: '320', h: '694', theme: shell.pictureTheme, style, ...(color ? { color } : {}), ...(shell.hideTitles ? { titles: '0' } : {}), format: 'webp', v: String(shell.okAt) });
+/**
+ * Each screen's layout (the owner, 11-22: both new lock designs kept, his choice here; options for the home screen too).
+ * An app without the choice (before 0.7.3's layouts) shows no layout row.
+ */
+const LAYOUTS: Array<{ id: Layout; label: string }> = [
+  { id: 'classic', label: 'Classic' },
+  { id: 'glass', label: 'Glass' },
+  { id: 'stack', label: 'Stack' },
+];
+const appliedLayout = (shell: ShellState, screen: Screen): Layout => (screen === 'lock' ? shell.lockLayout ?? 'classic' : shell.homeLayout ?? 'classic');
+
+/** The preview's address for one screen in a style and layout (the server draws it small for this phone). */
+function previewSrc(shell: ShellState, screen: Screen, style: string, color: string | null, layout: Layout): string {
+  const q = new URLSearchParams({ screen, w: '320', h: '694', theme: shell.pictureTheme, style, ...(color ? { color } : {}), ...(shell.hideTitles ? { titles: '0' } : {}), ...(layout !== 'classic' ? { layout } : {}), format: 'webp', v: String(shell.okAt) });
   return `${String(axiosInstance.defaults.baseURL ?? '')}/api/ambient/wallpaper.png?${q.toString()}`;
 }
 
@@ -46,9 +58,9 @@ function previewSrc(shell: ShellState, screen: Screen, style: string, color: str
  * The real picture of today for one screen in the chosen style, small; the lock screen with the phone's clock over it.
  * 0.7.3 (the owner: the pictures took long to show): the last picture stays while the next one loads, then swaps in.
  */
-function ScreenPreview({ shell, screen, style, color }: { shell: ShellState; screen: Screen; style: string; color: string | null }) {
+function ScreenPreview({ shell, screen, style, color, layout }: { shell: ShellState; screen: Screen; style: string; color: string | null; layout: Layout }) {
   const [now] = useState(() => new Date());
-  const want = previewSrc(shell, screen, style, color);
+  const want = previewSrc(shell, screen, style, color, layout);
   const [shown, setShown] = useState(want);
   const loading = want !== shown;
   useEffect(() => {
@@ -118,13 +130,16 @@ function ScreensGroup({ shell, name }: { shell: ShellState; name: string }) {
 function LookPicker({ shell, screen, style: appliedStyle, color: appliedColor, name }: { shell: ShellState; screen: Screen; style: string; color: string | null; name: string }) {
   const [styles, setStyles] = useKept<PictureStyle[] | null>('look:styles', null);
   // 0.7.3 (the owner): a style or colour is tried in the preview first; Apply sets it on the phone (each tap used to).
-  const [draft, setDraft] = useState<{ screen: Screen; style: string; color: string | null } | null>(null);
+  const [draft, setDraft] = useState<{ screen: Screen; style: string; color: string | null; layout?: Layout } | null>(null);
+  const layouts = !!bridge()?.setScreenDesign;
   // Set on Apply; "Applying…" shows while the app's refresh that sets it runs (the look itself is kept at once).
   const [applied, setApplied] = useState(false);
   const applying = applied && shell.busy;
   const chosenStyle = draft && draft.screen === screen ? draft.style : appliedStyle;
   const chosenColor = draft && draft.screen === screen ? draft.color : appliedColor;
-  const choose = (next: { screen: Screen; style: string; color: string | null }) => {
+  const nowLayout = appliedLayout(shell, screen);
+  const layout: Layout = draft && draft.screen === screen && draft.layout ? draft.layout : nowLayout;
+  const choose = (next: { screen: Screen; style: string; color: string | null; layout?: Layout }) => {
     setApplied(false);
     setDraft(next);
   };
@@ -140,24 +155,35 @@ function LookPicker({ shell, screen, style: appliedStyle, color: appliedColor, n
   }, [setStyles]);
   const style = styles?.find((s) => s.id === chosenStyle) ?? styles?.[0] ?? null;
   const color = style?.colors.find((c) => c.id === chosenColor) ?? style?.colors[0] ?? null;
-  const pending = !!style && (style.id !== appliedStyle || (color?.id ?? null) !== (appliedColor ?? style.colors[0]?.id ?? null));
+  const pending = !!style && (style.id !== appliedStyle || (color?.id ?? null) !== (appliedColor ?? style.colors[0]?.id ?? null) || layout !== nowLayout);
   const apply = () => {
     if (!style) return;
     setApplied(true);
-    setScreenLook(screen, style.id, color?.id ?? null);
+    const b = bridge();
+    if (b?.setScreenDesign) b.setScreenDesign(screen, layout, style.id, color?.id ?? null);
+    else setScreenLook(screen, style.id, color?.id ?? null);
   };
   return (
     <div className="lock-demo" style={{ marginTop: 14 }}>
-      {style ? <ScreenPreview shell={shell} screen={screen} style={style.id} color={color?.id ?? null} /> : <div className="lock-shot" aria-hidden />}
+      {style ? <ScreenPreview shell={shell} screen={screen} style={style.id} color={color?.id ?? null} layout={layout} /> : <div className="lock-shot" aria-hidden />}
       <div>
         <p className="row-title">{screen === 'lock' ? 'The dial of your day' : 'What matters today'}</p>
         <p className="meta" style={{ marginTop: 2 }}>
-          {screen === 'lock' ? `One arc for each thing today, lit when done, with ${name}’s words under it.` : `Your reminders still to come, and a thought from ${name} when it has one.`}
+          {screen === 'lock' ? `One arc for each thing today, lit when done, with ${name}’s words and what’s next under it.` : `What you left unfinished, what’s coming up, and a thought from ${name} when it has one.`}
         </p>
+        {layouts ? (
+          <div className="seg" role="group" aria-label="Its layout" style={{ marginTop: 12 }}>
+            {LAYOUTS.map((l) => (
+              <button key={l.id} type="button" className={layout === l.id ? 'is-on' : ''} aria-pressed={layout === l.id} onClick={() => choose({ screen, style: style?.id ?? chosenStyle, color: color?.id ?? null, layout: l.id })}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {styles && styles.length ? (
           <div className="styles" role="group" aria-label="Its style">
             {styles.map((s) => (
-              <button key={s.id} type="button" className={`chip${style?.id === s.id ? ' is-on' : ''}`} aria-pressed={style?.id === s.id} onClick={() => choose({ screen, style: s.id, color: s.colors[0]?.id ?? null })}>
+              <button key={s.id} type="button" className={`chip${style?.id === s.id ? ' is-on' : ''}`} aria-pressed={style?.id === s.id} onClick={() => choose({ screen, style: s.id, color: s.colors[0]?.id ?? null, layout })}>
                 {s.name}
               </button>
             ))}
@@ -173,7 +199,7 @@ function LookPicker({ shell, screen, style: appliedStyle, color: appliedColor, n
                 style={{ ['--dot' as string]: c.swatch }}
                 aria-label={c.name}
                 aria-pressed={color?.id === c.id}
-                onClick={() => choose({ screen, style: style.id, color: c.id })}
+                onClick={() => choose({ screen, style: style.id, color: c.id, layout })}
               />
             ))}
           </div>

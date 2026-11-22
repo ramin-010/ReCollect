@@ -51,6 +51,12 @@ export interface ShellState {
   busy: boolean;
   /** App 0.7.3: the pictures' own choice ("light", "dark" or "system"), and the live lock screen's two steps. */
   theme?: 'light' | 'dark' | 'system';
+  /** 11-22: each screen's layout. */
+  lockLayout?: 'classic' | 'glass' | 'stack';
+  /** The home screen widget: placed, and whether this launcher can add it with a tap. */
+  widgetPlaced?: boolean;
+  widgetCanAdd?: boolean;
+  homeLayout?: 'classic' | 'glass' | 'stack';
   liveAllowed?: boolean;
   liveActive?: boolean;
 }
@@ -77,6 +83,10 @@ interface Bridge {
   /** App 0.7.3: the pictures' light or dark, and the live wallpaper's picker (the old settings screen's, now here). */
   setPictureTheme?(theme: 'light' | 'dark' | 'system'): void;
   openLivePicker?(): void;
+  /** Asks Android to place the widget (the person confirms). */
+  addWidget?(): void;
+  /** 11-22: one screen's layout with its style and colour (Look's Apply). */
+  setScreenDesign?(screen: 'lock' | 'home', layout: 'classic' | 'glass' | 'stack', style: string, color: string | null): void;
   listen(): void;
 }
 

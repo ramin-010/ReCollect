@@ -161,6 +161,22 @@ export default function SettingsScreen() {
           </div>
         ) : null}
 
+        {shell?.connected && bridge()?.addWidget ? (
+          <div className="group">
+            <div className="set">
+              <div className="row-main">
+                <p className="row-title">Home screen widget</p>
+                <p className="meta">{shell.widgetPlaced ? 'On your home screen: one thing to do, with Later' : 'Optional: one thing to do, with a Later button. Your home screen already shows it'}</p>
+              </div>
+              {!shell.widgetPlaced && shell.widgetCanAdd ? (
+                <button type="button" className="btn out" style={{ height: 38, padding: '0 14px' }} onClick={() => bridge()?.addWidget?.()}>
+                  Add
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {/* Stage 11 (his items 10c, 10d): what the phone allows, last times, diagnostics; feedback to the owner. */}
         {shell ? <PhoneChecklist shell={shell} /> : null}
         <PhoneFeedback />
