@@ -13,6 +13,7 @@
  * task detail) live here too, replacing Revise's window events.
  */
 import { create } from 'zustand';
+import { tasksChanged } from '@/lib/tasksChanged';
 import { toast } from 'sonner';
 import { learningApi, LearningApiError, type TaskUpdate } from '@/lib/api/learningApi';
 import type {
@@ -393,6 +394,7 @@ export const useLearningStore = create<LearningState>((set, get) => {
       patch((d) => ({ ...d, tasks: d.tasks.map((t) => (t._id === id ? { ...t, status, completedAt } : t)) }));
       try {
         await learningApi.updateTask(id, { status });
+        tasksChanged();
       } catch (e) {
         set({ data: before });
         toast.error(errorMessage(e, 'Failed to update task'));
@@ -412,6 +414,7 @@ export const useLearningStore = create<LearningState>((set, get) => {
       try {
         const saved = await learningApi.updateTask(id, updates);
         if (saved) patch((d) => ({ ...d, tasks: d.tasks.map((t) => (t._id === id ? { ...t, ...saved, goalType: saved.goalType ?? t.goalType } : t)) }));
+        tasksChanged();
       } catch (e) {
         set({ data: before });
         toast.error(errorMessage(e, 'Failed to update task'));
@@ -428,6 +431,7 @@ export const useLearningStore = create<LearningState>((set, get) => {
       patch((d) => ({ ...d, tasks: d.tasks.filter((t) => t._id !== id) }));
       try {
         await learningApi.deleteTask(id);
+        tasksChanged();
         toast.success('Task deleted');
       } catch (e) {
         set({ data: before });

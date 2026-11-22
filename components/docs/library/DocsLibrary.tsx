@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSkel } from '@/components/rc-ui';
 import { RcPicker } from '@/components/rc-ui/RcPicker';
 import { docApi, type DocSearchHit } from '@/lib/api/docApi';
-import { learningApi } from '@/lib/api/learningApi';
+import { learningApi, type SubjectDeletion, type SubjectDeletionCounts } from '@/lib/api/learningApi';
 import { agentApi, type DocActivity } from '@/lib/api/agentApi';
 import { useDocStore, type Doc } from '@/lib/store/docStore';
 import type { Subject, SubjectWithTopics, TopicStatus } from '@/lib/learning/types';
@@ -56,6 +56,10 @@ export function DocsLibrary() {
   /** Docs an agent wrote or changed (still standing), by id: the "From agents" view. */
   const [agentDocs, setAgentDocs] = useState<Map<string, DocActivity>>(() => new Map());
   const [loadFailed, setLoadFailed] = useState(false);
+  // Deleting a subject (the owner, 11-22): its confirm, and the deleted ones still undoable (shown in Trash).
+  const [subjectToDelete, setSubjectToDelete] = useState<{ id: string; name: string; counts: SubjectDeletionCounts; undoDays: number } | null>(null);
+  const [deletingSubject, setDeletingSubject] = useState(false);
+  const [deletions, setDeletions] = useState<SubjectDeletion[]>([]);
   // ?subject=<id> opens that subject's path (Home's Next up links here).
   const [view, setView] = useState<View>(() => (params.get('subject') ? 'path' : 'all'));
   const [subjectFilter, setSubjectFilter] = useState<string | null>(() => params.get('subject'));
@@ -94,13 +98,15 @@ export function DocsLibrary() {
   const load = useCallback(async () => {
     setLoadFailed(false);
     try {
-      const [d, s, st, fromAgents] = await Promise.all([
+      const [d, s, st, fromAgents, gone] = await Promise.all([
         docApi.fetchAllDocs(),
         learningApi.getSubjects().catch(() => [] as SubjectWithTopics[]),
         learningApi.getTopicStatuses().catch(() => [] as TopicStatus[]),
         // The "From agents" view only; without it the rest of the library still works.
         agentApi.docActivity().catch(() => []),
+        learningApi.listSubjectDeletions().catch(() => [] as SubjectDeletion[]),
       ]);
+      setDeletions(gone);
       setDocs(d.map((x) => x as unknown as Doc));
       setSubjects(s);
       setStatuses(st);
@@ -149,10 +155,11 @@ export function DocsLibrary() {
   const trashRows: Row[] = useMemo(
     () =>
       docs
-        .filter((d) => !!d.trashedAt && (d.role ?? 'owner') === 'owner' && !d._id.startsWith('local_'))
+        // A deleted subject's docs come back with it: listed under it, not here.
+        .filter((d) => !!d.trashedAt && (d.role ?? 'owner') === 'owner' && !d._id.startsWith('local_') && !deletions.some((x) => x.docIds?.includes(d._id)))
         .sort((a, b) => new Date(b.trashedAt!).getTime() - new Date(a.trashedAt!).getTime())
         .map((doc) => ({ doc, status: null, subject: null })),
-    [docs],
+    [docs, deletions],
   );
 
   const counts = useMemo(
@@ -241,6 +248,41 @@ export function DocsLibrary() {
     }
   };
 
+  const askDeleteSubject = async (s: Subject) => {
+    try {
+      const preview = await learningApi.subjectDeletionPreview(s._id);
+      setSubjectToDelete({ id: s._id, name: preview.name, counts: preview.counts, undoDays: preview.undoDays });
+    } catch {
+      toast.error('Could not check what is in it. Try again.');
+    }
+  };
+
+  const undoSubject = async (deletionId: string) => {
+    try {
+      const back = await learningApi.undoSubjectDeletion(deletionId);
+      toast.success(`${back.name} is back, with everything in it`);
+    } catch {
+      toast.error('It could not be brought back. Try again.');
+    }
+    await load();
+  };
+
+  const confirmDeleteSubject = async () => {
+    if (!subjectToDelete) return;
+    setDeletingSubject(true);
+    try {
+      const gone = await learningApi.deleteSubject(subjectToDelete.id);
+      if (subjectFilter === subjectToDelete.id) chooseSubject(null);
+      setSubjectToDelete(null);
+      toast.success(`Deleted ${gone.name}`, { duration: 8000, action: { label: 'Undo', onClick: () => void undoSubject(gone._id) } });
+      await load();
+    } catch {
+      toast.error('The subject was not deleted. Try again.');
+    } finally {
+      setDeletingSubject(false);
+    }
+  };
+
   const restore = async (doc: Doc) => {
     updateDoc(doc._id, { trashedAt: null });
     try {
@@ -296,7 +338,7 @@ export function DocsLibrary() {
     { value: 'pinned' as View, label: 'Pinned', count: counts.pinned },
     ...(counts.shared ? [{ value: 'shared' as View, label: 'Shared', count: counts.shared }] : []),
     ...(counts.agents || view === 'agents' ? [{ value: 'agents' as View, label: 'From agents', count: counts.agents }] : []),
-    ...(counts.trash ? [{ value: 'trash' as View, label: 'Trash', count: counts.trash }] : []),
+    ...(counts.trash || deletions.length ? [{ value: 'trash' as View, label: 'Trash', count: counts.trash + deletions.length }] : []),
   ];
 
   return (
@@ -346,17 +388,28 @@ export function DocsLibrary() {
               <span className="lib-count">{counts.all}</span>
             </button>
             {subjects.map((s) => (
-              <button
-                key={s._id}
-                type="button"
-                className="lib-rail-item"
-                aria-current={subjectFilter === s._id || undefined}
-                onClick={() => chooseSubject(subjectFilter === s._id ? null : s._id)}
-              >
-                <span className="rc-swatch" style={{ background: s.color ?? 'var(--rc-icon)' }} aria-hidden />
-                <span className="min-w-0 flex-1 text-left">{s.name}</span>
-                <span className="lib-count">{subjectCounts.get(s._id) ?? 0}</span>
-              </button>
+              <div key={s._id} className="lib-rail-row">
+                <button
+                  type="button"
+                  className="lib-rail-item"
+                  aria-current={subjectFilter === s._id || undefined}
+                  onClick={() => chooseSubject(subjectFilter === s._id ? null : s._id)}
+                >
+                  <span className="rc-swatch" style={{ background: s.color ?? 'var(--rc-icon)' }} aria-hidden />
+                  <span className="min-w-0 flex-1 text-left">{s.name}</span>
+                  <span className="lib-count">{subjectCounts.get(s._id) ?? 0}</span>
+                </button>
+                <span className="lib-rail-more">
+                  <RcMenu
+                    label={`Options for ${s.name}`}
+                    actions={[{ label: 'Delete subject', icon: <Trash2 className="h-4 w-4" />, onSelect: () => void askDeleteSubject(s), danger: true }]}
+                  >
+                    <RcIconButton label={`Options for ${s.name}`} size="sm">
+                      <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
+                    </RcIconButton>
+                  </RcMenu>
+                </span>
+              </div>
             ))}
             {(subjectCounts.get(UNFILED) ?? 0) > 0 && (
               <button type="button" className="lib-rail-item" aria-current={subjectFilter === UNFILED || undefined} onClick={() => chooseSubject(subjectFilter === UNFILED ? null : UNFILED)}>
@@ -387,7 +440,10 @@ export function DocsLibrary() {
                 ))}
               </ul>
             ) : view === 'trash' ? (
-              <TrashList rows={trashRows} onRestore={(d) => void restore(d)} onDelete={setToDelete} />
+              <>
+                {deletions.length > 0 && <DeletedSubjects rows={deletions} onUndo={(id) => void undoSubject(id)} />}
+                {trashRows.length > 0 && <TrashList rows={trashRows} onRestore={(d) => void restore(d)} onDelete={setToDelete} />}
+              </>
             ) : rows.length === 0 ? (
               <div className="lib-empty">
                 <p className="rc-title">No docs yet</p>
@@ -453,6 +509,16 @@ export function DocsLibrary() {
         onConfirm={() => void confirmDelete()}
       />
       <RcConfirm
+        open={!!subjectToDelete}
+        onOpenChange={(o) => !o && setSubjectToDelete(null)}
+        title={`Delete ${subjectToDelete?.name ?? 'this subject'} and everything in it?`}
+        body={subjectToDelete ? <SubjectDeletionWords counts={subjectToDelete.counts} undoDays={subjectToDelete.undoDays} /> : null}
+        confirmLabel="Delete subject"
+        danger
+        busy={deletingSubject}
+        onConfirm={() => void confirmDeleteSubject()}
+      />
+      <RcConfirm
         open={emptyOpen}
         onOpenChange={setEmptyOpen}
         title={`Empty the trash?`}
@@ -467,6 +533,58 @@ export function DocsLibrary() {
 }
 
 const TRASH_DAYS = 30;
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** What a subject's delete takes, in words, and how long it can be undone. */
+function SubjectDeletionWords({ counts, undoDays }: { counts: SubjectDeletionCounts; undoDays: number }) {
+  const parts = [
+    counts.docs ? plural(counts.docs, 'doc') : null,
+    counts.topics ? `its path (${plural(counts.topics, 'topic')})` : null,
+    counts.revisions ? plural(counts.revisions, 'revision') : null,
+    counts.notes ? plural(counts.notes, 'note') : null,
+    counts.tasks ? plural(counts.tasks, 'task') + ' linked to its docs' : null,
+  ].filter(Boolean);
+  return (
+    <>
+      {parts.length ? `This deletes ${parts.join(', ')}.` : 'It has nothing in it yet.'}
+      {counts.sessions ? ` The time you logged on it (${plural(counts.sessions, 'session')}) stays in your record.` : ''} You can undo it for {undoDays} days, from Trash.
+    </>
+  );
+}
+
+/** Deleted subjects still undoable, at the top of the Trash view. */
+function DeletedSubjects({ rows, onUndo }: { rows: SubjectDeletion[]; onUndo: (id: string) => void }) {
+  return (
+    <>
+      <p className="rc-meta lib-trash-note">Deleted subjects come back with everything in them until their week is up.</p>
+      <ul className="mb-4">
+        {rows.map((d) => {
+          const until = new Date(d.undoUntil);
+          return (
+            <li key={d._id} className="lib-row rc-row lib-row--trash">
+              <span className="lib-row-link">
+                <Trash2 className="lib-row-icon" strokeWidth={1.75} aria-hidden />
+                <span className="lib-row-title">
+                  <span>{d.name}</span>
+                  <span className="rc-meta ml-2">{[d.counts.docs ? plural(d.counts.docs, 'doc') : null, d.counts.topics ? plural(d.counts.topics, 'topic') : null].filter(Boolean).join(' · ')}</span>
+                </span>
+                <span className="lib-edited" title={until.toLocaleString()}>
+                  Deleted {formatRelative(d.deletedAt)} · final {until.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                </span>
+              </span>
+              <span className="lib-trash-actions">
+                <RcButton size="sm" variant="quiet" icon={<RotateCcw className="h-4 w-4" strokeWidth={1.75} />} onClick={() => onUndo(d._id)}>
+                  Undo
+                </RcButton>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
 
 /** The Trash view: when each doc goes for good, with Restore and Delete for good on every row. */
 function TrashList({ rows, onRestore, onDelete }: { rows: Row[]; onRestore: (d: Doc) => void; onDelete: (d: Doc) => void }) {

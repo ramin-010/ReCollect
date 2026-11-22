@@ -285,7 +285,8 @@ export const TaskInput = forwardRef<HTMLInputElement, TaskInputProps>(({
             <TextareaAutosize
               ref={inputRef as any}
               value={title}
-              onChange={handleTitleChange as any}
+              // Typing opens the box too (after a save it closes but keeps the focus, so the next task had no options).
+              onChange={((e: React.ChangeEvent<HTMLTextAreaElement>) => { if (!isExpanded) onExpandChange(true); handleTitleChange(e); }) as any}
               onFocus={() => onExpandChange(true)}
               placeholder="Create a new task or type @ai to generate..."
               autoComplete="off"

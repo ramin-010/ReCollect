@@ -205,6 +205,26 @@ interface RawItemResult {
   mastered?: boolean;
 }
 
+/** A deleted subject, undoable until `undoUntil` (backend subjectDeletion.service.ts). */
+export interface SubjectDeletionCounts {
+  docs: number;
+  topics: number;
+  notes: number;
+  revisions: number;
+  tasks: number;
+  sessions: number;
+}
+export interface SubjectDeletion {
+  _id: string;
+  subjectId: string;
+  name: string;
+  deletedAt: string;
+  undoUntil: string;
+  counts: SubjectDeletionCounts;
+  /** Its docs waiting in the trash: they come back with it. */
+  docIds: string[];
+}
+
 /** PATCH /api/todos/:id body (C2's todo input + goalType). */
 export type TaskUpdate = Partial<CreateTodoPayload>;
 
@@ -366,11 +386,25 @@ export const learningApi = {
     return call(() => axiosInstance.patch(`/api/subjects/${id}`, body));
   },
 
-  // #11
-  async deleteSubject(id: string): Promise<{ deleted: true }> {
+  // #11: the subject and everything in it, undoable for a week (the owner, 11-22).
+  async deleteSubject(id: string): Promise<SubjectDeletion> {
     const m = await mock();
-    if (m) return m.deleteSubject(id);
+    if (m) return m.deleteSubject(id) as unknown as SubjectDeletion;
     return call(() => axiosInstance.delete(`/api/subjects/${id}`));
+  },
+
+  /** What deleting a subject would take, for the confirm. */
+  async subjectDeletionPreview(id: string): Promise<{ name: string; counts: SubjectDeletionCounts; undoDays: number }> {
+    return call(() => axiosInstance.get(`/api/subjects/${id}/deletion`));
+  },
+
+  /** Deleted subjects that can still be brought back. */
+  async listSubjectDeletions(): Promise<SubjectDeletion[]> {
+    return call(() => axiosInstance.get('/api/subject-deletions'));
+  },
+
+  async undoSubjectDeletion(id: string): Promise<{ subjectId: string; name: string }> {
+    return call(() => axiosInstance.post(`/api/subject-deletions/${id}/undo`, {}));
   },
 
   // #12

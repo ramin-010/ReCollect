@@ -19,6 +19,7 @@ import { PersonalTableView } from './PersonalTableView';
 import type { TodoResponse } from '@/lib/api/todoApi';
 import { PersonalTaskDetailModal } from './PersonalTaskDetailModal';
 import { isReferenceTypeVisible } from '@/lib/features';
+import { TASKS_CHANGED, tasksChanged } from '@/lib/tasksChanged';
 
 
 export function TodoView() {
@@ -27,7 +28,6 @@ export function TodoView() {
     setTodos,
     isLoading,
     setLoading,
-    isInitialized,
     addTodo,
     updateTodo,
     removeTodo
@@ -44,19 +44,33 @@ export function TodoView() {
   const [currentView, setCurrentView] = useState<'list' | 'table'>('list');
 
   // Fetch todos
+  // Fetched on every visit, when the window comes back and when another part of the app changes a task
+  // (the owner, 11-22: a tick on Home showed here only after a reload). The skeleton only on the first load.
   const fetchTodos = useCallback(async () => {
-    if (isInitialized) return;
+    const first = !useTodoStore.getState().isInitialized;
     try {
-      setLoading(true);
+      if (first) setLoading(true);
       const response = await axiosInstance.get('/api/todos');
       if (response.data.success) setTodos(response.data.data);
     } catch {
-      toast.error('Failed to load tasks');
-      setLoading(false);
+      if (first) {
+        toast.error('Failed to load tasks');
+        setLoading(false);
+      }
     }
-  }, [isInitialized, setTodos, setLoading]);
+  }, [setTodos, setLoading]);
 
-  useEffect(() => { fetchTodos(); }, [fetchTodos]);
+  useEffect(() => {
+    void fetchTodos();
+    const onVisible = () => document.visibilityState === 'visible' && void fetchTodos();
+    const onChanged = () => void fetchTodos();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener(TASKS_CHANGED, onChanged);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener(TASKS_CHANGED, onChanged);
+    };
+  }, [fetchTodos]);
 
   // The header's line and the views' counts, in plain numbers (no percentages).
   const counts = useMemo(() => {
@@ -210,9 +224,12 @@ export function TodoView() {
   // Adapter for workspace-style components (onStatusChange(id, newStatus))
   const handleStatusChange = useCallback((id: string, newStatus: string) => {
     updateTodo(id, { status: newStatus as 'pending' | 'complete' | 'in_progress' | 'review' | 'blocked' });
-    axiosInstance.patch(`/api/todos/${id}`, { status: newStatus }).catch(() => {
-      toast.error('Failed to update status');
-    });
+    axiosInstance
+      .patch(`/api/todos/${id}`, { status: newStatus })
+      .then(() => tasksChanged())
+      .catch(() => {
+        toast.error('Failed to update status');
+      });
   }, [updateTodo]);
 
   const views = [

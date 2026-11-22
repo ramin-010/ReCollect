@@ -10,6 +10,7 @@ import axiosInstance from '@/lib/utils/axios';
 import { rcScope } from '@/components/rc-ui';
 import { TaskStatusMark } from '@/components/todo/TaskMarks';
 import { dueWords } from '@/components/todo/taskWords';
+import { TASKS_CHANGED, tasksChanged } from '@/lib/tasksChanged';
 import './doc-tasks.css';
 
 interface LinkedTask {
@@ -41,6 +42,10 @@ export function DocTasks({ docId, docTitle, editable }: { docId: string; docTitl
 
   useEffect(() => {
     void load();
+    // A task changed elsewhere in the app (the Tasks page, Home, the task window): this row follows.
+    const onChanged = () => void load();
+    window.addEventListener(TASKS_CHANGED, onChanged);
+    return () => window.removeEventListener(TASKS_CHANGED, onChanged);
   }, [load]);
 
   const toggle = async (t: LinkedTask) => {
@@ -48,6 +53,7 @@ export function DocTasks({ docId, docTitle, editable }: { docId: string; docTitl
     setTasks((prev) => prev?.map((x) => (x._id === t._id ? { ...x, status: next } : x)) ?? prev);
     try {
       await axiosInstance.patch(`/api/todos/${t._id}`, { status: next });
+      tasksChanged();
     } catch {
       setTasks((prev) => prev?.map((x) => (x._id === t._id ? { ...x, status: t.status } : x)) ?? prev);
       toast.error('The task did not change. Try again.');
@@ -61,7 +67,10 @@ export function DocTasks({ docId, docTitle, editable }: { docId: string; docTitl
     try {
       const res = await axiosInstance.post('/api/todos', { title, status: 'pending', priority: 'low', references: [{ type: 'doc', refId: docId, title: docTitle || 'Untitled' }] });
       const created = res.data?.data as LinkedTask | undefined;
-      if (created?._id) setTasks((prev) => [...(prev ?? []), created]);
+      if (created?._id) {
+        setTasks((prev) => [...(prev ?? []), created]);
+        tasksChanged();
+      }
       setDraft('');
       inputRef.current?.focus();
     } catch {

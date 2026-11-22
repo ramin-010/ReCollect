@@ -49,9 +49,13 @@ export interface ShellState {
   voice: boolean;
   /** A refresh or a connect is running. */
   busy: boolean;
+  /** App 0.7.3: the pictures' own choice ("light", "dark" or "system"), and the live lock screen's two steps. */
+  theme?: 'light' | 'dark' | 'system';
+  liveAllowed?: boolean;
+  liveActive?: boolean;
 }
 
-export type ShellSwitch = 'lock' | 'home' | 'hideTitles' | 'notes' | 'reminders' | 'quiet';
+export type ShellSwitch = 'lock' | 'home' | 'hideTitles' | 'notes' | 'reminders' | 'quiet' | 'live';
 
 /** Stage 11 (his item 10c): what the app needs from the phone. */
 export type PermissionKind = 'exactAlarms' | 'notifications' | 'battery' | 'autoStart' | 'notificationAccess';
@@ -70,7 +74,9 @@ interface Bridge {
   refresh(): void;
   connect(server: string, token: string): void;
   disconnect(): void;
-  openSettings(): void;
+  /** App 0.7.3: the pictures' light or dark, and the live wallpaper's picker (the old settings screen's, now here). */
+  setPictureTheme?(theme: 'light' | 'dark' | 'system'): void;
+  openLivePicker?(): void;
   listen(): void;
 }
 

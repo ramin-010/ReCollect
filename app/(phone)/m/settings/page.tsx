@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, RefreshCw, Unplug, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/store/authStore';
+import { authApi } from '@/lib/api/auth';
 import { buddyApi, type BuddySettings } from '@/lib/api/buddyApi';
 import { recallApi, type AiUsage } from '@/lib/api/recallApi';
 import { lookName, useLook } from '@/components/phone/look';
@@ -85,6 +86,23 @@ export default function SettingsScreen() {
     }
   };
 
+  // Disconnect signs out too (the owner, 11-22): the server ends the session, then the app ends its code, clears the
+  // sign-in and opens the login. An older app (no full sign-out of its own) is sent to the login by the page.
+  const signOutAndDisconnect = async () => {
+    try {
+      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
+      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      localStorage.removeItem('auth_hint');
+      await authApi.logout();
+    } catch {
+      /* the app still clears the sign-in on its side */
+    }
+    useAuthStore.getState().logout();
+    const b = bridge();
+    b?.disconnect();
+    if (!b?.setPictureTheme) window.location.href = '/login?redirect=%2Fm%2Ftoday';
+  };
+
   const buddyOn = !!settings?.enabled;
   const buddyName = settings?.name?.trim() || 'your buddy';
   const close = () => setSheet(null);
@@ -140,15 +158,6 @@ export default function SettingsScreen() {
                 </button>
               </div>
             )}
-            <button type="button" className="set" style={{ width: '100%' }} onClick={() => bridge()?.openSettings()}>
-              <div className="row-main">
-                <p className="row-title">More on this phone</p>
-                <p className="meta">The widget, notification icons, the pictures’ theme</p>
-              </div>
-              <span className="val">
-                <ChevronRight className="i" strokeWidth={1.75} aria-hidden />
-              </span>
-            </button>
           </div>
         ) : null}
 
@@ -312,15 +321,15 @@ export default function SettingsScreen() {
               <>
                 <p className="sheet-title">Disconnect this phone?</p>
                 <p className="meta" style={{ marginTop: 6 }}>
-                  The app stops reading your day, takes its pictures off your screens, and ends its code. Your reminders stop ringing here.
+                  The app stops reading your day, takes its pictures off your screens, ends its code and signs you out. Your reminders stop ringing here.
                 </p>
                 <div className="acts">
                   <button
                     type="button"
                     className="act danger"
                     onClick={() => {
-                      bridge()?.disconnect();
                       close();
+                      void signOutAndDisconnect();
                     }}
                   >
                     <Unplug className="i" strokeWidth={1.75} aria-hidden />

@@ -36,16 +36,36 @@ interface PictureStyle {
 
 type Screen = 'lock' | 'home';
 
-/** The real picture of today for one screen in the chosen style, small; the lock screen with the phone's clock over it. */
+/** The preview's address for one screen in a style (the server draws it small for this phone). */
+function previewSrc(shell: ShellState, screen: Screen, style: string, color: string | null): string {
+  const q = new URLSearchParams({ screen, w: '320', h: '694', theme: shell.pictureTheme, style, ...(color ? { color } : {}), ...(shell.hideTitles ? { titles: '0' } : {}), format: 'webp', v: String(shell.okAt) });
+  return `${String(axiosInstance.defaults.baseURL ?? '')}/api/ambient/wallpaper.png?${q.toString()}`;
+}
+
+/**
+ * The real picture of today for one screen in the chosen style, small; the lock screen with the phone's clock over it.
+ * 0.7.3 (the owner: the pictures took long to show): the last picture stays while the next one loads, then swaps in.
+ */
 function ScreenPreview({ shell, screen, style, color }: { shell: ShellState; screen: Screen; style: string; color: string | null }) {
   const [now] = useState(() => new Date());
-  const q = new URLSearchParams({ screen, w: '320', h: '694', theme: shell.pictureTheme, style, ...(color ? { color } : {}), ...(shell.hideTitles ? { titles: '0' } : {}), v: String(shell.okAt) });
-  const src = `${String(axiosInstance.defaults.baseURL ?? '')}/api/ambient/wallpaper.png?${q.toString()}`;
+  const want = previewSrc(shell, screen, style, color);
+  const [shown, setShown] = useState(want);
+  const loading = want !== shown;
+  useEffect(() => {
+    if (want === shown) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = img.onerror = () => alive && setShown(want);
+    img.src = want;
+    return () => {
+      alive = false;
+    };
+  }, [want, shown]);
   return (
-    <div className="lock-shot is-real">
+    <div className="lock-shot is-real" aria-busy={loading || undefined}>
       {/* A picture the server draws for this phone (no next/image: it is private and changes with the day). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img key={src} src={src} alt="" />
+      <img src={shown} alt="" style={{ opacity: loading ? 0.55 : 1, transition: 'opacity 160ms ease' }} />
       {screen === 'lock' && (
         <>
           <p className="clock">{new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit', hour12: false }).format(now)}</p>
@@ -95,8 +115,19 @@ function ScreensGroup({ shell, name }: { shell: ShellState; name: string }) {
   );
 }
 
-function LookPicker({ shell, screen, style: chosenStyle, color: chosenColor, name }: { shell: ShellState; screen: Screen; style: string; color: string | null; name: string }) {
+function LookPicker({ shell, screen, style: appliedStyle, color: appliedColor, name }: { shell: ShellState; screen: Screen; style: string; color: string | null; name: string }) {
   const [styles, setStyles] = useKept<PictureStyle[] | null>('look:styles', null);
+  // 0.7.3 (the owner): a style or colour is tried in the preview first; Apply sets it on the phone (each tap used to).
+  const [draft, setDraft] = useState<{ screen: Screen; style: string; color: string | null } | null>(null);
+  // Set on Apply; "Applying…" shows while the app's refresh that sets it runs (the look itself is kept at once).
+  const [applied, setApplied] = useState(false);
+  const applying = applied && shell.busy;
+  const chosenStyle = draft && draft.screen === screen ? draft.style : appliedStyle;
+  const chosenColor = draft && draft.screen === screen ? draft.color : appliedColor;
+  const choose = (next: { screen: Screen; style: string; color: string | null }) => {
+    setApplied(false);
+    setDraft(next);
+  };
   useEffect(() => {
     let alive = true;
     axiosInstance.get('/api/ambient/styles').then(
@@ -109,6 +140,12 @@ function LookPicker({ shell, screen, style: chosenStyle, color: chosenColor, nam
   }, [setStyles]);
   const style = styles?.find((s) => s.id === chosenStyle) ?? styles?.[0] ?? null;
   const color = style?.colors.find((c) => c.id === chosenColor) ?? style?.colors[0] ?? null;
+  const pending = !!style && (style.id !== appliedStyle || (color?.id ?? null) !== (appliedColor ?? style.colors[0]?.id ?? null));
+  const apply = () => {
+    if (!style) return;
+    setApplied(true);
+    setScreenLook(screen, style.id, color?.id ?? null);
+  };
   return (
     <div className="lock-demo" style={{ marginTop: 14 }}>
       {style ? <ScreenPreview shell={shell} screen={screen} style={style.id} color={color?.id ?? null} /> : <div className="lock-shot" aria-hidden />}
@@ -120,7 +157,7 @@ function LookPicker({ shell, screen, style: chosenStyle, color: chosenColor, nam
         {styles && styles.length ? (
           <div className="styles" role="group" aria-label="Its style">
             {styles.map((s) => (
-              <button key={s.id} type="button" className={`chip${style?.id === s.id ? ' is-on' : ''}`} aria-pressed={style?.id === s.id} onClick={() => setScreenLook(screen, s.id, s.colors[0]?.id ?? null)}>
+              <button key={s.id} type="button" className={`chip${style?.id === s.id ? ' is-on' : ''}`} aria-pressed={style?.id === s.id} onClick={() => choose({ screen, style: s.id, color: s.colors[0]?.id ?? null })}>
                 {s.name}
               </button>
             ))}
@@ -136,13 +173,61 @@ function LookPicker({ shell, screen, style: chosenStyle, color: chosenColor, nam
                 style={{ ['--dot' as string]: c.swatch }}
                 aria-label={c.name}
                 aria-pressed={color?.id === c.id}
-                onClick={() => setScreenLook(screen, style.id, c.id)}
+                onClick={() => choose({ screen, style: style.id, color: c.id })}
               />
             ))}
           </div>
         ) : null}
+        {pending || applying ? (
+          <button type="button" className="btn main" style={{ marginTop: 14, height: 38, padding: '0 16px', opacity: applying ? 0.6 : 1 }} disabled={applying} onClick={apply}>
+            {applying ? 'Applying…' : `Apply to the ${screen === 'lock' ? 'lock' : 'home'} screen`}
+          </button>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+const PICTURE_THEMES: Array<{ id: 'light' | 'dark' | 'system'; label: string }> = [
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'system', label: 'Match the phone' },
+];
+
+/**
+ * Notification icons on the lock screen (the live lock screen, app 0.4.0; on this page since 0.7.3): the app draws the
+ * lock picture itself with your notifications' icons under the words. Android asks two things, one at a time.
+ */
+function LiveLock({ shell }: { shell: ShellState }) {
+  const needAccess = shell.live && shell.liveAllowed === false;
+  const needSet = shell.live && shell.liveAllowed !== false && shell.liveActive === false;
+  return (
+    <>
+      <div className="set">
+        <div className="row-main">
+          <p className="row-title">Notification icons on the lock screen</p>
+          <p className="meta">
+            {!shell.live
+              ? 'Your notifications’ icons, round and in colour, under the words'
+              : needAccess
+                ? 'Step 1 of 2: let the app see your notifications’ icons'
+                : needSet
+                  ? 'Step 2 of 2: set the app’s live wallpaper'
+                  : 'On'}
+          </p>
+        </div>
+        <Switch on={shell.live} label="Notification icons on the lock screen" onChange={(next) => bridge()?.setSwitch('live', next)} />
+      </div>
+      {needAccess ? (
+        <button type="button" className="btn out" style={{ height: 38, padding: '0 14px', marginTop: 4 }} onClick={() => bridge()?.openPermission?.('notificationAccess')}>
+          Allow notification access
+        </button>
+      ) : needSet ? (
+        <button type="button" className="btn out" style={{ height: 38, padding: '0 14px', marginTop: 4 }} onClick={() => bridge()?.openLivePicker?.()}>
+          Set the live wallpaper
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -200,6 +285,18 @@ export default function LookScreen() {
           <>
             <ScreensGroup shell={shell} name={buddy} />
             <div className="group">
+              {bridge()?.setPictureTheme ? (
+                <div className="set" style={{ display: 'block' }}>
+                  <p className="row-title">Wallpaper colours</p>
+                  <div className="seg" style={{ marginTop: 8 }} role="group" aria-label="Wallpaper colours">
+                    {PICTURE_THEMES.map((t) => (
+                      <button key={t.id} type="button" className={(shell.theme ?? 'system') === t.id ? 'is-on' : ''} aria-pressed={(shell.theme ?? 'system') === t.id} onClick={() => bridge()?.setPictureTheme?.(t.id)}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="set">
                 <div className="row-main">
                   <p className="row-title">Hide personal details</p>
@@ -207,6 +304,7 @@ export default function LookScreen() {
                 </div>
                 <Switch on={shell.hideTitles} label="Hide personal details" onChange={(next) => bridge()?.setSwitch('hideTitles', next)} />
               </div>
+              {shell.lock && bridge()?.openLivePicker ? <LiveLock shell={shell} /> : null}
             </div>
           </>
         ) : null}

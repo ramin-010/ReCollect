@@ -126,6 +126,31 @@
   font-weight: 500;
 }
 
+/* A subject's row: its menu (Delete subject) shows on hover or focus, over the count (the owner, 11-22). */
+.lib-rail-row {
+  position: relative;
+  display: flex;
+}
+.lib-rail-row > .lib-rail-item {
+  flex: 1;
+  min-width: 0;
+}
+.lib-rail-more {
+  position: absolute;
+  right: 2px;
+  top: 3px;
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+.lib-rail-row:hover .lib-rail-more,
+.lib-rail-more:focus-within,
+.lib-rail-more:has([data-state='open']) {
+  opacity: 1;
+}
+.lib-rail-row:hover .lib-count {
+  visibility: hidden;
+}
+
 .lib-count {
   font-size: 12.5px;
   color: var(--rc-ink-3);
@@ -323,6 +348,11 @@
 /* Phone (ALWAYS_ON_SPEC 6.1): one column; the subject rail becomes a row of chips that scrolls
    sideways; search takes the row; a doc row is its icon, title and status (subject and edited hide). */
 @media (max-width: 767px) {
+  /* No hover on a phone: a subject is deleted from a laptop for now. */
+  .lib-rail-more {
+    display: none;
+  }
+
   .lib-frame {
     padding: 12px 16px 96px;
   }

@@ -325,6 +325,10 @@ export const useTaskInput = (
       : (parsedResult?.cleanText || title.trim());
     
     const taskTitle = rawTitle.replace(/#\w+\s?/g, '').trim();
+    // A #label typed in the title is kept as a label even when it wasn't picked from the menu (it was dropped
+    // with the title's #word before: the owner's 11-22 check of the task box).
+    const typedLabels = (rawTitle.match(/#(\w+)/g) ?? []).map((m) => ({ name: m.slice(1) }));
+    const allLabels = [...selectedLabels, ...typedLabels.filter((t) => !selectedLabels.some((l) => l.name.toLowerCase() === t.name.toLowerCase()))];
     
     // Extract subtasks from HTML and remove them from description
     let finalDescription = description.trim();
@@ -388,7 +392,7 @@ export const useTaskInput = (
       reminderDate: (currentReminder ?? (!confirmedDueDate && suggestedDate ? subMinutes(suggestedDate, 10) : null))?.toISOString(),
       subtasks: formattedSubtasks.length > 0 ? formattedSubtasks : undefined,
       // Tag names; todoApi / workspaceTodoApi forward them as `tags` (JSON, or a JSON string in multipart).
-      tags: selectedLabels.length > 0 ? tagNamesForPayload(selectedLabels) : undefined,
+      tags: allLabels.length > 0 ? tagNamesForPayload(allLabels) : undefined,
       recurrence: recurrenceData,
       references: references.length > 0 ? references : (initialReferences && initialReferences.length > 0 ? initialReferences : undefined),
       workspace: workspaceId,
