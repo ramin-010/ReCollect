@@ -584,6 +584,104 @@ export interface MirrorData {
   weeks: Array<{ weekStart: DayString; minutes: KindMinutes; targets: { done: number; total: number } }>;
 }
 
+// ─── Where you stand (WHERE_YOU_STAND_PLAN §5): the record against the span before ───
+
+export type StandWindow = 'week' | 'month' | 'year';
+
+export interface StandSpan {
+  from: DayString;
+  to: DayString;
+}
+
+export interface StandMeasures {
+  /** The span's days the record covers. */
+  days: number;
+  activeDays: number;
+  /** Days with 30 minutes or more logged. */
+  daysWithSitting: number;
+  minutes: KindMinutes;
+  totalMinutes: number;
+  sessions: number;
+  reviews: { due: number; onDay: number; late: number; open: number; catchUps: number };
+  focus: { set: number; done: number };
+  targets: { set: number; done: number; dropped: number };
+  topicsDone: number;
+  topicsBySubject: Array<{ subjectId: string; name: string; done: number }>;
+  milestonesDone: number;
+  weakSpots: { found: number; cleared: number };
+  recall: { sets: number; strong: number; partial: number; weak: number };
+  practice: { total: number; alone: number; hints: number; afterAnswer: number };
+  notes: { written: number; workedOn: number };
+}
+
+export interface StandPeriod {
+  window: StandWindow;
+  span: StandSpan;
+  /** The record starts inside the span. */
+  partial: boolean;
+  /** The span before, only when the record covers all of it. */
+  before: StandSpan | null;
+  current: StandMeasures;
+  previous: StandMeasures | null;
+  /** 0-3 sentences written by the server from these numbers. */
+  verdict: string[];
+}
+
+export interface StandDay {
+  day: DayString;
+  active: boolean;
+  minutes: number;
+  byKind: KindMinutes;
+  reviews: number;
+  focus: number;
+  sessions: number;
+}
+
+/** Something finished on a day of the last 364: a path's topic (of: its subject) or a goal's milestone (of: the goal). */
+export interface StandMoment {
+  day: DayString;
+  kind: 'topic' | 'milestone';
+  title: string;
+  of: string | null;
+}
+
+export interface StandData {
+  today: DayString;
+  recordStart: DayString;
+  periods: Record<StandWindow, StandPeriod>;
+  /** The last 364 days, oldest first. */
+  days: StandDay[];
+  /** Reviews still waiting from before today. */
+  openNow: number;
+  weakOpenNow: number;
+  /** What was finished in the last 364 days, oldest first (absent from an older server). */
+  moments?: StandMoment[];
+}
+
+/** LeetCode (11-22): their public username; their accepted problems are logged as practice once a day. */
+export interface LeetcodeLink {
+  username: string | null;
+  syncedAt: string | null;
+  /** Practice sessions the import has logged in all. */
+  logged: number;
+}
+
+/** The buddy's take on a window (WHERE_YOU_STAND_PLAN §9): written when asked, kept for that day. */
+export interface StandTake {
+  window: StandWindow;
+  text: string;
+  at: string;
+}
+
+/** Why the buddy can't be asked now ('ok' when it can): the buddy's own gate. */
+export type StandAskGate = 'ok' | 'off' | 'paused' | 'no_ai' | 'not_allowed' | 'ai_paused' | 'allowance' | 'buddy_cap' | 'account_cap';
+
+export interface StandTakes {
+  takes: Partial<Record<StandWindow, StandTake>>;
+  ask: StandAskGate;
+  name: string | null;
+}
+
 /** Fired when the week, its targets or a suggestion changed (Home's sections reload). */
 export const WEEK_CHANGED_EVENT = 'recollect:week-changed';
 

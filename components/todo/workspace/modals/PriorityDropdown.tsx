@@ -36,7 +36,7 @@ export function PriorityDropdown({ currentPriority, onPriorityChange, children }
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content 
-          className="w-[180px] bg-[hsl(var(--card))] rounded-xl shadow-xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-50 text-[13px] outline-none font-sans"
+          className="w-[180px] bg-[hsl(var(--card))] rounded-xl shadow-xl border border-[hsl(var(--border))] overflow-hidden text-[hsl(var(--foreground))]/90 z-[130] text-[13px] outline-none font-sans"
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}

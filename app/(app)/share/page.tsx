@@ -12,6 +12,7 @@ import { Link2, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcSwitch } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
+import { LOG_MINUTES, minutesLabel, sharedForLog } from '@/lib/learning/shareLog';
 
 const URL_IN_TEXT = /https?:\/\/[^\s<>"']+/i;
 
@@ -26,6 +27,20 @@ function ShareCard() {
     return { url, title, note: rest && rest !== title ? rest : '' };
   }, [params]);
   const [title, setTitle] = useState(shared.title);
+  // 11-22 (the owner): a shared problem or video can be logged as time instead (a problem site is practice).
+  const forLog = useMemo(() => sharedForLog(params.get('text') ?? '', { url: shared.url, title: shared.title }), [params, shared]);
+  const logIt = async (minutes: number) => {
+    if (!forLog) return;
+    setBusy(true);
+    try {
+      await learningApi.createSession({ title: title.trim() && forLog.kind === 'study' ? title.trim() : forLog.title, minutes, kind: forLog.kind, ...(forLog.problem ? { problem: forLog.problem } : {}) });
+      toast.success(`Logged ${minutesLabel(minutes)} of ${forLog.kind}`);
+      router.replace('/');
+    } catch {
+      toast.error('It wasn’t logged. Check the connection and try again.');
+      setBusy(false);
+    }
+  };
   const [revise, setRevise] = useState(false);
   const [busy, setBusy] = useState(false);
   const nothing = !shared.url && !shared.title && !shared.note;
@@ -70,6 +85,18 @@ function ShareCard() {
             <RcSwitch checked={revise} onChange={setRevise} label="Revise this" />
             Revise this
           </label>
+        </div>
+      )}
+      {forLog && (
+        <div className="mt-5">
+          <p className="text-[14px] rc-ink-2">Or log it as {forLog.kind} time:</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {LOG_MINUTES.map((m) => (
+              <RcButton key={m} size="sm" variant="outline" disabled={busy} onClick={() => void logIt(m)}>
+                {minutesLabel(m)}
+              </RcButton>
+            ))}
+          </div>
         </div>
       )}
       <div className="mt-5 flex items-center justify-end gap-2">

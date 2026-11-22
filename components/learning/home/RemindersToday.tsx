@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import axiosInstance from '@/lib/utils/axios';
-import { SectionHead } from './parts';
+import { LabelLine } from './parts';
 
 /** One of today's reminders (GET /api/reminders/today, stage 7). */
 interface HomeReminder {
@@ -47,7 +47,7 @@ export function RemindersToday() {
   if (!data?.items.length) return null;
   return (
     <section aria-labelledby="reminders-today-h">
-      <SectionHead id="reminders-today-h" title="Reminders today" />
+      <LabelLine id="reminders-today-h" title="Reminders today" />
       <ul className="flex flex-col">
         {data.items.map((r) => {
           const Icon = r.ring ? Bell : BellOff;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/utils/axios';
 import { RcButton } from '@/components/rc-ui';
-import { SectionHead } from './parts';
+import { LabelLine } from './parts';
 
 /** A decision whose day to look again has come (LOOP_COMPLETE_SPEC 4.2). */
 interface DueDecision {
@@ -113,7 +113,7 @@ export function LookAgain() {
   if (!due.length) return null;
   return (
     <section aria-labelledby="look-again-h">
-      <SectionHead id="look-again-h" title="Look again" />
+      <LabelLine id="look-again-h" title="Look again" />
       <ul className="flex flex-col gap-1">
         {due.slice(0, 3).map((d) => (
           <DecisionRow key={d._id} d={d} onDone={(id) => setDue((cur) => cur.filter((x) => x._id !== id))} />

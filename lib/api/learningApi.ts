@@ -56,6 +56,11 @@ import type {
   SessionKind,
   SessionList,
   MirrorData,
+  StandData,
+  StandTake,
+  StandTakes,
+  LeetcodeLink,
+  StandWindow,
   RevisionCalendar,
   Suggestion,
   WeekData,
@@ -417,7 +422,7 @@ export const learningApi = {
   },
 
   /** A session logged by hand (Ctrl K: "log 40m graphs"). */
-  async createSession(body: { title: string; minutes?: number | null; kind?: SessionKind; subjectId?: string | null }): Promise<WorkSession> {
+  async createSession(body: { title: string; minutes?: number | null; kind?: SessionKind; subjectId?: string | null; problem?: string | null }): Promise<WorkSession> {
     return call(() => axiosInstance.post('/api/sessions', body));
   },
 
@@ -437,6 +442,35 @@ export const learningApi = {
 
   async getMirror(): Promise<MirrorData> {
     return call(() => axiosInstance.get('/api/mirror'));
+  },
+
+  /** Where you stand: the last week, month and year against the span before (WHERE_YOU_STAND_PLAN §5.5). */
+  async getStand(): Promise<StandData> {
+    return call(() => axiosInstance.get('/api/mirror/stand'));
+  },
+
+  /** LeetCode (11-22): the username whose accepted problems are logged as practice, when it last ran, how many it logged. */
+  async getLeetcode(): Promise<LeetcodeLink> {
+    return call(() => axiosInstance.get('/api/leetcode'));
+  },
+
+  /** Set (checked against LeetCode, then imported at once) or clear (null). */
+  async setLeetcode(username: string | null): Promise<LeetcodeLink & { imported?: number }> {
+    return call(() => axiosInstance.put('/api/leetcode', { username }));
+  },
+
+  async syncLeetcode(): Promise<LeetcodeLink & { imported: number }> {
+    return call(() => axiosInstance.post('/api/leetcode/sync'));
+  },
+
+  /** Today's takes by the buddy on Where you stand, and whether it can be asked now (WHERE_YOU_STAND_PLAN §9). */
+  async getStandTakes(): Promise<StandTakes> {
+    return call(() => axiosInstance.get('/api/mirror/stand/takes'));
+  },
+
+  /** The buddy's take on a window: today's if it wrote one, else a new one (one model call). */
+  async askStandTake(window: StandWindow): Promise<StandTake> {
+    return call(() => axiosInstance.post('/api/mirror/stand/takes', { window }));
   },
 
   /** The week (LOOP_COMPLETE_SPEC 1.6): its targets with what is done, last week, the review. */

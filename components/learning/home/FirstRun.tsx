@@ -79,7 +79,7 @@ export function FirstRun({ className }: { className?: string }) {
       title: 'Bring in your other chats',
       text: 'A fast start: an export from Claude or ChatGPT, and your buddy reads your own messages with their dates.',
       action: (
-        <Link href="/you#you-import" className="rc-btn rc-btn--quiet rc-btn--sm">
+        <Link href="/you?tab=settings#you-import"className="rc-btn rc-btn--quiet rc-btn--sm">
           Bring them in
         </Link>
       ),

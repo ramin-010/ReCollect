@@ -464,10 +464,15 @@ export function RcMenu({ label, actions, children, align = 'end' }: { label: str
 
 export const RcCheck = forwardRef<
   HTMLButtonElement,
-  { checked: boolean; onToggle: () => void; label: string; disabled?: boolean; className?: string }
->(function RcCheck({ checked, onToggle, label, disabled, className }, ref) {
+  { checked: boolean; onToggle: () => void; label: string; disabled?: boolean; className?: string } & Omit<
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    'onClick' | 'children' | 'role' | 'type'
+  > & { onClick?: React.MouseEventHandler<HTMLButtonElement> }
+>(function RcCheck({ checked, onToggle, label, disabled, className, onClick, ...rest }, ref) {
+  // Other props pass through, so a check can also open a menu (Home's Revise: Complete or Quiz me on it).
   return (
     <button
+      {...rest}
       ref={ref}
       type="button"
       role="checkbox"
@@ -476,6 +481,7 @@ export const RcCheck = forwardRef<
       disabled={disabled}
       onClick={(e) => {
         e.stopPropagation();
+        onClick?.(e);
         onToggle();
       }}
       className={cn('rc-check rc-hit', className)}

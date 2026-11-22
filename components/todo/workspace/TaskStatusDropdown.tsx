@@ -28,7 +28,7 @@ export function TaskStatusDropdown({ currentStatus, onStatusChange, children }: 
       <Popover.Trigger asChild>{children}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={cn(rcScope, 'rc-float z-50 w-[188px] rounded-[10px] p-1 text-[14px] outline-none')}
+          className={cn(rcScope, 'rc-float z-[130] w-[188px] rounded-[10px] p-1 text-[14px] outline-none')}
           sideOffset={4}
           align="start"
           onClick={(e) => e.stopPropagation()}

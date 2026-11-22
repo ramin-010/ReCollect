@@ -40,6 +40,12 @@
   --rc-kind-practice: #d95926;
   --rc-kind-build: #199e70;
   --rc-kind-review: #c98500;
+  /* Activity heat (the year grid, the owner 11-22: GitHub's green steps, not greys): empty, then less to more; lighter is more on dark */
+  --rc-heat-0: #2a2a28;
+  --rc-heat-1: #1e4532;
+  --rc-heat-2: #226c47;
+  --rc-heat-3: #2f9a5e;
+  --rc-heat-4: #4fcb7c;
   --rc-surface: #202020;
   --rc-surface-2: #262626;
   --rc-surface-float: #252525;
@@ -50,6 +56,8 @@
   --rc-ink-1: #f0efed;
   --rc-ink-2: #ada9a3;
   --rc-ink-3: #8e8b86;
+  /* Home's right sidebar: a step under ink-1 so the centre keeps the eye (the owner, 11-22). */
+  --rc-ink-rail: #d6d4d0;
   --rc-icon: #8e8b86;
   --rc-ctl: #7d7a75;
   --rc-field: rgba(255, 255, 255, 0.045);
@@ -100,6 +108,12 @@ html.light .rc,
   --rc-kind-practice: #eb6834;
   --rc-kind-build: #1baf7a;
   --rc-kind-review: #eda100;
+  /* Activity heat, light steps: darker is more */
+  --rc-heat-0: #ebeae7;
+  --rc-heat-1: #b5e2c2;
+  --rc-heat-2: #6cc48c;
+  --rc-heat-3: #34985c;
+  --rc-heat-4: #1f6a40;
   --rc-surface: #ffffff;
   --rc-surface-2: #f4f3f2;
   --rc-surface-float: #ffffff;
@@ -110,6 +124,7 @@ html.light .rc,
   --rc-ink-1: #2c2c2b;
   --rc-ink-2: #5f5e59;
   --rc-ink-3: #73706b;
+  --rc-ink-rail: #454441;
   --rc-icon: #8e8b86;
   --rc-ctl: #8e8b86;
   --rc-field: #f7f7f5;
@@ -1068,4 +1083,210 @@ html:not(.light) .rc.rc-btn--danger-solid {
   padding: 6px 8px;
   font-size: 13px;
   color: var(--rc-ink-3);
+}
+
+/* Home's rail: a right sidebar that scrolls on its own (wheel, keys, touch) with no scrollbar shown */
+.rc-rail {
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+
+.rc-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* The sidebar's toggle (ChatGPT's): a soft square, filled while the sidebar is open */
+.rc-panel-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--rc-r-md, 8px);
+}
+
+.rc-panel-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--rc-ink-1) 9%, transparent);
+  color: var(--rc-ink-1);
+}
+
+.rc-panel-toggle:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+/* Home's Due today: a ticked task leaves. A line is drawn through its title from the centre out
+   (240 ms), it fades, then the row folds away (the owner, 11-21). The tick is saved at the end. */
+.rc-task-title::after,
+.rc-strike::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.rc-task-row[data-leaving] .rc-task-title {
+  text-decoration: none;
+  color: var(--rc-ink-3);
+  transition: color 240ms ease;
+}
+
+.rc-task-row[data-leaving] .rc-task-title::after {
+  animation: rc-strike 240ms var(--rc-ease-out) forwards;
+}
+
+.rc-task-row[data-leaving] {
+  overflow: hidden;
+  pointer-events: none;
+  animation: rc-leave 520ms ease-in 240ms forwards;
+}
+
+.rc-task-row[data-leaving] [role='checkbox'] {
+  pointer-events: auto;
+}
+
+@keyframes rc-strike {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rc-leave {
+  0% {
+    opacity: 1;
+    max-height: 64px;
+  }
+  45% {
+    opacity: 0;
+    max-height: 64px;
+  }
+  100% {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-task-row[data-leaving] .rc-task-title::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+  .rc-task-row[data-leaving] {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Home's Revise: a row ticked now gets the same line from the centre, then moves to the end of the
+   list (framer-motion's layout move) and rests there faded. */
+.rc-rev-row[data-struck] .rc-strike::after {
+  animation: rc-strike 240ms var(--rc-ease-out) forwards;
+}
+
+.rc-rev-row {
+  transition: opacity 320ms ease;
+}
+
+.rc-rev-row[data-settled] {
+  opacity: 0.55;
+}
+
+.rc-rev-row[data-settled]:hover,
+.rc-rev-row[data-settled]:focus-within {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-rev-row[data-struck] .rc-strike::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* Revise's time line: the dashes fill with the session's time (1 s steps, eased so it reads as flow) */
+.rc-budget.rc-time > span {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 0;
+}
+
+.rc-budget.rc-time > span > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--rc-ink-2);
+  transition: width 1s linear;
+}
+
+.rc-budget.rc-time[data-over] > span > i {
+  background: var(--rc-attn-mark);
+}
+
+.rc-budget.rc-time[data-ended] > span > i {
+  background: var(--rc-stamp-mark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-budget.rc-time > span > i {
+    transition: none;
+  }
+}
+
+/* The task window as a side sheet (11-21): wider than the plain sheet, the full height */
+@media (min-width: 640px) {
+  .rc-sheet.rc-task-sheet {
+    width: min(600px, calc(100vw - 16px));
+  }
+}
+
+.rc-task-sheet .rc-prop-clear {
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.rc-task-sheet div:hover > .rc-prop-clear,
+.rc-task-sheet .rc-prop-clear:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .rc-task-sheet .rc-prop-clear {
+    opacity: 1;
+  }
+}
+
+.rc-task-notes .ProseMirror {
+  min-height: 200px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--rc-ink-1);
+}
+
+/* Where you stand (WHERE_YOU_STAND_PLAN §3.8): the one moment, the window switch redraws the grid,
+   the hours and the rows with a short ease; reduced motion jumps. */
+@keyframes rc-ws-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rc-ws-in {
+  animation: rc-ws-in 220ms var(--rc-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-ws-in {
+    animation: none;
+  }
 }

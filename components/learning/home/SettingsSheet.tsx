@@ -6,7 +6,8 @@ import { FolderPlus, RotateCw, Sparkles } from 'lucide-react';
 import { disablePush, enablePush, pushState, sendTestPush, type PushState } from '@/lib/push';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { addDays, type DayString } from '@/lib/learning/engine';
-import { BUDGET_MAX, BUDGET_MIN } from '@/lib/learning/types';
+import { BUDGET_MAX, BUDGET_MIN, type LeetcodeLink } from '@/lib/learning/types';
+import { learningApi } from '@/lib/api/learningApi';
 import { MINUTES_LATER_CYCLE } from '@/lib/learning/plan';
 import { RcButton, RcSelectList, RcSheet, RcSkel, RcStepper, RcSwitch, type SelectOption } from '@/components/rc-ui';
 import { weekdayDay } from './format';
@@ -90,6 +91,106 @@ function PushRow({ time }: { time: string }) {
         </div>
       )}
     </>
+  );
+}
+
+const AGO = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+function agoWords(iso: string): string {
+  const minutes = Math.round((Date.parse(iso) - Date.now()) / 60_000);
+  return Math.abs(minutes) < 60 ? AGO.format(minutes, 'minute') : Math.abs(minutes) < 48 * 60 ? AGO.format(Math.round(minutes / 60), 'hour') : AGO.format(Math.round(minutes / 1440), 'day');
+}
+
+/**
+ * LeetCode (11-22, the owner): their public username; once a day their newly accepted problems are logged as practice
+ * (the time logged, the wave, active days). LeetCode's public data, not an official API: the row says so.
+ */
+function LeetcodeRow() {
+  const [link, setLink] = useState<LeetcodeLink | null | 'failed'>(null);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState<'save' | 'sync' | 'stop' | null>(null);
+  useEffect(() => {
+    learningApi.getLeetcode().then(
+      (l) => {
+        setLink(l);
+        setName(l.username ?? '');
+      },
+      () => setLink('failed')
+    );
+  }, []);
+  if (link === null || link === 'failed') return null;
+  const words = (n: number | undefined) => (n ? `${n} new ${n === 1 ? 'problem' : 'problems'} logged.` : 'Nothing new to log.');
+  const save = async () => {
+    const clean = name.trim();
+    if (!clean) return;
+    setBusy('save');
+    try {
+      const r = await learningApi.setLeetcode(clean);
+      setLink(r);
+      toast.success(`Connected to ${r.username}. ${words(r.imported)}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'That didn’t save. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const sync = async () => {
+    setBusy('sync');
+    try {
+      const r = await learningApi.syncLeetcode();
+      setLink(r);
+      toast.success(words(r.imported));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'LeetCode didn’t answer. Try again later.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const stop = async () => {
+    setBusy('stop');
+    try {
+      setLink(await learningApi.setLeetcode(null));
+      setName('');
+    } catch {
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="py-4 border-t border-[var(--rc-line)]">
+      <label htmlFor="set-leetcode" className="block text-[15px] font-[600] text-[var(--rc-ink-1)]">
+        LeetCode
+      </label>
+      <p className="mt-1 text-[13.5px] leading-[1.4] rc-ink-3">
+        {link.username
+          ? `Your accepted problems come in as practice once a day${link.syncedAt ? `, last ${agoWords(link.syncedAt)}` : ''}. ${link.logged} logged so far.`
+          : 'Your public username: once a day your newly accepted problems are logged as practice. It reads LeetCode’s public profile, so it needs no password.'}
+      </p>
+      <form
+        className="mt-2.5 flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <input id="set-leetcode" className="rc-input w-[200px]" value={name} maxLength={40} placeholder="Username" aria-label="LeetCode username" onChange={(e) => setName(e.target.value)} />
+        {(!link.username || name.trim() !== link.username) && (
+          <RcButton type="submit" size="sm" variant="outline" busy={busy === 'save'} disabled={!name.trim()}>
+            {link.username ? 'Change' : 'Connect'}
+          </RcButton>
+        )}
+        {link.username && name.trim() === link.username && (
+          <>
+            <RcButton size="sm" variant="outline" busy={busy === 'sync'} onClick={() => void sync()}>
+              Import now
+            </RcButton>
+            <RcButton size="sm" variant="quiet" busy={busy === 'stop'} onClick={() => void stop()}>
+              Stop
+            </RcButton>
+          </>
+        )}
+      </form>
+    </div>
   );
 }
 
@@ -216,6 +317,7 @@ export function SettingsSheet({
             help="Shows the timeline, Day Manager and Wrap up day on Home. Off by default."
             control={<RcSwitch id="set-routine" label="Time blocks and day review" checked={settings.routineEnabled} onChange={(on) => void updateSettings({ routineEnabled: on })} />}
           />
+          <LeetcodeRow />
           <div className="py-4 border-t border-[var(--rc-line)]">
             <label htmlFor="set-tz" className="block text-[15px] font-[600] text-[var(--rc-ink-1)]">
               Time zone

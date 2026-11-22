@@ -6,7 +6,7 @@
  * shows as a receipt with Undo. Today's Tell opens it ready to type (?tell=1); a text shared to the phone app arrives in
  * the field (?q=). Inside the phone app the mic speaks into the field (Android's own recognizer, through the shell).
  */
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowUp, Check, Mic, SquarePen, Square } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +17,9 @@ import { clockWords, dayWords } from '@/components/phone/parts';
 import { listen, useShell } from '@/components/phone/shell';
 import { useKept } from '@/components/phone/kept';
 import { useNoAi } from '@/components/ai/NoAiNotice';
+import { learningApi } from '@/lib/api/learningApi';
+import { parseSessionLog, formatMinutes } from '@/lib/learning/sessionLog';
+import { LOG_MINUTES, minutesLabel, sharedForLog } from '@/lib/learning/shareLog';
 
 interface Shown {
   key: string;
@@ -70,6 +73,9 @@ function Chat() {
   const [items, setItems] = useKept<Shown[] | null>('buds:items', null);
   const [text, setText] = useState(params.get('q') ?? '');
   const [busy, setBusy] = useState(false);
+  // 11-22 (the owner): a link shared to the app (a LeetCode problem, a YouTube video) can be logged as time in one tap.
+  const shared = useMemo(() => sharedForLog(params.get('q') ?? ''), [params]);
+  const [logged, setLogged] = useState(false);
   // Stage 10: without AI, one quiet line instead of a box that would only fail.
   const noAi = useNoAi();
   const stopRef = useRef<AbortController | null>(null);
@@ -117,9 +123,33 @@ function Chat() {
 
   const typing = (on: boolean) => document.querySelector('.pw')?.classList.toggle('is-typing', on);
 
+  const logShared = async (minutes: number) => {
+    if (!shared) return;
+    try {
+      await learningApi.createSession({ title: shared.title, minutes, kind: shared.kind, ...(shared.problem ? { problem: shared.problem } : {}) });
+      setLogged(true);
+      setText('');
+      toast.success(`Logged ${minutesLabel(minutes)} of ${shared.kind}`);
+    } catch {
+      toast.error('It wasn’t logged. Try again.');
+    }
+  };
+
   const send = async () => {
     const clean = text.trim();
     if (!clean || busy) return;
+    // "log 40m graphs", as in the web's Ctrl K: a session logged by hand, not a message.
+    const log = parseSessionLog(clean);
+    if (log) {
+      try {
+        await learningApi.createSession(log);
+        setText('');
+        toast.success(`Logged ${formatMinutes(log.minutes)} of ${log.kind}: ${log.title}`);
+      } catch {
+        toast.error('It wasn’t logged. Try again.');
+      }
+      return;
+    }
     setText('');
     setBusy(true);
     const now = new Date().toISOString();
@@ -223,6 +253,21 @@ function Chat() {
           <div ref={endRef} />
         </div>
       </div>
+      {shared && !logged ? (
+        <div className="plain-card" style={{ margin: '0 var(--gutter) 10px' }}>
+          <p className="row-title">Log it as {shared.kind} time?</p>
+          <p className="meta" style={{ marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {shared.title}
+          </p>
+          <div className="chips" style={{ marginTop: 12 }}>
+            {LOG_MINUTES.map((m) => (
+              <button key={m} type="button" className="chip" onClick={() => void logShared(m)}>
+                {minutesLabel(m)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {noAi ? (
         <div className="composer">
           <p className="voice-s">Your buddy needs AI. Add your own Claude key in the web app’s Settings › AI, or connect your own Claude: it has the same tools.</p>

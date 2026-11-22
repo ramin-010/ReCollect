@@ -9,7 +9,8 @@ import { useLearningStore } from '@/lib/store/learningStore';
 import { WEEK_CHANGED_EVENT, WEEK_TARGET_MAX_CHARS, WEEK_TARGETS_MAX, type WeekData, type WeekTarget } from '@/lib/learning/types';
 import { formatMinutes } from '@/lib/learning/sessionLog';
 import { RcButton, RcCheck, RcIconButton, RcSkel } from '@/components/rc-ui';
-import { SectionFailed, SectionHead } from './parts';
+import { LabelLine, SectionFailed } from './parts';
+import { Suggested } from './Suggested';
 
 export const weekChanged = () => window.dispatchEvent(new Event(WEEK_CHANGED_EVENT));
 
@@ -164,7 +165,7 @@ export function ThisWeek() {
   if (week === 'failed') {
     return (
       <section aria-labelledby="week-h">
-        <SectionHead id="week-h" title="This week" />
+        <LabelLine id="week-h" title="This week" />
         <SectionFailed what="this week’s targets" onRetry={weekChanged} />
       </section>
     );
@@ -192,13 +193,7 @@ export function ThisWeek() {
 
   return (
     <section aria-labelledby="week-h">
-      <SectionHead id="week-h" title="This week">
-        {week.targets.length > 0 && (
-          <span className="rc-meta rc-num pr-1">
-            {done} of {week.targets.length} done
-          </span>
-        )}
-      </SectionHead>
+      <LabelLine id="week-h" title="This week" meta={week.targets.length > 0 ? `${done} of ${week.targets.length} done` : undefined} />
       <ul>
         {week.targets.map((t) => (
           <TargetRow key={t._id} t={t} onChanged={weekChanged} />
@@ -229,7 +224,8 @@ export function ThisWeek() {
           </li>
         )}
       </ul>
-      {week.targets.length === 0 && <p className="rc-meta mt-2">Up to five. Targets your study chat ties to a topic or a milestone tick themselves.</p>}
+      {/* What the week's review, the coach or an agent propose, in the same list (the owner, 11-21). */}
+      <Suggested embedded />
     </section>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Check, Flag, Plus, Target, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { RcButton, RcSheet, RcSkel } from '@/components/rc-ui';
 import { aiApi, type CoachNote } from '@/lib/api/aiApi';
@@ -9,12 +10,21 @@ import { AI_PAUSED_WORDS, recallErrorKind } from '@/lib/api/recallApi';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { formatStampDay } from '@/components/docs/page/format';
 
-const LINES: { key: keyof CoachNote['lines']; label: string }[] = [
-  { key: 'strong', label: 'Going well' },
-  { key: 'slipping', label: 'Slipping' },
-  { key: 'fix', label: 'The one fix' },
-  { key: 'deadline', label: 'Your deadline' },
+/** The note's four parts, each with a mark in its tone (the owner, 11-22: "make it readable"). */
+const LINES: { key: keyof CoachNote['lines']; label: string; Icon: LucideIcon; tone: string }[] = [
+  { key: 'strong', label: 'Going well', Icon: TrendingUp, tone: 'text-[var(--rc-good)]' },
+  { key: 'slipping', label: 'Slipping', Icon: TrendingDown, tone: 'text-[var(--rc-attn)]' },
+  { key: 'fix', label: 'The one fix', Icon: Target, tone: 'text-[var(--rc-ink-1)]' },
+  { key: 'deadline', label: 'Your deadline', Icon: Flag, tone: 'text-[var(--rc-ink-2)]' },
 ];
+
+/** A part's sentences, one bullet each ("Monday was … . When you sit down …" reads as two points). */
+function points(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9“"‘'])/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 /**
  * The weekly coach (PLAN §4, D3): five lines on the last 7 days (going well, slipping, the one fix,
@@ -109,21 +119,44 @@ export function CoachSheet({ open, onOpenChange }: { open: boolean; onOpenChange
           {note && <p className="rc-meta mt-3">The last note is more than a week old.</p>}
         </div>
       ) : (
-        <div className="flex flex-col gap-5">
-          {LINES.map((l) => (
-            <div key={l.key}>
-              <p className="rc-field-label">{l.label}</p>
-              <p className="rc-body mt-1">{note.lines[l.key]}</p>
-            </div>
-          ))}
-          <div>
-            <p className="rc-field-label">Focus lines to try</p>
-            <ul className="mt-1.5 flex flex-col">
+        <div className="flex flex-col gap-4">
+          {LINES.map(({ key, label, Icon, tone }) => {
+            const list = points(note.lines[key]);
+            return (
+              <section
+                key={key}
+                aria-label={label}
+                className={cn(key === 'fix' ? 'rounded-[12px] bg-[color-mix(in_srgb,var(--rc-ink-1)_4%,transparent)] px-3.5 py-3' : 'border-b border-[var(--rc-line)] pb-4')}
+              >
+                <h3 className="flex items-center gap-2 text-[13px] font-[600] text-[var(--rc-ink-1)]">
+                  <Icon className={cn('h-[15px] w-[15px] shrink-0', tone)} strokeWidth={2} aria-hidden />
+                  {label}
+                </h3>
+                <ul className="mt-2 flex flex-col gap-1.5">
+                  {list.map((t, i) => (
+                    <li key={i} className="flex gap-2.5 text-[15px] leading-[1.5] text-[var(--rc-ink-1)]">
+                      <span aria-hidden className="mt-[9px] h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--rc-ink-3)]" />
+                      <span className="min-w-0">{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+          <section aria-label="Focus lines to try" className="pt-1">
+            <h3 className="text-[13px] font-[600] text-[var(--rc-ink-1)]">Focus lines to try</h3>
+            <ol className="mt-1.5 flex flex-col">
               {note.focus.map((f, i) => (
-                <li key={f} className="rc-row rc-hoverable -mx-2 flex items-start justify-between gap-3 px-2 py-[7px]">
-                  <span className="rc-body min-w-0">{f}</span>
+                <li key={f} className="rc-row rc-hoverable -mx-2 flex items-start gap-3 px-2 py-[7px]">
+                  <span className="rc-num mt-[1px] grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--rc-ink-1)_8%,transparent)] text-[12px] font-[600] text-[var(--rc-ink-2)]">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 text-[15px] leading-[1.5]">{f}</span>
                   {added.has(i) ? (
-                    <span className="rc-meta shrink-0 pt-[2px]">Added to today</span>
+                    <span className="rc-meta inline-flex shrink-0 items-center gap-1 pt-[2px]">
+                      <Check className="h-3.5 w-3.5" aria-hidden />
+                      Added
+                    </span>
                   ) : (
                     <RcButton size="sm" variant="quiet" icon={<Plus className="h-4 w-4" />} onClick={() => void addFocus(i, f)}>
                       Add to today
@@ -131,8 +164,8 @@ export function CoachSheet({ open, onOpenChange }: { open: boolean; onOpenChange
                   )}
                 </li>
               ))}
-            </ul>
-          </div>
+            </ol>
+          </section>
         </div>
       )}
     </RcSheet>

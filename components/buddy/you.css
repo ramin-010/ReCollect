@@ -138,12 +138,6 @@
   outline-offset: 2px;
 }
 
-.you-learning {
-  margin-top: 56px;
-  padding-top: 20px;
-  border-top: 1px solid var(--rc-line);
-}
-
 .you-setting {
   display: flex;
   align-items: center;

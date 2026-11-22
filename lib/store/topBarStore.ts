@@ -12,7 +12,9 @@ interface TopBarState {
   crumbs: Crumb[] | null;
   /** Page actions at the right of the top bar (presence, Share, the page menu). */
   actions: ReactNode | null;
-  setTopBar: (s: { crumbs?: Crumb[] | null; actions?: ReactNode | null }) => void;
+  /** A page that draws its own header at the very top (Home's header options, the owner 11-22): the bar is hidden from 1280 up. */
+  hiddenOnDesktop: boolean;
+  setTopBar: (s: { crumbs?: Crumb[] | null; actions?: ReactNode | null; hiddenOnDesktop?: boolean }) => void;
   clearTopBar: () => void;
 }
 
@@ -20,6 +22,7 @@ interface TopBarState {
 export const useTopBar = create<TopBarState>((set) => ({
   crumbs: null,
   actions: null,
+  hiddenOnDesktop: false,
   setTopBar: (s) => set(s),
-  clearTopBar: () => set({ crumbs: null, actions: null }),
+  clearTopBar: () => set({ crumbs: null, actions: null, hiddenOnDesktop: false }),
 }));

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown, Lightbulb, X } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { learningApi } from '@/lib/api/learningApi';
@@ -9,6 +9,7 @@ import { useLearningStore } from '@/lib/store/learningStore';
 import { formatMinutes } from '@/lib/learning/sessionLog';
 import { WEEK_CHANGED_EVENT, type Suggestion, type WeekData, type WeekSummary } from '@/lib/learning/types';
 import { RcButton, RcIconButton } from '@/components/rc-ui';
+import { LabelLine } from './parts';
 import { weekChanged } from './ThisWeek';
 
 const ACCEPT_LABEL: Record<Suggestion['kind'], string> = {
@@ -45,16 +46,20 @@ function weekLine(w: WeekSummary): string | null {
   return parts.length ? parts.join(' · ') : null;
 }
 
+/** How many proposals stand on the page before "Show all". */
+const PREVIEW = 2;
+
 const from = (s: Suggestion): string | null =>
   s.proposedBy === 'agent' ? `from ${s.agentName ?? 'your agent'}` : s.proposedBy === 'coach' ? 'from the coach' : s.proposedBy === 'buddy' ? 'from your buddy' : null;
 
 /**
  * Suggested (LOOP_COMPLETE_SPEC 1.6, ECOSYSTEM_PLAN change 9): the one place for every proposal, from
- * the weekly review, the coach or an agent. Shown only when something waits. When the weekly review
- * is due it opens as a card ("Plan next week" on Sunday): last week in a line, the proposals, Add all
- * or Skip. Otherwise it is one quiet line that opens. Nothing changes until the user accepts.
+ * the weekly review, the coach or an agent. Shown only when something waits, in the week's part of
+ * Home: the first two on the page, the rest behind "Show all" (the owner, 11-21: the whole list
+ * stood between today's reviews and today's tasks). When the weekly review is due the heading says
+ * so ("Plan next week" on Sunday) with last week in a line. Nothing changes until the user accepts.
  */
-export function Suggested() {
+export function Suggested({ embedded = false }: { embedded?: boolean } = {}) {
   const [items, setItems] = useState<Suggestion[]>([]);
   const [week, setWeek] = useState<WeekData | null>(null);
   const [open, setOpen] = useState(false);
@@ -88,7 +93,6 @@ export function Suggested() {
   const reviewBatch = week ? `week:${week.review.weekStart}` : null;
   const isReview = !!reviewBatch && items.some((s) => s.batch === reviewBatch);
   const nextWeek = !!week && week.review.weekStart > week.weekStart;
-  const expanded = isReview || open;
   const last = isReview && week ? weekLine(week.lastWeek) : null;
 
   const settle = (ids: string[]) => setItems((cur) => cur.filter((s) => !ids.includes(s._id)));
@@ -142,44 +146,25 @@ export function Suggested() {
   };
 
   const title = isReview ? (nextWeek ? 'Plan next week' : 'Plan this week') : 'Suggested';
+  const shown = open ? items : items.slice(0, PREVIEW);
+  const hidden = items.length - shown.length;
 
-  if (!expanded) {
-    const names = [...new Set(items.map(from).filter(Boolean))];
-    return (
-      <button type="button" onClick={() => setOpen(true)} className="rc-row rc-hoverable mt-0.5 flex w-full items-center gap-2 rounded-[6px] px-2 py-[7px] text-left" aria-expanded={false}>
-        <Lightbulb className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
-        <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">
-          {items.length} {items.length === 1 ? 'suggestion' : 'suggestions'}
-        </span>
-        {names.length > 0 && <span className="rc-meta">{names.join(', ')}</span>}
-        <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
-      </button>
-    );
-  }
-
+  // Inside This week (the owner, 11-21: "This week and Plan this week merged"): the proposals are
+  // rows of the same list, each with a bulb where a target has its check.
+  const Wrap = embedded ? 'div' : 'section';
   return (
-    <section aria-labelledby="suggested-h" className="rc-card mt-6 overflow-hidden">
-      <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
-        <div className="min-w-0">
-          <h2 id="suggested-h" className="rc-h2">
-            {title}
-          </h2>
-          {last && <p className="rc-meta rc-num mt-0.5">Last week: {last}</p>}
-        </div>
-        {!isReview && (
-          <RcButton size="sm" variant="quiet" onClick={() => setOpen(false)}>
-            Hide
-          </RcButton>
-        )}
-      </div>
-      <ul className="mt-2">
-        {items.map((s) => (
-          <li key={s._id} className="rc-row flex items-start gap-3 border-t border-[var(--rc-line)] px-4 py-2.5">
+    <Wrap {...(embedded ? { 'aria-label': title } : { 'aria-labelledby': 'suggested-h' })}>
+      {!embedded && <LabelLine id="suggested-h" title={title} meta={`${items.length} waiting`} />}
+      {last && !embedded && <p className="rc-meta rc-num mt-2">Last week: {last}</p>}
+      <ul>
+        {shown.map((s) => (
+          <li key={s._id} className={embedded ? 'rc-row flex items-start gap-3 py-[7px]' : 'rc-row flex items-start gap-3 py-2'}>
+            {embedded && <Lightbulb className="mt-[2px] h-[18px] w-[18px] shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-label="Suggested" />}
             <div className="min-w-0 flex-1">
-              <p className="text-[var(--rc-fs-body)] leading-[1.4] text-[var(--rc-ink-1)] break-words">{s.text}</p>
+              <p className={cn('text-[var(--rc-fs-body)] leading-[1.4] break-words', 'text-[var(--rc-ink-1)]')}>{s.text}</p>
               {(s.reason || from(s)) && <p className="rc-meta mt-0.5 break-words">{[s.reason, from(s)].filter(Boolean).join(' · ')}</p>}
             </div>
-            <div className="-my-0.5 flex shrink-0 items-center gap-0.5">
+            <div className="-my-0.5 -mr-1.5 flex shrink-0 items-center gap-0.5">
               <RcButton size="sm" variant="outline" busy={busy === s._id} disabled={!!busy} onClick={() => void accept(s)}>
                 {ACCEPT_LABEL[s.kind]}
               </RcButton>
@@ -190,16 +175,28 @@ export function Suggested() {
           </li>
         ))}
       </ul>
-      {group.length > 1 && (
-        <div className={cn('flex items-center justify-end gap-2 border-t border-[var(--rc-line)] px-4 py-2.5')}>
-          <RcButton size="sm" variant="quiet" disabled={!!busy} onClick={() => void decideAll(false)}>
-            {isReview ? 'Skip this week' : 'Dismiss all'}
-          </RcButton>
-          <RcButton size="sm" variant="main" busy={busy === 'all'} disabled={!!busy} onClick={() => void decideAll(true)}>
-            Add all
-          </RcButton>
+      {(items.length > PREVIEW || group.length > 1) && (
+        <div className={cn('mt-1.5 flex flex-wrap items-center justify-between gap-2', embedded && 'pl-[30px]')}>
+          {items.length > PREVIEW ? (
+            <RcButton size="sm" variant="quiet" className="-ml-2" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+              {open ? 'Show fewer' : `Show all ${items.length}`}
+            </RcButton>
+          ) : (
+            <span />
+          )}
+          {(open || hidden === 0) && group.length > 1 && (
+            <div className="-mr-1.5 flex items-center gap-2">
+              <RcButton size="sm" variant="quiet" disabled={!!busy} onClick={() => void decideAll(false)}>
+                {isReview ? 'Skip this week' : 'Dismiss all'}
+              </RcButton>
+              <RcButton size="sm" variant="outline" busy={busy === 'all'} disabled={!!busy} onClick={() => void decideAll(true)}>
+                Add all
+              </RcButton>
+            </div>
+          )}
         </div>
       )}
-    </section>
+      {last && embedded && <p className="rc-meta rc-num mt-1 pl-[30px]">Last week: {last}</p>}
+    </Wrap>
   );
 }

@@ -17,6 +17,7 @@ import { useViewStore } from '@/lib/store/viewStore';
 import { QuickTaskAdd } from '@/components/todo/QuickTaskAdd';
 import { UserSettings } from '@/components/settings/UserSettings';
 import { features } from '@/lib/features';
+import { useTopBar } from '@/lib/store/topBarStore';
 
 export default function AppLayout({
   children,
@@ -42,6 +43,8 @@ export default function AppLayout({
   const isTodoInboxScreen = pathname === '/todo' && INBOX_FILTERS.includes(todoFilter);
   const hideNavbar = isDocEditorOpen || (pathname === '/slides' && isSlideFullscreen) || pathname === '/workspace' || pathname?.startsWith('/todo');
   const hideSidebar = (pathname === '/slides' && isSlideFullscreen);
+  // A page that draws its own header at the top (Home's header options) hides the bar from 1024 up.
+  const topBarHiddenOnDesktop = useTopBar((s) => s.hiddenOnDesktop);
   
 
   // Global keyboard shortcut for Ctrl+K (Quick Add Task)
@@ -115,7 +118,7 @@ export default function AppLayout({
                 initial={{ opacity: 0, y: -20, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -20, height: 0 }}
-                className="shrink-0 z-40 relative"
+                className={`shrink-0 z-40 relative${topBarHiddenOnDesktop ? ' xl:hidden' : ''}`}
               >
                 <Navbar />
               </motion.div>

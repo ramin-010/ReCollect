@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { RcButton } from '@/components/rc-ui';
 import { agentApi, type AgentEdit } from '@/lib/api/agentApi';
 import { formatRelative } from '@/components/docs/page/format';
-import { SectionHead } from './parts';
+import { LabelLine } from './parts';
 
 const FOLD_AFTER = 3;
 
@@ -66,13 +66,13 @@ export function FromAgent() {
 
   return (
     <section aria-labelledby="agent-h">
-      <SectionHead id="agent-h" title="From your agent">
+      <LabelLine id="agent-h" title="From your agent">
         {edits.length > 1 && (
           <RcButton size="sm" variant="quiet" onClick={() => void keep(edits.map((e) => e.id))}>
             Keep all
           </RcButton>
         )}
-      </SectionHead>
+      </LabelLine>
       {folded && (
         <button type="button" onClick={() => setExpanded(true)} className="rc-row rc-hoverable -mx-2 flex w-[calc(100%+16px)] items-center gap-3 px-2 py-[7px] text-left" aria-expanded={false}>
           <Bot className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />

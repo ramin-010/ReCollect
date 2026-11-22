@@ -79,7 +79,7 @@ function GoalCard({ goal, today, onEdit }: { goal: TodayGoal; today: DayString; 
   const line = forecastLine(goal, today);
 
   return (
-    <article className="rc-card px-3.5 pt-3 pb-3.5" aria-label={`Goal: ${goal.title}`}>
+    <article className="rounded-[14px] bg-[color-mix(in_srgb,var(--rc-ink-1)_3.5%,var(--rc-ground))] px-3.5 pt-3 pb-3.5" aria-label={`Goal: ${goal.title}`}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="rc-title min-w-0 pt-0.5">{goal.title}</h3>
         <RcIconButton label={`Edit goal “${goal.title}”`} size="sm" className="-mr-1.5 -mt-0.5" onClick={onEdit}>
@@ -174,9 +174,10 @@ export function GoalsRail({
 }) {
   return (
     <section aria-labelledby="goals-h">
-      <SectionHead id="goals-h" title="Goals">
+      {/* The heading and New goal a little faded (the owner, 11-22): the card leads. */}
+      <SectionHead id="goals-h" title="Goals" className="!mb-[4px] [&_h2]:ml-[3px] [&_h2]:!text-[var(--rc-ink-3)]">
         {goals && goals.length > 0 && goals.length < GOAL_LIMIT && (
-          <RcButton variant="quiet" size="sm" className="-mr-2" icon={<Plus />} onClick={onCreate}>
+          <RcButton variant="quiet" size="sm" className="-mr-2 !text-[var(--rc-ink-3)] hover:!text-[var(--rc-ink-1)]" icon={<Plus />} onClick={onCreate}>
             New goal
           </RcButton>
         )}

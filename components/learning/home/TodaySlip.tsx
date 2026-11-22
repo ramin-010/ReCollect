@@ -1,18 +1,19 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, ChevronDown, CircleHelp, FileText, MoreHorizontal, Pencil, SlidersHorizontal, StickyNote } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, CircleHelp, Pause, Play, RotateCcw, SlidersHorizontal, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { learningApi } from '@/lib/api/learningApi';
 import { useLearningStore } from '@/lib/store/learningStore';
 import type { DayString, RevisionItem, TodayPlan } from '@/lib/learning/types';
-import { estimateMinutes, nextReviewDay, REVISION_CYCLES } from '@/lib/learning/plan';
+import { nextReviewDay, REVISION_CYCLES } from '@/lib/learning/plan';
 import { RcButton, RcCheck, RcConfirm, RcIconButton, RcMenu, RcStamp, type MenuAction } from '@/components/rc-ui';
 import { NoteBody } from './NoteBody';
 import { RecallSheet, type RecallTarget } from '@/components/learning/recall/RecallSheet';
-import { openCapturePalette, SectionFailed } from './parts';
+import { LabelLine, openCapturePalette, SectionFailed } from './parts';
 import { plural, shortDay, stampDay } from './format';
 
 interface RowProps {
@@ -21,18 +22,23 @@ interface RowProps {
   today: DayString;
   nextDue: DayString | null | undefined;
   pressed: boolean;
+  /** Ticked on this visit and already moved to the end of the list: it rests there faded. */
+  settled: boolean;
   checkRef: (el: HTMLButtonElement | null) => void;
   onToggle: () => void;
   /** Recall mode for a due doc (PLAN §4: "Revise" means recall). */
   onRecall: () => void;
 }
 
-/** One slip line: check, title and meta, then the fixed stamp column (minutes, or the due stamp). */
-function SlipRow({ rev, done, today, nextDue, pressed, checkRef, onToggle, onRecall }: RowProps) {
+/**
+ * One review: check, the title with its meta beside it (under it when the two don't fit one line),
+ * then the due stamp once it is done (no minutes per review: the budget is for the whole list).
+ */
+function SlipRow({ rev, done, today, nextDue, pressed, settled, checkRef, onToggle, onRecall }: RowProps) {
+  const still = useReducedMotion();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const isNote = rev.kind === 'capture';
-  const minutes = estimateMinutes(rev);
   const late = !done && (rev.daysLate ?? 0) > 0;
   const next = nextDue === undefined ? nextReviewDay(today, rev.cycleNumber) : nextDue;
 
@@ -48,30 +54,48 @@ function SlipRow({ rev, done, today, nextDue, pressed, checkRef, onToggle, onRec
     }
     router.push(`/docs/${encodeURIComponent(docId)}`);
   };
-  // A due doc opens Recall mode (questions from the doc); a note expands; a finished one opens its doc.
-  const open = () => (isNote ? setExpanded((x) => !x) : done ? void openDoc() : onRecall());
+  const moveDay = () => useLearningStore.getState().openReschedule({ kind: 'revision', id: rev._id, title: rev.title, scheduledFor: rev.scheduledFor });
+  // The owner, 11-21: a click on a doc's row opens the doc, a click on a note's row unfolds it (a
+  // double-click edits it in place); the calendar in the meta moves either; the check of an open doc
+  // asks first: Complete, or Quiz me on it.
+  const checkActions: MenuAction[] = [
+    { label: 'Complete', icon: <Check />, onSelect: onToggle },
+    { label: 'Quiz me on it', icon: <CircleHelp />, onSelect: onRecall },
+  ];
 
-  const actions: MenuAction[] = [];
-  if (!isNote && !done) actions.push({ label: 'Quiz me on it', icon: <CircleHelp />, onSelect: onRecall });
-  actions.push(
-    isNote
-      ? { label: expanded ? 'Hide note' : 'Show note', icon: <StickyNote />, onSelect: () => setExpanded((x) => !x) }
-      : { label: 'Open doc', icon: <FileText />, onSelect: () => void openDoc() },
-  );
-  if (isNote) {
-    actions.push({
-      label: 'Edit note',
-      icon: <Pencil />,
-      onSelect: () => useLearningStore.getState().openEditCapture({ captureId: rev.itemId, title: rev.title, content: rev.content ?? '' }),
-    });
-  }
-  if (!done) {
-    actions.push({
-      label: 'Move to another day',
-      icon: <CalendarClock />,
-      onSelect: () => useLearningStore.getState().openReschedule({ kind: 'revision', id: rev._id, title: rev.title, scheduledFor: rev.scheduledFor }),
-    });
-  }
+  // A note edited in place: title and text, Ctrl Enter saves, Esc leaves it as it was.
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(rev.title);
+  const [draftBody, setDraftBody] = useState(rev.content ?? '');
+  const [saving, setSaving] = useState(false);
+  const beginEdit = () => {
+    setDraftTitle(rev.title);
+    setDraftBody(rev.content ?? '');
+    setExpanded(true);
+    setEditing(true);
+  };
+  const saveEdit = async () => {
+    const title = draftTitle.trim();
+    if (!title) return;
+    if (title === rev.title && draftBody === (rev.content ?? '')) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    const ok = await useLearningStore.getState().updateCapture(rev.itemId, { title, content: draftBody });
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+  const editKeys = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setEditing(false);
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void saveEdit();
+    }
+  };
 
   const right = done ? (
     next ? (
@@ -84,46 +108,123 @@ function SlipRow({ rev, done, today, nextDue, pressed, checkRef, onToggle, onRec
       </RcStamp>
     )
   ) : (
-    <span className="rc-meta rc-num whitespace-nowrap">{minutes} min</span>
+    null
   );
 
+  const titleSpan = (
+    <span
+      className={cn(
+        'rc-strike relative max-w-full text-[var(--rc-fs-body)] leading-[1.4] font-medium decoration-1 underline-offset-[3px] group-hover:underline',
+        done ? (pressed ? 'text-[var(--rc-ink-3)]' : 'text-[var(--rc-ink-3)] line-through decoration-[var(--rc-ink-3)]') : 'text-[var(--rc-ink-1)]',
+      )}
+    >
+      {rev.title}
+      {isNote && <ChevronDown aria-hidden className={cn('ml-1 inline w-4 h-4 align-[-2px] text-[var(--rc-ink-3)] transition-transform', expanded && 'rotate-180')} />}
+    </span>
+  );
+  // How late, at a glance (the owner, 11-21): "24d late", the number in weight, and a short amber
+  // fuse in front that grows with the wait (a day is a short stub, a month and more is full length).
+  const daysLate = rev.daysLate ?? 0;
+  const lateSpan = late ? (
+    <span className="inline-flex items-center gap-1.5 text-[var(--rc-attn)]" title={`${daysLate} ${daysLate === 1 ? 'day' : 'days'} late · waiting since ${shortDay(rev.scheduledFor, today)}`}>
+      <span aria-hidden className="h-[3px] rounded-full bg-[var(--rc-attn-mark)] opacity-80" style={{ width: `${Math.round(4 + Math.min(1, Math.log1p(daysLate) / Math.log1p(30)) * 16)}px` }} />
+      <span className="rc-num whitespace-nowrap">
+        <span className="font-[600]">{daysLate}d</span> late
+      </span>
+    </span>
+  ) : null;
+
   return (
-    <li className="rc-row rc-hoverable group mx-1.5 grid grid-cols-[18px_minmax(0,1fr)_28px] sm:grid-cols-[18px_minmax(0,1fr)_104px_28px] items-start gap-x-3 px-2.5 py-[9px]">
+    <motion.li
+      layout={still ? false : 'position'}
+      transition={{ layout: { duration: 0.42, ease: [0.2, 0.9, 0.25, 1] } }}
+      data-struck={(done && pressed) || undefined}
+      data-settled={(done && settled) || undefined}
+      className="rc-row rc-hoverable rc-rev-row group -mx-2 grid grid-cols-[18px_minmax(0,1fr)] items-start gap-x-3 px-2 py-[7px]"
+    >
       <div className="pt-[2px]">
-        <RcCheck ref={checkRef} checked={done} onToggle={onToggle} label={done ? `Mark “${rev.title}” not done` : `Mark “${rev.title}” done`} />
+        {!isNote && !done ? (
+          <RcMenu label={`Complete “${rev.title}” or quiz me on it`} actions={checkActions} align="start">
+            <RcCheck ref={checkRef} checked={false} onToggle={() => undefined} label={`Complete “${rev.title}” or quiz me on it`} />
+          </RcMenu>
+        ) : (
+          <RcCheck ref={checkRef} checked={done} onToggle={onToggle} label={done ? `Mark “${rev.title}” not done` : `Mark “${rev.title}” done`} />
+        )}
       </div>
 
       <div className="min-w-0">
-        <button
-          type="button"
-          onClick={open}
-          aria-expanded={isNote ? expanded : undefined}
-          className={cn(
-            'block max-w-full text-left text-[var(--rc-fs-body)] leading-[1.3] font-medium cursor-pointer decoration-1 underline-offset-[3px] hover:underline',
-            done ? 'text-[var(--rc-ink-3)] line-through decoration-[var(--rc-ink-3)]' : 'text-[var(--rc-ink-1)]',
-          )}
-        >
-          {rev.title}
-          {isNote && <ChevronDown aria-hidden className={cn('ml-1 inline w-4 h-4 align-[-2px] text-[var(--rc-ink-3)] transition-transform', expanded && 'rotate-180')} />}
-        </button>
-        <div className={cn('mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 rc-meta !leading-[1.35]', done && 'opacity-80')}>
-          <span className="inline-flex items-center gap-1.5 min-w-0">
-            <span className="rc-swatch" style={{ background: rev.subject?.color ?? 'var(--rc-ink-3)' }} aria-hidden />
-            <span>{rev.subject?.name ?? 'General'}</span>
-          </span>
-          <span>
-            Review {rev.cycleNumber} of {REVISION_CYCLES}
-          </span>
-          {isNote && (
-            <span className="inline-flex items-center gap-1">
-              <StickyNote className="w-3.5 h-3.5" aria-hidden /> Note
+        {isNote && editing ? (
+          <div className="flex flex-col gap-1.5" onKeyDown={editKeys}>
+            <input
+              autoFocus
+              className="w-full bg-transparent text-[var(--rc-fs-body)] font-medium leading-[1.4] text-[var(--rc-ink-1)] outline-none"
+              value={draftTitle}
+              maxLength={200}
+              aria-label="Note title"
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+                  e.preventDefault();
+                  (e.currentTarget.parentElement?.querySelector('textarea') as HTMLTextAreaElement | null)?.focus();
+                }
+              }}
+            />
+            <textarea
+              className="min-h-[72px] w-full resize-y rounded-[8px] bg-[var(--rc-surface-2)] px-3 py-2 text-[15px] leading-[1.5] text-[var(--rc-ink-1)] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--rc-line-strong)]"
+              value={draftBody}
+              aria-label="Note text"
+              onChange={(e) => setDraftBody(e.target.value)}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <span className="rc-meta">Ctrl Enter to save · Esc to cancel</span>
+              <div className="-mr-2 flex items-center gap-1">
+                <RcButton size="sm" variant="quiet" onClick={() => setEditing(false)}>
+                  Cancel
+                </RcButton>
+                <RcButton size="sm" variant="outline" busy={saving} disabled={!draftTitle.trim()} onClick={() => void saveEdit()}>
+                  Save
+                </RcButton>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+            <button
+              type="button"
+              aria-expanded={isNote ? expanded : undefined}
+              title={isNote ? 'Click to open · double-click to edit' : `Open the doc · review ${rev.cycleNumber} of ${REVISION_CYCLES}`}
+              onClick={() => (isNote ? setExpanded((x) => !x) : void openDoc())}
+              onDoubleClick={isNote ? beginEdit : undefined}
+              className="min-w-0 cursor-pointer text-left outline-none"
+            >
+              {titleSpan}
+              {/* "Title · DSA" (the owner, 11-21): the subject sits after the title, in the meta's ink. */}
+              <span className="rc-meta whitespace-nowrap font-[400]"> · {rev.subject?.name ?? 'General'}</span>
+            </button>
+            <span className={cn('flex flex-wrap items-center gap-x-3 gap-y-0.5 rc-meta !leading-[1.35]', done && 'opacity-80')}>
+              {/* The review's place in its cycle, "2/4", when it has one. */}
+              {rev.cycleNumber > 0 && (
+                <span className="rc-num" title={`Review ${rev.cycleNumber} of ${REVISION_CYCLES}`}>
+                  {rev.cycleNumber}/{REVISION_CYCLES}
+                </span>
+              )}
+              {isNote && (
+                <span className="inline-flex items-center gap-1">
+                  <StickyNote className="w-3.5 h-3.5" aria-hidden /> Note
+                </span>
+              )}
+              {!done && (
+                <RcIconButton size="sm" label={`Move “${rev.title}” to another day`} className="-my-1 -mx-1" onClick={moveDay}>
+                  <CalendarClock />
+                </RcIconButton>
+              )}
+              {lateSpan}
+              {right}
             </span>
-          )}
-          {late && <span>Waiting since {shortDay(rev.scheduledFor, today)}</span>}
-          <span className="sm:hidden">{right}</span>
-        </div>
-        {isNote && expanded && (rev.content || rev.url) && (
-          <div className="mt-2 rounded-[8px] bg-[var(--rc-surface-2)] px-3 py-2">
+          </div>
+        )}
+        {isNote && expanded && !editing && (rev.content || rev.url) && (
+          <div className="mt-2 cursor-text rounded-[8px] bg-[var(--rc-surface-2)] px-3 py-2" onDoubleClick={beginEdit} title="Double-click to edit">
             {rev.content && <NoteBody content={rev.content} />}
             {rev.url && (
               <a href={rev.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-[14px]">
@@ -133,25 +234,81 @@ function SlipRow({ rev, done, today, nextDue, pressed, checkRef, onToggle, onRec
           </div>
         )}
       </div>
-
-      <div className="hidden sm:flex justify-end pt-[2px]">{right}</div>
-
-      <div className="rc-row-actions">
-        <RcMenu label={`Actions for “${rev.title}”`} actions={actions}>
-          <RcIconButton label={`Actions for “${rev.title}”`} size="sm">
-            <MoreHorizontal />
-          </RcIconButton>
-        </RcMenu>
-      </div>
-    </li>
+    </motion.li>
   );
 }
 
 /**
- * Today's slip (LOOP_V2_SPEC §2), the page's hero: the budgeted plan as one paper card with no
- * heading (the page title and summary say what it is). A row ticked now keeps its place and takes
- * the due stamp; what was done earlier today folds away at the bottom; the waiting backlog and
- * Fresh start ("Spread them out") are the slip's footer.
+ * The day's revision session (the owner, 11-21): no share of the budget per review; Start sets the
+ * clock running for the whole list, and the dashed line fills with the time. Kept per day in this
+ * browser (a convenience: a lost start only means pressing Start again).
+ */
+type Session = {
+  startedAt: number;
+  endedAt?: number;
+  /** Paused since then (the owner, 11-22: a pause on the timer); the clock stands still. */
+  pausedAt?: number;
+  /** Time spent paused before, not counted. */
+  pausedMs?: number;
+};
+
+function sessionKey(today: DayString) {
+  return `rc-revise-session:${today}`;
+}
+
+function useReviseSession(today: DayString) {
+  const [session, setSession] = useState<Session | null>(() => {
+    try {
+      const raw = localStorage.getItem(sessionKey(today));
+      return raw ? (JSON.parse(raw) as Session) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [now, setNow] = useState(() => Date.now());
+  const running = !!session && !session.endedAt && !session.pausedAt;
+  const paused = !!session && !session.endedAt && !!session.pausedAt;
+  useEffect(() => {
+    if (!running) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [running]);
+  const save = (next: Session | null) => {
+    setSession(next);
+    setNow(Date.now());
+    try {
+      if (next) localStorage.setItem(sessionKey(today), JSON.stringify(next));
+      else localStorage.removeItem(sessionKey(today));
+    } catch {
+      /* not kept; the session still runs on this page */
+    }
+  };
+  const elapsedMs = session ? (session.endedAt ?? session.pausedAt ?? now) - session.startedAt - (session.pausedMs ?? 0) : 0;
+  return {
+    session,
+    running,
+    paused,
+    elapsedMs,
+    start: () => save({ startedAt: Date.now() }),
+    pause: () => session && running && save({ ...session, pausedAt: Date.now() }),
+    resume: () => session && session.pausedAt && save({ startedAt: session.startedAt, pausedMs: (session.pausedMs ?? 0) + (Date.now() - session.pausedAt) }),
+    // Ending while paused stops the clock where the pause left it.
+    end: () => session && save({ ...session, endedAt: session.pausedAt ?? Date.now(), pausedAt: undefined }),
+  };
+}
+
+/** "45 s", "12 min", "1 h 5 min" */
+function spent(ms: number): string {
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return `${Math.max(0, Math.floor(ms / 1000))} s`;
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ''}`;
+}
+
+/**
+ * Today's slip (LOOP_V2_SPEC §2): the budgeted plan as an open list on the page (the owner, 11-21:
+ * no card around it), under one heading with the budget and its meter. A row ticked now keeps its
+ * place and takes the due stamp; what was done earlier today folds away at the bottom; the waiting
+ * backlog and Fresh start ("Spread them out") are the list's last line.
  */
 export function TodaySlip({
   plan,
@@ -173,6 +330,20 @@ export function TodaySlip({
   const lateWaiting = plan && overdue ? overdue.filter((r) => !plan.planned.some((p) => p._id === r._id)).length : 0;
   const [pressed, setPressed] = useState<Set<string>>(() => new Set());
   const [ticked, setTicked] = useState<Set<string>>(() => new Set());
+  const clock = useReviseSession(today);
+  // The session ends by itself when the last review is ticked.
+  const allDone = !!plan && plan.planned.length === 0 && plan.doneToday.length > 0;
+  useEffect(() => {
+    if ((clock.running || clock.paused) && allDone) clock.end();
+  }, [clock, allDone]);
+  // A row ticked now: the line is drawn through it (240 ms), then it moves to the end of the list and
+  // rests there faded (the owner, 11-21); the value is when it moved, so the last ticked sits last.
+  const [settledAt, setSettledAt] = useState<Map<string, number>>(() => new Map());
+  const moveTimers = useRef(new Map<string, number>());
+  useEffect(() => {
+    const all = moveTimers.current;
+    return () => all.forEach((t) => window.clearTimeout(t));
+  }, []);
   const [showDone, setShowDone] = useState(false);
   const [confirmFresh, setConfirmFresh] = useState(false);
   const [recall, setRecall] = useState<RecallTarget | null>(null);
@@ -193,18 +364,29 @@ export function TodaySlip({
     const all = [...plan.planned.map((r) => ({ rev: r, done: false })), ...plan.doneToday.map((r) => ({ rev: r, done: true }))];
     const at = (id: string) => order.get(id) ?? Number.MAX_SAFE_INTEGER;
     const byOrder = (a: { rev: RevisionItem }, b: { rev: RevisionItem }) => at(a.rev._id) - at(b.rev._id);
+    const moved = (r: { rev: RevisionItem; done: boolean }) => (r.done ? settledAt.get(r.rev._id) : undefined);
+    const byPlace = (a: { rev: RevisionItem; done: boolean }, b: { rev: RevisionItem; done: boolean }) => {
+      const ma = moved(a);
+      const mb = moved(b);
+      if (ma === undefined && mb === undefined) return byOrder(a, b);
+      if (ma === undefined) return -1;
+      if (mb === undefined) return 1;
+      return ma - mb;
+    };
     return {
-      rows: all.filter((r) => !r.done || ticked.has(r.rev._id)).sort(byOrder),
+      rows: all.filter((r) => !r.done || ticked.has(r.rev._id)).sort(byPlace),
       folded: all.filter((r) => r.done && !ticked.has(r.rev._id)).sort(byOrder),
     };
-  }, [plan, ticked, order]);
+  }, [plan, ticked, order, settledAt]);
 
   if (!plan) return <SectionFailed what="today’s revisions" onRetry={onRetry} />;
 
   const everything = [...rows, ...folded];
-  const total = everything.reduce((s, r) => s + estimateMinutes(r.rev), 0);
   const doneCount = plan.doneToday.length;
-  const room = Math.max(0, plan.budgetMin - total);
+  const budgetMs = plan.budgetMin * 60_000;
+  // The dashed line: one dash a review, filled by time across the whole line.
+  const dashes = Math.max(4, Math.min(12, everything.length));
+  const filled = clock.session ? Math.min(1, clock.elapsedMs / budgetMs) * dashes : 0;
 
   const toggle = (rev: RevisionItem, done: boolean, index: number) => {
     const store = useLearningStore.getState();
@@ -214,12 +396,27 @@ export function TodaySlip({
         n.delete(rev._id);
         return n;
       });
+      const t = moveTimers.current.get(rev._id);
+      if (t) window.clearTimeout(t);
+      moveTimers.current.delete(rev._id);
+      setSettledAt((m) => {
+        const n = new Map(m);
+        n.delete(rev._id);
+        return n;
+      });
       void store.uncompleteRevision(rev._id);
       return;
     }
     setPressed((p) => new Set(p).add(rev._id));
     setTicked((t) => new Set(t).add(rev._id));
     void store.completeRevision(rev._id);
+    moveTimers.current.set(
+      rev._id,
+      window.setTimeout(() => {
+        moveTimers.current.delete(rev._id);
+        setSettledAt((m) => new Map(m).set(rev._id, Date.now()));
+      }, 300),
+    );
     // The next thing to do is always ready: focus the next open row.
     const nextOpen = rows.slice(index + 1).find((r) => !r.done) ?? rows.find((r) => !r.done && r.rev._id !== rev._id);
     if (nextOpen) requestAnimationFrame(() => checks.current.get(nextOpen.rev._id)?.focus());
@@ -247,6 +444,7 @@ export function TodaySlip({
       today={today}
       nextDue={nextDue[rev._id]}
       pressed={pressed.has(rev._id)}
+      settled={settledAt.has(rev._id)}
       checkRef={(el) => {
         checks.current.set(rev._id, el);
       }}
@@ -274,37 +472,80 @@ export function TodaySlip({
     );
 
   return (
-    <section aria-label="Today’s revisions" className="rc-card overflow-hidden">
+    <section aria-labelledby="revise-h">
       {!nothing && (
-        <div className="px-4 pt-3 pb-2.5">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <RcButton
-              variant="quiet"
-              size="sm"
-              className="-ml-2"
-              onClick={onOpenSettings}
-              aria-label={`Daily budget: ${plan.budgetMin} minutes. Change it`}
-              title="Change the daily budget"
+        <>
+          <LabelLine
+            id="revise-h"
+            title="Revise"
+            meta={
+              <>
+                {doneCount} of {everything.length} ·{' '}
+                {!clock.session ? (
+                  `${plan.budgetMin}-min budget`
+                ) : clock.session.endedAt ? (
+                  `done in ${spent(clock.elapsedMs)}`
+                ) : clock.paused ? (
+                  `paused · ${spent(clock.elapsedMs)} of ${plan.budgetMin} min`
+                ) : clock.elapsedMs > budgetMs ? (
+                  <span className="text-[var(--rc-attn)]">{spent(clock.elapsedMs - budgetMs)} over</span>
+                ) : (
+                  `${spent(clock.elapsedMs)} of ${plan.budgetMin} min`
+                )}
+              </>
+            }
+          >
+            {/* The dashed line fills with the session's time, not per review (the owner, 11-21). */}
+            <div
+              className="rc-budget rc-time mr-2 hidden w-[140px] sm:flex"
+              data-over={clock.elapsedMs > budgetMs || undefined}
+              data-ended={clock.session?.endedAt ? true : undefined}
+              role="img"
+              aria-label={clock.session ? `${spent(clock.elapsedMs)} of a ${plan.budgetMin}-minute budget` : `A ${plan.budgetMin}-minute budget, not started`}
             >
-              {plan.budgetMin}-minute budget
-              <SlidersHorizontal aria-hidden />
-            </RcButton>
-            <span className="rc-meta rc-num">
-              {doneCount} of {everything.length} done
-            </span>
-          </div>
-          <div className="rc-budget" role="img" aria-label={`${total} of ${plan.budgetMin} minutes planned; ${doneCount} of ${everything.length} done`}>
-            {everything.map(({ rev, done }) => (
-              <span key={rev._id} data-done={done} style={{ flexGrow: estimateMinutes(rev), flexBasis: 0 }} title={`${rev.title}: ${estimateMinutes(rev)} min${done ? ', done' : ''}`} />
-            ))}
-            {room > 0 && <span data-kind="room" style={{ flexGrow: room, flexBasis: 0 }} title={`${room} min of room left in the budget`} />}
-          </div>
-        </div>
+              {Array.from({ length: dashes }, (_, i) => (
+                <span key={i}>
+                  <i style={{ width: `${Math.max(0, Math.min(1, filled - i)) * 100}%` }} />
+                </span>
+              ))}
+            </div>
+            {!clock.session && (
+              <RcButton size="sm" variant="outline" icon={<Play />} onClick={clock.start}>
+                Start
+              </RcButton>
+            )}
+            {clock.running && (
+              <RcIconButton size="sm" label="Pause the session" onClick={clock.pause}>
+                <Pause />
+              </RcIconButton>
+            )}
+            {clock.paused && (
+              <RcButton size="sm" variant="outline" icon={<Play />} onClick={clock.resume} title="Go on with the session">
+                Resume
+              </RcButton>
+            )}
+            {(clock.running || clock.paused) && (
+              <RcButton size="sm" variant="quiet" onClick={clock.end} title="End the session">
+                End
+              </RcButton>
+            )}
+            {clock.session?.endedAt && !allDone && (
+              <RcButton size="sm" variant="quiet" icon={<RotateCcw />} onClick={clock.start} title="Start a new session">
+                Again
+              </RcButton>
+            )}
+            <RcIconButton size="sm" label={`Daily budget: ${plan.budgetMin} minutes. Change it`} onClick={onOpenSettings}>
+              <SlidersHorizontal />
+            </RcIconButton>
+          </LabelLine>
+        </>
       )}
 
       {nothing ? (
-        <div className="px-4 py-5 sm:px-5">
-          <p className="rc-title">{firstRun ? 'Start your first revision.' : plan.waitingCount > 0 ? 'Today’s budget is used up.' : 'A free day.'}</p>
+        <div>
+          <h2 id="revise-h" className="rc-title">
+            {firstRun ? 'Start your first revision.' : plan.waitingCount > 0 ? 'Today’s budget is used up.' : 'A free day.'}
+          </h2>
           <p className="mt-1 text-[15px] rc-ink-2">
             {plan.waitingCount > 0
               ? 'What is waiting comes in over the next days.'
@@ -319,33 +560,33 @@ export function TodaySlip({
           )}
         </div>
       ) : rows.length > 0 ? (
-        <ul className="pb-1.5">{rows.map(renderRow)}</ul>
+        <ul>{rows.map(renderRow)}</ul>
       ) : (
-        <p className="px-4 pb-3.5 pt-1 text-[14px] rc-ink-2">All done for today. The next ones come in tomorrow.</p>
+        <p className="py-1 text-[15px] rc-ink-2">All done for today. The next ones come in tomorrow.</p>
       )}
 
       {folded.length > 0 && (
-        <div className="border-t border-[var(--rc-line)]">
+        <div className="mt-1">
           <button
             type="button"
             aria-expanded={showDone}
             onClick={() => setShowDone((x) => !x)}
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] font-[500] rc-ink-2 cursor-pointer transition-colors hover:text-[var(--rc-ink-1)]"
+            className="rc-hoverable -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 px-2 py-[7px] text-left text-[14px] font-[500] rc-ink-2 cursor-pointer"
           >
-            <ChevronDown aria-hidden className={cn('w-4 h-4 text-[var(--rc-icon)] transition-transform', !showDone && '-rotate-90')} />
+            <ChevronDown aria-hidden className={cn('w-[18px] h-[18px] text-[var(--rc-icon)] transition-transform', !showDone && '-rotate-90')} />
             Done today <span className="rc-num font-[400] rc-ink-3">{folded.length}</span>
           </button>
-          {showDone && <ul className="pb-1.5">{folded.map((r, i) => renderRow(r, rows.length + i))}</ul>}
+          {showDone && <ul>{folded.map((r, i) => renderRow(r, rows.length + i))}</ul>}
         </div>
       )}
 
       {plan.waitingCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-[var(--rc-line)] px-4 py-2.5">
-          <p className="text-[14px] rc-ink-2 min-w-0">
-            {plan.waitingCount} more {plan.waitingCount === 1 ? 'is' : 'are'} waiting. They come in as room frees up.
+        <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 pl-[30px]">
+          <p className="rc-meta min-w-0">
+            <span className="rc-num">{plan.waitingCount}</span> more waiting · they come in as room frees up
           </p>
           {lateWaiting > 0 && (
-            <RcButton variant="outline" size="sm" onClick={() => void openFresh()}>
+            <RcButton variant="quiet" size="sm" className="-mr-2" onClick={() => void openFresh()}>
               Spread them out
             </RcButton>
           )}

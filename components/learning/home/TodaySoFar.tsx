@@ -69,8 +69,8 @@ export function TodaySoFar({ today }: { today: DayString }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="rc-row rc-hoverable mt-2 flex w-full items-center gap-2 rounded-[6px] px-2 py-[7px] text-left">
-        <Timer className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
+      <button type="button" onClick={() => setOpen(true)} className="rc-row rc-hoverable -mx-2 mt-1 flex w-[calc(100%+1rem)] items-center gap-3 rounded-[6px] px-2 py-[7px] text-left">
+        <Timer className="h-[18px] w-[18px] shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
         <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">{line}</span>
         <span className="rc-meta">last 14 days</span>
       </button>

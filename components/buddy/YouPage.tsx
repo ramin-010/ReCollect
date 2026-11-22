@@ -59,7 +59,34 @@ const ADD_KINDS: MemoryKind[] = ['fact', 'preference', 'value', 'aim', 'idea', '
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const dayText = (d: string) => DAY.format(new Date(`${d}T00:00:00Z`));
 const SHORT_MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' });
-const frame = 'mx-auto w-full max-w-[880px] px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8 pb-24';
+const frame = 'mx-auto w-full max-w-[1080px] px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8 pb-24';
+
+/**
+ * The page in parts (the owner, 11-22: "as it grows everything moves down, the settings sit at the very bottom"):
+ * his pick, a list of the parts at the left (sticky; the settings' groups under Settings), one part at a time;
+ * tabs under the title below 1024 px. `?tab=` keeps the part.
+ */
+type Tab = 'knows' | 'mind' | 'work' | 'settings';
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'knows', label: 'What it knows' },
+  { id: 'mind', label: 'On my mind' },
+  { id: 'work', label: 'Your work' },
+  { id: 'settings', label: 'Settings' },
+];
+const SETTING_GROUPS = [
+  { id: 'learning', title: 'Learning' },
+  { id: 'work', title: 'Work log' },
+  { id: 'phone', title: 'Your phone' },
+  { id: 'usage', title: 'Usage' },
+  { id: 'data', title: 'Your data' },
+] as const;
+type SettingGroup = (typeof SETTING_GROUPS)[number]['id'];
+
+function readParam<T extends string>(name: string, allowed: readonly T[], fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  const v = new URLSearchParams(window.location.search).get(name);
+  return allowed.includes(v as T) ? (v as T) : fallback;
+}
 
 function sourceWords(m: Memory): string {
   // An assistant's conclusion says whose it is (MCP_MEMORY_PLAN §4.4).
@@ -91,6 +118,13 @@ export function YouPage() {
   const [view, setView] = useState<View>('lasting');
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
+  const [tab, setTabState] = useState<Tab>(() => readParam('tab', TABS.map((t) => t.id), 'knows'));
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', t);
+    window.history.replaceState(window.history.state, '', url);
+  };
 
   useEffect(() => {
     let alive = true;
@@ -144,37 +178,87 @@ export function YouPage() {
   }, [memories]);
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const shown = memories.filter((m) => viewOf(m) === view && matches(m, words));
+  const ready = data && data !== 'failed' ? data : null;
+  const tabs = ready ? TABS.filter((t) => t.id !== 'mind' || ready.settings.loop) : TABS;
+  const current: Tab = tabs.some((t) => t.id === tab) ? tab : 'knows';
 
-  return (
-    <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
-      <div className={frame}>
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-          <div className="min-w-0">
-            <h1 className="rc-h1">About you</h1>
-            <p className="rc-meta mt-1.5 max-w-[560px]">What your buddy knows, from your chats and your own words. Only you see this, and you can change any of it.</p>
-          </div>
-          {data && data !== 'failed' && (
-            <RcButton variant="main" icon={<Plus />} onClick={() => setAdding(true)}>
-              Add a memory
-            </RcButton>
+  const header = (
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0">
+        <h1 className="rc-h1">About you</h1>
+        <p className="rc-meta mt-1.5 max-w-[560px]">What your buddy knows, from your chats and your own words. Only you see this, and you can change any of it.</p>
+      </div>
+      {ready && current === 'knows' && (
+        <RcButton variant="main" icon={<Plus />} onClick={() => setAdding(true)}>
+          Add a memory
+        </RcButton>
+      )}
+    </div>
+  );
+
+  const pausedNotice = ready?.settings.paused && (
+    <div role="status" className="rc-card mt-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <p className="text-[15px] rc-ink-2">Paused: your buddy keeps nothing new and doesn’t think until you turn learning back on.</p>
+      <RcButton size="sm" onClick={() => void setPaused(false)}>
+        Turn learning on
+      </RcButton>
+    </div>
+  );
+
+  const tabBar = (
+    <div role="tablist" aria-label="About you" className="mt-6 flex flex-wrap gap-x-5 border-b border-[var(--rc-line)]">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={current === t.id}
+          onClick={() => setTab(t.id)}
+          className={cn(
+            '-mb-px shrink-0 border-b-2 pb-2 pt-1 text-[14px] font-medium transition-colors',
+            current === t.id ? 'border-[var(--rc-ink-1)] text-[var(--rc-ink-1)]' : 'border-transparent text-[var(--rc-ink-3)] hover:text-[var(--rc-ink-1)]',
           )}
-        </div>
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
 
-        {data === null && <YouSkeleton />}
-        {data === 'failed' && <SectionFailed className="mt-8" what="what your buddy knows" onRetry={reload} />}
-        {data && data !== 'failed' && (
-          <>
-            {data.settings.paused && (
-              <div role="status" className="rc-card mt-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <p className="text-[15px] rc-ink-2">Paused: your buddy keeps nothing new and doesn’t think until you turn learning back on.</p>
-                <RcButton size="sm" onClick={() => void setPaused(false)}>
-                  Turn learning on
-                </RcButton>
+  const toGroup = (id: SettingGroup) => document.getElementById(`you-set-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const sideNav = (
+    <nav aria-label="About you" className="hidden lg:block">
+      <div className="sticky top-6 flex flex-col gap-0.5">
+        {tabs.map((t) => (
+          <div key={t.id}>
+            <button
+              type="button"
+              aria-current={current === t.id ? 'page' : undefined}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'rc-hoverable flex w-full rounded-[6px] px-2.5 py-[6px] text-left text-[14px] font-medium',
+                current === t.id ? 'bg-[var(--rc-selected)] text-[var(--rc-ink-1)]' : 'text-[var(--rc-ink-2)]',
+              )}
+            >
+              {t.label}
+            </button>
+            {t.id === 'settings' && current === 'settings' && (
+              <div className="mb-1 mt-0.5 flex flex-col">
+                {SETTING_GROUPS.map((g) => (
+                  <button key={g.id} type="button" onClick={() => toGroup(g.id)} className="rc-hoverable rounded-[6px] py-[5px] pl-5 pr-2.5 text-left text-[13px] text-[var(--rc-ink-3)] hover:text-[var(--rc-ink-1)]">
+                    {g.title}
+                  </button>
+                ))}
               </div>
             )}
-            <Portrait portrait={data.settings.portrait} />
-            <Questions chapters={data.chapters} onAnswered={reload} />
+          </div>
+        ))}
+      </div>
+    </nav>
+  );
 
+  const memoriesPart = ready && (
+          <>
             <div className="you-filters mt-8">
               <RcSegmented
                 label="Memories"
@@ -212,11 +296,42 @@ export function YouPage() {
                 })
               )}
             </div>
+          </>
+  );
 
-            {data.settings.loop && <OnMyMind />}
-            <Chapters chapters={data.chapters} />
-            <WorkLog on={data.settings.workLog} />
-            <Learning data={data} onPaused={setPaused} onChanged={reload} />
+  // One part at a time (the options); the first part's own top margin goes, the tabs give the space.
+  const part = ready && (
+    <div className="mt-6 [&>section:first-child]:!mt-0">
+      {current === 'knows' && (
+        <>
+          <Portrait portrait={ready.settings.portrait} />
+          <Questions chapters={ready.chapters} onAnswered={reload} />
+          {memoriesPart}
+          <Chapters chapters={ready.chapters} />
+        </>
+      )}
+      {current === 'mind' && <OnMyMind />}
+      {current === 'work' && <WorkLog on={ready.settings.workLog} />}
+      {current === 'settings' && <Learning data={ready} onPaused={setPaused} onChanged={reload} />}
+    </div>
+  );
+
+  return (
+    <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
+      <div className={frame}>
+        {header}
+        {data === null && <YouSkeleton />}
+        {data === 'failed' && <SectionFailed className="mt-8" what="what your buddy knows" onRetry={reload} />}
+        {ready && (
+          <>
+            {pausedNotice}
+            <div className="mt-8 lg:grid lg:grid-cols-[176px_minmax(0,1fr)] lg:gap-12">
+              {sideNav}
+              <div className="min-w-0">
+                <div className="lg:hidden">{tabBar}</div>
+                <div className="lg:-mt-6">{part}</div>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -993,6 +1108,19 @@ function Thinking({ enabled, onChanged }: { enabled: boolean; onChanged: () => v
   );
 }
 
+/** A group of settings in the Settings part (the owner's options, 11-22): a small label, then its rows. */
+function SettingsGroup({ id, children }: { id: SettingGroup; children: React.ReactNode }) {
+  const title = SETTING_GROUPS.find((g) => g.id === id)?.title;
+  return (
+    <section id={`you-set-${id}`} aria-labelledby={`you-set-${id}-h`} className="mt-10 scroll-mt-6 first:mt-0">
+      <h2 id={`you-set-${id}-h`} className="border-b border-[var(--rc-line)] pb-2 text-[13px] font-medium text-[var(--rc-ink-2)]">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (paused: boolean) => Promise<void>; onChanged: () => void }) {
   const [exporting, setExporting] = useState(false);
   const noAi = useNoAi();
@@ -1014,83 +1142,95 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
     }
   };
   const total = data.counts.active + data.counts.faded + data.counts.closed + data.counts.wrong;
-  return (
-    <section aria-labelledby="you-learning" className="you-learning">
-      <h2 id="you-learning" className="rc-h2">
-        How your buddy learns
-      </h2>
-      <div className="you-setting">
-        <div className="min-w-0">
-          <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Learn from my chats</p>
-          <p className="rc-meta mt-0.5">Off: nothing new is kept and it stops thinking. What it knows stays here.</p>
-        </div>
-        <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
+  const learn = (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Learn from my chats</p>
+        <p className="rc-meta mt-0.5">Off: nothing new is kept and it stops thinking. What it knows stays here.</p>
       </div>
-      <Thinking enabled={data.settings.enabled} onChanged={onChanged} />
-      {/* Stage 12: the work log needs no AI of ours (the chats write its lines), so it shows with or without AI. */}
-      <WorkLogSwitch on={data.settings.workLog} onChanged={onChanged} />
-      {data.settings.workLog && <ShareOfficeSwitch on={data.settings.shareOfficeWork !== false} onChanged={onChanged} />}
-      {/* Stage 10: the switches of what only its AI does are left out without AI (the line above says how to get it). */}
-      {noAi === false && (
-        <>
-          <VoiceSetting tone={data.settings.tone} onChanged={onChanged} />
-          <LoopSwitch on={data.settings.loop} onChanged={onChanged} />
-          {data.settings.loop && <AsksSwitch on={data.settings.asksOn !== false} onChanged={onChanged} />}
-        </>
-      )}
-      {data.routines.map((r) => (
-        <RoutineRow key={r._id} routine={r} onChanged={onChanged} />
-      ))}
-      <MonthLine pending={data.counts.pending} />
-      {data.catchUp && <CatchUpLine run={data.catchUp} />}
-      {!!data.sources?.length && <EarMeter sources={data.sources} />}
-      {data.settings.loop && <ImportChats />}
-      {data.settings.loop && <LockPins />}
-      {/* Stage 16: the goal's switch shows with or without the loop (its rules only with it). */}
-      <OnMyScreens rules={data.screenRules ?? []} loop={data.settings.loop} goalOnScreens={data.settings.goalOnScreens === true} onChanged={onChanged} />
-      {data.settings.loop && <BuddyReminders />}
-      {data.health.steps > 0 && (
-        <div className="you-setting">
-          <div className="min-w-0">
-            <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">How well it knows you</p>
-            <p className="rc-meta mt-0.5">
-              {[
-                `${data.counts.lasting} lasting, ${data.counts.working} for now`,
-                `${data.health.confirmedShare}% confirmed by you`,
-                `${data.health.thumbs.more} more like this, ${data.health.thumbs.less} not this`,
-                data.health.dropped ? `${data.health.dropped} ${data.health.dropped === 1 ? 'thing' : 'things'} its checks threw out` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}{' '}
-              · the last 30 days
-            </p>
-            {data.health.byAge && (
-              <p className="rc-meta mt-0.5">
-                By age: {data.health.byAge.month} from this month, {data.health.byAge.quarter} from the two before, {data.health.byAge.older} older
-              </p>
-            )}
-            {(data.health.months ?? [])
-              .filter((m) => m.more + m.less + m.dropped > 0 || m.costUsd > 0)
-              .map((m) => (
-                <p key={m.month} className="rc-meta mt-0.5">
-                  {MONTH.format(new Date(`${m.month}-01T00:00:00Z`))}: {m.more} more like this, {m.less} not this, {m.dropped} thrown out, ${m.costUsd.toFixed(2)}
-                </p>
-              ))}
-          </div>
-        </div>
-      )}
-      <div className="you-setting">
-        <div className="min-w-0">
-          <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Export everything</p>
+      <RcSwitch checked={!data.settings.paused} onChange={(on) => void onPaused(!on)} label="Learn from my chats" />
+    </div>
+  );
+  const health = data.health.steps > 0 && (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">How well it knows you</p>
+        <p className="rc-meta mt-0.5">
+          {[
+            `${data.counts.lasting} lasting, ${data.counts.working} for now`,
+            `${data.health.confirmedShare}% confirmed by you`,
+            `${data.health.thumbs.more} more like this, ${data.health.thumbs.less} not this`,
+            data.health.dropped ? `${data.health.dropped} ${data.health.dropped === 1 ? 'thing' : 'things'} its checks threw out` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}{' '}
+          · the last 30 days
+        </p>
+        {data.health.byAge && (
           <p className="rc-meta mt-0.5">
-            {total === 1 ? '1 memory' : `${total} memories`} and {data.counts.notes === 1 ? 'the 1 note' : `the ${data.counts.notes} notes`} behind them{data.settings.workLog ? ', and your work log' : ''}, as a JSON file.
+            By age: {data.health.byAge.month} from this month, {data.health.byAge.quarter} from the two before, {data.health.byAge.older} older
           </p>
-        </div>
-        <RcButton size="sm" icon={<Download />} busy={exporting} onClick={() => void download()}>
-          Export
-        </RcButton>
+        )}
+        {(data.health.months ?? [])
+          .filter((m) => m.more + m.less + m.dropped > 0 || m.costUsd > 0)
+          .map((m) => (
+            <p key={m.month} className="rc-meta mt-0.5">
+              {MONTH.format(new Date(`${m.month}-01T00:00:00Z`))}: {m.more} more like this, {m.less} not this, {m.dropped} thrown out, ${m.costUsd.toFixed(2)}
+            </p>
+          ))}
       </div>
-    </section>
+    </div>
+  );
+  const exportRow = (
+    <div className="you-setting">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Export everything</p>
+        <p className="rc-meta mt-0.5">
+          {total === 1 ? '1 memory' : `${total} memories`} and {data.counts.notes === 1 ? 'the 1 note' : `the ${data.counts.notes} notes`} behind them{data.settings.workLog ? ', and your work log' : ''}, as a JSON file.
+        </p>
+      </div>
+      <RcButton size="sm" icon={<Download />} busy={exporting} onClick={() => void download()}>
+        Export
+      </RcButton>
+    </div>
+  );
+  const loop = data.settings.loop;
+  return (
+    <div>
+      <SettingsGroup id="learning">
+        {learn}
+        <Thinking enabled={data.settings.enabled} onChanged={onChanged} />
+        {noAi === false && (
+          <>
+            <LoopSwitch on={loop} onChanged={onChanged} />
+            {loop && <AsksSwitch on={data.settings.asksOn !== false} onChanged={onChanged} />}
+            <VoiceSetting tone={data.settings.tone} onChanged={onChanged} />
+          </>
+        )}
+        {data.routines.map((r) => (
+          <RoutineRow key={r._id} routine={r} onChanged={onChanged} />
+        ))}
+      </SettingsGroup>
+      <SettingsGroup id="work">
+        <WorkLogSwitch on={data.settings.workLog} onChanged={onChanged} />
+        {data.settings.workLog && <ShareOfficeSwitch on={data.settings.shareOfficeWork !== false} onChanged={onChanged} />}
+      </SettingsGroup>
+      <SettingsGroup id="phone">
+        {loop && <LockPins />}
+        <OnMyScreens rules={data.screenRules ?? []} loop={loop} goalOnScreens={data.settings.goalOnScreens === true} onChanged={onChanged} />
+        {loop && <BuddyReminders />}
+      </SettingsGroup>
+      <SettingsGroup id="usage">
+        <MonthLine pending={data.counts.pending} />
+        {data.catchUp && <CatchUpLine run={data.catchUp} />}
+        {!!data.sources?.length && <EarMeter sources={data.sources} />}
+        {health}
+      </SettingsGroup>
+      <SettingsGroup id="data">
+        {loop && <ImportChats />}
+        {exportRow}
+      </SettingsGroup>
+    </div>
   );
 }
 

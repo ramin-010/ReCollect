@@ -4,10 +4,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Calendar, Flag, Tag, CheckCircle2, CheckCircle, Box, CircleDot, Bell, Paperclip, ListPlus,
-  Repeat, ChevronDown, CornerDownRight, Plus, Loader2, Save,
-  FileText, LayoutTemplate, Search, Link2, Check,
+  X, Calendar, Flag, Tag, CircleDot, Bell, Paperclip, Repeat, ChevronDown, Plus, Loader2,
+  FileText, LayoutTemplate, Link2, Check,
 } from 'lucide-react';
+import { RcButton, RcCheck, RcIconButton, rcScope } from '@/components/rc-ui';
+import { TaskStatusMark, PriorityBars } from './TaskMarks';
+import { PRIORITY_WORDS, STATUS_WORDS } from './taskWords';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { PriorityDropdown } from './workspace/modals/PriorityDropdown';
@@ -45,6 +47,19 @@ interface PersonalTaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateTask: (taskId: string, updates: any) => Promise<void>;
+}
+
+/** One property row: a quiet label, then its value as a button that opens its picker. */
+function Prop({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid min-h-[34px] grid-cols-[120px_minmax(0,1fr)] items-center gap-x-2">
+      <div className="flex items-center gap-2 text-[13px] text-[var(--rc-ink-3)] [&>svg]:h-[15px] [&>svg]:w-[15px] [&>svg]:shrink-0">
+        {icon}
+        {label}
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1">{children}</div>
+    </div>
+  );
 }
 
 export function PersonalTaskDetailModal({ task, isOpen, onClose, onUpdateTask }: PersonalTaskDetailModalProps) {
@@ -214,6 +229,12 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
     setIsSaving(false);
   }, [title, description, status, priority, dueDate, currentReminder, selectedLabels, subtasks, references, isRecurring, recurringUnit, recurringInterval, task._id, onUpdateTask, task]);
 
+  // Closing keeps what was changed (the owner, 11-21: the task window redone): no lost edits.
+  const closeAndSave = useCallback(async () => {
+    if (isDirty && !isSaving) await handleSave();
+    onClose();
+  }, [isDirty, isSaving, handleSave, onClose]);
+
   // ── Title handlers ──
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
@@ -267,440 +288,354 @@ function PersonalTaskDetailContent({ task, isOpen, onClose, onUpdateTask }: Pers
     markDirty();
   };
 
+  const priorityKey = priority === 'medium' ? 'normal' : priority;
+  const reminderLabel = currentReminder
+    ? isToday(currentReminder)
+      ? `Today at ${format(currentReminder, 'h:mm a')}`
+      : isTomorrow(currentReminder)
+        ? `Tomorrow at ${format(currentReminder, 'h:mm a')}`
+        : format(currentReminder, 'EEE d MMM, h:mm a')
+    : null;
+  const doneSubtasks = subtasks.filter((st) => st.isCompleted).length;
+
+  const valueBtn = 'rc-hoverable -ml-2 inline-flex min-h-[30px] max-w-full items-center gap-1.5 rounded-[6px] px-2 text-left text-[14px] text-[var(--rc-ink-1)] outline-none';
+  const empty = (words: string) => <span className="text-[var(--rc-ink-3)]">{words}</span>;
+
   return (
     <>
-    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open && previewImage) return; if (!open) onClose(); }}>
-      <AnimatePresence>
-        {isOpen && (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50"
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && previewImage) return;
+        if (!open) void closeAndSave();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className={cn(rcScope, 'rc-overlay')} />
+        <Dialog.Content
+          className={cn(rcScope, 'rc-float rc-sheet rc-task-sheet outline-none')}
+          aria-describedby={undefined}
+          onEscapeKeyDown={(e) => {
+            if (previewImage) { e.preventDefault(); setPreviewImage(null); }
+          }}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (isDirty) void handleSave(); }
+          }}
+        >
+          <Dialog.Title className="sr-only">Task: {title || 'Untitled'}</Dialog.Title>
+
+          {/* Head: where it stands and when it was made; the status is the one control up here. */}
+          <div className="flex items-center justify-between gap-3 px-5 pb-1 pt-4">
+            <TaskStatusDropdown currentStatus={status as TaskStatus} onStatusChange={(st) => { setStatus(st); markDirty(); }}>
+              <button type="button" className="rc-hoverable -ml-2 inline-flex h-[30px] items-center gap-2 rounded-[6px] px-2 text-[13px] font-[500] text-[var(--rc-ink-1)] outline-none">
+                <TaskStatusMark status={status} />
+                {STATUS_WORDS[status] ?? 'To do'}
+                <ChevronDown className="h-3.5 w-3.5 text-[var(--rc-icon)]" aria-hidden />
+              </button>
+            </TaskStatusDropdown>
+            <div className="flex items-center gap-2">
+              <span className="rc-meta">Created {createdDate}</span>
+              <RcIconButton label="Close" className="-mr-2" onClick={() => void closeAndSave()}>
+                <X />
+              </RcIconButton>
+            </div>
+          </div>
+
+          <div className="rc-sheet-body !px-5 custom-scrollbar">
+            {/* Title */}
+            <div className="relative mt-2">
+              {getHighlightedContent(title, null, null, selectedLabels, 'absolute inset-0 text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] pointer-events-none overflow-hidden whitespace-pre-wrap break-words bg-transparent text-transparent')}
+              <TextareaAutosize
+                ref={inputRef as any}
+                value={title}
+                onChange={handleTitleChange}
+                onKeyDown={handleTitleKeyDown}
+                aria-label="Task title"
+                className={cn(
+                  'w-full resize-none overflow-hidden border-none bg-transparent p-0 text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] outline-none focus:ring-0',
+                  isComplete ? 'text-[var(--rc-ink-3)] line-through' : 'text-[var(--rc-ink-1)] placeholder:text-[var(--rc-ink-3)]',
+                )}
+                placeholder="Task title"
+                minRows={1}
               />
-            </Dialog.Overlay>
-            <Dialog.Content
-              asChild
-              onEscapeKeyDown={(e) => {
-                if (previewImage) { e.preventDefault(); setPreviewImage(null); }
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98, x: '-50%', y: '-48%' }}
-                animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
-                exit={{ opacity: 0, scale: 0.98, x: '-50%', y: '-48%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                className="fixed top-[50%] left-[50%] w-full max-w-[860px] h-[90vh] max-h-[860px] bg-[hsl(var(--background))] border border-[var(--border-subtle)] rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden outline-none font-sans"
-              >
-                <Dialog.Title className="sr-only">Task Details</Dialog.Title>
+              <InlineLabelDropdown
+                ref={inlineLabelRef}
+                isOpen={isInlineLabelOpen}
+                searchQuery={tagSearchQuery}
+                onSelectLabel={handleInlineSelectLabel}
+                onCreateLabel={handleInlineCreateLabel}
+                onClose={() => setIsInlineLabelOpen(false)}
+              />
+            </div>
 
-                {/* ═══ Top Bar ═══ */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-subtle)] bg-[var(--surface-elevated)]/70 shrink-0">
-                  <div className="flex items-center gap-2 text-[13px] font-medium text-[hsl(var(--muted-foreground))]">
-                    <Box className="w-4 h-4" /> Task
-                  </div>
+            {/* Properties: one column, the label quiet, the value the thing to click. */}
+            <div className="mt-4 flex flex-col">
+              <Prop icon={<Calendar />} label="Due">
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className={valueBtn}>{dueDate ? dateLabel : empty('Add a date')}</button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto border-none bg-transparent p-0 shadow-none" align="start" side="bottom" sideOffset={6}>
+                    <SmartDatePicker selectedDate={dueDate} onSelect={(d) => { setDueDate(d); markDirty(); setIsCalendarOpen(false); }} onClose={() => setIsCalendarOpen(false)} />
+                  </PopoverContent>
+                </Popover>
+                {dueDate && (
+                  <RcIconButton size="sm" label="Clear the date" className="rc-prop-clear" onClick={() => { setDueDate(null); markDirty(); }}>
+                    <X />
+                  </RcIconButton>
+                )}
+              </Prop>
 
-                  <div className="flex items-center gap-3 text-[12px] text-[hsl(var(--muted-foreground))]">
-                    <span>Created {createdDate}</span>
+              <Prop icon={<Bell />} label="Reminder">
+                <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className={valueBtn}>{reminderLabel ?? empty('Remind me')}</button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto border-none bg-transparent p-0 shadow-none" align="start" side="bottom" sideOffset={6}>
+                    <SmartReminderModal dueDate={dueDate} onSetReminder={(d) => { setCurrentReminder(d); markDirty(); }} onClose={() => setIsReminderOpen(false)} currentReminder={currentReminder} />
+                  </PopoverContent>
+                </Popover>
+                {currentReminder && (
+                  <RcIconButton size="sm" label="Clear the reminder" className="rc-prop-clear" onClick={() => { setCurrentReminder(null); markDirty(); }}>
+                    <X />
+                  </RcIconButton>
+                )}
+              </Prop>
 
-                    <button
-                      onClick={handleSave}
-                      disabled={!isDirty || isSaving}
-                      className={cn(
-                        'flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all',
-                        isDirty
-                          ? 'bg-indigo-500 text-white hover:bg-indigo-400 shadow-lg shadow-indigo-500/20'
-                          : 'bg-[hsl(var(--muted))]/30 text-[hsl(var(--muted-foreground))] cursor-not-allowed'
-                      )}
-                    >
-                      {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </button>
+              <Prop icon={<Repeat />} label="Repeat">
+                {isRecurring ? (
+                  <span className="inline-flex flex-wrap items-center gap-1 text-[14px] text-[var(--rc-ink-1)]">
+                    Every
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className={cn(valueBtn, '!ml-0 !px-1.5 rc-num')}>
+                          {recurringInterval} <ChevronDown className="h-3 w-3 text-[var(--rc-icon)]" aria-hidden />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className={cn(rcScope, 'rc-float min-w-[56px] !border-0 z-[10002]')}>
+                        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                          <DropdownMenuItem key={n} onClick={() => { setRecurringInterval(n); markDirty(); }} className="text-[13px]">
+                            {n} {recurringInterval === n && <Check className="ml-auto h-3.5 w-3.5" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className={cn(valueBtn, '!ml-0 !px-1.5')}>
+                          {recurringUnit}{recurringInterval > 1 ? 's' : ''} <ChevronDown className="h-3 w-3 text-[var(--rc-icon)]" aria-hidden />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className={cn(rcScope, 'rc-float min-w-[88px] !border-0 z-[10002]')}>
+                        {(['day', 'week', 'month'] as const).map((u) => (
+                          <DropdownMenuItem key={u} onClick={() => { setRecurringUnit(u); markDirty(); }} className="text-[13px]">
+                            {u} {recurringUnit === u && <Check className="ml-auto h-3.5 w-3.5" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <RcIconButton size="sm" label="Stop repeating" className="rc-prop-clear" onClick={() => { setIsRecurring(false); markDirty(); }}>
+                      <X />
+                    </RcIconButton>
+                  </span>
+                ) : (
+                  <button type="button" className={valueBtn} onClick={() => { setIsRecurring(true); markDirty(); }}>
+                    {empty('Doesn’t repeat')}
+                  </button>
+                )}
+              </Prop>
 
-                    <button onClick={onClose} className="p-1 -mr-1 hover:text-white hover:bg-white/10 rounded transition-colors"><X className="w-5 h-5" /></button>
-                  </div>
-                </div>
-
-                {/* ═══ Body ═══ (single scrollable column, no activity sidebar) */}
-                <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar flex flex-col">
-
-                  {/* Title */}
-                  <div className="relative mb-6">
-                    {getHighlightedContent(title, null, null, selectedLabels, 'absolute inset-0 text-[28px] font-bold pointer-events-none overflow-hidden whitespace-pre-wrap break-words bg-transparent text-transparent')}
-                    <TextareaAutosize
-                      ref={inputRef as any}
-                      value={title}
-                      onChange={handleTitleChange}
-                      onKeyDown={handleTitleKeyDown}
-                      className={cn(
-                        'w-full bg-transparent text-[28px] font-bold border-none outline-none focus:ring-0 p-0 transition-colors resize-none overflow-hidden',
-                        isComplete ? 'text-[hsl(var(--muted-foreground))] line-through' : 'text-[hsl(var(--foreground))]/90 placeholder-[hsl(var(--muted-foreground))]/40'
-                      )}
-                      placeholder="Task title"
-                      minRows={1}
-                    />
-                    <InlineLabelDropdown
-                      ref={inlineLabelRef}
-                      isOpen={isInlineLabelOpen}
-                      searchQuery={tagSearchQuery}
-                      onSelectLabel={handleInlineSelectLabel}
-                      onCreateLabel={handleInlineCreateLabel}
-                      onClose={() => setIsInlineLabelOpen(false)}
-                    />
-                  </div>
-
-                  {/* Properties Grid */}
-                  <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 max-w-[720px]">
-
-                    {/* Status */}
-                    <div className="flex justify-between items-center group">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><CircleDot className="w-3.5 h-3.5" /> Status</div>
-                      <div className="flex-1 flex items-center">
-                        <TaskStatusDropdown
-                          currentStatus={status as TaskStatus}
-                          onStatusChange={(s) => { setStatus(s); markDirty(); }}
-                        >
-                          <button className={cn(
-                            'flex items-center gap-2 px-2.5 py-1 rounded text-[11px] font-bold tracking-wide uppercase transition-colors outline-none',
-                            isComplete ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                              : status === 'in_progress' ? 'bg-blue-500 text-white hover:bg-blue-400'
-                              : status === 'review' ? 'bg-amber-500 text-black hover:bg-amber-400'
-                              : status === 'blocked' ? 'bg-rose-500 text-white hover:bg-rose-400'
-                              : 'bg-[hsl(var(--muted))]/30 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50'
-                          )}>
-                            {isComplete ? 'Complete' : status === 'in_progress' ? 'In Progress' : status === 'review' ? 'Review' : status === 'blocked' ? 'Blocked' : 'To Do'}
-                            <span className="opacity-50 ml-1 flex items-center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6"/></svg></span>
-                          </button>
-                        </TaskStatusDropdown>
-                        {isComplete && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 ml-2" />}
-                      </div>
-                    </div>
-
-                    {/* References — replaces Assignees */}
-                    <div className="flex justify-between items-center z-[51]">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Link2 className="w-3.5 h-3.5" /> References</div>
-                      <div className="flex-1 flex items-center">
-                        <Popover open={isReferencePickerOpen} onOpenChange={setIsReferencePickerOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="flex flex-wrap items-center gap-1.5 min-h-[28px]   px-1 -ml-1 transition-colors text-left outline-none">
-                              {references.length > 0 ? (
-                                references.map(r => {
-                                  const isDoc = r.type === 'doc';
-                                  const Icon = isDoc ? FileText : LayoutTemplate;
-                                  const accent = 'text-emerald-600/80';
-                                  return (
-                                    <div key={`${r.type}-${r.refId}`} className={cn('flex items-center gap-1 px-2 py-0.5 bg-emerald-500/15 rounded-md  text-[11px] font-medium', accent)}>
-                                      <Icon className="w-3 h-3 shrink-0" />
-                                      <span className="truncate max-w-[100px]">{r.title}</span>
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                <span className="text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/70">Empty</span>
-                              )}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-0 w-72 border-[hsl(var(--border))] bg-[hsl(var(--card))]" align="start" side="bottom" sideOffset={8}>
-                            <div className="p-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 flex items-center gap-2">
-                              <Search className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-[11px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{REFERENCE_PICKER_COPY.heading}</span>
-                            </div>
-                            <div className="p-2 border-b border-[hsl(var(--border))]">
-                              <input
-                                type="text"
-                                value={referenceQuery}
-                                onChange={(e) => setReferenceQuery(e.target.value)}
-                                onKeyDown={(e) => e.stopPropagation()}
-                                placeholder={REFERENCE_PICKER_COPY.placeholder}
-                                className="w-full px-3 py-2 text-sm bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))] rounded-md text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]/50 outline-none focus:border-emerald-500/50"
-                                autoFocus
-                              />
-                            </div>
-                            <div className="max-h-52 overflow-y-auto p-1">
-                              {isSearchingRefs && (
-                                <div className="flex items-center justify-center py-3 text-[hsl(var(--muted-foreground))]">
-                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                  <span className="text-xs">Searching...</span>
-                                </div>
-                              )}
-                              {!isSearchingRefs && referenceResults.length === 0 && (
-                                <p className="text-xs text-[hsl(var(--muted-foreground))] text-center py-3">
-                                  {referenceQuery ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hint}
-                                </p>
-                              )}
-                              {!isSearchingRefs && referenceResults.map(item => {
-                                const isDoc = item.type === 'doc';
-                                const isSelected = references.some(r => r.refId === item.refId && r.type === item.type);
-                                const accentColor = 'text-[hsl(var(--foreground))]/80';
-                                const accentBg = 'bg-[hsl(var(--muted))]/30';
-                                return (
-                                  <button
-                                    key={`${item.type}-${item.refId}`}
-                                    onClick={() => toggleReference(item)}
-                                    className={cn(
-                                      'w-full flex items-center gap-2.5 px-2 py-1  rounded-lg transition-colors text-left',
-                                      isSelected ? 'bg-[hsl(var(--muted))]/20' : 'hover:bg-[hsl(var(--muted))]/10'
-                                    )}
-                                  >
-                                    <div className={cn('w-7 h-7 shrink-0 rounded-md flex items-center justify-center', accentBg)}>
-                                      {isDoc ? <FileText className={cn('w-3.5 h-3.5', accentColor)} /> : <LayoutTemplate className={cn('w-3.5 h-3.5', accentColor)} />}
-                                    </div>
-                                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                                      <span className={cn('text-[10px] font-bold uppercase tracking-wide shrink-0', accentColor)}>
-                                        {isDoc ? 'Doc' : 'Slide'}
-                                      </span>
-                                      <span className="text-[hsl(var(--muted-foreground))]/40">—</span>
-                                      <p className={cn('text-sm truncate font-medium', isSelected ? 'text-[hsl(var(--foreground))]/90' : 'text-[hsl(var(--foreground))]/80')}>{item.title}</p>
-                                    </div>
-                                    {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-
-                    {/* Due Date */}
-                    <div className="flex justify-between items-center group z-50">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Calendar className="w-3.5 h-3.5" /> Due Date</div>
-                      <div className="flex-1 flex items-center text-[13px]">
-                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="flex items-center gap-2 hover:bg-[hsl(var(--muted))]/30 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
-                              {dueDate ? <span className="text-[hsl(var(--foreground))]/80 group-hover:text-[hsl(var(--foreground))]">{dateLabel}</span> : <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/60">Empty</span>}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="start" side="bottom" sideOffset={8}>
-                            <SmartDatePicker
-                              selectedDate={dueDate}
-                              onSelect={(d) => { setDueDate(d); markDirty(); setIsCalendarOpen(false); }}
-                              onClose={() => setIsCalendarOpen(false)}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-
-                    {/* Priority */}
-                    <div className="flex justify-between items-center group z-40">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Flag className="w-3.5 h-3.5" /> Priority</div>
-                      <div className="flex-1 flex items-center text-[13px]">
-                        <PriorityDropdown
-                          currentPriority={priority}
-                          onPriorityChange={(p) => { setPriority(p); markDirty(); }}
-                        >
-                          <button className="flex items-center gap-1.5 hover:bg-white/5 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
-                            {priority ? (
-                              <>
-                                <Flag className={cn('w-3.5 h-3.5',
-                                  priority === 'high' || priority === 'urgent' ? 'text-rose-400 fill-rose-500/20' :
-                                  priority === 'medium' || priority === 'normal' ? 'text-amber-400 fill-amber-500/20' :
-                                  'text-blue-400 fill-blue-500/20'
-                                )} />
-                                <span className="text-[hsl(var(--foreground))]/80 capitalize group-hover:text-[hsl(var(--foreground))]">
-                                  {priority === 'medium' ? 'Normal' : priority}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/60">Empty</span>
-                            )}
-                          </button>
-                        </PriorityDropdown>
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex justify-between items-center z-30">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Tag className="w-3.5 h-3.5" /> Tags</div>
-                      <div className="flex-1 flex items-center text-[13px]">
-                        <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="flex flex-wrap items-center gap-1.5 min-h-[28px] hover:bg-[hsl(var(--muted))]/30 rounded px-1 -ml-1 transition-colors text-left outline-none">
-                              {selectedLabels.length > 0 ? (
-                                selectedLabels.map(l => (
-                                  <span key={l.id} className="px-1.5 py-0.5 rounded text-[10px] font-medium border border-blue-500/30 bg-blue-500/10 text-blue-400">{l.name}</span>
-                                ))
-                                ) : (
-                                <span className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]/60">Empty</span>
-                              )}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="start" side="bottom" sideOffset={8}>
-                            <LabelsModal
-                              selectedLabels={selectedLabels}
-                              onLabelsChange={(labels) => { setSelectedLabels(labels); markDirty(); }}
-                              onClose={() => setIsLabelsOpen(false)}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-
-                    {/* Reminder */}
-                    <div className="flex justify-between items-center z-20">
-                      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))] w-[120px]"><Bell className="w-3.5 h-3.5" /> Reminder</div>
-                      <div className="flex-1 flex items-center text-[13px]">
-                        <Popover open={isReminderOpen} onOpenChange={setIsReminderOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="flex items-center gap-2 hover:bg-[hsl(var(--muted))]/30 rounded px-1 -ml-1 transition-colors text-left outline-none min-h-[28px]">
-                              {currentReminder ? (
-                                <span className="text-[hsl(var(--foreground))]/80">
-                                  {isToday(currentReminder) ? `Today at ${format(currentReminder, 'h:mm a')}` :
-                                   isTomorrow(currentReminder) ? `Tomorrow at ${format(currentReminder, 'h:mm a')}` :
-                                   format(currentReminder, 'MMM d, yyyy h:mm a')}
-                                </span>
-                              ) : (
-                                <span className="text-white/30 hover:text-white/50">Empty</span>
-                              )}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-0 w-auto border-none bg-transparent shadow-none" align="start" side="bottom" sideOffset={8}>
-                            <SmartReminderModal
-                              dueDate={dueDate}
-                              onSetReminder={(d) => { setCurrentReminder(d); markDirty(); }}
-                              onClose={() => setIsReminderOpen(false)}
-                              currentReminder={currentReminder}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Options Bar */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30 transition-colors">
-                      <Paperclip className="w-3.5 h-3.5" /> Attachment
-                    </button>
-                    <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
-                      const files = e.target.files;
-                      if (!files) return;
-                      Array.from(files).forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          if (ev.target?.result) {
-                            const src = ev.target.result as string;
-                            setDescription(prev => prev + `<div style="margin:8px 0;"><img src="${src}" style="max-width:280px;max-height:196px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);display:block;"></div>`);
-                            markDirty();
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }} />
-
-                    <button onClick={addSubtask} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30 transition-colors">
-                      <ListPlus className="w-3.5 h-3.5" /> Sub Task
-                    </button>
-
-                    <button onClick={() => { setIsRecurring(!isRecurring); markDirty(); }} className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors',
-                      isRecurring ? 'border-indigo-500/30 text-indigo-400 bg-indigo-500/10' : 'border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/30'
-                    )}>
-                      <Repeat className="w-3.5 h-3.5" /> {isRecurring ? 'Recurring' : 'Recurrence'}
-                    </button>
-
-                    {isRecurring && (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[hsl(var(--border))] text-xs">
-                        <span className="text-[hsl(var(--muted-foreground))]">every</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-[hsl(var(--foreground))]/80 bg-[hsl(var(--muted))]/30 hover:bg-[hsl(var(--muted))]/50 rounded transition-colors">
-                              {recurringInterval} <ChevronDown className="w-3 h-3 text-white/40" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="min-w-[48px]">
-                            {[1,2,3,4,5,6,7].map(n => (
-                              <DropdownMenuItem key={n} onClick={() => { setRecurringInterval(n); markDirty(); }} className={cn('focus:bg-[hsl(var(--muted))]/50 text-xs', recurringInterval === n && 'text-indigo-400')}>{n}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-1 px-2 py-0.5 text-xs text-white/80 bg-white/5 hover:bg-white/10 rounded transition-colors">
-                              {recurringUnit} <ChevronDown className="w-3 h-3 text-white/40" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="min-w-[64px]">
-                            {(['day','week','month'] as const).map(u => (
-                              <DropdownMenuItem key={u} onClick={() => { setRecurringUnit(u); markDirty(); }} className={cn('focus:bg-[hsl(var(--muted))]/50 text-xs', recurringUnit === u && 'text-indigo-400')}>{u}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <button onClick={() => { setIsRecurring(false); markDirty(); }} className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] rounded transition-colors ml-1"><X className="w-3 h-3" /></button>
-                      </div>
+              <Prop icon={<Flag />} label="Priority">
+                <PriorityDropdown currentPriority={priority} onPriorityChange={(pr) => { setPriority(pr); markDirty(); }}>
+                  <button type="button" className={valueBtn}>
+                    {priorityKey ? (
+                      <>
+                        <PriorityBars priority={priorityKey} />
+                        {PRIORITY_WORDS[priorityKey] ?? priorityKey}
+                      </>
+                    ) : (
+                      empty('None')
                     )}
-                  </div>
+                  </button>
+                </PriorityDropdown>
+              </Prop>
 
-                  {/* Subtasks */}
-                  {subtasks.length > 0 && (
-                    <div className="my-4">
-                      <div className="border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--card))]/50 overflow-hidden">
-                        <div className="px-4 py-2 text-xs font-medium text-[hsl(var(--muted-foreground))] border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-                          Sub-issues ({subtasks.filter(s => s.isCompleted).length}/{subtasks.length})
-                        </div>
-                        <div className="p-0.5 space-y-0.5">
-                          {subtasks.map((st, idx) => (
-                            <div key={st.id} className="flex items-center gap-3 px-3 py-2 group">
-                              <CornerDownRight className="w-3.5 h-3.5 text-white/30" />
-                            <button onClick={() => toggleSubtask(st.id)} className={cn(
-                                'w-4 h-4 rounded-sm flex items-center justify-center shrink-0 border transition-colors cursor-pointer',
-                                st.isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--foreground))]/40'
-                              )}>
-                                {st.isCompleted && <CheckCircle className="w-3 h-3 text-white" />}
-                              </button>
-                              <input
-                                type="text" value={st.text}
-                                onChange={(e) => { const u = [...subtasks]; u[idx] = { ...u[idx], text: e.target.value }; setSubtasks(u); markDirty(); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(); } if (e.key === 'Backspace' && st.text === '') { e.preventDefault(); removeSubtask(st.id); } }}
-                                placeholder="Issue title"
-                                className={cn('flex-1 bg-transparent text-sm placeholder:text-[hsl(var(--muted-foreground))]/50 focus:outline-none', st.isCompleted ? 'text-[hsl(var(--muted-foreground))] line-through' : 'text-[hsl(var(--foreground))]/80')}
-                                autoFocus={st.text === ''}
-                              />
-                              <button onClick={() => removeSubtask(st.id)} className="opacity-0 group-hover:opacity-100 p-1 text-[hsl(var(--muted-foreground))]/40 hover:text-[hsl(var(--muted-foreground))] transition-all"><X className="w-3 h-3" /></button>
-                            </div>
-                          ))}
-                        <button onClick={addSubtask} className="flex items-center gap-2 px-3 py-2 w-full text-left text-xs font-medium text-indigo-400 hover:bg-white/5 transition-colors">
-                            <Plus className="w-3.5 h-3.5" /> Add sub-issue
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+              <Prop icon={<Tag />} label="Tags">
+                <Popover open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className={cn(valueBtn, 'flex-wrap py-1')}>
+                      {selectedLabels.length > 0
+                        ? selectedLabels.map((l) => (
+                            <span key={l.id} className="rounded-[4px] bg-[var(--rc-surface-2)] px-1.5 py-0.5 text-[12.5px] font-[500] text-[var(--rc-ink-2)]">
+                              {l.name}
+                            </span>
+                          ))
+                        : empty('Add tags')}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto border-none bg-transparent p-0 shadow-none" align="start" side="bottom" sideOffset={6}>
+                    <LabelsModal selectedLabels={selectedLabels} onLabelsChange={(labels) => { setSelectedLabels(labels); markDirty(); }} onClose={() => setIsLabelsOpen(false)} />
+                  </PopoverContent>
+                </Popover>
+              </Prop>
 
-                    {/* Description (scrollable area) */}
-                    <div className="flex-1 mt-4 overflow-y-auto custom-scrollbar border border-[var(--border-subtle)] rounded-lg p-4 bg-[var(--surface-elevated)] min-h-[300px]">
-                      <TiptapTaskEditor
-                        content={description}
-                        onChange={(val: string) => { setDescription(val); markDirty(); }}
-                        onImageClick={setPreviewImage}
-                        placeholder="Add description... Write or type / for commands"
-                        onSelectLabel={handleEditorSelectLabel}
-                        onLabelDelete={handleEditorLabelDelete}
+              <Prop icon={<Link2 />} label="Linked docs">
+                <Popover open={isReferencePickerOpen} onOpenChange={setIsReferencePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className={cn(valueBtn, 'flex-wrap py-1')}>
+                      {references.length > 0
+                        ? references.map((r) => {
+                            const Icon = r.type === 'doc' ? FileText : LayoutTemplate;
+                            return (
+                              <span key={`${r.type}-${r.refId}`} className="inline-flex max-w-[220px] items-center gap-1 rounded-[4px] bg-[var(--rc-surface-2)] px-1.5 py-0.5 text-[12.5px] font-[500] text-[var(--rc-ink-2)]">
+                                <Icon className="h-3 w-3 shrink-0" aria-hidden />
+                                <span className="truncate">{r.title}</span>
+                              </span>
+                            );
+                          })
+                        : empty('Link a doc')}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className={cn(rcScope, 'rc-float w-80 overflow-hidden rounded-[10px] p-0')} align="start" side="bottom" sideOffset={6}>
+                    <div className="border-b border-[var(--rc-line)] p-2">
+                      <input
+                        type="text"
+                        value={referenceQuery}
+                        onChange={(e) => setReferenceQuery(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        placeholder={REFERENCE_PICKER_COPY.placeholder}
+                        className="rc-input w-full"
+                        autoFocus
                       />
                     </div>
-                </div>
-              </motion.div>
-            </Dialog.Content>
+                    <div className="max-h-56 overflow-y-auto p-1">
+                      {isSearchingRefs && (
+                        <div className="flex items-center justify-center gap-2 py-3 text-[13px] text-[var(--rc-ink-3)]">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Searching…
+                        </div>
+                      )}
+                      {!isSearchingRefs && referenceResults.length === 0 && (
+                        <p className="py-3 text-center text-[13px] text-[var(--rc-ink-3)]">{referenceQuery ? REFERENCE_PICKER_COPY.noResults : REFERENCE_PICKER_COPY.hint}</p>
+                      )}
+                      {!isSearchingRefs &&
+                        referenceResults.map((item) => {
+                          const isSelected = references.some((r) => r.refId === item.refId && r.type === item.type);
+                          const Icon = item.type === 'doc' ? FileText : LayoutTemplate;
+                          return (
+                            <button
+                              key={`${item.type}-${item.refId}`}
+                              type="button"
+                              onClick={() => toggleReference(item)}
+                              className="rc-hoverable flex w-full items-center gap-2.5 rounded-[6px] px-2 py-1.5 text-left text-[14px]"
+                            >
+                              <Icon className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" aria-hidden />
+                              <span className="min-w-0 flex-1 truncate text-[var(--rc-ink-1)]">{item.title}</span>
+                              {isSelected && <Check className="h-4 w-4 shrink-0 text-[var(--rc-ink-2)]" aria-hidden />}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </Prop>
+            </div>
 
-            {/* Image Preview */}
-            <AnimatePresence>
-              {previewImage && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto" onClick={() => setPreviewImage(null)}>
-                  <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="relative max-w-[80vw] max-h-[80vh]" onClick={e => e.stopPropagation()}>
-                    <img src={previewImage} alt="Preview" className="max-w-full max-h-[80vh] rounded-lg shadow-2xl" />
-                    <button onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors cursor-pointer"><X className="w-5 h-5 text-white" /></button>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
+            {/* Subtasks */}
+            <div className="mt-6">
+              <div className="flex min-h-[26px] items-center justify-between border-b border-[var(--rc-line)] pb-1.5 text-[13px]">
+                <span className="font-[600] text-[var(--rc-ink-2)]">
+                  Subtasks {subtasks.length > 0 && <span className="rc-num font-[400] text-[var(--rc-ink-3)]">{doneSubtasks} of {subtasks.length}</span>}
+                </span>
+              </div>
+              <ul className="mt-0.5">
+                {subtasks.map((st, idx) => (
+                  <li key={st.id} className="rc-row rc-hoverable group -mx-2 flex items-center gap-3 px-2 py-[5px]">
+                    <RcCheck checked={st.isCompleted} onToggle={() => toggleSubtask(st.id)} label={st.isCompleted ? `Mark “${st.text}” not done` : `Mark “${st.text}” done`} />
+                    <input
+                      type="text"
+                      value={st.text}
+                      onChange={(e) => { const u = [...subtasks]; u[idx] = { ...u[idx], text: e.target.value }; setSubtasks(u); markDirty(); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); addSubtask(); }
+                        if (e.key === 'Backspace' && st.text === '') { e.preventDefault(); removeSubtask(st.id); }
+                      }}
+                      placeholder="A step"
+                      aria-label="Subtask"
+                      className={cn('min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--rc-ink-3)]', st.isCompleted ? 'text-[var(--rc-ink-3)] line-through' : 'text-[var(--rc-ink-1)]')}
+                      autoFocus={st.text === ''}
+                    />
+                    <div className="rc-row-actions">
+                      <RcIconButton size="sm" label={`Remove “${st.text || 'this step'}”`} onClick={() => removeSubtask(st.id)}>
+                        <X />
+                      </RcIconButton>
+                    </div>
+                  </li>
+                ))}
+                <li>
+                  <button type="button" onClick={addSubtask} className="rc-hoverable -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-[6px] px-2 py-[6px] text-left text-[14px] text-[var(--rc-ink-3)]">
+                    <Plus className="h-[18px] w-[18px] text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden /> Add a step
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Notes: the editor straight on the sheet, no box. */}
+            <div className="mt-6 flex min-h-[260px] flex-col">
+              <div className="flex min-h-[26px] items-center justify-between border-b border-[var(--rc-line)] pb-1.5 text-[13px]">
+                <span className="font-[600] text-[var(--rc-ink-2)]">Notes</span>
+                <RcButton size="sm" variant="quiet" className="-my-1 -mr-2" icon={<Paperclip />} onClick={() => fileInputRef.current?.click()}>
+                  Add image
+                </RcButton>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                  const files = e.target.files;
+                  if (!files) return;
+                  Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result) {
+                        const src = ev.target.result as string;
+                        setDescription(prev => prev + `<div style="margin:8px 0;"><img src="${src}" style="max-width:280px;max-height:196px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);display:block;"></div>`);
+                        markDirty();
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  });
+                }} />
+              </div>
+              <div className="rc-task-notes flex-1 pt-2">
+                <TiptapTaskEditor
+                  content={description}
+                  onChange={(val: string) => { setDescription(val); markDirty(); }}
+                  onImageClick={setPreviewImage}
+                  placeholder="Write anything, or type / for commands"
+                  onSelectLabel={handleEditorSelectLabel}
+                  onLabelDelete={handleEditorLabelDelete}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Saving: what changed is kept on close; the foot says so and saves now on a click (or Ctrl S). */}
+          <div className={cn('rc-sheet-foot justify-between !py-2.5 transition-opacity', isDirty || isSaving ? 'opacity-100' : 'pointer-events-none opacity-0')} aria-hidden={!isDirty && !isSaving}>
+            <span className="rc-meta">{isSaving ? 'Saving…' : 'Unsaved changes · saved when you close'}</span>
+            <RcButton size="sm" variant="main" busy={isSaving} disabled={!isDirty || isSaving} onClick={() => void handleSave()}>
+              Save
+            </RcButton>
+          </div>
+        </Dialog.Content>
+
+        {/* Image preview */}
+        <AnimatePresence>
+          {previewImage && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto" onClick={() => setPreviewImage(null)}>
+              <motion.div initial={{ scale: 0.96 }} animate={{ scale: 1 }} exit={{ scale: 0.96 }} className="relative max-w-[80vw] max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                <img src={previewImage} alt="Preview" className="max-w-full max-h-[80vh] rounded-lg shadow-2xl" />
+                <button onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors cursor-pointer" aria-label="Close the preview"><X className="w-5 h-5 text-white" /></button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Dialog.Portal>
     </Dialog.Root>
     </>
   );
