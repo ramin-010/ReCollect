@@ -40,7 +40,7 @@ export function CopyRow({ text, label }: { text: string; label: string }) {
  */
 export function SetUpComputer({ apiUrl }: { apiUrl: string }) {
   const url = apiUrl.replace(/\/+$/, '');
-  const command = /^https:\/\/api\.re-collect\.in$/i.test(url) ? 'npx re-collect setup' : `npx re-collect setup --url ${url}`;
+  const command = /^https:\/\/api\.re-collect\.in$/i.test(url) ? 'npx recollect-setup' : `npx recollect-setup --url ${url}`;
   return (
     <div className="set-field mt-5">
       <p className="rc-field-label">Use it in your coding tools</p>

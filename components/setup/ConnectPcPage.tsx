@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * A computer asks to use Recollect (EASY_SETUP_PLAN §3.2): `npx re-collect setup` showed a code in a terminal and
+ * A computer asks to use Recollect (EASY_SETUP_PLAN §3.2): `npx recollect-setup` showed a code in a terminal and
  * opened this page with it. The same quiet column as an app's sign-in (ConsentPage): the computer as it calls itself,
  * the code to check against the terminal (the one guard against someone else's link), what it will be able to do, and
  * Approve (the one dark button) or Deny. Signed out, they sign in first and come back here. No code in the link: they
@@ -111,7 +111,7 @@ export function ConnectPcPage() {
           <form onSubmit={enterCode}>
             <h1 className="oauth-title">Connect a computer</h1>
             <p className="oauth-sub">
-              Type the code your terminal shows after <code className="rc-code">npx re-collect setup</code>.
+              Type the code your terminal shows after <code className="rc-code">npx recollect-setup</code>.
             </p>
             <label htmlFor="pc-code" className="oauth-label block">
               Code
