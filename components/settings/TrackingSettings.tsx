@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { rcScope, RcButton, RcSegmented, RcSkel } from '@/components/rc-ui';
+import { rcScope, RcButton, RcMenu, RcSegmented, RcSkel } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
 import { formatMinutes, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
-import type { DayString, ProjectKind, ProjectRow } from '@/lib/learning/types';
+import type { DayString, FolderTracking, NewFolders, ProjectKind, ProjectRow } from '@/lib/learning/types';
 import { relativeDay } from '@/components/learning/home/format';
 import './settings.css';
 
@@ -14,6 +15,23 @@ const KINDS: Array<{ value: ProjectKind; label: string }> = [
   { value: 'personal', label: 'Personal' },
   { value: 'study', label: 'Study' },
   { value: 'work', label: 'Work' },
+];
+
+/** EASY_SETUP_PLAN: what is logged in a folder (its kind's default unless it has its own). */
+const TRACKING: Array<{ value: FolderTracking; label: string; help: string }> = [
+  { value: 'full', label: 'Everything', help: 'Time, your words for your buddy, the work log' },
+  { value: 'light', label: 'Time only', help: 'How long you worked; nothing you type is read' },
+  { value: 'off', label: 'Nothing', help: 'Recollect leaves this folder alone' },
+];
+const trackingLabel = (t: FolderTracking | undefined) => TRACKING.find((x) => x.value === t)?.label ?? 'Everything';
+
+/** EASY_SETUP_PLAN §3.5: what a folder Recollect has never seen is. */
+const NEW_FOLDERS: Array<{ value: NewFolders; label: string }> = [
+  { value: 'ask', label: 'Ask' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'study', label: 'Study' },
+  { value: 'work', label: 'Work' },
+  { value: 'off', label: 'Ignore' },
 ];
 
 type Counts = 'personal' | 'all';
@@ -41,6 +59,7 @@ const recount = () => window.dispatchEvent(new Event(SESSIONS_CHANGED_EVENT));
  */
 export function TrackingSettings() {
   const [counts, setCounts] = useState<Counts | null>(null);
+  const [newFolders, setNewFolders] = useState<NewFolders>('ask');
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [saving, setSaving] = useState<string | null>(null);
@@ -50,6 +69,7 @@ export function TrackingSettings() {
     try {
       const [settings, list] = await Promise.all([learningApi.getSettings(), learningApi.listProjects()]);
       setCounts(settings.progressIncludesWork ? 'all' : 'personal');
+      setNewFolders(settings.newFolders ?? 'ask');
       setProjects(list);
       setState('ready');
     } catch {
@@ -78,8 +98,42 @@ export function TrackingSettings() {
     }
   };
 
+  const pickNewFolders = async (next: NewFolders) => {
+    if (next === newFolders) return;
+    const was = newFolders;
+    setNewFolders(next);
+    setSaving('new');
+    try {
+      await learningApi.updateSettings({ newFolders: next });
+      toast.success(next === 'ask' ? 'A new folder asks you once what it is' : next === 'off' ? 'New folders are ignored until you pick them here' : `New folders start as ${next}`);
+    } catch {
+      setNewFolders(was);
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const pickTracking = async (p: ProjectRow, tracking: FolderTracking) => {
+    const was = { tracking: p.tracking, trackingSet: p.trackingSet };
+    // Its kind's own default again is no choice of its own (a later change of kind moves it with it).
+    const own = tracking === ((p.kind ?? 'personal') === 'work' ? 'light' : 'full') ? null : tracking;
+    setProjects((list) => list?.map((x) => (x._id === p._id ? { ...x, tracking, trackingSet: own !== null } : x)) ?? list);
+    setSaving(p._id);
+    try {
+      const fresh = await learningApi.setProjectTracking(p._id, own);
+      setProjects((list) => list?.map((x) => (x._id === p._id ? fresh : x)) ?? list);
+      toast.success(tracking === 'off' ? `${p.name}: nothing is logged now` : tracking === 'light' ? `${p.name}: only the time is logged now` : `${p.name}: everything is logged now`);
+    } catch {
+      setProjects((list) => list?.map((x) => (x._id === p._id ? { ...x, ...was } : x)) ?? list);
+      toast.error('That didn’t save. Try again.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const pickKind = async (p: ProjectRow, kind: ProjectKind) => {
-    if ((p.kind ?? 'personal') === kind) return;
+    if ((p.kind ?? 'personal') === kind && p.kindSetBy !== null) return;
     const was = p.kind ?? 'personal';
     setProjects((list) => list?.map((x) => (x._id === p._id ? { ...x, kind } : x)) ?? list);
     setSaving(p._id);
@@ -146,32 +200,63 @@ export function TrackingSettings() {
         ) : (
           <ul className="set-list mt-3" aria-label="Folders">
             {shown.map((p) => {
+              const undecided = p.kindSetBy === null;
               const meta = [
+                undecided ? 'not set yet: its next chat asks' : null,
                 p.lastSession ? `last worked ${lastWorked(p.lastSession.day, today)}` : 'nothing logged yet',
                 p.minutes28 ? `${formatMinutes(p.minutes28)} in 4 weeks` : null,
                 p.isArchived ? 'archived' : null,
               ]
                 .filter(Boolean)
                 .join(' · ');
+              const tracking = p.tracking ?? ((p.kind ?? 'personal') === 'work' ? 'light' : 'full');
               return (
-                <li key={p._id} className="set-row max-sm:flex-col max-sm:items-start max-sm:py-2.5">
+                <li key={p._id} className="set-row track-row">
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] text-[var(--rc-ink-1)]">{p.name}</span>
                     <span className="rc-meta rc-num block text-[13px]">{meta}</span>
                   </span>
-                  <RcSegmented
-                    className={cn('shrink-0', saving === p._id && 'pointer-events-none opacity-70')}
-                    label={`What ${p.name} is`}
-                    options={KINDS}
-                    value={p.kind ?? 'personal'}
-                    onChange={(k) => void pickKind(p, k)}
-                  />
+                  <span className={cn('flex shrink-0 items-center gap-2', saving === p._id && 'pointer-events-none opacity-70')}>
+                    {p.tracking !== undefined && (
+                      <RcMenu
+                        label={`What is logged in ${p.name}`}
+                        align="end"
+                        actions={TRACKING.map((t) => ({
+                          label: t.label,
+                          icon: t.value === tracking ? <Check className="h-4 w-4" strokeWidth={2} aria-label="current" /> : <span className="inline-block w-4" aria-hidden />,
+                          onSelect: () => void pickTracking(p, t.value),
+                        }))}
+                      >
+                        <button type="button" className="track-logged" title={TRACKING.find((t) => t.value === tracking)?.help}>
+                          {trackingLabel(tracking)}
+                          <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+                        </button>
+                      </RcMenu>
+                    )}
+                    <RcSegmented label={`What ${p.name} is`} options={KINDS} value={p.kind ?? 'personal'} onChange={(k) => void pickKind(p, k)} />
+                  </span>
                 </li>
               );
             })}
           </ul>
         )}
-        <p className="rc-meta mt-4 text-[13px]">A new folder starts as your PC’s hook settings call it; what you pick here wins after that, on every PC and in every chat.</p>
+        <p className="rc-meta mt-4 text-[13px]">
+          What is logged: everything (the time, your words for your buddy, the work log), the time only, or nothing. What you pick here holds on every computer and in every chat; a chat can still say it is study, personal or work (/study, /personal, /work).
+        </p>
+      </section>
+
+      <section aria-labelledby="track-new" className="mt-10">
+        <h2 id="track-new" className="rc-field-label">
+          New folders
+        </h2>
+        <p className="rc-field-help">
+          {newFolders === 'ask'
+            ? 'The first chat in a folder Recollect hasn’t seen asks you once what it is. Until you answer, only its time is kept, on your computer.'
+            : newFolders === 'off'
+              ? 'A folder Recollect hasn’t seen is ignored until you pick what it is here.'
+              : `A folder Recollect hasn’t seen starts as ${newFolders}; change it here any time.`}
+        </p>
+        <RcSegmented className={cn('mt-3', saving === 'new' && 'pointer-events-none opacity-70')} label="New folders" options={NEW_FOLDERS} value={newFolders} onChange={(v) => void pickNewFolders(v)} />
       </section>
     </div>
   );

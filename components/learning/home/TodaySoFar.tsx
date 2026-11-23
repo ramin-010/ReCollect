@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, Hammer, Pencil, Puzzle, RotateCcw, Timer, Trash2, X } from 'lucide-react';
+import { BookOpen, Check, Hammer, Pencil, Puzzle, RotateCcw, Tag, Timer, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { RcIconButton, RcSheet } from '@/components/rc-ui';
+import { RcIconButton, RcMenu, RcSheet } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
 import { formatMinutes, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
-import type { DayString, SessionKind, SessionList, WorkSession } from '@/lib/learning/types';
+import type { ChatKind, DayString, SessionKind, SessionList, WorkSession } from '@/lib/learning/types';
 
 const KIND_ICON: Record<SessionKind, typeof BookOpen> = { study: BookOpen, practice: Puzzle, build: Hammer, review: RotateCcw };
 const OUTCOME: Record<string, string> = { alone: 'solved alone', hints: 'with hints', after_answer: 'after the answer' };
@@ -32,11 +32,19 @@ function dayLabel(day: DayString, today: DayString): string {
 
 const writer = (s: WorkSession) => (s.source === 'user' ? 'you' : s.source === 'hook' ? 'Claude Code' : s.agentName ?? 'an agent');
 
+/** EASY_SETUP_PLAN §7: what a chat is, from its row (the most trusted choice: no chat can change it after). */
+const CHAT_KINDS: Array<{ value: ChatKind; label: string }> = [
+  { value: 'personal', label: 'Personal' },
+  { value: 'study', label: 'Study' },
+  { value: 'work', label: 'Work' },
+];
+
 /**
  * The record on Home (SYNC_SPINE_SPEC 1.2): one quiet line under Today ("Today so far: 50 min study
  * · 2 h build", or the last session), opening the last 14 days. Hidden when nothing was logged.
  * PERSONAL_OFFICE_PLAN (11-23): the line counts what counts as progress (work only when they said so); the sheet
- * still lists every session, work marked, so any entry can be fixed.
+ * still lists every session, work marked, so any entry can be fixed. EASY_SETUP_PLAN §7: each row says what the chat
+ * is (an agent's call named) and can be set Personal, Study or Work.
  */
 export function TodaySoFar({ today }: { today: DayString }) {
   const [list, setList] = useState<SessionList | null>(null);
@@ -118,14 +126,30 @@ function SessionRow({ s, onChanged }: { s: WorkSession; onChanged: () => void })
   const [minutes, setMinutes] = useState(s.minutes?.toString() ?? '');
   const [busy, setBusy] = useState(false);
   const Icon = KIND_ICON[s.kind];
+  const kindWord = s.area === 'work' ? 'work' : s.kind;
   const meta = [
     s.minutes ? formatMinutes(s.minutes) : null,
-    s.area === 'work' ? 'work' : s.kind,
+    // An agent's call on what the chat is, named (theirs or the app's needs no word).
+    s.kindSetBy === 'agent' ? `${kindWord}, ${writer(s)}’s call` : kindWord,
     s.topic?.title ?? s.subject?.name ?? s.project?.name ?? null,
     s.score ? `quiz ${s.score.done}/${s.score.total}` : null,
     s.outcome ? OUTCOME[s.outcome] : null,
     `by ${writer(s)}`,
   ].filter(Boolean);
+
+  const mark = async (chatKind: ChatKind) => {
+    if (chatKind === s.chatKind && s.kindSetBy === 'app') return;
+    setBusy(true);
+    try {
+      await learningApi.updateSession(s._id, { chatKind });
+      toast.success(chatKind === 'work' ? 'Marked as work: its time isn’t counted as progress' : `Marked as ${chatKind}`);
+      onChanged();
+    } catch {
+      toast.error('That did not save. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const save = async () => {
     const m = minutes.trim() === '' ? null : Number(minutes);
@@ -199,6 +223,20 @@ function SessionRow({ s, onChanged }: { s: WorkSession; onChanged: () => void })
         <p className="rc-meta mt-0.5 break-words">{meta.join(' · ')}</p>
       </div>
       <div className="rc-row-actions -my-1 flex items-center">
+        {s.chatKind && (
+          <RcMenu
+            label={`What “${s.title}” is`}
+            actions={CHAT_KINDS.map((k) => ({
+              label: k.label,
+              icon: k.value === s.chatKind ? <Check className="h-4 w-4" strokeWidth={2} aria-label="current" /> : <span className="inline-block w-4" aria-hidden />,
+              onSelect: () => void mark(k.value),
+            }))}
+          >
+            <RcIconButton label={`What “${s.title}” is: ${s.chatKind}`} size="sm" disabled={busy}>
+              <Tag />
+            </RcIconButton>
+          </RcMenu>
+        )}
         <RcIconButton label={`Edit “${s.title}”`} size="sm" onClick={() => setEditing(true)}>
           <Pencil />
         </RcIconButton>

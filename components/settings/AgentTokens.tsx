@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, KeyRound } from 'lucide-react';
-import { ConnectChats } from './ConnectChats';
+import { ConnectChats, SetUpComputer } from './ConnectChats';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcSkel } from '@/components/rc-ui';
@@ -113,6 +113,7 @@ export function AgentTokens() {
       <p className="rc-body rc-ink-2">
         Let a coding agent write learning docs, set goals and plan your week through the Recollect MCP server. Its changes are labelled “From your agent” on Home, and each one can be undone.
       </p>
+      <SetUpComputer apiUrl={apiUrl} />
       <ConnectChats apiUrl={apiUrl} />
 
       {fresh ? (
@@ -136,6 +137,7 @@ export function AgentTokens() {
           <label htmlFor="tok-name" className="rc-field-label">
             New token
           </label>
+          <p className="rc-field-help">For another agent, or a setup by hand.</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input id="tok-name" className="rc-input set-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="What will use it, e.g. Claude Code" />
             <RcButton variant="main" icon={<KeyRound className="h-4 w-4" />} busy={creating} disabled={!name.trim() || !scopes.length} onClick={() => void create()}>

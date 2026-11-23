@@ -61,6 +61,8 @@ import type {
   StandTakes,
   LeetcodeLink,
   ProjectKind,
+  FolderTracking,
+  ChatKind,
   ProjectRow,
   StandLens,
   StandWindow,
@@ -463,7 +465,7 @@ export const learningApi = {
     return call(() => axiosInstance.post('/api/sessions', body));
   },
 
-  async updateSession(id: string, body: { title?: string; minutes?: number | null; kind?: SessionKind }): Promise<WorkSession> {
+  async updateSession(id: string, body: { title?: string; minutes?: number | null; kind?: SessionKind; chatKind?: ChatKind }): Promise<WorkSession> {
     return call(() => axiosInstance.patch(`/api/sessions/${id}`, body));
   },
 
@@ -497,6 +499,11 @@ export const learningApi = {
   /** A folder's kind (its past sessions move with it). */
   async setProjectKind(id: string, kind: ProjectKind): Promise<ProjectRow> {
     return call(() => axiosInstance.patch(`/api/projects/${encodeURIComponent(id)}`, { kind }));
+  },
+
+  /** EASY_SETUP_PLAN: what is logged in a folder (null: its kind's default). */
+  async setProjectTracking(id: string, tracking: FolderTracking | null): Promise<ProjectRow> {
+    return call(() => axiosInstance.patch(`/api/projects/${encodeURIComponent(id)}`, { tracking }));
   },
 
   /** LeetCode (11-22): the username whose accepted problems are logged as practice, when it last ran, how many it logged. */

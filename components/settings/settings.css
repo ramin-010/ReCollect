@@ -170,3 +170,36 @@
   overflow-wrap: anywhere;
   user-select: all;
 }
+
+/* Settings › Tracking: what is logged in a folder, a quiet menu button beside its kind (EASY_SETUP_PLAN). */
+.track-logged {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--rc-r-md);
+  font-size: 13px;
+  color: var(--rc-ink-2);
+  white-space: nowrap;
+}
+.track-logged:hover,
+.track-logged[data-state='open'] {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+.track-logged:focus-visible {
+  outline: 2px solid var(--rc-focus, var(--rc-accent));
+  outline-offset: 1px;
+}
+
+/* Settings › Tracking's folder rows on a phone: the name over its two controls, all from the left (the utilities'
+   max-sm:items-start lost to .set-row's unlayered align-items). */
+@media (max-width: 639.98px) {
+  .track-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 0;
+  }
+}

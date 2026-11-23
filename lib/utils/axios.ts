@@ -30,8 +30,9 @@ axiosInstance.interceptors.response.use(
         const path = window.location.pathname;
 
         // A published doc's page (/p/<slug>) is for anyone: a stale login there must not leave the page.
-        // An app's sign-in (/oauth/consent) sends him to the login itself and back, with its request kept.
-        if (!path.startsWith('/welcome') && !path.startsWith('/login') && !path.startsWith('/signup') && !path.startsWith('/p/') && !path.startsWith('/oauth/')) {
+        // An app's sign-in (/oauth/consent) and a computer's (/connect-pc) send them to the login themselves and back,
+        // with the request or code kept.
+        if (!path.startsWith('/welcome') && !path.startsWith('/login') && !path.startsWith('/signup') && !path.startsWith('/p/') && !path.startsWith('/oauth/') && !path.startsWith('/connect-pc')) {
           window.location.href = '/welcome';
         }
       }

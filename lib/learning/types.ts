@@ -356,12 +356,22 @@ export interface LearningSettings {
   agentProfile?: string | null;
   /** PERSONAL_OFFICE_PLAN: work counts as progress too (absent from an older server: personal only). */
   progressIncludesWork?: boolean;
+  /** EASY_SETUP_PLAN: what a folder the server has never seen is (absent from an older server). */
+  newFolders?: NewFolders;
 }
 
 /** `PATCH /api/learning/settings` accepts any subset. */
 export type LearningSettingsPatch = Partial<
-  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork'>
+  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork' | 'newFolders'>
 >;
+
+/** EASY_SETUP_PLAN: what a new folder is: ask (the agent asks once), a kind, or off (not logged). */
+export type NewFolders = 'ask' | 'personal' | 'study' | 'work' | 'off';
+/** EASY_SETUP_PLAN: what is logged in a folder: everything, the time only, nothing. */
+export type FolderTracking = 'full' | 'light' | 'off';
+/** EASY_SETUP_PLAN §7: what a chat is, and who said so (folder: it follows its folder). */
+export type ChatKind = 'personal' | 'study' | 'work';
+export type KindSetBy = 'folder' | 'pc' | 'agent' | 'chat' | 'app';
 
 /** PERSONAL_OFFICE_PLAN: what a folder is. Personal and study count as progress; work only if they say so. */
 export type ProjectKind = 'personal' | 'study' | 'work';
@@ -375,6 +385,11 @@ export interface ProjectRow {
   name: string;
   /** Absent from an older server (personal). */
   kind?: ProjectKind;
+  /** EASY_SETUP_PLAN: what is logged there (its own choice, else its kind's); absent from an older server. */
+  tracking?: FolderTracking;
+  trackingSet?: boolean;
+  /** Who decided what it is; null: nobody yet (a new folder asks once). */
+  kindSetBy?: KindSetBy | null;
   goal: { _id: string; title: string } | null;
   nextStep: string | null;
   isArchived: boolean;
@@ -504,6 +519,9 @@ export interface WorkSession {
   agentName: string | null;
   /** PERSONAL_OFFICE_PLAN: personal or work (absent from an older server: personal). */
   area?: 'personal' | 'work';
+  /** EASY_SETUP_PLAN §7: what the chat is, and who said so (absent from an older server). */
+  chatKind?: ChatKind;
+  kindSetBy?: KindSetBy;
 }
 
 export interface SessionList {

@@ -1,0 +1,47 @@
+/* A computer's sign-in (ConnectPcPage.tsx), on the consent page's column (consent.css): the computer as one card on
+   surface 2 with its code in tabular figures, the check said once under it. */
+@layer components {
+  .pc-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--rc-surface-2);
+  }
+  .pc-card-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--rc-icon);
+  }
+  .pc-card-name {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .pc-card-code {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--rc-ink-2);
+  }
+  .pc-card-code b {
+    font-weight: 600;
+    color: var(--rc-ink-1);
+    letter-spacing: 0.06em;
+  }
+  .pc-check {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--rc-ink-2);
+  }
+  .pc-code-input {
+    width: 100%;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
