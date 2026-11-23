@@ -46,6 +46,8 @@
   --rc-heat-2: #226c47;
   --rc-heat-3: #2f9a5e;
   --rc-heat-4: #4fcb7c;
+  /* PERSONAL_OFFICE_PLAN: work time on Where you stand's wave, a quiet slate beside the greens */
+  --rc-wave-work: #8fa3c4;
   --rc-surface: #202020;
   --rc-surface-2: #262626;
   --rc-surface-float: #252525;
@@ -114,6 +116,7 @@ html.light .rc,
   --rc-heat-2: #6cc48c;
   --rc-heat-3: #34985c;
   --rc-heat-4: #1f6a40;
+  --rc-wave-work: #5b6b8c;
   --rc-surface: #ffffff;
   --rc-surface-2: #f4f3f2;
   --rc-surface-float: #ffffff;

@@ -35,6 +35,8 @@ const writer = (s: WorkSession) => (s.source === 'user' ? 'you' : s.source === '
 /**
  * The record on Home (SYNC_SPINE_SPEC 1.2): one quiet line under Today ("Today so far: 50 min study
  * · 2 h build", or the last session), opening the last 14 days. Hidden when nothing was logged.
+ * PERSONAL_OFFICE_PLAN (11-23): the line counts what counts as progress (work only when they said so); the sheet
+ * still lists every session, work marked, so any entry can be fixed.
  */
 export function TodaySoFar({ today }: { today: DayString }) {
   const [list, setList] = useState<SessionList | null>(null);
@@ -61,11 +63,16 @@ export function TodaySoFar({ today }: { today: DayString }) {
   const changed = () => window.dispatchEvent(new Event(SESSIONS_CHANGED_EVENT));
 
   if (!list || list.sessions.length === 0) return null;
-  const todays = list.days.find((d) => d.day === today);
-  const last = list.sessions[0]!;
-  const line = todays
-    ? `Today so far: ${kindsText(todays.minutes) || `${todays.count} ${todays.count === 1 ? 'session' : 'sessions'}`}`
-    : `Last session: ${dayLabel(last.day, today)}${last.minutes ? ` · ${formatMinutes(last.minutes)} ${last.kind}` : ''}`;
+  const counted = list.sessions.filter((s) => list.progressLens === 'all' || s.area !== 'work');
+  const todays = counted.filter((s) => s.day === today);
+  const todayMinutes = { study: 0, practice: 0, build: 0, review: 0 } as Record<SessionKind, number>;
+  for (const s of todays) todayMinutes[s.kind] += s.minutes ?? 0;
+  const last = counted[0];
+  const line = todays.length
+    ? `Today so far: ${kindsText(todayMinutes) || `${todays.length} ${todays.length === 1 ? 'session' : 'sessions'}`}`
+    : last
+      ? `Last session: ${dayLabel(last.day, today)}${last.minutes ? ` · ${formatMinutes(last.minutes)} ${last.kind}` : ''}`
+      : 'Work sessions only';
 
   return (
     <>
@@ -113,7 +120,7 @@ function SessionRow({ s, onChanged }: { s: WorkSession; onChanged: () => void })
   const Icon = KIND_ICON[s.kind];
   const meta = [
     s.minutes ? formatMinutes(s.minutes) : null,
-    s.kind,
+    s.area === 'work' ? 'work' : s.kind,
     s.topic?.title ?? s.subject?.name ?? s.project?.name ?? null,
     s.score ? `quiz ${s.score.done}/${s.score.total}` : null,
     s.outcome ? OUTCOME[s.outcome] : null,

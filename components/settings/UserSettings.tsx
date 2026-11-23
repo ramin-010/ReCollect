@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useRouter } from 'next/navigation';
 import { useSettingsStore } from '@/lib/store/settingsStore';
 import { ContentCard } from '@/components/content/ContentCard';
-import { User, Archive, Heart, X, LogOut, Bot, Gauge, Smartphone, MessageSquare, Database } from 'lucide-react';
+import { User, Archive, Heart, X, LogOut, Bot, Gauge, Smartphone, MessageSquare, Database, ChartNoAxesColumn } from 'lucide-react';
 import { rcScope, RcConfirm, RcIconButton } from '@/components/rc-ui';
 import { cn } from '@/lib/utils';
 import { AgentTokens } from './AgentTokens';
@@ -14,6 +14,7 @@ import { AiSettings } from './AiSettings';
 import { PhoneAppSettings } from './PhoneAppSettings';
 import { ProfileSettings } from './ProfileSettings';
 import { SendFeedback } from './SendFeedback';
+import { TrackingSettings } from './TrackingSettings';
 import { YourData } from './YourData';
 import { toast } from 'sonner';
 import { userApi } from '@/lib/api/user';
@@ -22,7 +23,7 @@ import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
 import { features } from '@/lib/features';
 
-type TabType = 'profile' | 'agents' | 'ai' | 'phone' | 'data' | 'feedback' | 'archived' | 'favorites';
+type TabType = 'profile' | 'agents' | 'tracking' | 'ai' | 'phone' | 'data' | 'feedback' | 'archived' | 'favorites';
 
 export function UserSettings() {
   const router = useRouter();
@@ -160,6 +161,8 @@ export function UserSettings() {
   const tabs = [
     { id: 'profile' as TabType, label: 'Profile', icon: User },
     { id: 'agents' as TabType, label: 'Agents', icon: Bot },
+    // PERSONAL_OFFICE_PLAN (11-23): what counts as progress, and what each folder is.
+    { id: 'tracking' as TabType, label: 'Tracking', icon: ChartNoAxesColumn },
     { id: 'ai' as TabType, label: 'AI', icon: Gauge },
     { id: 'phone' as TabType, label: 'Phone app', icon: Smartphone },
     // Stage 11 (§9.6): everything in one file, deleting the account; a few words to whoever runs this server.
@@ -286,6 +289,7 @@ export function UserSettings() {
                       <p className="rc-meta mt-1 text-[14px]">
                         {activeTab === 'profile' && 'Your name, your photo and how you sign in'}
                         {activeTab === 'agents' && 'Tokens for Claude Code and other agents'}
+                        {activeTab === 'tracking' && 'Personal growth, work, and the folders your agents work in'}
                         {activeTab === 'ai' && 'Recall questions and grading, and what they cost'}
                         {activeTab === 'phone' && 'Your day on your Android home and lock screen'}
                         {activeTab === 'feedback' && 'Tell the person who runs this server what you think'}
@@ -431,6 +435,12 @@ export function UserSettings() {
               {activeTab === 'agents' && (
                 <motion.div key="agents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                   <AgentTokens />
+                </motion.div>
+              )}
+
+              {activeTab === 'tracking' && (
+                <motion.div key="tracking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                  <TrackingSettings />
                 </motion.div>
               )}
 

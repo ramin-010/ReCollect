@@ -157,13 +157,10 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
     ) : null;
 
   const asks = data.asks ?? [];
-  // The words that open the day: the line for now, else the night's note.
-  const lead: { text: string; target: string | null; big: boolean } | null = line
-    ? { text: line.text, target: line.fallback ? null : (line.key ?? line.slot), big: true }
-    : day?.note
-      ? { text: day.note, target: 'note', big: false }
-      : null;
-  const noteBelow = !!line && !!day?.note;
+  // The words that open the day: the buddy's line for now, and nothing when it has none (the owner, 11-23: an older
+  // note or a plain stand-in line in its place reads as stale; the phone's Today shows the same).
+  const lead: { text: string; target: string | null; big: boolean } | null = line && (!line.fallback || line === PREVIEW_LINE) ? { text: line.text, target: line.fallback ? null : (line.key ?? line.slot), big: true } : null;
+  const noteBelow = !!lead && !!day?.note;
   const open = more || !lead;
 
   const tellForm = (

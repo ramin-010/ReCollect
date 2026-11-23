@@ -142,8 +142,9 @@ export function YearCard({ stand, top, bottom, pointed }: { stand: StandData | n
         {at && (
           <div
             role="tooltip"
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-[6px] bg-[var(--rc-surface-float)] px-2 py-1 text-[12.5px] text-[var(--rc-ink-1)] shadow-[var(--rc-shadow-float)]"
-            style={{ left: Math.min(Math.max(at.x, 90), width - 90), top: at.y - 6 }}
+            // A day's words may name where its time went (PERSONAL_OFFICE_PLAN): up to 300 px, then they wrap.
+            className="pointer-events-none absolute z-10 w-max max-w-[300px] -translate-x-1/2 -translate-y-full rounded-[6px] bg-[var(--rc-surface-float)] px-2 py-1 text-center text-[12.5px] text-[var(--rc-ink-1)] shadow-[var(--rc-shadow-float)]"
+            style={{ left: Math.min(Math.max(at.x, 150), width - 150), top: at.y - 6 }}
           >
             {at.text}
           </div>

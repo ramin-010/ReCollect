@@ -60,6 +60,9 @@ import type {
   StandTake,
   StandTakes,
   LeetcodeLink,
+  ProjectKind,
+  ProjectRow,
+  StandLens,
   StandWindow,
   RevisionCalendar,
   Suggestion,
@@ -478,9 +481,22 @@ export const learningApi = {
     return call(() => axiosInstance.get('/api/mirror'));
   },
 
-  /** Where you stand: the last week, month and year against the span before (WHERE_YOU_STAND_PLAN §5.5). */
-  async getStand(): Promise<StandData> {
-    return call(() => axiosInstance.get('/api/mirror/stand'));
+  /**
+   * Where you stand: the last week, month and year against the span before (WHERE_YOU_STAND_PLAN §5.5). No lens: what
+   * counts as progress for them (Home's year and week); a lens: Where you stand's Personal, Work or All.
+   */
+  async getStand(lens?: StandLens): Promise<StandData> {
+    return call(() => axiosInstance.get('/api/mirror/stand', lens ? { params: { lens } } : undefined));
+  },
+
+  /** PERSONAL_OFFICE_PLAN: the folders they worked in, with each one's kind. */
+  async listProjects(): Promise<ProjectRow[]> {
+    return call(() => axiosInstance.get('/api/projects'));
+  },
+
+  /** A folder's kind (its past sessions move with it). */
+  async setProjectKind(id: string, kind: ProjectKind): Promise<ProjectRow> {
+    return call(() => axiosInstance.patch(`/api/projects/${encodeURIComponent(id)}`, { kind }));
   },
 
   /** LeetCode (11-22): the username whose accepted problems are logged as practice, when it last ran, how many it logged. */

@@ -157,6 +157,7 @@ html[data-look="paper"]:not(.dark):not(.theme-dark-gray) .rc {
   --rc-heat-2: #4f9c60;
   --rc-heat-3: #2e7d4a;
   --rc-heat-4: #1b5232;
+  --rc-wave-work: #5d6880;
   --rc-surface: #fcf9f3;
   --rc-surface-2: #ece4d4;
   --rc-surface-float: #fcf9f3;
@@ -218,6 +219,7 @@ html[data-look="paper"].theme-dark-gray .rc {
   --rc-heat-2: #2e6646;
   --rc-heat-3: #4a9867;
   --rc-heat-4: #7cc495;
+  --rc-wave-work: #9aa7bf;
   --rc-surface: #201d19;
   --rc-surface-2: #2a2620;
   --rc-surface-float: #24211c;

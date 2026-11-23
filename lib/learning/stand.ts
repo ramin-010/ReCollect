@@ -71,15 +71,17 @@ export interface WavePoint {
  * 28 days, each beside the same day of the span before; a year's 52 weeks (no year before is sent), from the record's
  * start. A month's day is the average a day over the 7 days up to it, so it shows the trend, not single days' spikes.
  */
-export function waveSeries(stand: StandData, window: StandWindow): WavePoint[] {
+export function waveSeries(stand: StandData, window: StandWindow, area?: 'personal' | 'work'): WavePoint[] {
   const { span, before } = stand.periods[window];
   const days = byDay(stand);
   const today = stand.today;
+  // PERSONAL_OFFICE_PLAN: one area's minutes (the All lens draws personal and work as two lines).
+  const minutesOf = (e: StandDay) => (area ? (e.byArea?.[area] ?? (area === 'personal' ? e.minutes : 0)) : e.minutes);
   const total = (from: DayString, to: DayString) => {
     let sum = 0;
     for (let d = from; d <= to; d = addDays(d, 1)) {
       const e = days.get(d);
-      if (e) sum += e.minutes;
+      if (e) sum += minutesOf(e);
     }
     return sum;
   };
@@ -135,15 +137,19 @@ export function cellLevel(d: StandDay): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
-/** What made a day active, for its tooltip: '1 h 40 min · 2 reviews, 1 focus line'. */
+/**
+ * What made a day active, for its tooltip: '1 h 40 min (second_brain 1 h, DSA 40 min) · 2 reviews, 1 focus line'
+ * (where the time went: PERSONAL_OFFICE_PLAN; an older server sends no places).
+ */
 export function dayWords(d: StandDay, formatMinutes: (m: number) => string): string {
   if (!d.active) return 'not active';
+  const where = d.places?.length && d.minutes ? ` (${d.places.map((p) => `${p.name} ${formatMinutes(p.minutes)}`).join(', ')})` : '';
   const parts = [
     d.reviews ? `${d.reviews} ${d.reviews === 1 ? 'review' : 'reviews'}` : null,
     d.focus ? `${d.focus} focus ${d.focus === 1 ? 'line' : 'lines'}` : null,
     d.sessions && !d.minutes ? `${d.sessions} ${d.sessions === 1 ? 'session' : 'sessions'}` : null,
   ].filter(Boolean);
-  return [d.minutes ? formatMinutes(d.minutes) : null, parts.join(', ') || null].filter(Boolean).join(' · ');
+  return [d.minutes ? `${formatMinutes(d.minutes)}${where}` : null, parts.join(', ') || null].filter(Boolean).join(' · ');
 }
 
 /**

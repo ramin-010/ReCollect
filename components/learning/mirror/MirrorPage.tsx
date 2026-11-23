@@ -5,7 +5,10 @@ import { ArrowDown, ArrowUp, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { learningApi } from '@/lib/api/learningApi';
-import type { DayString, MirrorData, PathPace, StandData, StandMeasures, StandPeriod, StandTakes, StandWindow } from '@/lib/learning/types';
+import { buddyApi, type WorkDay, type WorkKind } from '@/lib/api/buddyApi';
+import { addDays } from '@/lib/learning/engine';
+import { formatMinutes } from '@/lib/learning/sessionLog';
+import type { DayString, MirrorData, PathPace, StandData, StandLens, StandMeasures, StandPeriod, StandTakes, StandWindow } from '@/lib/learning/types';
 import { countTrend, dayName, formatSpan, shareTrend, STAND_WINDOWS, WINDOW_LABEL, WINDOW_WORDS, type Trend } from '@/lib/learning/stand';
 import { RcButton, RcSegmented, RcSkel, rcScope } from '@/components/rc-ui';
 import { voice } from '@/components/buddy/voice';
@@ -14,6 +17,22 @@ import { shortDay } from '../home/format';
 import { StandWave } from './StandWave';
 
 const WINDOW_KEY = 'rc-mirror-window';
+/** PERSONAL_OFFICE_PLAN: the lens looked through last in this browser (a per-viewer convenience). */
+const LENS_KEY = 'rc-mirror-lens';
+const LENS_OPTIONS: Array<{ value: StandLens; label: string }> = [
+  { value: 'personal', label: 'Personal' },
+  { value: 'work', label: 'Work' },
+  { value: 'all', label: 'All' },
+];
+
+function readLens(): StandLens | null {
+  try {
+    const v = localStorage.getItem(LENS_KEY);
+    return v === 'personal' || v === 'work' || v === 'all' ? v : null;
+  } catch {
+    return null;
+  }
+}
 const frame = 'mx-auto w-full max-w-[760px] px-4 sm:px-6 pt-6 lg:pt-8 pb-24';
 
 type Load<T> = T | null | 'failed';
@@ -42,17 +61,33 @@ export function MirrorPage() {
   const [mirrorTry, setMirrorTry] = useState(0);
   // The window chosen last in this browser (a per-viewer convenience; the content renders after the data, on the client).
   const [win, setWin] = useState<StandWindow>(readWindow);
+  // PERSONAL_OFFICE_PLAN: the lens (null: what counts as progress for them, the server's default).
+  const [lens, setLens] = useState<StandLens | null>(readLens);
+  const pickLens = (l: StandLens | null) => {
+    setLens(l);
+    try {
+      if (l) localStorage.setItem(LENS_KEY, l);
+      else localStorage.removeItem(LENS_KEY);
+    } catch {
+      /* the choice just isn't kept */
+    }
+  };
 
   useEffect(() => {
     let alive = true;
-    learningApi.getStand().then(
-      (s) => alive && setStand(s),
+    learningApi.getStand(lens ?? undefined).then(
+      (s) => {
+        if (!alive) return;
+        // A kept lens with no work left to look at goes back to what counts as progress (the control is gone then).
+        if (lens && s.hasWork === false && lens !== (s.progressLens ?? 'personal')) pickLens(null);
+        else setStand(s);
+      },
       () => alive && setStand('failed')
     );
     return () => {
       alive = false;
     };
-  }, [standTry]);
+  }, [standTry, lens]);
 
   useEffect(() => {
     let alive = true;
@@ -87,6 +122,9 @@ export function MirrorPage() {
   };
 
   const period = stand && stand !== 'failed' ? stand.periods[win] : null;
+  const seen: StandLens = stand && stand !== 'failed' ? (stand.lens ?? 'personal') : 'personal';
+  // The buddy's take is about what counts as progress: it shows only through that lens.
+  const progressView = stand && stand !== 'failed' ? seen === (stand.progressLens ?? 'personal') : true;
 
   return (
     <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
@@ -95,19 +133,31 @@ export function MirrorPage() {
         {stand === null && <StandSkeleton />}
         {stand === 'failed' && <SectionFailed what="where you stand" onRetry={() => setStandTry((n) => n + 1)} />}
         {stand && stand !== 'failed' && period && (
-          <StandBlocks stand={stand} period={period} win={win} onWindow={pickWindow} takes={takes} onTake={(t) => setTakes((cur) => (cur ? { ...cur, takes: { ...cur.takes, [t.window]: t } } : cur))} />
+          <StandBlocks
+            stand={stand}
+            period={period}
+            win={win}
+            onWindow={pickWindow}
+            lens={seen}
+            onLens={stand.hasWork ? (l) => pickLens(l) : undefined}
+            takes={progressView ? takes : null}
+            onTake={(t) => setTakes((cur) => (cur ? { ...cur, takes: { ...cur.takes, [t.window]: t } } : cur))}
+          />
         )}
 
-        <div className="mt-9 flex flex-col gap-9">
-          {mirror === null && <RcSkel className="h-[140px] w-full rounded-[10px]" />}
-          {mirror === 'failed' && <SectionFailed what="your goals and subjects" onRetry={() => setMirrorTry((n) => n + 1)} />}
-          {mirror && mirror !== 'failed' && (
-            <>
-              <Goals goals={mirror.goals} today={mirror.today} />
-              <Subjects subjects={mirror.subjects} period={period} />
-            </>
-          )}
-        </div>
+        {/* Goals and subjects are learning: not part of the Work view. */}
+        {seen !== 'work' && (
+          <div className="mt-9 flex flex-col gap-9">
+            {mirror === null && <RcSkel className="h-[140px] w-full rounded-[10px]" />}
+            {mirror === 'failed' && <SectionFailed what="your goals and subjects" onRetry={() => setMirrorTry((n) => n + 1)} />}
+            {mirror && mirror !== 'failed' && (
+              <>
+                <Goals goals={mirror.goals} today={mirror.today} />
+                <Subjects subjects={mirror.subjects} period={period} />
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -134,6 +184,8 @@ function StandBlocks({
   period,
   win,
   onWindow,
+  lens,
+  onLens,
   takes,
   onTake,
 }: {
@@ -141,6 +193,9 @@ function StandBlocks({
   period: StandPeriod;
   win: StandWindow;
   onWindow: (w: StandWindow) => void;
+  /** PERSONAL_OFFICE_PLAN: the lens this record was read through; `onLens` only when they have work tracked. */
+  lens: StandLens;
+  onLens?: (l: StandLens) => void;
   takes: StandTakes | null;
   onTake: (t: NonNullable<StandTakes['takes'][StandWindow]>) => void;
 }) {
@@ -149,16 +204,107 @@ function StandBlocks({
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
+        <div className="flex flex-wrap items-center gap-2">
+          <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
+          {onLens && <RcSegmented label="Look at" options={LENS_OPTIONS} value={lens} onChange={onLens} />}
+        </div>
         <p className="rc-meta rc-num">{spans}</p>
       </div>
-      <Summary key={`s-${win}`} period={period} takes={takes} onTake={onTake} />
-      <div key={win} className="rc-ws-in mt-7 flex flex-col gap-9">
-        <StandWave stand={stand} period={period} moments={stand.moments ?? []} />
-        <Finished stand={stand} period={period} />
-        <Habits stand={stand} period={period} />
+      <Summary key={`s-${win}-${lens}`} period={period} takes={takes} onTake={onTake} />
+      <div key={`${win}-${lens}`} className="rc-ws-in mt-7 flex flex-col gap-9">
+        <StandWave stand={stand} period={period} moments={lens === 'work' ? [] : (stand.moments ?? [])} lens={lens} />
+        {lens === 'work' ? (
+          <WorkDone stand={stand} period={period} />
+        ) : (
+          <>
+            <Finished stand={stand} period={period} />
+            <Habits stand={stand} period={period} />
+          </>
+        )}
       </div>
     </>
+  );
+}
+
+// ─── The Work view: what was done, day by day (PERSONAL_OFFICE_PLAN §5 stage 3) ──
+
+const WORK_WORD: Record<WorkKind, string> = { did: 'Done', decided: 'Decided', stuck: 'Open', next: 'Next' };
+/** How many days the list shows before "Show all". */
+const WORK_DAYS = 10;
+/** The work log reads at most this far back. */
+const WORK_LOG_DAYS = 30;
+
+/**
+ * "What did I do at work yesterday": the window's days with work time, newest first, each folder's time and the
+ * lines the work log kept for it (when the work log is on). Time comes from the stand; lines from GET /api/buddy/work.
+ */
+function WorkDone({ stand, period }: { stand: StandData; period: StandPeriod }) {
+  const [log, setLog] = useState<WorkDay[] | null>(null);
+  const [all, setAll] = useState(false);
+  const floor = addDays(stand.today, -WORK_LOG_DAYS);
+  const from = period.span.from > floor ? period.span.from : floor;
+  useEffect(() => {
+    let alive = true;
+    buddyApi.work({ from, to: stand.today }).then(
+      (days) => alive && setLog(days),
+      () => alive && setLog([])
+    );
+    return () => {
+      alive = false;
+    };
+  }, [from, stand.today]);
+
+  const days = stand.days.filter((d) => d.day >= period.span.from && d.day <= period.span.to && (d.byArea?.work ?? 0) > 0).reverse();
+  const shown = all ? days : days.slice(0, WORK_DAYS);
+  const where = period.partial ? 'the record' : WINDOW_WORDS[period.window].now;
+  const linesOf = (day: DayString, place: string) =>
+    log?.find((x) => x.day === day)?.projects.find((p) => p.project.toLowerCase() === place.toLowerCase())?.lines ?? [];
+
+  return (
+    <section aria-labelledby="ws-work">
+      <LabelLine title="What you did" id="ws-work" meta={days.length ? `${days.length} ${days.length === 1 ? 'day' : 'days'} at work in ${where}` : undefined} />
+      {days.length === 0 ? (
+        <p className="rc-meta mt-3">No work tracked in {where}. Sessions in a folder marked Work land here with what your work log kept from them.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {shown.map((d) => (
+            <li key={d.day} className="border-b border-[var(--rc-line)] py-3 last:border-b-0">
+              <p className="flex items-baseline justify-between gap-3">
+                <span className="text-[15px] font-[500] text-[var(--rc-ink-1)]">{dayName(d.day, stand.today)}</span>
+                <span className="rc-num text-[13px] text-[var(--rc-ink-3)]">{formatMinutes(d.byArea?.work ?? d.minutes)}</span>
+              </p>
+              {(d.places ?? [])
+                .filter((p) => p.area === 'work')
+                .map((p) => {
+                  const lines = linesOf(d.day, p.name);
+                  return (
+                    <div key={p.name} className="mt-1.5">
+                      <p className="text-[13.5px] text-[var(--rc-ink-2)]">
+                        {p.name} <span className="rc-num text-[var(--rc-ink-3)]">· {formatMinutes(p.minutes)}</span>
+                      </p>
+                      {lines.length > 0 && (
+                        <ul className="mt-1 flex flex-col gap-0.5 pl-3">
+                          {lines.map((l) => (
+                            <li key={l._id} className="text-[14px] leading-[1.45] text-[var(--rc-ink-1)]">
+                              <span className="text-[var(--rc-ink-3)]">{WORK_WORD[l.kind]}: </span>
+                              {l.text}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+            </li>
+          ))}
+        </ul>
+      )}
+      {days.length > WORK_DAYS && (
+        <button type="button" className="rc-meta mt-2 hover:text-[var(--rc-ink-1)]" onClick={() => setAll((x) => !x)}>
+          {all ? 'Show fewer' : `Show all ${days.length} days`}
+        </button>
+      )}
+    </section>
   );
 }
 

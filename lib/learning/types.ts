@@ -354,12 +354,35 @@ export interface LearningSettings {
   routineMode?: RoutineMode;
   /** About you, for your agents (the brief starts with it). */
   agentProfile?: string | null;
+  /** PERSONAL_OFFICE_PLAN: work counts as progress too (absent from an older server: personal only). */
+  progressIncludesWork?: boolean;
 }
 
 /** `PATCH /api/learning/settings` accepts any subset. */
 export type LearningSettingsPatch = Partial<
-  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile'>
+  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork'>
 >;
+
+/** PERSONAL_OFFICE_PLAN: what a folder is. Personal and study count as progress; work only if they say so. */
+export type ProjectKind = 'personal' | 'study' | 'work';
+/** Which sessions Where you stand is read through: what counts as progress is `personal` or `all`. */
+export type StandLens = 'personal' | 'work' | 'all';
+
+/** `GET /api/projects`: a folder Claude Code or a chat worked in. */
+export interface ProjectRow {
+  _id: string;
+  key: string;
+  name: string;
+  /** Absent from an older server (personal). */
+  kind?: ProjectKind;
+  goal: { _id: string; title: string } | null;
+  nextStep: string | null;
+  isArchived: boolean;
+  lastSession: { day: DayString; minutes: number | null; title: string } | null;
+  sessions: number;
+  /** Minutes in the last 28 days (absent from an older server). */
+  minutes28?: number;
+}
 
 export const BUDGET_MIN = 5;
 export const BUDGET_MAX = 120;
@@ -479,12 +502,16 @@ export interface WorkSession {
   nextStep: string | null;
   source: 'agent' | 'hook' | 'user';
   agentName: string | null;
+  /** PERSONAL_OFFICE_PLAN: personal or work (absent from an older server: personal). */
+  area?: 'personal' | 'work';
 }
 
 export interface SessionList {
   sessions: WorkSession[];
   /** One per day with sessions, newest first. */
   days: { day: DayString; minutes: Record<SessionKind, number>; count: number }[];
+  /** PERSONAL_OFFICE_PLAN: what counts as progress for them (absent from an older server: everything). */
+  progressLens?: 'personal' | 'all';
 }
 
 // ─── The week and suggestions (LOOP_COMPLETE_SPEC 1.6) ──────────────────────
@@ -601,6 +628,8 @@ export interface StandMeasures {
   daysWithSitting: number;
   minutes: KindMinutes;
   totalMinutes: number;
+  /** PERSONAL_OFFICE_PLAN: the same minutes by area (absent from an older server). */
+  minutesByArea?: { personal: number; work: number };
   sessions: number;
   reviews: { due: number; onDay: number; late: number; open: number; catchUps: number };
   focus: { set: number; done: number };
@@ -632,6 +661,9 @@ export interface StandDay {
   active: boolean;
   minutes: number;
   byKind: KindMinutes;
+  /** PERSONAL_OFFICE_PLAN: the minutes by area, and where the time went (most first, at most 3). */
+  byArea?: { personal: number; work: number };
+  places?: Array<{ name: string; minutes: number; area: 'personal' | 'work' }>;
   reviews: number;
   focus: number;
   sessions: number;
@@ -656,6 +688,12 @@ export interface StandData {
   weakOpenNow: number;
   /** What was finished in the last 364 days, oldest first (absent from an older server). */
   moments?: StandMoment[];
+  /** PERSONAL_OFFICE_PLAN (absent from an older server): the lens this was read through, what counts as progress,
+   * whether they have work tracked (the page offers the lenses), and their folders marked Work. */
+  lens?: StandLens;
+  progressLens?: 'personal' | 'all';
+  hasWork?: boolean;
+  workFolders?: string[];
 }
 
 /** LeetCode (11-22): their public username; their accepted problems are logged as practice once a day. */
