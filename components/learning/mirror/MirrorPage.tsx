@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -148,11 +148,28 @@ export function MirrorPage() {
   const look: LookAt = lens ?? 'progress';
   const onLook = (l: LookAt) => pickLens(l === 'progress' ? null : l);
 
+  // His look (11-23 night): the list at the left starts level with the first card (the buddy's take, else the first
+  // chart), not with the dates line above it. Measured, since the summary above it can wrap.
+  const column = useRef<HTMLDivElement>(null);
+  const [navTop, setNavTop] = useState(0);
+  useLayoutEffect(() => {
+    const el = column.current;
+    if (!el) return;
+    const measure = () => {
+      const card = el.querySelector<HTMLElement>('[data-first-card]') ?? el.querySelector<HTMLElement>('.rc-ws-in > *');
+      setNavTop(card ? Math.max(0, Math.round(card.getBoundingClientRect().top - el.getBoundingClientRect().top)) : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stand, win, lens, takes]);
+
   return (
     <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
       <div className={cn(frame, 'lg:grid lg:grid-cols-[176px_minmax(0,760px)] lg:justify-center lg:gap-12')}>
         <h1 className="sr-only">Where you stand</h1>
-        <nav aria-label="Look at" className="hidden lg:block">
+        <nav aria-label="Look at" className="hidden lg:block" style={{ paddingTop: navTop }}>
           <div className="sticky top-6 flex flex-col gap-0.5">
             {looks.map((l) => (
               <button
@@ -170,7 +187,7 @@ export function MirrorPage() {
             ))}
           </div>
         </nav>
-        <div className="min-w-0">
+        <div className="min-w-0" ref={column}>
         {stand === null && <StandSkeleton />}
         {stand === 'failed' && <SectionFailed what="where you stand" onRetry={() => setStandTry((n) => n + 1)} />}
         {stand && stand !== 'failed' && period && (
@@ -286,13 +303,13 @@ function StandBlocks({
       </div>
       <Summary key={`s-${win}-${lens}`} period={period} takes={takes} onTake={onTake} />
       <div key={`${win}-${lens}`} className="rc-ws-in mt-7 flex flex-col gap-9">
+        {/* COVERAGE_PLAN, his ask (11-23 night): on Progress, Coverage comes before the time graph. */}
+        {look === 'progress' && period.coverage && <Coverage coverage={period.coverage} window={period.window} partial={period.partial} />}
         <StandWave stand={stand} period={period} moments={lens === 'work' || lens === 'building' ? [] : (stand.moments ?? [])} lens={lens} />
         {lens === 'work' || lens === 'building' ? (
           <WorkDone stand={stand} period={period} building={lens === 'building'} />
         ) : (
           <>
-            {/* COVERAGE_PLAN: on Progress only; every part the record holds, whatever counts as progress. */}
-            {look === 'progress' && period.coverage && <Coverage coverage={period.coverage} window={period.window} partial={period.partial} />}
             <Finished stand={stand} period={period} />
             <Habits stand={stand} period={period} />
           </>
@@ -435,7 +452,7 @@ function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandT
         </p>
       )}
       {(take || canAsk) && (
-        <div className="mt-5 rounded-[14px] bg-[color-mix(in_srgb,var(--rc-ink-1)_3.5%,var(--rc-ground))] px-5 py-4 sm:-mx-4" aria-live="polite">
+        <div data-first-card className="mt-5 rounded-[14px] bg-[color-mix(in_srgb,var(--rc-ink-1)_3.5%,var(--rc-ground))] px-5 py-4 sm:-mx-4" aria-live="polite">
           <div className="flex items-center gap-2 text-[12.5px] text-[var(--rc-ink-3)]">
             {avatar}
             <span className="font-[600] text-[var(--rc-ink-2)]">{name}’s take</span>
