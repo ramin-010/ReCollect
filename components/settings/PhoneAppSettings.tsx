@@ -3,7 +3,7 @@
 import './phone-app.css';
 import { useEffect, useState } from 'react';
 import qrcode from 'qrcode-generator';
-import { Copy, Smartphone } from 'lucide-react';
+import { Copy, Download, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { RcButton } from '@/components/rc-ui';
 import axiosInstance from '@/lib/utils/axios';
@@ -32,6 +32,19 @@ export function PhoneAppSettings() {
   const [chosen, setChosen] = useState<string>('');
   const [link, setLink] = useState<string | null>(null);
   const [making, setMaking] = useState(false);
+  // The app's file on this server (GET /api/ambient/app): a download button when it is there.
+  const [app, setApp] = useState<{ available: boolean; size: number | null } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    axiosInstance
+      .get('/api/ambient/app')
+      .then((r) => alive && setApp(r.data?.data ?? { available: false, size: null }))
+      .catch(() => alive && setApp({ available: false, size: null }));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -76,6 +89,22 @@ export function PhoneAppSettings() {
   return (
     <div className="phone-app-settings">
       <p className="phone-app-intro">Our Android app sets the picture of your day as the wallpaper and shows it in a widget. It can read that picture and its lines, nothing else.</p>
+      {/* The owner, 11-23 night: get the app from here. On an Android phone the browser downloads it and Android offers
+          to install it (it asks once to allow installs from the browser); on a computer, the file to send to a phone. */}
+      {app?.available && addresses && addresses.length > 0 && (
+        <div className="mt-4">
+          <p className="rc-field-label">Get the app</p>
+          <a
+            className="rc-btn rc-btn--outline mt-2 inline-flex items-center gap-2"
+            href={`${(addresses.find((a) => a.kind === 'public') ?? addresses[0]!).url}/phone/recollect.apk`}
+            download="recollect.apk"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Download the Android app{app.size ? ` (${Math.max(1, Math.round(app.size / 1024))} KB)` : ''}
+          </a>
+          <p className="rc-meta mt-2">Open this page on your Android phone and tap it: Android installs it after you allow installs from your browser once. Then make the connect code below.</p>
+        </div>
+      )}
       {addresses === null ? (
         <p className="rc-meta mt-4">Finding this computer&apos;s addresses…</p>
       ) : addresses.length === 0 ? (
