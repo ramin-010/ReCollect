@@ -11,7 +11,6 @@ import { formatMinutes } from '@/lib/learning/sessionLog';
 import type { DayString, MirrorData, PathPace, StandData, StandLens, StandMeasures, StandPeriod, StandTakes, StandWindow } from '@/lib/learning/types';
 import { countTrend, dayName, formatSpan, shareTrend, STAND_WINDOWS, WINDOW_LABEL, WINDOW_WORDS, type Trend } from '@/lib/learning/stand';
 import { RcButton, RcSegmented, RcSkel, rcScope } from '@/components/rc-ui';
-import { voice } from '@/components/buddy/voice';
 import { LabelLine, SectionFailed } from '../home/parts';
 import { shortDay } from '../home/format';
 import { StandWave } from './StandWave';
@@ -52,7 +51,8 @@ function readLens(): Exclude<LookAt, 'progress'> | null {
     return null;
   }
 }
-const frame = 'mx-auto w-full max-w-[760px] px-4 sm:px-6 pt-6 lg:pt-8 pb-24';
+// His look (11-23 night): the views as a list at the left like About you's (the same frame and column), tabs on a phone.
+const frame = 'mx-auto w-full max-w-[1080px] px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8 pb-24';
 
 type Load<T> = T | null | 'failed';
 
@@ -144,11 +144,33 @@ export function MirrorPage() {
   const seen: StandLens = stand && stand !== 'failed' ? (stand.lens ?? 'personal') : 'personal';
   // The buddy's take is about what counts as progress: it shows only on Progress.
   const progressView = lens === null;
+  const looks = stand && stand !== 'failed' ? looksOf(stand) : (['progress'] as LookAt[]);
+  const look: LookAt = lens ?? 'progress';
+  const onLook = (l: LookAt) => pickLens(l === 'progress' ? null : l);
 
   return (
     <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
-      <div className={frame}>
+      <div className={cn(frame, 'lg:grid lg:grid-cols-[176px_minmax(0,760px)] lg:justify-center lg:gap-12')}>
         <h1 className="sr-only">Where you stand</h1>
+        <nav aria-label="Look at" className="hidden lg:block">
+          <div className="sticky top-6 flex flex-col gap-0.5">
+            {looks.map((l) => (
+              <button
+                key={l}
+                type="button"
+                aria-current={look === l ? 'page' : undefined}
+                onClick={() => onLook(l)}
+                className={cn(
+                  'rc-hoverable flex w-full rounded-[6px] px-2.5 py-[6px] text-left text-[14px] font-medium',
+                  look === l ? 'bg-[var(--rc-selected)] text-[var(--rc-ink-1)]' : 'text-[var(--rc-ink-2)]'
+                )}
+              >
+                {LOOK_LABEL[l]}
+              </button>
+            ))}
+          </div>
+        </nav>
+        <div className="min-w-0">
         {stand === null && <StandSkeleton />}
         {stand === 'failed' && <SectionFailed what="where you stand" onRetry={() => setStandTry((n) => n + 1)} />}
         {stand && stand !== 'failed' && period && (
@@ -158,9 +180,9 @@ export function MirrorPage() {
             win={win}
             onWindow={pickWindow}
             lens={seen}
-            look={lens ?? 'progress'}
-            looks={looksOf(stand)}
-            onLook={(l) => pickLens(l === 'progress' ? null : l)}
+            look={look}
+            looks={looks}
+            onLook={onLook}
             takes={progressView ? takes : null}
             onTake={(t) => setTakes((cur) => (cur ? { ...cur, takes: { ...cur.takes, [t.window]: t } } : cur))}
           />
@@ -179,6 +201,7 @@ export function MirrorPage() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
@@ -231,7 +254,7 @@ function StandBlocks({
   // buddy's take in its own quiet block (the same place whether it is there or can be asked for).
   return (
     <>
-      <div className="border-b border-[var(--rc-line)]">
+      <div className="border-b border-[var(--rc-line)] lg:hidden">
         {looks.length > 1 ? (
           <div role="tablist" aria-label="Look at" className="-mb-px flex gap-5">
             {looks.map((l) => {
@@ -257,7 +280,7 @@ function StandBlocks({
           <h2 className="pb-2.5 pt-1 text-[15px] font-[600] text-[var(--rc-ink-1)]">{LOOK_LABEL[look]}</h2>
         )}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:mt-0">
         <p className="rc-meta rc-num">{spans}</p>
         <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
       </div>
@@ -419,7 +442,7 @@ function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandT
             {take && <span>· today</span>}
           </div>
           {take ? (
-            <p className={cn('mt-2 text-[15.5px] leading-[1.6] text-[var(--rc-ink-1)]', voice.className)}>{take.text}</p>
+            <blockquote className="mt-2.5 border-l-2 border-[var(--rc-heat-3)] pl-4 text-[15.5px] italic leading-[1.65] text-[var(--rc-ink-1)]">“{take.text}”</blockquote>
           ) : (
             <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <p className="text-[14px] text-[var(--rc-ink-2)]">An honest read of {WINDOW_WORDS[period.window].now}, from what {name} knows about you.</p>
