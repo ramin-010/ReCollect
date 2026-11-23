@@ -193,5 +193,20 @@ export function sessionInLens(lens: StandLens, s: { area?: 'personal' | 'work'; 
   if (lens === 'learning') return learning;
   if (lens === 'learning_work') return learning || area === 'work';
   if (lens === 'building') return area === 'personal' && s.kind === 'build';
+  if (lens === 'building_work') return area === 'work' || s.kind === 'build';
   return lens === area;
+}
+
+/** The three parts of the record a view can show (Home's graph filter). */
+export interface RecordParts {
+  learning: boolean;
+  building: boolean;
+  work: boolean;
+}
+
+/** The lens that shows these parts (null: none ticked). */
+export function lensOfParts(p: RecordParts): StandLens | null {
+  if (p.learning) return p.building ? (p.work ? 'all' : 'personal') : p.work ? 'learning_work' : 'learning';
+  if (p.building) return p.work ? 'building_work' : 'building';
+  return p.work ? 'work' : null;
 }

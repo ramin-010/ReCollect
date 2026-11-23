@@ -397,7 +397,7 @@ export type KindSetBy = 'folder' | 'pc' | 'agent' | 'chat' | 'app';
 export type ProjectKind = 'personal' | 'study' | 'work';
 /** Which sessions Where you stand is read through: what counts as progress is `personal` or `all`. STUDY_FLOW_PLAN
  * §4.5: Learning and Building are the two parts of Personal, each looked at alone. */
-export type StandLens = 'personal' | 'learning' | 'building' | 'work' | 'all' | 'learning_work';
+export type StandLens = 'personal' | 'learning' | 'building' | 'work' | 'all' | 'learning_work' | 'building_work';
 /** What counts as progress: learning always, with building and work as they ticked them (Settings › Tracking). */
 export type ProgressLens = 'learning' | 'personal' | 'learning_work' | 'all';
 

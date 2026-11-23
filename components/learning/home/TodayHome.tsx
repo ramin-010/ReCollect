@@ -31,7 +31,8 @@ import { RoutinePanel } from './RoutinePanel';
 import { SettingsSheet } from './SettingsSheet';
 import { TasksToday } from './TasksToday';
 import { TodaySlip } from './TodaySlip';
-import { useYearStand, yearWords } from './YearGrid';
+import { GraphFilter, useYearStand, yearWords } from './YearGrid';
+import { lensOfParts, type RecordParts } from '@/lib/learning/stand';
 import { YearCard } from './YearCard';
 import { longDay, weekdayDay } from './format';
 import { AiPausedNotice } from '@/components/ai/AiPausedNotice';
@@ -150,7 +151,12 @@ export function TodayHome({ data }: { data: TodayPayload }) {
   }, []);
   const mode = data.plan?.mode ?? 'normal';
   // The year for the header: loaded again when today's activity changes (a review done, the day turning active).
-  const year = useYearStand(`${(data.stats.rhythm?.last7 ?? []).map((d) => (d.active ? 1 : 0)).join('')}:${data.revisions.doneToday.length}`);
+  // The graph's filter (the owner, 11-23): starts as what counts as progress; a pick is for this view only.
+  const progressParts: RecordParts = { learning: true, building: settings?.progressIncludesBuilding !== false, work: settings?.progressIncludesWork === true };
+  const [pickedParts, setPickedParts] = useState<RecordParts | null>(null);
+  const parts = pickedParts ?? progressParts;
+  const same = (['learning', 'building', 'work'] as const).every((k) => parts[k] === progressParts[k]);
+  const year = useYearStand(`${(data.stats.rhythm?.last7 ?? []).map((d) => (d.active ? 1 : 0)).join('')}:${data.revisions.doneToday.length}`, same ? undefined : (lensOfParts(parts) ?? undefined));
   const retry = () => void useLearningStore.getState().refresh();
   const reviewCount = data.weeklyReview.isReviewDay ? data.weeklyReview.goals.length : 0;
   // The right sidebar, open unless closed in this browser (a per-viewer convenience).
@@ -188,6 +194,7 @@ export function TodayHome({ data }: { data: TodayPayload }) {
                     {weekdayDay(data.today, data.today)}
                   </h1>
                   {year && year !== 'failed' && <span className="rc-num">{yearWords(year)}</span>}
+                  {year && year !== 'failed' && <GraphFilter parts={parts} progress={progressParts} onChange={(p) => setPickedParts(p)} />}
                   {mode === 'comeback' && <span>Welcome back: just a few to get going</span>}
                   {mode === 'busy' && <span>Busy week{settings?.busyUntil ? ` until ${weekdayDay(settings.busyUntil, data.today)}` : ''}: just the small things</span>}
                 </span>
