@@ -6,10 +6,12 @@ import type { HocuspocusProvider } from '@hocuspocus/provider';
 import type * as Y from 'yjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, ImagePlus, Link2, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { FileDown, ImagePlus, Link2, MoreHorizontal, PanelRight, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSkel } from '@/components/rc-ui';
+import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSheet, RcSkel } from '@/components/rc-ui';
+import { learningApi } from '@/lib/api/learningApi';
+import { EditCaptureDialog } from '@/components/learning/EditCaptureDialog';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDocStore, type Doc } from '@/lib/store/docStore';
 import { useTopBar } from '@/lib/store/topBarStore';
@@ -21,12 +23,40 @@ import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 import { SharePopover } from './SharePopover';
 import { useLiveDocEditor } from '@/components/docs/editor/useLiveDocEditor';
 import { DocProperties } from './DocProperties';
+import { DocNotes, useNotes, type NotesPlace } from './DocNotes';
 import type { DocEditor } from '@/lib/blocks/schema';
 import '@/components/docs/editor/doc-editor.css';
 
 const CARET_COLORS = ['#2383e2', '#d9730d', '#0f7b6c', '#9065b0', '#c14c8a', '#dfab01', '#e03e3e', '#64473a'];
 
 /** The doc's editor (BlockNote, the "blocks" fragment; DOCS_EDITOR_V2_PLAN). Client only. */
+/** The notes panel: open or closed, per browser (STUDY_FLOW_PLAN §4.3). */
+const NOTES_KEY = 'rc-doc-notes';
+/** Below this page width the panel opens as a sheet (the doc's column keeps at least ~760 px beside 320). */
+const NOTES_BESIDE_MIN = 1080;
+/** Its width (drag its left edge; double-click puts it back), kept per browser. */
+const NOTES_W_KEY = 'rc-doc-notes-w';
+/** Fits the empty space beside the doc's column on a 1,536 screen with the app's sidebar open: the doc doesn't move. */
+const NOTES_W_DEFAULT = 276;
+const NOTES_W_MIN = 240;
+const NOTES_W_MAX = 640;
+
+/**
+ * How far the doc's column moves for the open panel (his ask): not at all while the panel fits in the empty space
+ * beside the column; only as much as a wider panel (or a narrower page) needs. The panel lies over the page's right
+ * margin; the page gets right padding twice the overlap, so its centred column moves left by the overlap.
+ */
+function docShift(pageW: number, panelW: number): number {
+  if (!pageW || !panelW) return 0;
+  const column = Math.min(912, pageW);
+  const pad = pageW <= 1024 ? 48 : 96;
+  const textRight = pageW / 2 + column / 2 - pad;
+  const overlap = textRight - (pageW - panelW);
+  // Every pixel wider than the default moves the column with it (his ask), and it never sits under the panel.
+  const wider = Math.max(0, panelW - NOTES_W_DEFAULT);
+  return Math.max(0, Math.round(Math.max(overlap * 2, wider)));
+}
+
 const LabEditor = dynamic(() => import('@/components/docs/v2/LabEditor').then((m) => m.LabEditor), { ssr: false });
 
 /** What the page asks of the body, whichever editor draws it: the title's Enter and ↓, and "is it empty". */
@@ -346,6 +376,110 @@ function DocSurface({
     }
   };
 
+  // STUDY_FLOW_PLAN §4.3: the lesson's notes and links in a right panel. Its toggle sits at the top bar's right end
+  // (open or closed kept per browser, closed at first); beside the doc when the page has room, a sheet when not.
+  const [notesPlace, setNotesPlace] = useState<NotesPlace | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([learningApi.getTopicByDoc(doc._id), learningApi.getSubjects()])
+      .then(([t, subjects]) => {
+        if (cancelled || !t.topic) return;
+        const subject = subjects.find((s) => s._id === t.topic!.subjectId);
+        setNotesPlace({ topicId: t.topic._id, subjectId: t.topic.subjectId, subjectName: subject?.name ?? 'its subject' });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [doc._id]);
+  const [notesOpen, setNotesOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setNotesOpen(window.localStorage.getItem(NOTES_KEY) === '1');
+    } catch {
+      /* no storage: closed */
+    }
+  }, []);
+  const toggleNotes = useCallback((open: boolean) => {
+    setNotesOpen(open);
+    try {
+      window.localStorage.setItem(NOTES_KEY, open ? '1' : '0');
+    } catch {
+      /* kept for this visit only */
+    }
+  }, []);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const [roomy, setRoomy] = useState(true);
+  const [pageW, setPageW] = useState(0);
+  useLayoutEffect(() => {
+    const el = splitRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      setPageW(w);
+      setRoomy(w >= NOTES_BESIDE_MIN);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const notes = useNotes(notesPlace, notesOpen);
+  // Its width: its left edge drags it wider or narrower (his ask), kept per browser; never so wide the doc gets cramped.
+  const [sideW, setSideW] = useState(NOTES_W_DEFAULT);
+  const [resizing, setResizing] = useState(false);
+  useEffect(() => {
+    try {
+      const w = Number(window.localStorage.getItem(NOTES_W_KEY));
+      if (w >= NOTES_W_MIN && w <= NOTES_W_MAX) setSideW(w);
+    } catch {
+      /* the default width */
+    }
+  }, []);
+  const clampW = useCallback((w: number) => {
+    const room = (splitRef.current?.getBoundingClientRect().width ?? 1400) - 640;
+    return Math.round(Math.max(NOTES_W_MIN, Math.min(NOTES_W_MAX, room, w)));
+  }, []);
+  const keepW = (w: number) => {
+    try {
+      window.localStorage.setItem(NOTES_W_KEY, String(w));
+    } catch {
+      /* kept for this visit only */
+    }
+  };
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const grip = e.currentTarget;
+    grip.setPointerCapture(e.pointerId);
+    const x0 = e.clientX;
+    const w0 = sideW;
+    let w = w0;
+    setResizing(true);
+    const move = (ev: PointerEvent) => {
+      w = clampW(w0 + (x0 - ev.clientX));
+      setSideW(w);
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+      setResizing(false);
+      keepW(w);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+  };
+  const resizeByKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const w = clampW(sideW + (e.key === 'ArrowLeft' ? 24 : -24));
+    setSideW(w);
+    keepW(w);
+  };
+  const notesCount = notes.lesson?.length ?? 0;
+
   // Fill the top bar: breadcrumb and the page's actions.
   useEffect(() => {
     setTopBar({
@@ -378,15 +512,28 @@ function DocSurface({
               <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </RcIconButton>
           </RcMenu>
+          {notesPlace && (
+            <RcIconButton
+              size="sm"
+              label={notesOpen ? 'Hide notes and links' : 'Show notes and links'}
+              aria-pressed={notesOpen}
+              className="rc-panel-toggle doc-side-toggle"
+              onClick={() => toggleNotes(!notesOpen)}
+            >
+              <PanelRight className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              {notesCount > 0 && <span className="doc-side-count">{notesCount}</span>}
+            </RcIconButton>
+          )}
         </div>
       ),
     });
-  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart]);
+  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart, notesPlace, notesOpen, notesCount, toggleNotes]);
 
   useEffect(() => () => clearTopBar(), [clearTopBar]);
 
   return (
-    <div ref={scrollRef} className={cn(rcScope, 'doc-page')}>
+    <div ref={splitRef} className={cn(rcScope, 'doc-split')}>
+    <div ref={scrollRef} className={cn(rcScope, 'doc-page')} style={notesPlace && roomy ? { paddingRight: docShift(pageW, notesOpen ? sideW : 0) } : undefined}>
       {trashedAt && (
         <div className="doc-trash-bar" role="status">
           <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
@@ -491,6 +638,46 @@ function DocSurface({
         busy={deleting}
         onConfirm={deleteDoc}
       />
+    </div>
+    {notesPlace && roomy && (
+      <aside
+        className={cn('doc-side', notesOpen && 'doc-side--open', resizing && 'doc-side--resizing')}
+        style={{ '--doc-side-w': `${sideW}px` } as React.CSSProperties}
+        aria-label="Notes and links"
+        aria-hidden={!notesOpen}
+      >
+        <div className="doc-side-inner">
+          <div className="doc-side-frame">
+          <div
+            className="doc-side-grip"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Drag to widen or narrow the notes"
+            aria-valuenow={sideW}
+            aria-valuemin={NOTES_W_MIN}
+            aria-valuemax={NOTES_W_MAX}
+            tabIndex={notesOpen ? 0 : -1}
+            data-dragging={resizing ? '' : undefined}
+            onPointerDown={startResize}
+            onKeyDown={resizeByKey}
+            onDoubleClick={() => {
+              setSideW(NOTES_W_DEFAULT);
+              keepW(NOTES_W_DEFAULT);
+            }}
+          />
+          <div className="doc-side-card">
+            <DocNotes place={notesPlace} lesson={notes.lesson} subject={notes.subject} failed={notes.failed} />
+          </div>
+          </div>
+        </div>
+      </aside>
+    )}
+    {notesPlace && !roomy && (
+      <RcSheet open={notesOpen} onOpenChange={toggleNotes} title="Notes and links">
+        <DocNotes place={notesPlace} lesson={notes.lesson} subject={notes.subject} failed={notes.failed} />
+      </RcSheet>
+    )}
+    {notesPlace && <EditCaptureDialog />}
     </div>
   );
 }

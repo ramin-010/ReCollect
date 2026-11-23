@@ -381,6 +381,51 @@ export function RcSheet({
   );
 }
 
+/**
+ * A centred dialog for reading (STUDY_FLOW_PLAN §4.4: a lesson's revision card): a title line with a quiet note at its
+ * right, a body that scrolls on its own, a footer that stays. Full screen on a phone.
+ */
+export function RcDialog({
+  open,
+  onOpenChange,
+  title,
+  aside,
+  children,
+  footer,
+  className,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  /** Quiet words at the title line's right ("Review 2 of 4"). */
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className={cn(rcScope, 'rc-overlay')} />
+        <DialogPrimitive.Content className={cn(rcScope, 'rc-float rc-read', className)}>
+          <div className="rc-read-head">
+            <DialogPrimitive.Title className="rc-read-title">{title}</DialogPrimitive.Title>
+            {aside ? <span className="rc-meta shrink-0">{aside}</span> : null}
+            <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
+            <DialogPrimitive.Close asChild>
+              <RcIconButton label="Close" className="-mr-1.5">
+                <X />
+              </RcIconButton>
+            </DialogPrimitive.Close>
+          </div>
+          <div className="rc-read-body">{children}</div>
+          {footer ? <div className="rc-read-foot">{footer}</div> : null}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 export function RcConfirm({
   open,
   onOpenChange,

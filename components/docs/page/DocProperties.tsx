@@ -11,6 +11,7 @@ import type { Goal, SubjectWithTopics, TopicByDoc } from '@/lib/learning/types';
 import { formatRelative, formatStampDay } from './format';
 import { RecallSheet, type RecallTarget } from '@/components/learning/recall/RecallSheet';
 import { RevisionTimeline } from './RevisionTimeline';
+import { RevisionCardDialog } from './RevisionCard';
 import { DocTasks } from './DocTasks';
 
 const CYCLES = 4;
@@ -27,6 +28,8 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
   const [recall, setRecall] = useState<RecallTarget | null>(null);
   const [agentEdit, setAgentEdit] = useState<AgentEdit | null>(null);
   const [unfiling, setUnfiling] = useState(false);
+  // STUDY_FLOW_PLAN §4.4: the doc's revision card, opened from the Revision row.
+  const [cardOpen, setCardOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -238,6 +241,11 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
             </span>
           )}
           {info.chain.length > 0 && <RevisionTimeline chain={info.chain} title={topic?.title ?? 'This doc'} editable={editable} onMoved={() => void load()} />}
+          {info.hasCard && (
+            <RcButton size="sm" variant="quiet" onClick={() => setCardOpen(true)}>
+              Card
+            </RcButton>
+          )}
         </span>
       </div>
 
@@ -290,6 +298,20 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
         </div>
       )}
       <RecallSheet target={recall} onOpenChange={(o) => !o && setRecall(null)} onFinished={() => void load()} />
+      <RevisionCardDialog
+        docId={cardOpen ? docId : null}
+        title={docTitle}
+        onClose={() => setCardOpen(false)}
+        onDone={() => setCardOpen(false)}
+        onQuiz={(review) => {
+          setCardOpen(false);
+          setRecall({ revisionId: review.revisionId, title: topic?.title ?? docTitle, docId: null, cycleNumber: review.cycle, subjectName: subject?.name });
+        }}
+        onRevised={(review) => {
+          setCardOpen(false);
+          void run(() => learningApi.completeRevision(review.revisionId), 'Marked as revised');
+        }}
+      />
       <RcConfirm
         open={unfiling}
         onOpenChange={setUnfiling}

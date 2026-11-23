@@ -294,6 +294,14 @@ export function parseNote(source: string): NoteNode[] {
       continue;
     }
 
+    // A Markdown heading ("## Why it works", as chats write notes, STUDY_FLOW_PLAN §4.3): its words as a label line.
+    const atx = /^\s{0,3}#{1,6}\s+(\S.*?)\s*#*\s*$/.exec(line);
+    if (atx && atx[1]) {
+      nodes.push({ type: 'label', children: parseInline(atx[1]) });
+      i++;
+      continue;
+    }
+
     // Explicit fenced block (an unterminated fence, mid-typing, runs to the end)
     const fence = line.match(FENCE_RE);
     if (fence) {

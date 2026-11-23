@@ -13,6 +13,7 @@ import { nextReviewDay, REVISION_CYCLES } from '@/lib/learning/plan';
 import { RcButton, RcCheck, RcConfirm, RcIconButton, RcMenu, RcStamp, type MenuAction } from '@/components/rc-ui';
 import { NoteBody } from './NoteBody';
 import { RecallSheet, type RecallTarget } from '@/components/learning/recall/RecallSheet';
+import { RevisionCardDialog } from '@/components/docs/page/RevisionCard';
 import { LabelLine, openCapturePalette, SectionFailed } from './parts';
 import { plural, shortDay, stampDay } from './format';
 
@@ -28,13 +29,15 @@ interface RowProps {
   onToggle: () => void;
   /** Recall mode for a due doc (PLAN §4: "Revise" means recall). */
   onRecall: () => void;
+  /** STUDY_FLOW_PLAN §4.4: a doc with a revision card shows the card first. */
+  onCard: () => void;
 }
 
 /**
  * One review: check, the title with its meta beside it (under it when the two don't fit one line),
  * then the due stamp once it is done (no minutes per review: the budget is for the whole list).
  */
-function SlipRow({ rev, done, today, nextDue, pressed, settled, checkRef, onToggle, onRecall }: RowProps) {
+function SlipRow({ rev, done, today, nextDue, pressed, settled, checkRef, onToggle, onRecall, onCard }: RowProps) {
   const still = useReducedMotion();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -193,7 +196,7 @@ function SlipRow({ rev, done, today, nextDue, pressed, settled, checkRef, onTogg
               type="button"
               aria-expanded={isNote ? expanded : undefined}
               title={isNote ? 'Click to open · double-click to edit' : `Open the doc · review ${rev.cycleNumber} of ${REVISION_CYCLES}`}
-              onClick={() => (isNote ? setExpanded((x) => !x) : void openDoc())}
+              onClick={() => (isNote ? setExpanded((x) => !x) : rev.hasCard && !done ? onCard() : void openDoc())}
               onDoubleClick={isNote ? beginEdit : undefined}
               className="min-w-0 cursor-pointer text-left outline-none"
             >
@@ -347,6 +350,9 @@ export function TodaySlip({
   const [showDone, setShowDone] = useState(false);
   const [confirmFresh, setConfirmFresh] = useState(false);
   const [recall, setRecall] = useState<RecallTarget | null>(null);
+  // STUDY_FLOW_PLAN §4.4: the review whose revision card is open (its row's place, for the tick).
+  const [card, setCard] = useState<{ rev: RevisionItem; index: number } | null>(null);
+  const router = useRouter();
   const [freshBusy, setFreshBusy] = useState(false);
   const [preview, setPreview] = useState<{ moved: number; spreadDays: number } | null | 'loading'>(null);
   // Each row's place for this visit: first seen, first listed, so a tick never reorders the slip.
@@ -452,6 +458,7 @@ export function TodaySlip({
       onRecall={() =>
         setRecall({ revisionId: rev._id, title: rev.title, docId: rev.docId ?? null, cycleNumber: rev.cycleNumber, subjectName: rev.subject?.name ?? null })
       }
+      onCard={() => setCard({ rev, index: i })}
     />
   );
 
@@ -554,7 +561,7 @@ export function TodaySlip({
                 : 'Nothing is due. Capture something new to revise, or enjoy the quiet.'}
           </p>
           {plan.waitingCount === 0 && (
-            <RcButton variant="outline" size="sm" className="mt-3" onClick={openCapturePalette}>
+            <RcButton variant="outline" size="sm" className="mt-3" onClick={() => openCapturePalette()}>
               Capture something to revise
             </RcButton>
           )}
@@ -604,6 +611,28 @@ export function TodaySlip({
         onConfirm={() => void runFreshStart()}
       />
       <RecallSheet target={recall} onOpenChange={(o) => !o && setRecall(null)} onFinished={() => void useLearningStore.getState().refresh()} />
+      <RevisionCardDialog
+        docId={card?.rev.docId ?? null}
+        title={card?.rev.title}
+        onClose={() => setCard(null)}
+        onDone={() => {
+          const docId = card?.rev.docId;
+          setCard(null);
+          if (docId) router.push(`/docs/${encodeURIComponent(docId)}`);
+        }}
+        onQuiz={() => {
+          if (!card) return;
+          const { rev } = card;
+          setCard(null);
+          setRecall({ revisionId: rev._id, title: rev.title, docId: rev.docId ?? null, cycleNumber: rev.cycleNumber, subjectName: rev.subject?.name ?? null });
+        }}
+        onRevised={() => {
+          if (!card) return;
+          const { rev, index } = card;
+          setCard(null);
+          toggle(rev, false, index);
+        }}
+      />
       <span className="sr-only" aria-live="polite">
         {doneCount > 0 ? `${plural(doneCount, 'revision')} done today` : ''}
       </span>

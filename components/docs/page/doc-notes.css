@@ -1,0 +1,316 @@
+/* A lesson's notes and links (DocNotes.tsx, STUDY_FLOW_PLAN §4.3): two quiet label lines (Notes, Links) like the
+   owner's ChatGPT right panel, rows whose shape says what they are, the menu only on hover. */
+.dn {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.dn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dn-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 4px 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rc-ink-2);
+}
+
+.dn-label--fold {
+  width: 100%;
+  border-radius: var(--rc-r-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.dn-label--fold:hover {
+  background: var(--rc-hover);
+}
+
+.dn-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dn-row-line {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.rc .dn-row-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 32px 6px 8px;
+  border-radius: var(--rc-r-sm);
+  text-align: left;
+  color: var(--rc-ink-1);
+  text-decoration: none;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.dn-row-main:hover {
+  background: var(--rc-hover);
+}
+
+.dn-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.dn-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--rc-ink-3);
+}
+
+.dn-meta svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dn-row-main > .dn-meta {
+  padding-left: 0;
+}
+
+button.dn-row-main > .dn-meta {
+  padding-left: 18px;
+}
+
+.dn-chev {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  color: var(--rc-icon);
+  transition: transform var(--rc-fast) ease;
+}
+
+.dn-chev--open {
+  transform: rotate(90deg);
+}
+
+.dn-row-menu {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.dn-row:hover .dn-row-menu,
+.dn-row-menu:focus-within,
+.dn-row-menu [data-state='open'] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .dn-row-menu {
+    opacity: 1;
+  }
+}
+
+.dn-dots {
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.dn-body {
+  padding: 2px 8px 10px 26px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rc-ink-1);
+}
+
+.dn-empty {
+  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--rc-ink-3);
+}
+
+/* The doc page's right panel (DocPage.tsx): beside the doc, the page's own ground, no line and no scrollbar (Home's
+   right sidebar as the reference). It slides between 0 and 320 px; what is inside keeps its width. */
+.doc-split {
+  position: relative;
+  min-height: 100%;
+}
+
+/* The page keeps its full width: the panel lies over its right margin, and the column moves only when the panel
+   would cover the text (DocPage's docShift), sliding with the panel. */
+.doc-split > .doc-page {
+  transition: padding-right 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.doc-split > .doc-page:has(+ .doc-side--resizing) {
+  transition: none;
+}
+
+.doc-side {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  /* clip, not hidden: no scroll box of its own, so the card inside stays stuck to the top of the page's view. */
+  overflow: clip;
+  visibility: hidden;
+  background: var(--rc-ground);
+  transition:
+    width 160ms cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s linear 160ms;
+}
+
+.doc-side--open {
+  width: var(--doc-side-w, 276px);
+  visibility: visible;
+  transition:
+    width 160ms cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s;
+}
+
+/* The panel is a card, as in his ChatGPT panel: a raised rounded surface that holds the lists and fits them (it
+   scrolls on its own when they are longer than the page). */
+.doc-side-inner {
+  position: sticky;
+  top: 0;
+  width: var(--doc-side-w, 276px);
+  height: calc(100dvh - 44px);
+  padding: 12px 12px 16px 6px;
+}
+
+/* The card and its grip: the grip is the card's own left edge, as tall as the card. */
+.doc-side-frame {
+  position: relative;
+  display: flex;
+  max-height: 100%;
+}
+
+.doc-side-card {
+  flex: 1;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 12px 8px 14px;
+  border: 1px solid var(--rc-line);
+  border-radius: 16px;
+  background: var(--rc-surface-2);
+}
+
+.doc-side-card::-webkit-scrollbar {
+  display: none;
+}
+
+/* Its left edge widens or narrows it (drag; arrow keys when focused); the width is kept per browser. */
+.doc-side-grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+
+.doc-side-grip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 3px;
+  height: min(36px, 50%);
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: var(--rc-line-strong);
+  opacity: 0;
+  transition: opacity var(--rc-fast) ease;
+}
+
+.doc-side-grip:hover::after,
+.doc-side-grip:focus-visible::after,
+.doc-side-grip[data-dragging]::after {
+  opacity: 1;
+}
+
+.doc-side-grip:focus-visible {
+  outline: none;
+}
+
+.doc-side--resizing {
+  transition: none;
+  user-select: none;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-side,
+  .doc-side--open {
+    transition: none;
+  }
+}
+
+/* The toggle's count: a small quiet number beside the panel glyph. */
+.doc-side-count {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rc-ink-3);
+}
+
+/* A subject's page: one quiet line under its summary, opening its notes. */
+.rc .path-notes {
+  display: inline-flex;
+  margin: -6px 0 14px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: var(--rc-r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rc-ink-2);
+  transition: background-color var(--rc-fast) ease;
+}
+
+.rc .path-notes:hover:not(:disabled) {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+/* The toggle with its count on one line: the glyph, then the number (the button grows; its left edge stays). */
+.rc .rc-icon-btn.doc-side-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 28px;
+  padding: 0 6px;
+  gap: 3px;
+}

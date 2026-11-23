@@ -4,6 +4,7 @@ import React from 'react';
 import { RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RcButton } from '@/components/rc-ui';
+import { requestPaletteMode, type PaletteMode } from '@/lib/capturePalette';
 
 /** A Home section heading row: the title, and actions at the right on the same baseline. */
 export function SectionHead({ title, id, children, className }: { title: string; id: string; children?: React.ReactNode; className?: string }) {
@@ -52,6 +53,7 @@ export function SectionFailed({ what, onRetry, className }: { what: string; onRe
 }
 
 /** Opens the global Ctrl+K palette (the app layout owns it and listens on document). */
-export function openCapturePalette() {
+export function openCapturePalette(mode: PaletteMode | null = null) {
+  requestPaletteMode(mode);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
 }

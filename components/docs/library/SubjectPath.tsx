@@ -12,6 +12,8 @@ import type { PathStatus, PathTopic, SubjectPath, TopicPathPatch, TopicStatus } 
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSkel, rcScope, type MenuAction } from '@/components/rc-ui';
 import { PATH_STATUS_WORD, PathMark, studyPrompt } from '@/components/learning/PathMark';
 import { StatusCell } from './StatusCell';
+import { SubjectNotes } from '@/components/docs/page/DocNotes';
+import { EditCaptureDialog } from '@/components/learning/EditCaptureDialog';
 
 const STATUS_ACTIONS: { status: PathStatus; label: string; icon: React.ReactNode }[] = [
   { status: 'in_progress', label: 'Start it', icon: <PathMark status="in_progress" className="h-4 w-4" /> },
@@ -204,6 +206,9 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
           ? 'No topics on this path yet.'
           : `${path.done} of ${n} ${n === 1 ? 'topic' : 'topics'} done${path.next ? ` · next: ${path.next.position}. ${path.next.title}` : ' · nothing planned next'}`}
       </p>
+      {/* STUDY_FLOW_PLAN §4.3: the subject's notes and its lessons', in a sheet. */}
+      <SubjectNotes subjectId={subjectId} subjectName={subjectName} />
+      <EditCaptureDialog />
 
       {n > 0 && (
         <ol ref={listRef} className="path-list" data-dragging={drag ? '' : undefined} aria-label={`${subjectName} path`}>

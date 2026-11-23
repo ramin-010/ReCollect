@@ -39,6 +39,7 @@ import type {
   RawQuickNote,
   RawRevisionItem,
   RawTodayPayload,
+  RevisionCard,
   RevisionItem,
   ScheduleSlotUpdate,
   Slot,
@@ -583,17 +584,38 @@ export const learningApi = {
    * Ctrl K → Find (`q`: every word, in the title, text or link; also captures being revised) and
    * All notes › Inbox (`inbox`: the ones not on a revision schedule). Pinned first, then newest.
    */
-  async listCaptures(params: { q?: string; inbox?: boolean; limit?: number } = {}, signal?: AbortSignal): Promise<Capture[]> {
+  async listCaptures(
+    params: { q?: string; inbox?: boolean; limit?: number; topicId?: string; subjectId?: string; lessons?: boolean } = {},
+    signal?: AbortSignal,
+  ): Promise<Capture[]> {
     const m = await mock();
     const raw: RawCapture[] = m
       ? await m.listCaptures(params)
       : await call(() =>
           axiosInstance.get('/api/captures', {
-            params: { q: params.q?.trim() || undefined, inbox: params.inbox ? 1 : undefined, limit: params.limit },
+            params: {
+              q: params.q?.trim() || undefined,
+              inbox: params.inbox ? 1 : undefined,
+              limit: params.limit,
+              // STUDY_FLOW_PLAN §4.3: a lesson's notes (the doc's sidebar), a subject's (its page).
+              topicId: params.topicId,
+              subjectId: params.subjectId,
+              lessons: params.lessons ? 1 : undefined,
+            },
             signal,
           }),
         );
     return raw.map(parseCapture);
+  },
+
+  /** STUDY_FLOW_PLAN §4.4: a doc's revision card to draw read-only, and its review; null when it has none. */
+  async getRevisionCard(docId: string): Promise<RevisionCard | null> {
+    try {
+      return await call(() => axiosInstance.get(`/api/docs/${docId}/card`));
+    } catch (err) {
+      if (err instanceof LearningApiError && err.status === 404) return null;
+      throw err;
+    }
   },
 
   // #18

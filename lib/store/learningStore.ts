@@ -39,6 +39,7 @@ import { FOCUS_LIMIT } from '@/lib/learning/types';
 import { dayOf, diffDays, resolveTimeZone } from '@/lib/learning/engine';
 import { formatDayChip } from '@/lib/learning/dates';
 import { estimateMinutes, nextReviewDay } from '@/lib/learning/plan';
+import { notesChanged } from '@/lib/learning/notesEvents';
 
 export type RescheduleTarget =
   | { kind: 'revision'; id: string; title: string; scheduledFor: DayString }
@@ -502,6 +503,7 @@ export const useLearningStore = create<LearningState>((set, get) => {
       try {
         await learningApi.updateCapture(id, body);
         toast.success('Updated successfully!');
+        notesChanged();
         void get().refresh();
         return true;
       } catch (e) {
@@ -514,6 +516,7 @@ export const useLearningStore = create<LearningState>((set, get) => {
       try {
         await learningApi.deleteCapture(id);
         toast.success('Capture deleted');
+        notesChanged();
         void get().refresh();
       } catch (e) {
         toast.error(errorMessage(e, 'Failed to delete'));

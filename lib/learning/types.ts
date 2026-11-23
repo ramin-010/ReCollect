@@ -53,6 +53,8 @@ export interface RawRevisionItem {
   tags: string[];
   /** topic only */
   docId?: string | null;
+  /** topic only: its doc has a revision card, which a review shows first (STUDY_FLOW_PLAN §4.4) */
+  hasCard?: boolean;
   /** capture only */
   content?: string | null;
   url?: string | null;
@@ -160,6 +162,11 @@ export interface RawCapture {
   subject: SubjectRef | null;
   topicId: string | null;
   attachments: Attachment[];
+  /** STUDY_FLOW_PLAN §4.3: who wrote it (a chat's note says "from <app>" in the doc's sidebar). */
+  createdBy?: 'user' | 'agent';
+  agentName?: string | null;
+  /** The lesson it belongs to (lists by subject with `lessons`). */
+  lesson?: { docId: string | null; title: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +174,17 @@ export interface RawCapture {
 export interface Capture extends Omit<RawCapture, 'createdAt' | 'updatedAt'> {
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** GET /api/docs/:id/card (STUDY_FLOW_PLAN §4.4): the card as a Y.Doc state (base64) the editor draws read-only. */
+export interface RevisionCard {
+  docId: string;
+  title: string;
+  heading: string;
+  state: string;
+  topicId: string | null;
+  /** The doc's next pending review; `due` when Mark as revised may complete it today. */
+  review: { revisionId: string; cycle: number; of: number; scheduledFor: DayString; due: boolean } | null;
 }
 
 export interface RawQuickNote {
@@ -821,6 +839,8 @@ export interface TopicByDoc {
   topic: Topic | null;
   chain: ChainRevision[];
   nextAction: NextRevisionAction;
+  /** STUDY_FLOW_PLAN §4.4: the doc has a revision card (older servers leave it out). */
+  hasCard?: boolean;
 }
 
 // ─── Request bodies ─────────────────────────────────────────────────────────

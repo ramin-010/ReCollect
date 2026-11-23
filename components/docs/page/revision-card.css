@@ -1,0 +1,10 @@
+/* A lesson's revision card in its dialog (RevisionCard.tsx, STUDY_FLOW_PLAN §4.4): the doc's own type, read-only,
+   without the editor's room for a long page under it. */
+.card-body .lab-editor .bn-editor {
+  padding-bottom: 8px;
+}
+
+/* The card's own heading ("Revision card") is the dialog's title already: it stays out of the card's body. */
+.card-body .lab-editor .bn-block-outer:first-child > .bn-block > .bn-block-content[data-content-type='heading'] {
+  display: none;
+}

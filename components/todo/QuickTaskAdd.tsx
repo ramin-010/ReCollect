@@ -15,6 +15,7 @@ import { learningApi } from '@/lib/api/learningApi';
 import type { Attachment, SubjectWithTopics } from '@/lib/learning/types';
 import { CaptureComposer, type CaptureComposerHandle } from '@/components/learning/CaptureComposer';
 import { SubjectPicker } from '@/components/learning/SubjectPicker';
+import { takePaletteMode } from '@/lib/capturePalette';
 import { cn } from '@/lib/utils';
 import { formatMinutes, parseSessionLog, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
 
@@ -94,7 +95,8 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) {
-      setMode('task');
+      // A button may open it on Note or Link (the doc's notes panel); Ctrl K itself on a task.
+      setMode(takePaletteMode() ?? 'task');
       setRevise(false);
       setGoal('NONE');
       setIsPinned(false);

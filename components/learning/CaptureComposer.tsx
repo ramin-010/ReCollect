@@ -13,6 +13,7 @@ import { DEFAULT_TIMEZONE } from '@/lib/learning/engine';
 import { formatDayChip, revisionDaysFrom, todayIn } from '@/lib/learning/dates';
 import { useLearningStore } from '@/lib/store/learningStore';
 import type { Attachment } from '@/lib/learning/types';
+import { notesChanged } from '@/lib/learning/notesEvents';
 import { isImageAttachment } from './AttachmentThumbnails';
 
 export interface CaptureComposerHandle {
@@ -130,7 +131,11 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
         });
         const what = asLink ? 'Link' : 'Note';
         if (revise) toast.success('Saved · revisions scheduled', { description: 'It comes up in your list on its first review day.' });
+        // STUDY_FLOW_PLAN §4.3: one on a lesson shows in its doc's notes panel; one on a subject on the subject's page.
+        else if (topicId) toast.success(`${what} saved on this lesson`, { description: 'It is in the doc’s notes, at the top right.' });
+        else if (subjectId) toast.success(`${what} saved on the subject`, { description: 'Its notes are on the subject’s page in Docs.' });
         else toast.success(`${what} saved to the inbox`, { description: 'Find it on Home under All notes › Inbox.' });
+        notesChanged();
       }
       const store = useLearningStore.getState();
       if (store.isHomeMounted) void store.refresh();

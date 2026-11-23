@@ -523,7 +523,12 @@ export function DocAsk({
       e.preventDefault();
       if (input.trim()) void send(input);
       else if (showMenu) runStarter(starters[at]!);
-      else if (phase === 'done') main();
+      else if (phase === 'done') {
+        // Putting a reply into the doc is the button's alone: Enter on an empty line never writes the answer's text
+        // (STUDY_FLOW_PLAN §7.1: a chat's "I haven't changed the doc…" landed in one that way).
+        if (answer && !failed && !changed && !halted) return;
+        main();
+      }
     }
   };
 
