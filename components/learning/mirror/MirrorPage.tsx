@@ -226,14 +226,40 @@ function StandBlocks({
 }) {
   const start = shortDay(stand.recordStart, stand.today);
   const spans = period.before ? `${formatSpan(period.span, stand.today)} · against ${formatSpan(period.before, stand.today)}` : `${formatSpan(period.span, stand.today)} · the record starts ${start}`;
+  // His look (11-23 night): the top rethought. The views are the page's own tabs (underlined, the page's sections),
+  // the window a small switch at their right; under a hairline, the span, the plain summary as the lead, and the
+  // buddy's take in its own quiet block (the same place whether it is there or can be asked for).
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
-          {looks.length > 1 && <RcSegmented label="Look at" options={looks.map((l) => ({ value: l, label: LOOK_LABEL[l] }))} value={look} onChange={onLook} />}
-        </div>
+      <div className="border-b border-[var(--rc-line)]">
+        {looks.length > 1 ? (
+          <div role="tablist" aria-label="Look at" className="-mb-px flex gap-5">
+            {looks.map((l) => {
+              const on = l === look;
+              return (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => onLook(l)}
+                  className={cn(
+                    'border-b-2 pb-2.5 pt-1 text-[15px] transition-colors',
+                    on ? 'border-[var(--rc-ink-1)] font-[600] text-[var(--rc-ink-1)]' : 'border-transparent text-[var(--rc-ink-3)] hover:text-[var(--rc-ink-1)]'
+                  )}
+                >
+                  {LOOK_LABEL[l]}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <h2 className="pb-2.5 pt-1 text-[15px] font-[600] text-[var(--rc-ink-1)]">{LOOK_LABEL[look]}</h2>
+        )}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <p className="rc-meta rc-num">{spans}</p>
+        <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
       </div>
       <Summary key={`s-${win}-${lens}`} period={period} takes={takes} onTake={onTake} />
       <div key={`${win}-${lens}`} className="rc-ws-in mt-7 flex flex-col gap-9">
@@ -355,7 +381,6 @@ function WorkDone({ stand, period, building = false }: { stand: StandData; perio
  */
 function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandTakes | null; onTake: (t: NonNullable<StandTakes['takes'][StandWindow]>) => void }) {
   const [asking, setAsking] = useState(false);
-  const [plain, setPlain] = useState(false);
   const take = takes?.takes[period.window] ?? null;
   const name = takes?.name || 'Buddy';
   const canAsk = takes?.ask === 'ok';
@@ -364,7 +389,6 @@ function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandT
     setAsking(true);
     try {
       onTake(await learningApi.askStandTake(period.window));
-      setPlain(false);
     } catch (err) {
       toast.error(err instanceof Error && err.message ? err.message : 'Your buddy couldn’t answer just now. Try again.');
     } finally {
@@ -373,48 +397,38 @@ function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandT
   };
 
   const avatar = (
-    <span className="mt-[3px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-[var(--rc-main)] text-[11px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
+    <span className="grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full bg-[var(--rc-main)] text-[10.5px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
       {name.charAt(0).toUpperCase()}
     </span>
   );
 
-  if (take && !plain) {
-    return (
-      <div className="mt-6 max-w-[640px]" aria-live="polite">
-        <div className="flex items-start gap-2.5">
-          {avatar}
-          <p className={cn('min-w-0 flex-1 text-[16px] leading-[1.6] text-[var(--rc-ink-1)]', voice.className)}>{take.text}</p>
-        </div>
-        <p className="mt-2 pl-[32px] text-[12.5px] text-[var(--rc-ink-3)]">
-          {name}’s take for today ·{' '}
-          <button type="button" className="underline-offset-2 hover:text-[var(--rc-ink-1)] hover:underline" onClick={() => setPlain(true)}>
-            The plain summary
-          </button>
-        </p>
-      </div>
-    );
-  }
-
+  // The plain summary leads (facts, written by code); the buddy's take sits under it in a quiet block, never in
+  // its place, so the two don't swap and the page doesn't jump.
   return (
-    <div className="mt-6 max-w-[640px]">
+    <div className="mt-4">
       {period.verdict.length > 0 && (
-        <p className="text-[16px] leading-[1.55] text-[var(--rc-ink-1)]" aria-live="polite">
+        <p className="max-w-[680px] text-[17px] leading-[1.55] text-[var(--rc-ink-1)]" aria-live="polite">
           {period.verdict.join(' ')}
         </p>
       )}
-      {take ? (
-        <button type="button" className="mt-2 text-[12.5px] text-[var(--rc-ink-3)] underline-offset-2 hover:text-[var(--rc-ink-1)] hover:underline" onClick={() => setPlain(false)}>
-          {name}’s take for today
-        </button>
-      ) : (
-        canAsk && (
-          <RcButton size="sm" variant="quiet" busy={asking} className="-ml-2 mt-2.5 gap-2" onClick={() => void ask()}>
-            <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-[var(--rc-main)] text-[10px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
-              {name.charAt(0).toUpperCase()}
-            </span>
-            {asking ? `${name} is thinking…` : `Ask ${name} for an honest take`}
-          </RcButton>
-        )
+      {(take || canAsk) && (
+        <div className="mt-5 rounded-[14px] bg-[color-mix(in_srgb,var(--rc-ink-1)_3.5%,var(--rc-ground))] px-5 py-4 sm:-mx-4" aria-live="polite">
+          <div className="flex items-center gap-2 text-[12.5px] text-[var(--rc-ink-3)]">
+            {avatar}
+            <span className="font-[600] text-[var(--rc-ink-2)]">{name}’s take</span>
+            {take && <span>· today</span>}
+          </div>
+          {take ? (
+            <p className={cn('mt-2 text-[15.5px] leading-[1.6] text-[var(--rc-ink-1)]', voice.className)}>{take.text}</p>
+          ) : (
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <p className="text-[14px] text-[var(--rc-ink-2)]">An honest read of {WINDOW_WORDS[period.window].now}, from what {name} knows about you.</p>
+              <RcButton size="sm" variant="outline" busy={asking} onClick={() => void ask()}>
+                {asking ? `${name} is thinking…` : `Ask ${name}`}
+              </RcButton>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
