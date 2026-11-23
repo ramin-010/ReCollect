@@ -74,12 +74,13 @@ export function GraphFilter({ parts, progress, onChange }: { parts: RecordParts;
           aria-label="Show on the graph"
           title="Show on the graph"
           className={cn(
-            'relative -my-1 grid h-6 w-6 place-items-center rounded-[6px] text-[var(--rc-ink-3)] hover:bg-[var(--rc-hover)] hover:text-[var(--rc-ink-1)]',
+            // Sits on the date line: the line's own size and ink, nudged onto its baseline (his look, 11-23 night).
+            'relative inline-grid h-[18px] w-[18px] translate-y-[3px] place-items-center rounded-[5px] text-[var(--rc-ink-3)] opacity-75 hover:opacity-100 hover:bg-[var(--rc-hover)] hover:text-[var(--rc-ink-1)]',
             changed && 'text-[var(--rc-ink-1)]'
           )}
         >
-          <ListFilter className="h-[14px] w-[14px]" strokeWidth={1.75} aria-hidden />
-          {changed && <span className="absolute right-[3px] top-[3px] h-[5px] w-[5px] rounded-full bg-[var(--rc-accent)]" aria-hidden />}
+          <ListFilter className="h-[12px] w-[12px]" strokeWidth={1.75} aria-hidden />
+          {changed && <span className="absolute right-[1px] top-[1px] h-[4px] w-[4px] rounded-full bg-[var(--rc-accent)]" aria-hidden />}
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
