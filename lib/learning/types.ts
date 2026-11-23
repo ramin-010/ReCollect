@@ -697,6 +697,21 @@ export interface StandPeriod {
   previous: StandMeasures | null;
   /** 0-3 sentences written by the server from these numbers. */
   verdict: string[];
+  /** COVERAGE_PLAN (absent from an older server): the four rates of this window. */
+  coverage?: StandCoverage;
+}
+
+export interface StandTally {
+  done: number;
+  due: number;
+}
+
+/** COVERAGE_PLAN: days with each part (work: of weekdays; null: the record has none), and what came due done on time. */
+export interface StandCoverage {
+  learning: { days: number; of: number };
+  building: { days: number; of: number } | null;
+  work: { days: number; of: number } | null;
+  onTime: StandTally & { by: { reviews: StandTally; tasks: StandTally; milestones: StandTally; targets: StandTally; focus: StandTally } };
 }
 
 export interface StandDay {

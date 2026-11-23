@@ -15,6 +15,7 @@ import { voice } from '@/components/buddy/voice';
 import { LabelLine, SectionFailed } from '../home/parts';
 import { shortDay } from '../home/format';
 import { StandWave } from './StandWave';
+import { Coverage } from './Coverage';
 
 const WINDOW_KEY = 'rc-mirror-window';
 /** PERSONAL_OFFICE_PLAN: the lens looked through last in this browser (a per-viewer convenience). */
@@ -241,6 +242,8 @@ function StandBlocks({
           <WorkDone stand={stand} period={period} building={lens === 'building'} />
         ) : (
           <>
+            {/* COVERAGE_PLAN: on Progress only; every part the record holds, whatever counts as progress. */}
+            {look === 'progress' && period.coverage && <Coverage coverage={period.coverage} window={period.window} partial={period.partial} />}
             <Finished stand={stand} period={period} />
             <Habits stand={stand} period={period} />
           </>
