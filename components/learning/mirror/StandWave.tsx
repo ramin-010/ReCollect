@@ -85,15 +85,21 @@ const momentWords = (list: readonly StandMoment[]) =>
 
 /**
  * PERSONAL_OFFICE_PLAN (11-23), the lens: Personal and All draw in the year's greens, Work in a quiet slate; All draws
- * personal and work as two lines (no span-before line, so three lines never share the chart).
+ * personal and work as two lines (no span-before line, so three lines never share the chart). STUDY_FLOW_PLAN §4.5:
+ * Learning draws in the greens too (it is the Personal page on learning time), Building in its own colour.
  */
 export function StandWave({ stand, period, moments, lens = 'personal' }: { stand: StandData; period: StandPeriod; moments?: readonly StandMoment[]; lens?: StandLens }) {
   const win = period.window;
-  const split = lens === 'all';
+  // All, or learning and work (what counts as progress for them): the personal part and work as two lines.
+  const split = lens === 'all' || lens === 'learning_work';
+  const ownLabel = lens === 'learning_work' ? 'Learning' : 'Personal';
   const points = useMemo(() => waveSeries(stand, win, split ? 'personal' : undefined), [stand, win, split]);
   const workPoints = useMemo(() => (split ? waveSeries(stand, win, 'work') : null), [stand, win, split]);
-  const stroke = lens === 'work' ? 'var(--rc-wave-work)' : 'var(--rc-heat-4)';
-  const fill = lens === 'work' ? 'var(--rc-wave-work)' : 'var(--rc-heat-3)';
+  const tone = lens === 'work' ? 'var(--rc-wave-work)' : lens === 'building' ? 'var(--rc-wave-build)' : null;
+  const stroke = tone ?? 'var(--rc-heat-4)';
+  const fill = tone ?? 'var(--rc-heat-3)';
+  /** How the lens says its time: "at work", "building", "logged". */
+  const timeWord = lens === 'work' ? 'at work' : lens === 'building' ? 'building' : 'logged';
   const [box, width] = useWidth<HTMLDivElement>(680);
   const [hover, setHover] = useState<number | null>(null);
   const gradient = useId().replace(/:/g, '');
@@ -124,13 +130,13 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
   );
 
   const readOut = (i: number | null) => {
-    if (i === null) return `${c.activeDays} of ${c.days} days ${lens === 'work' ? 'at work' : 'active'}`;
+    if (i === null) return `${c.activeDays} of ${c.days} days ${lens === 'work' ? 'at work' : lens === 'building' ? 'building' : lens === 'learning' ? 'studying' : 'active'}`;
     const pt = points[i]!;
     if (pt.now === null) return `${pt.name} · before the record`;
     const u = WAVE_UNIT[win].suffix;
     if (workPoints) {
       const w = workPoints[i]?.now ?? 0;
-      return `${pt.name} · ${hoursText(pt.now)} personal · ${hoursText(w)} work${Math.round(pt.now) || Math.round(w) ? u : ''}`;
+      return `${pt.name} · ${hoursText(pt.now)} ${ownLabel.toLowerCase()} · ${hoursText(w)} work${Math.round(pt.now) || Math.round(w) ? u : ''}`;
     }
     return `${pt.name} · ${hoursText(pt.now)}${Math.round(pt.now) ? u : ''}${pt.before !== null ? ` · before ${hoursText(pt.before)}${Math.round(pt.before) ? u : ''}` : ''}`;
   };
@@ -151,9 +157,9 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <div className="min-w-0">
           <h2 id="ws-wave" className="rc-num text-[20px] font-[600] leading-[1.2] text-[var(--rc-ink-1)]">
-            {c.totalMinutes ? formatMinutes(c.totalMinutes) : lens === 'work' ? 'No time' : 'Nothing'}{' '}
+            {c.totalMinutes ? formatMinutes(c.totalMinutes) : lens === 'work' || lens === 'building' ? 'No time' : 'Nothing'}{' '}
             <span className="text-[14px] font-[400] text-[var(--rc-ink-3)]">
-              {lens === 'work' ? 'at work' : 'logged'} {span}
+              {timeWord} {span}
             </span>
           </h2>
           {diff !== null && p && (
@@ -183,14 +189,18 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
 
       {empty ? (
         <p className="rc-meta py-10 text-center">
-          {lens === 'work' ? 'Claude Code in a folder marked Work fills this in (Settings › Tracking).' : 'Study chats, Claude Code and Ctrl K “log 40m …” fill this in.'}
+          {lens === 'work'
+            ? 'Claude Code in a folder marked Work fills this in (Settings › Tracking).'
+            : lens === 'building'
+              ? 'Claude Code in a folder of your own fills this in (Settings › Tracking).'
+              : 'Study chats, Claude Code and Ctrl K “log 40m …” fill this in.'}
         </p>
       ) : (
         <div ref={box} className="mt-3">
           <div
             tabIndex={0}
             role="group"
-            aria-label={`Time ${lens === 'work' ? 'at work' : 'logged'} ${span}, ${win === 'year' ? 'a week at a time' : win === 'month' ? 'as the average a day over the 7 days up to each day' : 'a day at a time'}${compare ? ', with the span before as a dashed line' : ''}${split ? ', personal and work as two lines' : ''}. Use the arrow keys to read each point; Show the numbers lists them.`}
+            aria-label={`Time ${timeWord} ${span}, ${win === 'year' ? 'a week at a time' : win === 'month' ? 'as the average a day over the 7 days up to each day' : 'a day at a time'}${compare ? ', with the span before as a dashed line' : ''}${split ? `, ${ownLabel.toLowerCase()} and work as two lines` : ''}. Use the arrow keys to read each point; Show the numbers lists them.`}
             className="rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--rc-accent)]"
             onFocus={() => setHover((h) => h ?? n - 1)}
             onBlur={() => setHover(null)}
@@ -261,7 +271,7 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
               <ul className="flex flex-wrap gap-x-4 pt-px text-[12.5px] text-[var(--rc-ink-3)]" aria-label="Legend">
                 <li className="flex items-center gap-1.5">
                   <span className="inline-block h-[2px] w-3.5 rounded-full bg-[var(--rc-heat-4)]" aria-hidden />
-                  Personal
+                  {ownLabel}
                 </li>
                 <li className="flex items-center gap-1.5">
                   <span className="inline-block h-[2px] w-3.5 rounded-full bg-[var(--rc-wave-work)]" aria-hidden />
@@ -272,7 +282,7 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
             ) : compare ? (
               <ul className="flex flex-wrap gap-x-4 pt-px text-[12.5px] text-[var(--rc-ink-3)]" aria-label="Legend">
                 <li className="flex items-center gap-1.5">
-                  <span className={cn('inline-block h-[2px] w-3.5 rounded-full', lens === 'work' ? 'bg-[var(--rc-wave-work)]' : 'bg-[var(--rc-heat-4)]')} aria-hidden />
+                  <span className="inline-block h-[2px] w-3.5 rounded-full" style={{ background: stroke }} aria-hidden />
                   {WINDOW_WORDS[win].now.replace(/^the /, 'The ')}
                 </li>
                 <li className="flex items-center gap-1.5">
@@ -290,7 +300,7 @@ export function StandWave({ stand, period, moments, lens = 'personal' }: { stand
                 <thead>
                   <tr className="text-[var(--rc-ink-3)]">
                     <th className="py-1 font-medium">{win === 'year' ? 'Week' : 'Day'}</th>
-                    <th className="py-1 text-right font-medium">{split ? 'Personal' : WAVE_UNIT[win].column}</th>
+                    <th className="py-1 text-right font-medium">{split ? ownLabel : WAVE_UNIT[win].column}</th>
                     {split && <th className="py-1 text-right font-medium">Work</th>}
                     {compare && <th className="py-1 text-right font-medium">Before</th>}
                   </tr>

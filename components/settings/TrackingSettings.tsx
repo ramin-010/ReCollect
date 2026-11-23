@@ -4,18 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { rcScope, RcButton, RcMenu, RcSegmented, RcSkel } from '@/components/rc-ui';
+import { rcScope, RcButton, RcMenu, RcSegmented, RcSkel, RcSwitch } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
 import { formatMinutes, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
 import type { DayString, FolderTracking, NewFolders, ProjectKind, ProjectRow } from '@/lib/learning/types';
 import { relativeDay } from '@/components/learning/home/format';
 import './settings.css';
 
+// STUDY_FLOW_PLAN §4.5: Personal is Learning and Building; a folder is one of Building, Learning, Work (the stored
+// values stay personal, study, work).
 const KINDS: Array<{ value: ProjectKind; label: string }> = [
-  { value: 'personal', label: 'Personal' },
-  { value: 'study', label: 'Study' },
+  { value: 'personal', label: 'Building' },
+  { value: 'study', label: 'Learning' },
   { value: 'work', label: 'Work' },
 ];
+/** A folder's kind in a sentence: "is for building", "is for learning", "is work". */
+const KIND_SAID: Record<ProjectKind, string> = { personal: 'for building', study: 'for learning', work: 'work' };
 
 /** EASY_SETUP_PLAN: what is logged in a folder (its kind's default unless it has its own). */
 const TRACKING: Array<{ value: FolderTracking; label: string; help: string }> = [
@@ -28,16 +32,18 @@ const trackingLabel = (t: FolderTracking | undefined) => TRACKING.find((x) => x.
 /** EASY_SETUP_PLAN §3.5: what a folder Recollect has never seen is. */
 const NEW_FOLDERS: Array<{ value: NewFolders; label: string }> = [
   { value: 'ask', label: 'Ask' },
-  { value: 'personal', label: 'Personal' },
-  { value: 'study', label: 'Study' },
+  { value: 'personal', label: 'Building' },
+  { value: 'study', label: 'Learning' },
   { value: 'work', label: 'Work' },
   { value: 'off', label: 'Ignore' },
 ];
 
-type Counts = 'personal' | 'all';
-const COUNTS: Array<{ value: Counts; label: string }> = [
-  { value: 'personal', label: 'Personal only' },
-  { value: 'all', label: 'Personal and work' },
+/** STUDY_FLOW_PLAN §4.5: what counts as progress, three ticks. Learning always counts; Building and Work as they pick. */
+type Counts = { building: boolean; work: boolean };
+const COUNT_ROWS: Array<{ key: 'learning' | keyof Counts; label: string; help: string }> = [
+  { key: 'learning', label: 'Learning', help: 'Study, practice, reviews, topics and goals. Always counts.' },
+  { key: 'building', label: 'Building', help: 'Time on your own projects.' },
+  { key: 'work', label: 'Work', help: 'Time in folders marked Work.' },
 ];
 
 /** The browser's today (the rows' "last worked" only; every number comes from the server). */
@@ -68,7 +74,7 @@ export function TrackingSettings() {
     setState('loading');
     try {
       const [settings, list] = await Promise.all([learningApi.getSettings(), learningApi.listProjects()]);
-      setCounts(settings.progressIncludesWork ? 'all' : 'personal');
+      setCounts({ building: settings.progressIncludesBuilding !== false, work: settings.progressIncludesWork === true });
       setNewFolders(settings.newFolders ?? 'ask');
       setProjects(list);
       setState('ready');
@@ -81,15 +87,15 @@ export function TrackingSettings() {
     void load();
   }, [load]);
 
-  const pickCounts = async (next: Counts) => {
-    if (next === counts) return;
+  const pickCounts = async (key: keyof Counts, on: boolean) => {
+    if (!counts || counts[key] === on) return;
     const was = counts;
-    setCounts(next);
+    setCounts({ ...counts, [key]: on });
     setSaving('counts');
     try {
-      await learningApi.updateSettings({ progressIncludesWork: next === 'all' });
+      await learningApi.updateSettings(key === 'work' ? { progressIncludesWork: on } : { progressIncludesBuilding: on });
       recount();
-      toast.success(next === 'all' ? 'Work counts as progress now' : 'Only personal work counts as progress now');
+      toast.success(`${key === 'work' ? 'Work' : 'Building'} ${on ? 'counts as progress now' : 'no longer counts as progress'}`);
     } catch {
       setCounts(was);
       toast.error('That didn’t save. Try again.');
@@ -105,7 +111,7 @@ export function TrackingSettings() {
     setSaving('new');
     try {
       await learningApi.updateSettings({ newFolders: next });
-      toast.success(next === 'ask' ? 'A new folder asks you once what it is' : next === 'off' ? 'New folders are ignored until you pick them here' : `New folders start as ${next}`);
+      toast.success(next === 'ask' ? 'A new folder asks you once what it is' : next === 'off' ? 'New folders are ignored until you pick them here' : `New folders start as ${KIND_SAID[next]}`);
     } catch {
       setNewFolders(was);
       toast.error('That didn’t save. Try again.');
@@ -141,7 +147,7 @@ export function TrackingSettings() {
       const fresh = await learningApi.setProjectKind(p._id, kind);
       setProjects((list) => list?.map((x) => (x._id === p._id ? fresh : x)) ?? list);
       recount();
-      toast.success(`${p.name} is ${kind === 'work' ? 'work' : kind === 'study' ? 'a study folder' : 'personal'} now, its past too`);
+      toast.success(`${p.name} is ${KIND_SAID[kind]} now, its past too`);
     } catch {
       setProjects((list) => list?.map((x) => (x._id === p._id ? { ...x, kind: was } : x)) ?? list);
       toast.error('That didn’t save. Try again.');
@@ -181,11 +187,28 @@ export function TrackingSettings() {
           What counts as progress
         </h2>
         <p className="rc-field-help">
-          {counts === 'all'
-            ? 'Personal and work: a day at work is an active day, its hours count, and your buddy treats it as progress.'
-            : 'Your own projects, study and practice. Work is kept for your work log and the Work view of Where you stand; it doesn’t make a day active or count as progress.'}
+          What makes a day active, fills Home’s year and week, and what your buddy and the coach judge your progress on. What
+          doesn’t count is still kept: its own view on Where you stand, and your work log.
         </p>
-        <RcSegmented className="mt-3" label="What counts as progress" options={COUNTS} value={counts} onChange={(v) => void pickCounts(v)} />
+        <ul className={cn('set-list mt-3', saving === 'counts' && 'pointer-events-none opacity-70')} aria-label="What counts as progress">
+          {COUNT_ROWS.map((r) => {
+            const on = r.key === 'learning' ? true : counts[r.key];
+            return (
+              <li key={r.key} className="set-row track-row">
+                <span className="min-w-0">
+                  <span className="block text-[15px] text-[var(--rc-ink-1)]">{r.label}</span>
+                  <span className="rc-meta block text-[13px]">{r.help}</span>
+                </span>
+                <RcSwitch
+                  checked={on}
+                  disabled={r.key === 'learning'}
+                  label={r.key === 'learning' ? 'Learning always counts as progress' : `${r.label} counts as progress`}
+                  onChange={(v) => r.key !== 'learning' && void pickCounts(r.key, v)}
+                />
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section aria-labelledby="track-folders" className="mt-10">
@@ -193,7 +216,7 @@ export function TrackingSettings() {
           Folders
         </h2>
         <p className="rc-field-help">
-          Where Claude Code and your chats worked. Personal: your own projects. Study: a folder you learn in. Work: your job, tracked for time and your work log. A change moves the folder’s past with it.
+          Where Claude Code and your chats worked. Building: your own projects. Learning: a folder you learn in. Work: your job, tracked for time and your work log. A change moves the folder’s past with it.
         </p>
         {shown.length === 0 ? (
           <p className="rc-meta mt-4">No folders yet. A folder shows here once Claude Code works in it with Recollect’s hooks, or a chat logs a session there.</p>
@@ -241,7 +264,7 @@ export function TrackingSettings() {
           </ul>
         )}
         <p className="rc-meta mt-4 text-[13px]">
-          What is logged: everything (the time, your words for your buddy, the work log), the time only, or nothing. What you pick here holds on every computer and in every chat; a chat can still say it is study, personal or work (/study, /personal, /work).
+          What is logged: everything (the time, your words for your buddy, the work log), the time only, or nothing. What you pick here holds on every computer and in every chat; a chat can still say it is learning, building or work (/study, /build, /work).
         </p>
       </section>
 
@@ -254,7 +277,7 @@ export function TrackingSettings() {
             ? 'The first chat in a folder Recollect hasn’t seen asks you once what it is. Until you answer, only its time is kept, on your computer.'
             : newFolders === 'off'
               ? 'A folder Recollect hasn’t seen is ignored until you pick what it is here.'
-              : `A folder Recollect hasn’t seen starts as ${newFolders}; change it here any time.`}
+              : `A folder Recollect hasn’t seen starts as ${KIND_SAID[newFolders]}; change it here any time.`}
         </p>
         <RcSegmented className={cn('mt-3', saving === 'new' && 'pointer-events-none opacity-70')} label="New folders" options={NEW_FOLDERS} value={newFolders} onChange={(v) => void pickNewFolders(v)} />
       </section>

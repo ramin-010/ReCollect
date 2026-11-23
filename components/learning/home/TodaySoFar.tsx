@@ -7,6 +7,7 @@ import { RcIconButton, RcMenu, RcSheet } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
 import { formatMinutes, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
 import type { ChatKind, DayString, SessionKind, SessionList, WorkSession } from '@/lib/learning/types';
+import { sessionInLens } from '@/lib/learning/stand';
 
 const KIND_ICON: Record<SessionKind, typeof BookOpen> = { study: BookOpen, practice: Puzzle, build: Hammer, review: RotateCcw };
 const OUTCOME: Record<string, string> = { alone: 'solved alone', hints: 'with hints', after_answer: 'after the answer' };
@@ -34,8 +35,8 @@ const writer = (s: WorkSession) => (s.source === 'user' ? 'you' : s.source === '
 
 /** EASY_SETUP_PLAN §7: what a chat is, from its row (the most trusted choice: no chat can change it after). */
 const CHAT_KINDS: Array<{ value: ChatKind; label: string }> = [
-  { value: 'personal', label: 'Personal' },
-  { value: 'study', label: 'Study' },
+  { value: 'personal', label: 'Building' },
+  { value: 'study', label: 'Learning' },
   { value: 'work', label: 'Work' },
 ];
 
@@ -44,7 +45,7 @@ const CHAT_KINDS: Array<{ value: ChatKind; label: string }> = [
  * · 2 h build", or the last session), opening the last 14 days. Hidden when nothing was logged.
  * PERSONAL_OFFICE_PLAN (11-23): the line counts what counts as progress (work only when they said so); the sheet
  * still lists every session, work marked, so any entry can be fixed. EASY_SETUP_PLAN §7: each row says what the chat
- * is (an agent's call named) and can be set Personal, Study or Work.
+ * is (an agent's call named) and can be set Building, Learning or Work (STUDY_FLOW_PLAN §4.5; stored as personal, study, work).
  */
 export function TodaySoFar({ today }: { today: DayString }) {
   const [list, setList] = useState<SessionList | null>(null);
@@ -71,7 +72,7 @@ export function TodaySoFar({ today }: { today: DayString }) {
   const changed = () => window.dispatchEvent(new Event(SESSIONS_CHANGED_EVENT));
 
   if (!list || list.sessions.length === 0) return null;
-  const counted = list.sessions.filter((s) => list.progressLens === 'all' || s.area !== 'work');
+  const counted = list.sessions.filter((s) => sessionInLens(list.progressLens ?? 'all', s));
   const todays = counted.filter((s) => s.day === today);
   const todayMinutes = { study: 0, practice: 0, build: 0, review: 0 } as Record<SessionKind, number>;
   for (const s of todays) todayMinutes[s.kind] += s.minutes ?? 0;
@@ -126,7 +127,7 @@ function SessionRow({ s, onChanged }: { s: WorkSession; onChanged: () => void })
   const [minutes, setMinutes] = useState(s.minutes?.toString() ?? '');
   const [busy, setBusy] = useState(false);
   const Icon = KIND_ICON[s.kind];
-  const kindWord = s.area === 'work' ? 'work' : s.kind;
+  const kindWord = s.area === 'work' ? 'work' : s.kind === 'build' ? 'building' : s.kind;
   const meta = [
     s.minutes ? formatMinutes(s.minutes) : null,
     // An agent's call on what the chat is, named (theirs or the app's needs no word).
@@ -142,7 +143,7 @@ function SessionRow({ s, onChanged }: { s: WorkSession; onChanged: () => void })
     setBusy(true);
     try {
       await learningApi.updateSession(s._id, { chatKind });
-      toast.success(chatKind === 'work' ? 'Marked as work: its time isn’t counted as progress' : `Marked as ${chatKind}`);
+      toast.success(chatKind === 'work' ? 'Marked as work: its time isn’t counted as progress' : `Marked as ${chatKind === 'personal' ? 'building' : 'learning'}`);
       onChanged();
     } catch {
       toast.error('That did not save. Try again.');

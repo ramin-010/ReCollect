@@ -4,7 +4,7 @@
  * GET /api/mirror/stand; nothing here counts the record, it only groups the days the server sent.
  */
 import { addDays, diffDays, type DayString } from '@/lib/learning/engine';
-import type { StandData, StandDay, StandSpan, StandWindow } from './types';
+import type { SessionKind, StandData, StandDay, StandLens, StandSpan, StandWindow } from './types';
 
 export const STAND_WINDOWS: StandWindow[] = ['week', 'month', 'year'];
 export const WINDOW_LABEL: Record<StandWindow, string> = { week: 'Week', month: 'Month', year: 'Year' };
@@ -183,4 +183,15 @@ export function shareTrend(now: [number, number], before: [number, number] | nul
   const b = before[0] / before[1];
   if (Math.abs(a - b) < 0.005) return null;
   return a > b ? 'up' : 'down';
+}
+
+/** Does a session count under this lens? (the server's inLens; Learning and Building need the kind). */
+export function sessionInLens(lens: StandLens, s: { area?: 'personal' | 'work'; kind: SessionKind }): boolean {
+  const area = s.area ?? 'personal';
+  const learning = area === 'personal' && s.kind !== 'build';
+  if (lens === 'all') return true;
+  if (lens === 'learning') return learning;
+  if (lens === 'learning_work') return learning || area === 'work';
+  if (lens === 'building') return area === 'personal' && s.kind === 'build';
+  return lens === area;
 }

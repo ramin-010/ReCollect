@@ -158,6 +158,7 @@ html[data-look="paper"]:not(.dark):not(.theme-dark-gray) .rc {
   --rc-heat-3: #2e7d4a;
   --rc-heat-4: #1b5232;
   --rc-wave-work: #5d6880;
+  --rc-wave-build: #a8661a;
   --rc-surface: #fcf9f3;
   --rc-surface-2: #ece4d4;
   --rc-surface-float: #fcf9f3;
@@ -220,6 +221,7 @@ html[data-look="paper"].theme-dark-gray .rc {
   --rc-heat-3: #4a9867;
   --rc-heat-4: #7cc495;
   --rc-wave-work: #9aa7bf;
+  --rc-wave-build: #e0a24a;
   --rc-surface: #201d19;
   --rc-surface-2: #2a2620;
   --rc-surface-float: #24211c;

@@ -374,13 +374,15 @@ export interface LearningSettings {
   agentProfile?: string | null;
   /** PERSONAL_OFFICE_PLAN: work counts as progress too (absent from an older server: personal only). */
   progressIncludesWork?: boolean;
+  /** STUDY_FLOW_PLAN §4.5: building their own projects counts as progress too (absent from an older server: yes). */
+  progressIncludesBuilding?: boolean;
   /** EASY_SETUP_PLAN: what a folder the server has never seen is (absent from an older server). */
   newFolders?: NewFolders;
 }
 
 /** `PATCH /api/learning/settings` accepts any subset. */
 export type LearningSettingsPatch = Partial<
-  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork' | 'newFolders'>
+  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork' | 'progressIncludesBuilding' | 'newFolders'>
 >;
 
 /** EASY_SETUP_PLAN: what a new folder is: ask (the agent asks once), a kind, or off (not logged). */
@@ -393,8 +395,11 @@ export type KindSetBy = 'folder' | 'pc' | 'agent' | 'chat' | 'app';
 
 /** PERSONAL_OFFICE_PLAN: what a folder is. Personal and study count as progress; work only if they say so. */
 export type ProjectKind = 'personal' | 'study' | 'work';
-/** Which sessions Where you stand is read through: what counts as progress is `personal` or `all`. */
-export type StandLens = 'personal' | 'work' | 'all';
+/** Which sessions Where you stand is read through: what counts as progress is `personal` or `all`. STUDY_FLOW_PLAN
+ * §4.5: Learning and Building are the two parts of Personal, each looked at alone. */
+export type StandLens = 'personal' | 'learning' | 'building' | 'work' | 'all' | 'learning_work';
+/** What counts as progress: learning always, with building and work as they ticked them (Settings › Tracking). */
+export type ProgressLens = 'learning' | 'personal' | 'learning_work' | 'all';
 
 /** `GET /api/projects`: a folder Claude Code or a chat worked in. */
 export interface ProjectRow {
@@ -547,7 +552,7 @@ export interface SessionList {
   /** One per day with sessions, newest first. */
   days: { day: DayString; minutes: Record<SessionKind, number>; count: number }[];
   /** PERSONAL_OFFICE_PLAN: what counts as progress for them (absent from an older server: everything). */
-  progressLens?: 'personal' | 'all';
+  progressLens?: ProgressLens;
 }
 
 // ─── The week and suggestions (LOOP_COMPLETE_SPEC 1.6) ──────────────────────
@@ -666,6 +671,8 @@ export interface StandMeasures {
   totalMinutes: number;
   /** PERSONAL_OFFICE_PLAN: the same minutes by area (absent from an older server). */
   minutesByArea?: { personal: number; work: number };
+  /** STUDY_FLOW_PLAN §4.5: where most of the minutes went (absent from an older server). */
+  topPlace?: { name: string; minutes: number } | null;
   sessions: number;
   reviews: { due: number; onDay: number; late: number; open: number; catchUps: number };
   focus: { set: number; done: number };
@@ -727,9 +734,14 @@ export interface StandData {
   /** PERSONAL_OFFICE_PLAN (absent from an older server): the lens this was read through, what counts as progress,
    * whether they have work tracked (the page offers the lenses), and their folders marked Work. */
   lens?: StandLens;
-  progressLens?: 'personal' | 'all';
+  progressLens?: ProgressLens;
   hasWork?: boolean;
   workFolders?: string[];
+  /** STUDY_FLOW_PLAN §4.5 (absent from an older server): the record holds learning and building (the page offers
+   * Learning and Building only when both are there), and their own folders with build time. */
+  hasLearning?: boolean;
+  hasBuilding?: boolean;
+  buildFolders?: string[];
 }
 
 /** LeetCode (11-22): their public username; their accepted problems are logged as practice once a day. */

@@ -19,16 +19,34 @@ import { StandWave } from './StandWave';
 const WINDOW_KEY = 'rc-mirror-window';
 /** PERSONAL_OFFICE_PLAN: the lens looked through last in this browser (a per-viewer convenience). */
 const LENS_KEY = 'rc-mirror-lens';
-const LENS_OPTIONS: Array<{ value: StandLens; label: string }> = [
-  { value: 'personal', label: 'Personal' },
-  { value: 'work', label: 'Work' },
-  { value: 'all', label: 'All' },
-];
+/**
+ * STUDY_FLOW_PLAN §4.5 (his call, 11-23): the page looks at Progress (what counts as progress: learning, with building
+ * and work as ticked in Settings › Tracking) or at one part alone: Learning, Building, Work.
+ */
+type LookAt = 'progress' | 'learning' | 'building' | 'work';
+const LOOK_LABEL: Record<LookAt, string> = { progress: 'Progress', learning: 'Learning', building: 'Building', work: 'Work' };
+const PARTS = ['learning', 'building', 'work'] as const;
 
-function readLens(): StandLens | null {
+/**
+ * The views this record offers: Progress always; a part when the record holds it and its view differs from Progress
+ * (Learning, when progress also counts building or work they have; Building and Work, when there is something else
+ * beside them). A record with one view has no control at all.
+ */
+function looksOf(s: StandData): LookAt[] {
+  const p = s.progressLens ?? 'personal';
+  const building = p === 'personal' || p === 'all';
+  const work = p === 'learning_work' || p === 'all';
+  const out: LookAt[] = ['progress'];
+  if (s.hasLearning && ((building && s.hasBuilding) || (work && s.hasWork))) out.push('learning');
+  if (s.hasBuilding && (s.hasLearning || s.hasWork || !building)) out.push('building');
+  if (s.hasWork && (s.hasLearning || s.hasBuilding || !work)) out.push('work');
+  return out;
+}
+
+function readLens(): Exclude<LookAt, 'progress'> | null {
   try {
     const v = localStorage.getItem(LENS_KEY);
-    return v === 'personal' || v === 'work' || v === 'all' ? v : null;
+    return (PARTS as readonly (string | null)[]).includes(v) ? (v as Exclude<LookAt, 'progress'>) : null;
   } catch {
     return null;
   }
@@ -62,8 +80,8 @@ export function MirrorPage() {
   // The window chosen last in this browser (a per-viewer convenience; the content renders after the data, on the client).
   const [win, setWin] = useState<StandWindow>(readWindow);
   // PERSONAL_OFFICE_PLAN: the lens (null: what counts as progress for them, the server's default).
-  const [lens, setLens] = useState<StandLens | null>(readLens);
-  const pickLens = (l: StandLens | null) => {
+  const [lens, setLens] = useState<Exclude<LookAt, 'progress'> | null>(readLens);
+  const pickLens = (l: Exclude<LookAt, 'progress'> | null) => {
     setLens(l);
     try {
       if (l) localStorage.setItem(LENS_KEY, l);
@@ -78,8 +96,8 @@ export function MirrorPage() {
     learningApi.getStand(lens ?? undefined).then(
       (s) => {
         if (!alive) return;
-        // A kept lens with no work left to look at goes back to what counts as progress (the control is gone then).
-        if (lens && s.hasWork === false && lens !== (s.progressLens ?? 'personal')) pickLens(null);
+        // A kept view the record no longer offers goes back to Progress (its option is gone then).
+        if (lens && !looksOf(s).includes(lens)) pickLens(null);
         else setStand(s);
       },
       () => alive && setStand('failed')
@@ -123,8 +141,8 @@ export function MirrorPage() {
 
   const period = stand && stand !== 'failed' ? stand.periods[win] : null;
   const seen: StandLens = stand && stand !== 'failed' ? (stand.lens ?? 'personal') : 'personal';
-  // The buddy's take is about what counts as progress: it shows only through that lens.
-  const progressView = stand && stand !== 'failed' ? seen === (stand.progressLens ?? 'personal') : true;
+  // The buddy's take is about what counts as progress: it shows only on Progress.
+  const progressView = lens === null;
 
   return (
     <div className={cn(rcScope, 'min-h-full bg-[var(--rc-ground)]')}>
@@ -139,14 +157,16 @@ export function MirrorPage() {
             win={win}
             onWindow={pickWindow}
             lens={seen}
-            onLens={stand.hasWork ? (l) => pickLens(l) : undefined}
+            look={lens ?? 'progress'}
+            looks={looksOf(stand)}
+            onLook={(l) => pickLens(l === 'progress' ? null : l)}
             takes={progressView ? takes : null}
             onTake={(t) => setTakes((cur) => (cur ? { ...cur, takes: { ...cur.takes, [t.window]: t } } : cur))}
           />
         )}
 
-        {/* Goals and subjects are learning: not part of the Work view. */}
-        {seen !== 'work' && (
+        {/* Goals and subjects are learning: not part of the Work and Building views. */}
+        {seen !== 'work' && seen !== 'building' && (
           <div className="mt-9 flex flex-col gap-9">
             {mirror === null && <RcSkel className="h-[140px] w-full rounded-[10px]" />}
             {mirror === 'failed' && <SectionFailed what="your goals and subjects" onRetry={() => setMirrorTry((n) => n + 1)} />}
@@ -185,7 +205,9 @@ function StandBlocks({
   win,
   onWindow,
   lens,
-  onLens,
+  look,
+  looks,
+  onLook,
   takes,
   onTake,
 }: {
@@ -193,9 +215,11 @@ function StandBlocks({
   period: StandPeriod;
   win: StandWindow;
   onWindow: (w: StandWindow) => void;
-  /** PERSONAL_OFFICE_PLAN: the lens this record was read through; `onLens` only when they have work tracked. */
+  /** PERSONAL_OFFICE_PLAN: the lens this record was read through; the view picked and the ones offered (one: no control). */
   lens: StandLens;
-  onLens?: (l: StandLens) => void;
+  look: LookAt;
+  looks: LookAt[];
+  onLook: (l: LookAt) => void;
   takes: StandTakes | null;
   onTake: (t: NonNullable<StandTakes['takes'][StandWindow]>) => void;
 }) {
@@ -206,15 +230,15 @@ function StandBlocks({
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <RcSegmented label="Compare over" options={STAND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))} value={win} onChange={onWindow} />
-          {onLens && <RcSegmented label="Look at" options={LENS_OPTIONS} value={lens} onChange={onLens} />}
+          {looks.length > 1 && <RcSegmented label="Look at" options={looks.map((l) => ({ value: l, label: LOOK_LABEL[l] }))} value={look} onChange={onLook} />}
         </div>
         <p className="rc-meta rc-num">{spans}</p>
       </div>
       <Summary key={`s-${win}-${lens}`} period={period} takes={takes} onTake={onTake} />
       <div key={`${win}-${lens}`} className="rc-ws-in mt-7 flex flex-col gap-9">
-        <StandWave stand={stand} period={period} moments={lens === 'work' ? [] : (stand.moments ?? [])} lens={lens} />
-        {lens === 'work' ? (
-          <WorkDone stand={stand} period={period} />
+        <StandWave stand={stand} period={period} moments={lens === 'work' || lens === 'building' ? [] : (stand.moments ?? [])} lens={lens} />
+        {lens === 'work' || lens === 'building' ? (
+          <WorkDone stand={stand} period={period} building={lens === 'building'} />
         ) : (
           <>
             <Finished stand={stand} period={period} />
@@ -237,8 +261,10 @@ const WORK_LOG_DAYS = 30;
 /**
  * "What did I do at work yesterday": the window's days with work time, newest first, each folder's time and the
  * lines the work log kept for it (when the work log is on). Time comes from the stand; lines from GET /api/buddy/work.
+ * STUDY_FLOW_PLAN §4.5, `building`: the same list for their own projects, "What you built" (the Building lens's stand
+ * holds build sessions only, so every minute and place on a day is building).
  */
-function WorkDone({ stand, period }: { stand: StandData; period: StandPeriod }) {
+function WorkDone({ stand, period, building = false }: { stand: StandData; period: StandPeriod; building?: boolean }) {
   const [log, setLog] = useState<WorkDay[] | null>(null);
   const [all, setAll] = useState(false);
   const floor = addDays(stand.today, -WORK_LOG_DAYS);
@@ -254,7 +280,8 @@ function WorkDone({ stand, period }: { stand: StandData; period: StandPeriod }) 
     };
   }, [from, stand.today]);
 
-  const days = stand.days.filter((d) => d.day >= period.span.from && d.day <= period.span.to && (d.byArea?.work ?? 0) > 0).reverse();
+  // Building: every day with a build session (the days the verdict counts), a session without minutes too.
+  const days = stand.days.filter((d) => d.day >= period.span.from && d.day <= period.span.to && (building ? d.sessions > 0 : (d.byArea?.work ?? 0) > 0)).reverse();
   const shown = all ? days : days.slice(0, WORK_DAYS);
   const where = period.partial ? 'the record' : WINDOW_WORDS[period.window].now;
   const linesOf = (day: DayString, place: string) =>
@@ -262,19 +289,27 @@ function WorkDone({ stand, period }: { stand: StandData; period: StandPeriod }) 
 
   return (
     <section aria-labelledby="ws-work">
-      <LabelLine title="What you did" id="ws-work" meta={days.length ? `${days.length} ${days.length === 1 ? 'day' : 'days'} at work in ${where}` : undefined} />
+      <LabelLine
+        title={building ? 'What you built' : 'What you did'}
+        id="ws-work"
+        meta={days.length ? `${days.length} ${days.length === 1 ? 'day' : 'days'} ${building ? 'building' : 'at work'} in ${where}` : undefined}
+      />
       {days.length === 0 ? (
-        <p className="rc-meta mt-3">No work tracked in {where}. Sessions in a folder marked Work land here with what your work log kept from them.</p>
+        <p className="rc-meta mt-3">
+          {building
+            ? `Nothing built in ${where}. Sessions in a folder of your own land here with what your work log kept from them.`
+            : `No work tracked in ${where}. Sessions in a folder marked Work land here with what your work log kept from them.`}
+        </p>
       ) : (
         <ul className="flex flex-col">
           {shown.map((d) => (
             <li key={d.day} className="border-b border-[var(--rc-line)] py-3 last:border-b-0">
               <p className="flex items-baseline justify-between gap-3">
                 <span className="text-[15px] font-[500] text-[var(--rc-ink-1)]">{dayName(d.day, stand.today)}</span>
-                <span className="rc-num text-[13px] text-[var(--rc-ink-3)]">{formatMinutes(d.byArea?.work ?? d.minutes)}</span>
+                <span className="rc-num text-[13px] text-[var(--rc-ink-3)]">{building ? (d.minutes ? formatMinutes(d.minutes) : 'no time logged') : formatMinutes(d.byArea?.work ?? d.minutes)}</span>
               </p>
               {(d.places ?? [])
-                .filter((p) => p.area === 'work')
+                .filter((p) => p.area === (building ? 'personal' : 'work'))
                 .map((p) => {
                   const lines = linesOf(d.day, p.name);
                   return (

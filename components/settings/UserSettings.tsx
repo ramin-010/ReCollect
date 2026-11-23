@@ -289,7 +289,7 @@ export function UserSettings() {
                       <p className="rc-meta mt-1 text-[14px]">
                         {activeTab === 'profile' && 'Your name, your photo and how you sign in'}
                         {activeTab === 'agents' && 'Tokens for Claude Code and other agents'}
-                        {activeTab === 'tracking' && 'Personal growth, work, and the folders your agents work in'}
+                        {activeTab === 'tracking' && 'Learning, building, work, and the folders your agents work in'}
                         {activeTab === 'ai' && 'Recall questions and grading, and what they cost'}
                         {activeTab === 'phone' && 'Your day on your Android home and lock screen'}
                         {activeTab === 'feedback' && 'Tell the person who runs this server what you think'}

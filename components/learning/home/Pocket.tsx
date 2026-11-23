@@ -412,7 +412,8 @@ export function PocketRail({ notes, onOpenAll }: { notes: QuickNote[]; onOpenAll
           </div>
         )}
         {list.length > 0 ? (
-          <ul aria-label={q ? 'Matching notes' : 'Pinned notes'} className="flex flex-col gap-px">
+          // The list sits in a card like the doc's notes panel (his ask, 11-23): surface 2, a 1 px line, 16 px corners.
+          <ul aria-label={q ? 'Matching notes' : 'Pinned notes'} className="mx-1.5 flex flex-col gap-px rounded-[16px] border border-[var(--rc-line)] bg-[var(--rc-surface-2)] px-1 py-1.5">
             {list.map((n) => (
               <PocketLine key={n._id} note={n} />
             ))}
