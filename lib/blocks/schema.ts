@@ -5,6 +5,7 @@ import { canvasBlock } from './canvas/View';
 import { calloutBlock } from './callout/View';
 import { codeBlock } from './code/View';
 import { diagramBlock } from './diagram/View';
+import { pageBlock } from './page/View';
 
 /** The block registry (DOCS_EDITOR_V2_PLAN §4.1): BlockNote's built-ins plus our own blocks. */
 export const docSchema = BlockNoteSchema.create({
@@ -16,6 +17,8 @@ export const docSchema = BlockNoteSchema.create({
     codeBlock: codeBlock(),
     canvas: canvasBlock(),
     callout: calloutBlock(),
+    // DOC_PAGES_PLAN §5: a page shown at a spot in its parent's text.
+    page: pageBlock(),
   },
 });
 

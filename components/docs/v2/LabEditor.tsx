@@ -11,6 +11,9 @@ import './lab-editor.css';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type * as Y from 'yjs';
 import type { HocuspocusProvider } from '@hocuspocus/provider';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { docApi } from '@/lib/api/docApi';
 import {
   BlockNoteViewRaw,
   FilePanelController,
@@ -58,6 +61,7 @@ import {
   Underline,
   Workflow,
   Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { rcScope } from '@/components/rc-ui';
@@ -399,6 +403,8 @@ const ICONS: Record<string, React.ComponentType<{ 'aria-hidden'?: boolean; class
   callout: Lightbulb,
   diagram: Workflow,
   ask_ai: KaagaIcon,
+  // DOC_PAGES_PLAN §5: a page inside this doc.
+  page: FileText,
 };
 
 function RcSlashMenu({ items, selectedIndex, onItemClick }: SuggestionMenuProps<SlashItem>) {
@@ -629,6 +635,8 @@ export function LabEditor({
   editable = true,
   docId,
   onEditor,
+  canAddPages = false,
+  onPages,
 }: {
   ydoc: Y.Doc;
   provider: HocuspocusProvider | null;
@@ -637,6 +645,10 @@ export function LabEditor({
   docId?: string;
   /** The editor, once made (the doc page drives the title's Enter and ↓ through it). */
   onEditor?: (editor: Editor) => void;
+  /** DOC_PAGES_PLAN §5: "/page" makes a page inside this doc (the owner's). */
+  canAddPages?: boolean;
+  /** The pages this doc's page blocks point at, live (the Pages list leaves those out). */
+  onPages?: (ids: string[]) => void;
 }) {
   const fragment = useMemo(() => ydoc.getXmlFragment('blocks'), [ydoc]);
   // Spike only: let the QA script look at the Y.Doc and the provider.
@@ -677,6 +689,31 @@ export function LabEditor({
   useEffect(() => {
     onEditor?.(editor);
   }, [editor, onEditor]);
+
+  // DOC_PAGES_PLAN §5: which pages have a block here, as the doc changes (here or in another tab).
+  useEffect(() => {
+    if (!onPages) return;
+    // Told only when the set changes (not on every keystroke).
+    let last: string | null = null;
+    const read = () => {
+      const ids: string[] = [];
+      const walk = (blocks: readonly { type: string; props?: Record<string, unknown>; children?: readonly unknown[] }[]) => {
+        for (const b of blocks) {
+          if (b.type === 'page' && typeof b.props?.['docId'] === 'string' && b.props['docId']) ids.push(b.props['docId']);
+          if (b.children?.length) walk(b.children as never);
+        }
+      };
+      walk(editor.document as never);
+      const key = ids.join(',');
+      if (key === last) return;
+      last = key;
+      onPages(ids);
+    };
+    read();
+    const off = (editor as unknown as { onChange: (cb: () => void) => (() => void) | void }).onChange(read);
+    return typeof off === 'function' ? off : undefined;
+  }, [editor, onPages]);
+  const router = useRouter();
 
   // Tests read the block tree and the live doc from here (tests/editor/ and the QA scripts).
   useEffect(() => {
@@ -807,6 +844,32 @@ export function LabEditor({
         else editor.insertBlocks([{ type: 'callout', props: { kind: 'note' } } as never], at, 'after');
       },
     };
+    // DOC_PAGES_PLAN §5: "/page": a new page inside this doc, placed here, then opened (its title waits for typing).
+    const pageItem: SlashItem = {
+      key: 'page',
+      title: 'Page',
+      subtext: 'A new page inside this doc',
+      aliases: ['subpage', 'sub-page', 'nested', 'child'],
+      group: 'Basic blocks',
+      onItemClick: () => {
+        if (!docId) return;
+        const at = editor.getTextCursorPosition().block;
+        const empty = Array.isArray((at as { content?: unknown }).content) && (at as { content: unknown[] }).content.length === 0;
+        void docApi
+          .createDoc({ title: 'Untitled', parentId: docId })
+          .then(async (res) => {
+            const id = res.data?._id;
+            if (!id) throw new Error('no id');
+            const block = { type: 'page', props: { docId: id } } as never;
+            if (empty) editor.updateBlock(at, block);
+            else editor.insertBlocks([block], at, 'after');
+            // The block reaches the server before the page leaves (at most 2 s).
+            for (let i = 0; i < 20 && (provider?.unsyncedChanges ?? 0) > 0; i++) await new Promise((r) => setTimeout(r, 100));
+            router.push(`/docs/${id}?new=1`);
+          })
+          .catch(() => toast.error('The page was not made. Try again.'));
+      },
+    };
     const askAi: SlashItem = {
       key: 'ask_ai',
       title: 'Ask Kaaga',
@@ -818,6 +881,7 @@ export function LabEditor({
     };
     const items = [
       ...(canAsk ? [askAi] : []),
+      ...(canAddPages && docId ? [pageItem] : []),
       ...take('paragraph', 'Text', 'Basic blocks', undefined, ['text', 'plain']),
       ...take('heading', 'Heading 1', 'Basic blocks', '#', ['h1', 'title']),
       ...take('heading_2', 'Heading 2', 'Basic blocks', '##', ['h2']),

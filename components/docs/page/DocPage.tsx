@@ -327,6 +327,8 @@ function DocSurface({
   }, [doc._id, isOwner, loadTree]);
   // §4.7: "Move to…" from the ··· menu.
   const [moveOpen, setMoveOpen] = useState(false);
+  // §5: the pages that have a block in the text (live from the editor).
+  const [blockPages, setBlockPages] = useState<string[]>([]);
   // §4.8: Ctrl+Shift+U opens the doc above (Notion's key); not at the top level, not from a field outside the editor.
   const parentId = (doc as { parentId?: string | null }).parentId ?? null;
   useEffect(() => {
@@ -683,9 +685,19 @@ function DocSurface({
         {oldEditor ? (
           <OldBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} onReady={setBody} />
         ) : (
-          <NewBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} editable={editable && !trashedAt} onReady={setBody} />
+          <NewBody
+            ydoc={ydoc}
+            provider={provider}
+            user={{ name: me.name, color: me.color }}
+            docId={doc._id}
+            editable={editable && !trashedAt}
+            onReady={setBody}
+            canAddPages={isOwner && !trashedAt}
+            onPages={setBlockPages}
+          />
         )}
-        <DocPages docId={doc._id} pages={tree.pages} isOwner={isOwner && !trashedAt} />
+        {/* §5: a page that has a block in the text is not repeated here. */}
+        <DocPages docId={doc._id} pages={tree.pages.filter((p) => !blockPages.includes(p._id))} isOwner={isOwner && !trashedAt} />
         {!trashedAt && <PageFooterNav docId={doc._id} />}
       </div>
       <MoveDocDialog
@@ -767,6 +779,9 @@ type BodyProps = {
   user: { name: string; color: string };
   docId: string;
   onReady: (api: BodyApi) => void;
+  /** DOC_PAGES_PLAN §5: "/page" (the owner's) and the pages that have a block in the text. */
+  canAddPages?: boolean;
+  onPages?: (ids: string[]) => void;
 };
 
 /** The new editor (BlockNote) and what the title asks of it. */
@@ -802,7 +817,7 @@ function NewBody({ editable, onReady, ...rest }: BodyProps & { editable: boolean
   );
   return (
     <div className="doc-body doc-body-v2">
-      <LabEditor ydoc={rest.ydoc} provider={rest.provider} user={rest.user} editable={editable} docId={rest.docId} onEditor={onEditor} />
+      <LabEditor ydoc={rest.ydoc} provider={rest.provider} user={rest.user} editable={editable} docId={rest.docId} onEditor={onEditor} canAddPages={rest.canAddPages ?? false} {...(rest.onPages ? { onPages: rest.onPages } : {})} />
     </div>
   );
 }

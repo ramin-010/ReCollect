@@ -944,3 +944,76 @@ body.doc-block-bar .phone-tabs {
     animation: none;
   }
 }
+
+/* DOC_PAGES_PLAN §5: the page block, a full-width row: the page's glyph and its title, underlined quietly; a click opens
+   it. Off (not available, in the trash): ink 3. A page elsewhere: a small arrow on the glyph. */
+.doc-page-block {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  margin: 1px 0;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--rc-ink-1);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 100ms ease;
+}
+
+.doc-page-block:hover {
+  background: var(--rc-hover);
+}
+
+.doc-page-block-icon {
+  position: relative;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+}
+
+.doc-page-block-glyph {
+  width: 18px;
+  height: 18px;
+  color: var(--rc-icon);
+}
+
+.doc-page-block-away {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  padding: 1px;
+  border-radius: 3px;
+  background: var(--rc-bg, #fff);
+  color: var(--rc-ink-2);
+}
+
+.doc-page-block-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--rc-line-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-page-block-meta {
+  flex: none;
+  font-size: 13px;
+  color: var(--rc-ink-3);
+}
+
+.doc-page-block--off .doc-page-block-title {
+  color: var(--rc-ink-3);
+  font-weight: 400;
+  text-decoration: none;
+}

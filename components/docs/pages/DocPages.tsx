@@ -9,7 +9,7 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileText, Plus } from 'lucide-react';
+import { FileText, Files, Plus } from 'lucide-react';
 import { docApi } from '@/lib/api/docApi';
 import './doc-pages.css';
 
@@ -47,7 +47,7 @@ export function DocPages({ docId, pages, isOwner }: { docId: string; pages: Page
         {pages.map((p) => (
           <li key={p._id}>
             <Link href={`/docs/${p._id}`} className="dp-row">
-              <FileText aria-hidden strokeWidth={1.75} className="dp-glyph" />
+              {p.pages > 0 ? <Files aria-hidden strokeWidth={1.75} className="dp-glyph" /> : <FileText aria-hidden strokeWidth={1.75} className="dp-glyph" />}
               <span className="dp-title">{p.title.trim() || 'Untitled'}</span>
               {p.pages > 0 && <span className="dp-count">{p.pages === 1 ? '1 page' : `${p.pages} pages`}</span>}
             </Link>
