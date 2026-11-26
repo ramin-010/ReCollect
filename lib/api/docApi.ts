@@ -21,6 +21,10 @@ export interface ServerDoc {
   role?: 'owner' | 'editor' | 'viewer';
   updatedAt: string;
   createdAt: string;
+  /** DOC_PAGES_PLAN: the doc it is a page of, the docs above it the user can open (root first), the pages inside it. */
+  parentId?: string | null;
+  trail?: Array<{ _id: string; title: string }>;
+  pages?: Array<{ _id: string; title: string; position: number; pages: number }>;
 }
 
 /** A doc found by GET /api/docs/search: titles and text on Postgres full-text, best match first. */
@@ -37,7 +41,7 @@ export interface DocSearchHit {
 export const docApi = {
 
   /** A new doc; with `content` (a template's JSON) it starts with it, as blocks (the server converts it). */
-  async createDoc(data: { title: string; content?: unknown }): Promise<{ success: boolean; data?: ServerDoc }> {
+  async createDoc(data: { title: string; content?: unknown; parentId?: string }): Promise<{ success: boolean; data?: ServerDoc }> {
     console.log('[docApi] Creating new doc:', data.title);
     const response = await axiosInstance.post('/api/docs', data);
     return {

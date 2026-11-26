@@ -1,0 +1,63 @@
+/* "Pages" at the end of a doc (DocPages.tsx, DOC_PAGES_PLAN §4.3): a quiet label line and rows like the library's. */
+.dp {
+  margin: 40px 0 24px;
+}
+
+.dp-label {
+  margin: 0 0 6px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ui-ink-3, #8a8985);
+}
+
+.dp-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dp-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: var(--ui-ink-1, inherit);
+  text-align: left;
+  transition: background-color 100ms ease;
+}
+
+.dp-row:hover {
+  background: var(--ui-hover, rgba(0, 0, 0, 0.04));
+}
+
+.dp-row--ghost {
+  color: var(--ui-ink-3, #8a8985);
+}
+
+.dp-glyph {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--ui-ink-3, #8a8985);
+}
+
+.dp-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dp-count {
+  flex: none;
+  font-size: 13px;
+  color: var(--ui-ink-3, #8a8985);
+}

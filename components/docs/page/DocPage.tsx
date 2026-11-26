@@ -6,7 +6,8 @@ import type { HocuspocusProvider } from '@hocuspocus/provider';
 import type * as Y from 'yjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, ImagePlus, Link2, MoreHorizontal, PanelRight, RotateCcw, Trash2 } from 'lucide-react';
+import { FileDown, FilePlus2, ImagePlus, Link2, MoreHorizontal, PanelRight, RotateCcw, Trash2 } from 'lucide-react';
+import { DocPages, useNewPage, type PageRow } from '@/components/docs/pages/DocPages';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSheet, RcSkel } from '@/components/rc-ui';
@@ -82,6 +83,19 @@ function tokenFromCookies(): string {
 type Role = 'owner' | 'editor' | 'viewer';
 
 /** /docs/[id]: one live doc. Loads the doc's metadata, connects to the live room, then renders the page. */
+/** DOC_PAGES_PLAN: where a doc sits in a tree (fields of GET /api/docs/:id; an older server sends none). */
+function treeOf(doc: unknown): { trail: Array<{ _id: string; title: string }>; pages: PageRow[] } {
+  const d = doc as { trail?: Array<{ _id: string; title: string }>; pages?: PageRow[] };
+  return { trail: d.trail ?? [], pages: d.pages ?? [] };
+}
+
+/** The trail's crumbs: every doc above when there are two or fewer, else the root, "…" (the one above the parent), the parent. */
+function trailCrumbs(trail: Array<{ _id: string; title: string }>): Array<{ label: string; href: string }> {
+  const crumb = (t: { _id: string; title: string }) => ({ label: t.title.trim() || 'Untitled', href: `/docs/${t._id}` });
+  if (trail.length <= 2) return trail.map(crumb);
+  return [crumb(trail[0]!), { label: '…', href: `/docs/${trail[trail.length - 2]!._id}` }, crumb(trail[trail.length - 1]!)];
+}
+
 export function DocPage({ id }: { id: string }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -292,6 +306,9 @@ function DocSurface({
   // A template is filled in when the doc is made (POST /api/docs with its content), as blocks.
   const params = useSearchParams();
   const router = useRouter();
+  // DOC_PAGES_PLAN §4.2-4.3: the docs above this one (the trail) and the pages inside it, from GET /api/docs/:id.
+  const tree = useMemo(() => treeOf(doc), [doc]);
+  const { make: makePage } = useNewPage(doc._id);
   // ?share=1 (a request's notification or email) opens the Share popover once; the address drops it.
   const [shareAtStart] = useState(() => params.get('share') === '1');
   useEffect(() => {
@@ -483,7 +500,8 @@ function DocSurface({
   // Fill the top bar: breadcrumb and the page's actions.
   useEffect(() => {
     setTopBar({
-      crumbs: [{ label: 'Docs', href: '/docs' }, { label: title.trim() || 'Untitled' }],
+      // DOC_PAGES_PLAN §4.2: Docs / A / … / Parent / This page (the docs above it the user can open).
+      crumbs: [{ label: 'Docs', href: '/docs' }, ...trailCrumbs(tree.trail), { label: title.trim() || 'Untitled' }],
       actions: (
         <div className={cn(rcScope, 'flex items-center gap-1')}>
           <span className="doc-sync" data-state={synced ? 'saved' : 'saving'} aria-live="polite">
@@ -505,6 +523,8 @@ function DocSurface({
               { label: 'Copy link', icon: <Link2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: copyLink },
               { label: 'Copy as Markdown', icon: <FileDown className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void copyMarkdown() },
               ...(editable ? [{ label: cover ? 'Change cover' : 'Add cover', icon: <ImagePlus className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => setCoverOpen(true) }] : []),
+              // DOC_PAGES_PLAN §4.3: a page inside this doc (the owner's).
+              ...(isOwner && !trashedAt ? [{ label: 'Add a page inside', icon: <FilePlus2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void makePage() }] : []),
               ...(isOwner && !trashedAt ? [{ label: 'Move to trash', icon: <Trash2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void moveToTrash(), danger: true, separatorBefore: true }] : []),
             ]}
           >
@@ -527,7 +547,7 @@ function DocSurface({
         </div>
       ),
     });
-  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart, notesPlace, notesOpen, notesCount, toggleNotes]);
+  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart, notesPlace, notesOpen, notesCount, toggleNotes, tree.trail, makePage]);
 
   useEffect(() => () => clearTopBar(), [clearTopBar]);
 
@@ -617,6 +637,7 @@ function DocSurface({
         ) : (
           <NewBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} editable={editable && !trashedAt} onReady={setBody} />
         )}
+        <DocPages docId={doc._id} pages={tree.pages} isOwner={isOwner && !trashedAt} />
       </div>
 
       <CoverPicker
