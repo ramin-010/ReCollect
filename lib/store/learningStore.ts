@@ -49,6 +49,8 @@ export interface EditCaptureTarget {
   captureId: string;
   title: string;
   content: string;
+  /** TOOL_ACCESS_PLAN §11.5: its files (the dialog adds and removes them). */
+  attachments?: Attachment[];
 }
 
 export interface PreviewTarget {

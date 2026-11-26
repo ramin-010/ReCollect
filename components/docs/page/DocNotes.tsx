@@ -6,16 +6,17 @@
  * two quiet label lines, Notes and Links), and on a subject's page. A note's title unfolds its text in place; its menu
  * edits or deletes it; one a chat wrote says which.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { ChevronRight, ExternalLink, Plus } from 'lucide-react';
+import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { ChevronRight, ExternalLink, Paperclip, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RcIconButton, RcMenu, RcSheet, RcSkel } from '@/components/rc-ui';
 import { learningApi } from '@/lib/api/learningApi';
 import { useLearningStore } from '@/lib/store/learningStore';
-import { NOTES_CHANGED } from '@/lib/learning/notesEvents';
+import { NOTES_CHANGED, notesChanged } from '@/lib/learning/notesEvents';
 import type { Capture } from '@/lib/learning/types';
 import { NoteBody } from '@/components/learning/home/NoteBody';
 import { openCapturePalette } from '@/components/learning/home/parts';
+import { NoteFileRows, type PendingFile } from './NoteFiles';
 import './doc-notes.css';
 
 const dayWords = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -88,8 +89,9 @@ function NoteRow({ note }: { note: Capture }) {
   const link = isLink(note);
   const byApp = note.createdBy === 'agent' ? note.agentName || 'a chat' : null;
   const meta = [link ? siteOf(note.url) : dayWords(note.createdAt), byApp ? `from ${byApp}` : null].filter(Boolean).join(' · ');
+  const files = note.attachments ?? [];
   const edit = () =>
-    useLearningStore.getState().openEditCapture({ captureId: note._id, title: note.title ?? '', content: note.content ?? '' });
+    useLearningStore.getState().openEditCapture({ captureId: note._id, title: note.title ?? '', content: note.content ?? '', attachments: files });
   const remove = () => void useLearningStore.getState().deleteCapture(note._id);
 
   return (
@@ -109,7 +111,16 @@ function NoteRow({ note }: { note: Capture }) {
               <ChevronRight aria-hidden strokeWidth={1.75} className={cn('dn-chev', open && 'dn-chev--open')} />
               {titleOf(note)}
             </span>
-            <span className="dn-meta">{meta}</span>
+            <span className="dn-meta">
+              {meta}
+              {files.length > 0 && (
+                <span className="nf-count" title={`${files.length} file${files.length === 1 ? '' : 's'}`}>
+                  {' · '}
+                  <Paperclip aria-hidden strokeWidth={1.75} />
+                  {files.length}
+                </span>
+              )}
+            </span>
           </button>
         )}
         <span className="dn-row-menu">
@@ -128,9 +139,10 @@ function NoteRow({ note }: { note: Capture }) {
           </RcMenu>
         </span>
       </div>
-      {open && !link && note.content && (
+      {open && !link && (note.content || files.length > 0) && (
         <div className="dn-body">
-          <NoteBody content={note.content} />
+          {note.content && <NoteBody content={note.content} />}
+          <NoteFileRows files={files} />
         </div>
       )}
     </li>
@@ -161,9 +173,47 @@ function Group({ label, notes, empty, onAdd }: { label: string; notes: Capture[]
   );
 }
 
+/**
+ * TOOL_ACCESS_PLAN §11.5: files dropped on the panel become notes on this lesson (or, on no lesson, on the subject),
+ * one note a file, titled with the file's name and holding it. A refused file stays as a row with the server's words.
+ */
+function useDropToNotes(place: NotesPlace) {
+  const [pending, setPending] = useState<PendingFile[]>([]);
+  const [over, setOver] = useState(false);
+  const onDrop = async (e: DragEvent) => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    setOver(false);
+    for (const file of [...e.dataTransfer.files]) {
+      const key = `${file.name}-${Math.random().toString(36).slice(2)}`;
+      setPending((p) => [...p, { key, name: file.name, error: null }]);
+      try {
+        const stored = await learningApi.uploadLearningFile(file);
+        await learningApi.createCapture({ type: 'NOTE', title: file.name, subjectId: place.subjectId, ...(place.topicId ? { topicId: place.topicId } : {}), attachments: [stored] });
+        setPending((p) => p.filter((x) => x.key !== key));
+        notesChanged();
+      } catch (err) {
+        const m = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+        setPending((p) => p.map((x) => (x.key === key ? { ...x, error: typeof m === 'string' ? m : 'That file did not go up. Try again.' } : x)));
+      }
+    }
+  };
+  const zone = {
+    onDragOver: (e: DragEvent) => {
+      if (![...e.dataTransfer.types].includes('Files')) return;
+      e.preventDefault();
+      setOver(true);
+    },
+    onDragLeave: () => setOver(false),
+    onDrop: (e: DragEvent) => void onDrop(e),
+  };
+  return { pending, over, zone, dismiss: (key: string) => setPending((p) => p.filter((x) => x.key !== key)) };
+}
+
 /** The panel's content: Notes, Links, then the subject's own (folded). */
 export function DocNotes({ place, lesson, subject, failed }: { place: NotesPlace; lesson: Capture[] | null; subject: Capture[] | null; failed: boolean }) {
   const [subjectOpen, setSubjectOpen] = useState(false);
+  const drop = useDropToNotes(place);
   if (failed && !lesson) return <p className="dn-empty">The notes didn&apos;t load. They come back when the connection does.</p>;
   if (!lesson || !subject) {
     return (
@@ -180,7 +230,8 @@ export function DocNotes({ place, lesson, subject, failed }: { place: NotesPlace
   const notes = lesson.filter((n) => !isLink(n));
   const links = lesson.filter(isLink);
   return (
-    <div className="dn">
+    <div className={cn('dn', drop.over && 'nf-drop')} {...drop.zone}>
+      <NoteFileRows files={[]} pending={drop.pending} onDismiss={drop.dismiss} />
       {place.topicId && (
         <>
           <Group label="Notes" notes={notes} empty="Notes on this lesson show here: ask your chat to add one, or press Ctrl K." onAdd={addNote} />

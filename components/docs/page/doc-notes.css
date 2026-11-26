@@ -314,3 +314,85 @@ button.dn-row-main > .dn-meta {
   padding: 0 6px;
   gap: 3px;
 }
+
+/* Files on a note (NoteFiles.tsx, TOOL_ACCESS_PLAN §11.5): quiet rows, a glyph by kind, the name, the size. */
+.nf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nf-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rc .nf-main,
+.nf-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--rc-r-sm);
+  font-size: 13px;
+  color: var(--rc-ink-1);
+  text-align: left;
+  transition: background-color var(--rc-fast) ease;
+}
+
+.nf-main:not(.nf-main--static):hover {
+  background: var(--rc-hover);
+}
+
+.nf-glyph {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--rc-ink-3);
+}
+
+.nf-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nf-size {
+  flex: none;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--rc-ink-3);
+}
+
+.nf-error {
+  flex: none;
+  margin-left: auto;
+  max-width: 60%;
+  font-size: 12px;
+  color: var(--rc-danger, #c4453c);
+  white-space: normal;
+}
+
+.nf-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nf-count svg {
+  width: 12px;
+  height: 12px;
+}
+
+.nf-drop {
+  outline: 1.5px dashed var(--rc-line-strong, var(--rc-ink-3));
+  outline-offset: 2px;
+  border-radius: var(--rc-r-md, 8px);
+}

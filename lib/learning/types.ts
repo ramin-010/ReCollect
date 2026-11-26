@@ -25,6 +25,9 @@ export interface Attachment {
   publicId: string;
   fileName: string;
   fileType: string;
+  /** TOOL_ACCESS_PLAN §11.2: bytes, and the store's resource type (older files have neither). */
+  size?: number;
+  resourceType?: string;
 }
 
 /** Short subject reference; `null` on a revision means "General". */
@@ -895,6 +898,8 @@ export interface UpdateCaptureBody {
   category?: string;
   isPinned?: boolean;
   subjectId?: string | null;
+  /** TOOL_ACCESS_PLAN §11.3: the whole new list of files (one dropped leaves storage). */
+  attachments?: Attachment[];
 }
 
 export interface ScheduleSlotUpdate {
