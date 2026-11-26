@@ -46,7 +46,7 @@ export function useBlockSelection(editor: Editor | null, root: React.RefObject<H
     clearRef.current = clear;
     const order = () => flatten(editor.document as Array<AnyBlock & { children?: AnyBlock[] }>).map((b) => b.id);
     const onKey = (e: KeyboardEvent) => {
-      // Typing in the Ask AI box is not the doc's: no block keys there.
+      // Typing in the Ask Kaaga box is not the doc's: no block keys there.
       if ((e.target as HTMLElement | null)?.closest?.('.doc-ask')) return;
       const active = selected.current.length > 0;
       if (!active) {
@@ -162,6 +162,6 @@ export function useBlockSelection(editor: Editor | null, root: React.RefObject<H
     };
   }, [editor, root, enabled]);
 
-  // Ask AI reads what is selected, then lets it go (its box tints those blocks itself).
+  // Ask Kaaga reads what is selected, then lets it go (its box tints those blocks itself).
   return useMemo(() => ({ selected: () => [...selected.current], clear: () => clearRef.current() }), []);
 }

@@ -42,7 +42,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-3">1. Who runs it</h2>
             <p>
-              Recollect is a personal app run by one person (&quot;the owner&quot;) for themselves and the people they invite. New accounts are by
+              Kaaga is a personal app run by one person (&quot;the owner&quot;) for themselves and the people they invite. New accounts are by
               invitation only. This page says plainly what it keeps about you, what its AI reads, who can see what, and how to take everything out or
               delete it.
             </p>
@@ -53,8 +53,8 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-6 space-y-2">
               <li>Your account: your name, your email address, your time zone, and your password (only as a hash) or your Google sign-in.</li>
               <li>What you put in: docs, notes, tasks, reminders, goals, study sessions, revisions, and the files you upload.</li>
-              <li>Your conversations with Ask AI.</li>
-              <li>What your buddy keeps (when it is on): short notes and memories about you, the things it keeps an eye on, its questions and your answers, and a work log if you turn it on. You see all of it on About you.</li>
+              <li>Your conversations with Ask Kaaga.</li>
+              <li>What Kaaga keeps (when it is on): short notes and memories about you, the things it keeps an eye on, its questions and your answers, and a work log if you turn it on. You see all of it on About you.</li>
               <li>Numbers about use: the AI calls made for you and what they cost, and the last day you opened the app.</li>
               <li>What you send the owner: feedback, and the phone app&apos;s diagnostics (model, Android version, screen size, its permissions) only when you tap Send.</li>
               <li>A sign-in cookie so you stay signed in. No advertising or tracking cookies, and nothing is sold.</li>
@@ -65,9 +65,9 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold text-slate-900 mb-3">3. What the AI reads</h2>
             <p>Only while the app&apos;s AI is on for your account (the owner&apos;s free AI, or your own Claude key):</p>
             <ul className="list-disc pl-6 space-y-2 mt-3">
-              <li>What you type in Ask AI, and the parts of your plan and notes it looks up to answer.</li>
-              <li>If you connect Claude Code with Recollect&apos;s hooks: the words you type to your coding agent. They are cleaned of anything that looks like a password or key, read by your buddy, and then deleted; only the notes it keeps stay, and you can see, change or delete each one. A folder you mark as work is never read this way.</li>
-              <li>What a connected chat (claude.ai, ChatGPT, Claude Code) chooses to save to Recollect while you talk to it.</li>
+              <li>What you type in Ask Kaaga, and the parts of your plan and notes it looks up to answer.</li>
+              <li>If you connect Claude Code with Kaaga&apos;s hooks: the words you type to your coding agent. They are cleaned of anything that looks like a password or key, read by Kaaga, and then deleted; only the notes it keeps stay, and you can see, change or delete each one. A folder you mark as work is never read this way.</li>
+              <li>What a connected chat (claude.ai, ChatGPT, Claude Code) chooses to save to Kaaga while you talk to it.</li>
               <li>An export of your other chats, only if you bring one in.</li>
             </ul>
             <p className="mt-3">
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-3">5. Your say over it</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>On About you: pause your buddy, turn off what it does, edit any memory, keep one private, or forget it.</li>
+              <li>On About you: pause Kaaga, turn off what it does, edit any memory, keep one private, or forget it.</li>
               <li>Settings › Your data › Download everything: one file with all of the above that is yours.</li>
               <li>
                 Settings › Your data › Delete your account: removes your account and everything in it at once. Backups of the database may hold a copy
@@ -115,7 +115,7 @@ export default function PrivacyPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-12 text-center text-sm text-slate-500">
-        <p>&copy; {new Date().getFullYear()} Recollect</p>
+        <p>&copy; {new Date().getFullYear()} Kaaga</p>
       </footer>
     </div>
   );

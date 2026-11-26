@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Offline · Recollect</title>
+    <title>Offline · Kaaga</title>
     <style>
       :root {
         --page: #ffffff;
@@ -31,6 +31,11 @@
         max-width: 420px;
         margin: 0 auto;
         padding: 28vh 24px 0;
+      }
+      .mark {
+        display: block;
+        margin-bottom: 20px;
+        fill: var(--ink-1);
       }
       h1 {
         font-size: 28px;
@@ -60,8 +65,9 @@
   </head>
   <body>
     <main>
+      <svg class="mark" viewBox="58.9 38.9 434.2 434.2" width="36" height="36" aria-hidden="true"><defs><clipPath id="o0"><rect x="-200" y="80" width="900" height="71.5"/></clipPath><clipPath id="o1"><rect x="-200" y="173.5" width="900" height="71.5"/></clipPath><clipPath id="o2"><rect x="-200" y="267" width="900" height="71.5"/></clipPath><clipPath id="o3"><rect x="-200" y="360.5" width="900" height="71.5"/></clipPath></defs><circle clip-path="url(#o0)" cx="256" cy="256" r="176"/><circle clip-path="url(#o1)" cx="256" cy="256" r="176"/><circle clip-path="url(#o2)" cx="296" cy="256" r="176"/><circle clip-path="url(#o3)" cx="256" cy="256" r="176"/></svg>
       <h1>You're offline</h1>
-      <p>Recollect needs the connection to load this page. It will open as soon as you're back.</p>
+      <p>Kaaga needs the connection to load this page. It will open as soon as you're back.</p>
       <button type="button" onclick="location.reload()">Try again</button>
     </main>
   </body>

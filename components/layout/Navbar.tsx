@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useDashboardStore } from '@/lib/store/dashboardStore';
 import { useCreateNote } from '@/lib/context/CreateNoteContext';
 import { Button } from '@/components/ui-base/Button';
-import { Share2, Plus, X, Home, FileText, Users, CheckSquare, Settings, Files, Mail, LayoutGrid, ChartNoAxesColumn, Sparkles, UserRound } from 'lucide-react';
+import { Share2, Plus, X, Home, FileText, Users, CheckSquare, Settings, Files, Mail, LayoutGrid, ChartNoAxesColumn, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { ShareDashboardDialog } from '@/components/dashboard/ShareDashboardDialog';
 import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
@@ -14,6 +14,7 @@ import { features } from '@/lib/features';
 import Link from 'next/link';
 import { useTopBar } from '@/lib/store/topBarStore';
 import { FadeText } from '@/components/rc-ui/FadeText';
+import { KaagaIcon } from '@/components/brand/kaaga';
 
 /** The breadcrumb's page icon (Notion shows the page's own icon, never the brand mark). */
 function PageIcon({ pathname }: { pathname: string }) {
@@ -25,7 +26,7 @@ function PageIcon({ pathname }: { pathname: string }) {
   if (pathname.startsWith('/settings')) return <Settings className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/mirror')) return <ChartNoAxesColumn className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/you')) return <UserRound className={cls} strokeWidth={1.75} />;
-  if (pathname.startsWith('/ask')) return <Sparkles className={cls} strokeWidth={1.75} />;
+  if (pathname.startsWith('/ask')) return <KaagaIcon className={cls} />;
   if (pathname.startsWith('/slides')) return <Files className={cls} strokeWidth={1.75} />;
   if (pathname.startsWith('/email')) return <Mail className={cls} strokeWidth={1.75} />;
   return <LayoutGrid className={cls} strokeWidth={1.75} />;
@@ -48,8 +49,8 @@ export function Navbar() {
     if (pathname.startsWith('/docs')) return 'Docs';
     if (pathname.startsWith('/mirror')) return 'Where you stand';
     if (pathname.startsWith('/you')) return 'About you';
-    if (pathname.startsWith('/ask')) return 'Ask AI';
-    if (pathname.startsWith('/share')) return 'Save to Recollect';
+    if (pathname.startsWith('/ask')) return 'Ask Kaaga';
+    if (pathname.startsWith('/share')) return 'Save to Kaaga';
     if (pathname.startsWith('/lab')) return 'Lab';
     if (pathname.startsWith('/workspace')) return 'Workspace';
     if (pathname.startsWith('/todo')) return 'Tasks';

@@ -24,8 +24,8 @@ const rowBase =
   'w-full flex items-center gap-2 h-[30px] px-2 rounded-[6px] text-[14px] leading-none outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)]';
 
 /**
- * Ask AI's conversations in the main sidebar (Notion's way: the chats live in the sidebar, not in a
- * second column on the page): "New chat", then the conversations by day, each opening in Ask AI,
+ * Ask Kaaga's conversations in the main sidebar (Notion's way: the chats live in the sidebar, not in a
+ * second column on the page): "New chat", then the conversations by day, each opening in Ask Kaaga,
  * with a delete on hover that asks first.
  */
 export function SidebarChats({ onNavigate }: { onNavigate: () => void }) {
@@ -103,7 +103,7 @@ export function SidebarChats({ onNavigate }: { onNavigate: () => void }) {
           </button>
         </div>
       )}
-      {Array.isArray(threads) && threads.length === 0 && <p className="px-2 pt-2 text-[13px] leading-[1.4] text-[var(--ui-ink-3)]">Your conversations with Ask AI show here.</p>}
+      {Array.isArray(threads) && threads.length === 0 && <p className="px-2 pt-2 text-[13px] leading-[1.4] text-[var(--ui-ink-3)]">Your conversations with Ask Kaaga show here.</p>}
 
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-px">

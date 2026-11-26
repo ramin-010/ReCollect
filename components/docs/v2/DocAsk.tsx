@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Ask AI inside a doc (DOCS_EDITOR_V2_PLAN phase 5): a box under the block he is in, or under the
+ * Ask Kaaga inside a doc (DOCS_EDITOR_V2_PLAN phase 5): a box under the block he is in, or under the
  * blocks he selected. He says what he wants or picks a starter; the manager's engine runs with the doc
- * in hand and changes the doc live through the block tools (agent edits labelled "Ask AI", listed in
+ * in hand and changes the doc live through the block tools (agent edits labelled "Ask Kaaga", listed in
  * Home → From your agent). What it wrote is tinted once; the box then says what changed, with
  * Keep · Undo · Try again and a line for a follow-up. A question gets its answer in the box, with
  * Insert below and Copy; the doc stays as it was.
@@ -23,12 +23,10 @@ import {
   Eye,
   Feather,
   ListTree,
-  LoaderCircle,
   PenLine,
   RotateCw,
   ScanSearch,
   Shrink,
-  Sparkles,
   Square,
   SpellCheck,
   TextQuote,
@@ -46,6 +44,7 @@ import { assistantApi, AskError, type AssistantMessage, type AssistantTool, type
 import { agentApi } from '@/lib/api/agentApi';
 import { learningApi } from '@/lib/api/learningApi';
 import { sanitizeBoard, writeBoard } from '@/lib/editor/canvasBoard';
+import { KaagaIcon, KaagaMark } from '@/components/brand/kaaga';
 
 /** What he points at when the box opens. */
 export interface AskFocus {
@@ -545,7 +544,7 @@ export function DocAsk({
         ref={boxRef}
         className="doc-ask"
         role="dialog"
-        aria-label="Ask AI"
+        aria-label="Ask Kaaga"
         data-phase={phase}
         style={{ top: top ?? 0, visibility: top === null ? 'hidden' : undefined }}
         onKeyDown={(e) => {
@@ -573,7 +572,7 @@ export function DocAsk({
             {/* The working line (and its Stop) stays put above the words as they arrive. */}
             {phase === 'working' && (
               <div className="doc-ask-working">
-                <LoaderCircle className="doc-ask-spin" strokeWidth={1.75} aria-hidden />
+                <KaagaMark size={16} state="thinking" className="doc-ask-thinking" />
                 <span className="doc-ask-working-words">{turn.stopping ? 'Stopping…' : steps.some((t) => t.level === 2 && t.ok) ? 'Still writing…' : 'Writing…'}</span>
                 <RcButton variant="quiet" size="sm" className="doc-ask-stop" icon={<Square aria-hidden fill="currentColor" />} disabled={!!turn.stopping} onClick={stop} aria-keyshortcuts="Escape">
                   Stop
@@ -656,14 +655,14 @@ export function DocAsk({
         )}
         {phase !== 'working' && (
           <div className="doc-ask-bar">
-            <Sparkles className="doc-ask-mark" strokeWidth={1.75} aria-hidden />
+            <KaagaIcon className="doc-ask-mark" />
             <textarea
               ref={inputRef}
               rows={1}
               autoFocus
               className="doc-ask-input"
-              aria-label="Ask AI"
-              placeholder={phase === 'done' ? 'Tell AI what to change, or ask more…' : focus.selection ? 'Ask AI to edit or explain this…' : 'Ask AI to write, edit or explain…'}
+              aria-label="Ask Kaaga"
+              placeholder={phase === 'done' ? 'Tell Kaaga what to change, or ask more…' : focus.selection ? 'Ask Kaaga to edit or explain this…' : 'Ask Kaaga to write, edit or explain…'}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);

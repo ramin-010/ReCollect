@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Buds, the chat with the buddy (PHONE_APP_REDESIGN_PLAN §5, §8; step 4), on the Ask AI engine: the latest chat
+ * Buds, the chat with the buddy (PHONE_APP_REDESIGN_PLAN §5, §8; step 4), on the Ask Kaaga engine: the latest chat
  * goes on, a new one starts from the pen. The buddy's words in the serif, theirs in a tinted bubble; what it did
  * shows as a receipt with Undo. Today's Tell opens it ready to type (?tell=1); a text shared to the phone app arrives in
  * the field (?q=). Inside the phone app the mic speaks into the field (Android's own recognizer, through the shell).
@@ -20,6 +20,9 @@ import { useNoAi } from '@/components/ai/NoAiNotice';
 import { learningApi } from '@/lib/api/learningApi';
 import { parseSessionLog, formatMinutes } from '@/lib/learning/sessionLog';
 import { LOG_MINUTES, minutesLabel, sharedForLog } from '@/lib/learning/shareLog';
+import { buddyName } from '@/lib/brand';
+import { isKaaga } from '@/lib/brand';
+import { KaagaMark } from '@/components/brand/kaaga';
 
 interface Shown {
   key: string;
@@ -196,10 +199,10 @@ function Chat() {
     <>
       <header className="bar" style={{ padding: '0 8px 0 20px' }}>
         <span className="mark lg" aria-hidden>
-          {(name ?? 'Buddy').charAt(0).toUpperCase()}
+          {isKaaga(name) ? <KaagaMark size={21} state={busy ? 'thinking' : 'still'} /> : buddyName(name).charAt(0).toUpperCase()}
         </span>
         <p className="bar-title" style={{ marginLeft: 10 }}>
-          {name ?? 'Your buddy'}
+          {buddyName(name)}
         </p>
         <span className="grow" />
         <button type="button" className="icon-btn" aria-label="A new chat" onClick={fresh}>
@@ -270,7 +273,7 @@ function Chat() {
       ) : null}
       {noAi ? (
         <div className="composer">
-          <p className="voice-s">Your buddy needs AI. Add your own Claude key in the web app’s Settings › AI, or connect your own Claude: it has the same tools.</p>
+          <p className="voice-s">Kaaga needs AI. Add your own Claude key in the web app’s Settings › AI, or connect your own Claude: it has the same tools.</p>
         </div>
       ) : (
       <div className="composer">
@@ -279,8 +282,8 @@ function Chat() {
             ref={fieldRef}
             rows={1}
             value={text}
-            placeholder={`Message ${name ?? 'your buddy'}`}
-            aria-label={`Message ${name ?? 'your buddy'}`}
+            placeholder={`Message ${buddyName(name)}`}
+            aria-label={`Message ${buddyName(name)}`}
             onChange={(e) => {
               setText(e.target.value);
             }}

@@ -102,7 +102,7 @@ export function formatClock(instant: Date, tz: string | null | undefined): strin
 }
 
 /**
- * A task due date for `day` at 18:00 in the user's zone (Recollect's date-only rule,
+ * A task due date for `day` at 18:00 in the user's zone (Kaaga's date-only rule,
  * smartDateParser DEFAULT_DUE_HOUR), whatever zone the browser is in.
  */
 export function dueInstantForDay(day: DayString, tz: string | null | undefined): Date {

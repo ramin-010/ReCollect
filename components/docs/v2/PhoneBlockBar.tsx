@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState, type ComponentType } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Copy, IndentDecrease, IndentIncrease, MoreHorizontal, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Copy, IndentDecrease, IndentIncrease, MoreHorizontal, Trash2 } from 'lucide-react';
+import { KaagaIcon } from '@/components/brand/kaaga';
 
 /**
  * The block handle on a phone (no hover, so BlockNote's grip would sit off the screen): while he edits
  * on a touch screen, a bar above the keyboard acts on the block holding the caret: its kind (the
  * Turn into list), move up and down (a phone can't drag), indent and outdent, and "⋯" for Duplicate,
- * Ask AI and Delete. Buttons never take the focus, so the keyboard stays up.
+ * Ask Kaaga and Delete. Buttons never take the focus, so the keyboard stays up.
  */
 
 type Block = { id: string; type: string; props: Record<string, unknown>; children?: Block[] };
@@ -213,8 +214,8 @@ export function PhoneBlockBar({
           </button>
           {onAsk && (
             <button type="button" role="menuitem" className="phone-block-row" onPointerDown={keep} onMouseDown={keep} onClick={() => act(onAsk)}>
-              <Sparkles aria-hidden />
-              <span>Ask AI</span>
+              <KaagaIcon />
+              <span>Ask Kaaga</span>
             </button>
           )}
           <button type="button" role="menuitem" className="phone-block-row phone-block-row--danger" onPointerDown={keep} onMouseDown={keep} onClick={remove}>

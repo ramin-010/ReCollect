@@ -7,7 +7,7 @@ import { parseNote, prettyUrl, type InlineNode, type NoteNode } from '@/lib/lear
 import { lx } from './styles';
 
 // Port of revise/src/components/dashboard/NoteContent.tsx. highlight.js is not installed in
-// Recollect, so code cards use Prism (already a dependency), loaded on first use.
+// Kaaga, so code cards use Prism (already a dependency), loaded on first use.
 
 function LinkChip({ href, label, bare }: { href: string; label: string; bare: boolean }) {
   const display = bare ? prettyUrl(label) : label;

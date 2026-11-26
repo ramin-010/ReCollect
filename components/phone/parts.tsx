@@ -67,11 +67,11 @@ export const reviewWords = (cycle: number): string => (cycle >= 1 && cycle <= 4 
 /** Where its words come from, in the person's terms (the ear meter's sources). */
 export const SOURCE_WORDS: Record<string, string> = {
   hook: 'Claude Code',
-  ask_ai: 'This chat and Ask AI',
-  doc_ask: 'Ask AI in a doc',
+  ask_ai: 'This chat and Ask Kaaga',
+  doc_ask: 'Ask Kaaga in a doc',
   answer: 'Your answers to its questions',
   agent: 'Notes your agents saved',
-  tell: 'Tell your buddy',
+  tell: 'Tell Kaaga',
   app: 'This app',
   pocket: 'Your pocket notes',
   import: 'Chats you brought in',

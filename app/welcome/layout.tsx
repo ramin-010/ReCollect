@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/brand';
 
 // Only what is true of the app today (the honest-copy task, 11-15): no encryption, slides, email or
 // company claims.
-const TITLE = 'Recollect: keep what you learn, find what you need';
+const TITLE = 'Kaaga: one memory for all your AIs';
 const DESCRIPTION =
-  'Recollect brings your notes back on a short daily list, keeps your goals honest and works with the coding agents you already use. Open source.';
+  'Kaaga keeps what you learn, build and plan, connects it to Claude, ChatGPT and your coding agents, and brings it back on a short daily list. Open source.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -22,20 +23,13 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     type: 'website',
-    images: [
-      {
-        url: '/logo3.webp',
-        width: 512,
-        height: 512,
-        alt: 'Recollect logo',
-      },
-    ],
+    images: [{ url: '/brand/og-image-dark-1200x630.png', width: 1200, height: 630, alt: 'Kaaga: one memory for all your AIs' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: TITLE,
     description: DESCRIPTION,
-    images: ['/logo3.webp'],
+    images: ['/brand/og-image-dark-1200x630.png'],
   },
   alternates: {
     canonical: '/welcome',
@@ -56,8 +50,8 @@ export default function WelcomeLayout({
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'WebApplication',
-            name: 'Recollect',
-            url: 'https://re-collect.in',
+            name: 'Kaaga',
+            url: SITE_URL,
             description: DESCRIPTION,
             applicationCategory: 'EducationalApplication',
             operatingSystem: 'Web',
@@ -69,7 +63,7 @@ export default function WelcomeLayout({
             featureList: [
               'Spaced revisions on a short daily list',
               'Docs with diagrams, code blocks and live editing',
-              'Ask AI inside a doc',
+              'Ask Kaaga inside a doc',
               'Goals with deadlines and honest forecasts',
               'Pinned notes and commands, one click to copy',
               'An MCP server for coding agents',

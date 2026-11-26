@@ -1,18 +1,19 @@
 'use client';
 
 /**
- * The phone's bottom bar (ALWAYS_ON_SPEC 6.1): Home, Docs, Ask AI and a dark "+" that opens capture
+ * The phone's bottom bar (ALWAYS_ON_SPEC 6.1): Home, Docs, Ask Kaaga and a dark "+" that opens capture
  * (the Ctrl K palette). Under 768 px only; the sidebar drawer stays for everything else.
  */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Home, Plus, Sparkles } from 'lucide-react';
+import { FileText, Home, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { KaagaIcon } from '@/components/brand/kaaga';
 
 const TABS = [
   { href: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },
   { href: '/docs', label: 'Docs', icon: FileText, match: (p: string) => p.startsWith('/docs') },
-  { href: '/ask', label: 'Ask AI', icon: Sparkles, match: (p: string) => p.startsWith('/ask') },
+  { href: '/ask', label: 'Ask Kaaga', icon: KaagaIcon, match: (p: string) => p.startsWith('/ask') },
 ] as const;
 
 function openCapture() {

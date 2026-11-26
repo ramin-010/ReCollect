@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * A computer asks to use Recollect (EASY_SETUP_PLAN §3.2): `npx recollect-setup` showed a code in a terminal and
+ * A computer asks to use Kaaga (EASY_SETUP_PLAN §3.2): `npx kaaga-setup` showed a code in a terminal and
  * opened this page with it. The same quiet column as an app's sign-in (ConsentPage): the computer as it calls itself,
  * the code to check against the terminal (the one guard against someone else's link), what it will be able to do, and
  * Approve (the one dark button) or Deny. Signed out, they sign in first and come back here. No code in the link: they
@@ -17,6 +17,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { setupApi, type PcSignIn } from '@/lib/api/setupApi';
 import '@/components/oauth/consent.css';
 import './connect-pc.css';
+import { KaagaLogo } from '@/components/brand/kaaga';
 
 /** The same words as Settings → Agents (one name for one thing). */
 const ABILITIES = ['Read docs, goals and today', 'Write docs', 'Set goals, focus lines and notes', 'Log study and work sessions', 'Add and change your tasks'];
@@ -92,9 +93,8 @@ export function ConnectPcPage() {
   return (
     <div className={cn(rcScope, 'oauth-page')}>
       <main className="oauth-col">
-        <Link href="/" className="oauth-brand" aria-label="Recollect">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a local icon */}
-          <img src="/icons/icon-192.png" alt="" width={32} height={32} />
+        <Link href="/" className="oauth-brand" aria-label="Kaaga">
+          <KaagaLogo height={26} variant="header" />
         </Link>
 
         {view.kind === 'loading' && (
@@ -111,7 +111,7 @@ export function ConnectPcPage() {
           <form onSubmit={enterCode}>
             <h1 className="oauth-title">Connect a computer</h1>
             <p className="oauth-sub">
-              Type the code your terminal shows after <code className="rc-code">npx recollect-setup</code>.
+              Type the code your terminal shows after <code className="rc-code">npx kaaga-setup</code>.
             </p>
             <label htmlFor="pc-code" className="oauth-label block">
               Code
@@ -144,7 +144,7 @@ export function ConnectPcPage() {
             </p>
             <div className="oauth-actions">
               <RcButton variant="outline" onClick={() => router.push('/')}>
-                Go to Recollect
+                Go to Kaaga
               </RcButton>
             </div>
           </>
@@ -156,14 +156,14 @@ export function ConnectPcPage() {
             <p className="oauth-sub">
               {view.info.status === 'denied'
                 ? 'Nothing was connected. You can close this tab.'
-                : `${view.info.device} can use Recollect now. Your terminal goes on by itself; you can close this tab.`}
+                : `${view.info.device} can use Kaaga now. Your terminal goes on by itself; you can close this tab.`}
             </p>
           </>
         )}
 
         {view.kind === 'ready' && (
           <>
-            <h1 className="oauth-title">Connect this computer to Recollect?</h1>
+            <h1 className="oauth-title">Connect this computer to Kaaga?</h1>
             {user?.email && (
               <p className="oauth-sub">
                 Signed in as {user.name ? `${user.name} · ` : ''}

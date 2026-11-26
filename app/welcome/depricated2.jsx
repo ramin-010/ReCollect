@@ -1,4 +1,4 @@
-// ReCollect Landing Page - Clean, Professional, Engaging
+// Kaaga Landing Page - Clean, Professional, Engaging
 'use client';
 
 import React from 'react';
@@ -107,7 +107,7 @@ export default function WelcomePage() {
               <div className="flex items-center gap-3 mb-4">
                 <Logo size="xll"  className="h-12 w-auto text-[hsl(var(--foreground))]" />
                 {/* <span className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  ReCollect
+                  Kaaga
                 </span> */}
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function WelcomePage() {
             
             {/* Subtitle */}
             <p className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] max-w-3xl mx-auto mb-12 leading-relaxed">
-              ReCollect is your professional companion for capturing ideas, organizing knowledge, 
+              Kaaga is your professional companion for capturing ideas, organizing knowledge, 
               and building connections between your thoughts. Never lose a brilliant idea again.
             </p>
             
@@ -276,7 +276,7 @@ export default function WelcomePage() {
               
               {/* Subtitle */}
               <p className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] mb-10 max-w-2xl mx-auto leading-relaxed">
-                Join thousands of professionals who have made ReCollect their second brain. 
+                Join thousands of professionals who have made Kaaga their second brain. 
                 Start organizing your thoughts today—no credit card required.
               </p>
               

@@ -72,9 +72,9 @@ export const BLOCK_TYPES: BlockType[] = [
     apply: (c) => c.insertCanvas() },
   { id: 'mermaid', label: 'Diagram (Mermaid)', icon: Workflow, group: 'Advanced', aliases: ['mermaid', 'diagram', 'flowchart', 'chart', 'graph', 'sequence'],
     apply: (c) => c.clearNodes().setCodeBlock({ language: 'mermaid' }) },
-  // "Ask AI to write" (the old inlineAi node on the Groq/Gemini chain) is hidden (SYNC_SPINE_SPEC 0.3):
+  // "Ask Kaaga to write" (the old inlineAi node on the Groq/Gemini chain) is hidden (SYNC_SPINE_SPEC 0.3):
   // stored inlineAi nodes still load; the node, its view and its route go in the editor rebuild,
-  // where the new Ask AI runs on the same tools as agents.
+  // where the new Ask Kaaga runs on the same tools as agents.
 ];
 
 /** Blocks shown in "Turn into" menus. */

@@ -50,7 +50,7 @@ function weekLine(w: WeekSummary): string | null {
 const PREVIEW = 2;
 
 const from = (s: Suggestion): string | null =>
-  s.proposedBy === 'agent' ? `from ${s.agentName ?? 'your agent'}` : s.proposedBy === 'coach' ? 'from the coach' : s.proposedBy === 'buddy' ? 'from your buddy' : null;
+  s.proposedBy === 'agent' ? `from ${s.agentName ?? 'your agent'}` : s.proposedBy === 'coach' ? 'from the coach' : s.proposedBy === 'buddy' ? 'from Kaaga' : null;
 
 /**
  * Suggested (LOOP_COMPLETE_SPEC 1.6, ECOSYSTEM_PLAN change 9): the one place for every proposal, from

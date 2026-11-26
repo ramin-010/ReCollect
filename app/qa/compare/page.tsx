@@ -13,7 +13,7 @@ import { useLook, type Look } from '@/components/phone/look';
 
 const SCREENS = [
   ['today', 'Today'],
-  ['buddy', 'Buds'],
+  ['buddy', 'Kaaga'],
   ['library', 'Library'],
   ['you', 'You'],
   ['settings', 'Settings'],

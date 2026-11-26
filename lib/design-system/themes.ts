@@ -1,4 +1,4 @@
-// ReCollect Design System - Theme Configuration
+// Kaaga Design System - Theme Configuration
 // Complete theme system with Dark, Light, Blue, and Gray modes
 
 export const themes = {
@@ -25,7 +25,7 @@ export const themes = {
       border: 'hsl(240, 3.7%, 15.9%)',
       input: 'hsl(240, 3.7%, 15.9%)',
       ring: 'hsl(240, 4.9%, 83.9%)',
-      // Custom colors for ReCollect
+      // Custom colors for Kaaga
       surfaceLight: 'hsl(240, 10%, 8%)',
       surfaceMedium: 'hsl(240, 10%, 12%)',
       textSecondary: 'hsl(240, 5%, 65%)',

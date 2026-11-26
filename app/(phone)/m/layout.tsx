@@ -23,7 +23,7 @@ const figtree = localFont({
   display: 'swap',
 });
 
-export const metadata: Metadata = { title: 'Recollect', robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: 'Kaaga', robots: { index: false, follow: false } };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#F5F0E6' };
 
 export default function PhoneLayout({ children }: { children: React.ReactNode }) {

@@ -61,7 +61,7 @@ export function LockPins() {
     <div className="you-setting">
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">On my lock screen</p>
-        <p className="rc-meta mt-0.5">Your own words on the phone’s lock screen until a time today; in that window they show instead of your buddy’s.</p>
+        <p className="rc-meta mt-0.5">Your own words on the phone’s lock screen until a time today; in that window they show instead of Kaaga’s.</p>
         {!!pins?.length && (
           <ul className="mt-2 grid gap-1">
             {pins.map((p) => (
@@ -69,7 +69,7 @@ export function LockPins() {
                 <span className="min-w-0 flex-1 text-[14px] text-[var(--rc-ink-1)]">
                   “{p.text}”
                   <span className="rc-meta">
-                    {` · ${p.from}–${p.to === '00:00' ? 'midnight' : p.to}${DAY_WORDS(p) ? ` · ${DAY_WORDS(p)}` : ''}${p.now ? ' · showing now' : ''}${p.setBy !== 'you' ? ` · set by ${p.setBy === 'ask_ai' ? 'Ask AI' : 'an agent'}` : ''}`}
+                    {` · ${p.from}–${p.to === '00:00' ? 'midnight' : p.to}${DAY_WORDS(p) ? ` · ${DAY_WORDS(p)}` : ''}${p.now ? ' · showing now' : ''}${p.setBy !== 'you' ? ` · set by ${p.setBy === 'ask_ai' ? 'Ask Kaaga' : 'an agent'}` : ''}`}
                   </span>
                 </span>
                 <RcButton size="sm" variant="quiet" disabled={busy} onClick={() => void clear(p._id)}>

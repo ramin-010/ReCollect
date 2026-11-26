@@ -19,6 +19,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { publicDocApi, shareError, type PublicDoc } from '@/lib/api/sharingApi';
 import '@/components/docs/editor/doc-editor.css';
 import './public-doc.css';
+import { KaagaLogo } from '@/components/brand/kaaga';
 
 const LabEditor = dynamic(() => import('@/components/docs/v2/LabEditor').then((m) => m.LabEditor), {
   ssr: false,
@@ -57,7 +58,7 @@ export function PublicDocPage({ slug }: { slug: string }) {
   }, [slug, authLoading, loggedIn]);
 
   useEffect(() => {
-    if (doc) document.title = `${doc.title} · Recollect`;
+    if (doc) document.title = `${doc.title} · Kaaga`;
   }, [doc]);
 
   if (missing) {
@@ -67,7 +68,7 @@ export function PublicDocPage({ slug }: { slug: string }) {
           <h1 className="rc-h1">This page isn&apos;t published</h1>
           <p className="rc-body rc-ink-2 mt-2">The link may be wrong, or its owner stopped publishing it.</p>
           <Link href="/" className="rc-btn rc-btn--outline mt-5 inline-flex">
-            Go to Recollect
+            Go to Kaaga
           </Link>
         </div>
       </Frame>
@@ -155,7 +156,7 @@ function ReaderActions({ slug, doc, onAsked }: { slug: string; doc: PublicDoc; o
 
   const open = doc.docId ? (
     <Link href={`/docs/${doc.docId}`} className="rc-btn rc-btn--main rc-btn--sm">
-      Open in Recollect
+      Open in Kaaga
     </Link>
   ) : null;
 
@@ -184,10 +185,8 @@ function Frame({ children, actions }: { children: React.ReactNode; actions?: Rea
   return (
     <div className={cn(rcScope, 'pub-page doc-page')}>
       <header className="pub-bar">
-        <Link href="/" className="pub-brand" aria-label="Recollect">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a local icon */}
-          <img src="/icons/icon-192.png" alt="" width={20} height={20} />
-          <span>Recollect</span>
+        <Link href="/" className="pub-brand" aria-label="Kaaga">
+          <KaagaLogo height={20} variant="sidebar" />
         </Link>
         <div className="pub-actions">{actions}</div>
       </header>

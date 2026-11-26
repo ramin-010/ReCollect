@@ -1,4 +1,4 @@
-// ReCollect - Custom Tag Selector Component
+// Kaaga - Custom Tag Selector Component
 'use client';
 
 import { useState, useEffect } from 'react';

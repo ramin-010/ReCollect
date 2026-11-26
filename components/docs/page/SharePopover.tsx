@@ -190,7 +190,7 @@ function InviteRow({ docId, onChange }: { docId: string; onChange: (s: DocPeople
           {error}
         </p>
       ) : (
-        <p className="sh-note">They need a Recollect account. They get a notification and an email.</p>
+        <p className="sh-note">They need a Kaaga account. They get a notification and an email.</p>
       )}
     </div>
   );
@@ -304,7 +304,7 @@ function People({ state, meId, onChange, onLeft }: { state: DocPeople; meId: str
           );
         })}
       </ul>
-      {owner && state.people.length === 0 && <p className="sh-note">Only you can open it in Recollect.</p>}
+      {owner && state.people.length === 0 && <p className="sh-note">Only you can open it in Kaaga.</p>}
     </div>
   );
 }

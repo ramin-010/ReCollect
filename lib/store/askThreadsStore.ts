@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { assistantApi, type AssistantThread } from '@/lib/api/assistantApi';
 
 /**
- * Ask AI's conversations, shared by the main sidebar's Chats list and the Ask AI page (a new chat
+ * Ask Kaaga's conversations, shared by the main sidebar's Chats list and the Ask Kaaga page (a new chat
  * shows in the sidebar as it starts; one deleted from the sidebar leaves the page).
  */
 interface AskThreadsState {

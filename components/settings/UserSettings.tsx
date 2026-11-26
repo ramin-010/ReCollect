@@ -22,6 +22,7 @@ import { authApi } from '@/lib/api/auth';
 import { Content as ContentType } from '@/lib/utils/types';
 import { useEffect } from 'react';
 import { features } from '@/lib/features';
+import { clearAuthHint } from '@/lib/brand';
 
 type TabType = 'profile' | 'agents' | 'tracking' | 'ai' | 'phone' | 'data' | 'feedback' | 'archived' | 'favorites';
 
@@ -145,8 +146,7 @@ export function UserSettings() {
 
   const handleLogout = async () => {
     try {
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      clearAuthHint();
       localStorage.removeItem('auth_hint');
       await authApi.logout();
       logout();

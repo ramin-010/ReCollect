@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The share target (ALWAYS_ON_SPEC 6.7): "Share → Recollect" on the phone opens /share?title&text&url.
+ * The share target (ALWAYS_ON_SPEC 6.7): "Share → Kaaga" on the phone opens /share?title&text&url.
  * One small card: the title (editable), the link, "Revise this", Save. A link becomes a link capture,
  * anything else a note; both land in the inbox (Home › All notes) like Ctrl K's.
  */
@@ -65,9 +65,9 @@ function ShareCard() {
 
   return (
     <div className={cn(rcScope, 'mx-auto w-full max-w-[480px] px-4 pt-10 pb-16')}>
-      <h1 className="rc-h1">Save to Recollect</h1>
+      <h1 className="rc-h1">Save to Kaaga</h1>
       {nothing ? (
-        <p className="rc-body rc-ink-2 mt-2">Nothing came with the share. Share a page or some text to Recollect from another app.</p>
+        <p className="rc-body rc-ink-2 mt-2">Nothing came with the share. Share a page or some text to Kaaga from another app.</p>
       ) : (
         <div className="rc-card mt-5 p-4">
           <div className="flex items-start gap-3">

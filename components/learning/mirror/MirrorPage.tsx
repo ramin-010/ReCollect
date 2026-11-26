@@ -15,6 +15,8 @@ import { LabelLine, SectionFailed } from '../home/parts';
 import { shortDay } from '../home/format';
 import { StandWave } from './StandWave';
 import { Coverage } from './Coverage';
+import { BuddyAvatar } from '@/components/buddy/BuddyAvatar';
+import { buddyName } from '@/lib/brand';
 
 const WINDOW_KEY = 'rc-mirror-window';
 /** PERSONAL_OFFICE_PLAN: the lens looked through last in this browser (a per-viewer convenience). */
@@ -422,7 +424,7 @@ function WorkDone({ stand, period, building = false }: { stand: StandData; perio
 function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandTakes | null; onTake: (t: NonNullable<StandTakes['takes'][StandWindow]>) => void }) {
   const [asking, setAsking] = useState(false);
   const take = takes?.takes[period.window] ?? null;
-  const name = takes?.name || 'Buddy';
+  const name = buddyName(takes?.name);
   const canAsk = takes?.ask === 'ok';
 
   const ask = async () => {
@@ -430,17 +432,14 @@ function Summary({ period, takes, onTake }: { period: StandPeriod; takes: StandT
     try {
       onTake(await learningApi.askStandTake(period.window));
     } catch (err) {
-      toast.error(err instanceof Error && err.message ? err.message : 'Your buddy couldn’t answer just now. Try again.');
+      toast.error(err instanceof Error && err.message ? err.message : `${name} couldn’t answer just now. Try again.`);
     } finally {
       setAsking(false);
     }
   };
 
-  const avatar = (
-    <span className="grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full bg-[var(--rc-main)] text-[10.5px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
-      {name.charAt(0).toUpperCase()}
-    </span>
-  );
+  // Kaaga's face: it ripples while it reads the window (KAAGA_REBRAND_PLAN D4).
+  const avatar = <BuddyAvatar name={takes?.name} size={20} state={asking ? 'thinking' : 'still'} />;
 
   // The plain summary leads (facts, written by code); the buddy's take sits under it in a quiet block, never in
   // its place, so the two don't swap and the page doesn't jump.

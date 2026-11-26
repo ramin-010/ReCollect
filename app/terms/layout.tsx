@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms',
-  description: 'The terms for using Recollect, a personal app run by one person for the people they invite.',
+  description: 'The terms for using Kaaga, a personal app run by one person for the people they invite.',
   robots: {
     index: true,
     follow: true,

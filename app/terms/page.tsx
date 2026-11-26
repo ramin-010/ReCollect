@@ -8,7 +8,7 @@ import { ArrowLeft, BookOpenCheck } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 
 /**
- * The terms (ECOSYSTEM_V2_PLAN stage 11, §9.6 item 6): true to what Recollect is, a personal app one person runs for the
+ * The terms (ECOSYSTEM_V2_PLAN stage 11, §9.6 item 6): true to what Kaaga is, a personal app one person runs for the
  * people they invite, with free AI that has limits and can end, and your words always yours to take out or delete.
  */
 export default function TermsPage() {
@@ -41,7 +41,7 @@ export default function TermsPage() {
 
         <div className="max-w-none space-y-10 text-[17px] leading-[1.65] text-slate-700">
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">1. What Recollect is</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">1. What Kaaga is</h2>
             <p>
               A personal app for keeping what you learn alive and what you plan in one place, run by one person (&quot;the owner&quot;) for themselves
               and the people they invite. It is not a company&apos;s product and it has no paid plans. By making an account you agree to these terms.
@@ -83,7 +83,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-3">5. No promises it never changes</h2>
             <p>
-              Recollect is built and run by one person. It is offered as it is, without a guarantee that it is always available, free of mistakes, or
+              Kaaga is built and run by one person. It is offered as it is, without a guarantee that it is always available, free of mistakes, or
               kept forever: it may change, pause or stop. Keep your own copy of what matters with Settings › Your data › Download everything. The
               owner is not responsible for losses from using it, as far as the law allows.
             </p>
@@ -112,7 +112,7 @@ export default function TermsPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-12 text-center text-sm text-slate-500">
-        <p>&copy; {new Date().getFullYear()} Recollect</p>
+        <p>&copy; {new Date().getFullYear()} Kaaga</p>
       </footer>
     </div>
   );

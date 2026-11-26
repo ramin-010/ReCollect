@@ -17,7 +17,7 @@ const STATE_WORDS: Record<OwnKeyView['state'], string> = { ok: 'works', no_credi
 const message = (err: unknown) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
 
 /**
- * Settings → AI: their own Claude API key. The buddy, Ask AI and Recall run on it and they pay Anthropic directly. It is
+ * Settings → AI: their own Claude API key. The buddy, Ask Kaaga and Recall run on it and they pay Anthropic directly. It is
  * checked when added, kept encrypted, and never shown again: only its last 4.
  */
 export function OwnKey({ onChanged }: { onChanged?: () => void }) {
@@ -78,7 +78,7 @@ export function OwnKey({ onChanged }: { onChanged?: () => void }) {
         </div>
       ) : (
         <>
-          <p className="rc-field-help">Your buddy, Ask AI and Recall run on it, and you pay Anthropic directly: about $5 to $15 a month of active use. It’s checked when you add it, kept encrypted, and never shown again.</p>
+          <p className="rc-field-help">Kaaga (Kaaga and Ask Kaaga) and Recall run on it, and you pay Anthropic directly: about $5 to $15 a month of active use. It’s checked when you add it, kept encrypted, and never shown again.</p>
           <form
             className="mt-2 flex items-center gap-2"
             onSubmit={(e) => {

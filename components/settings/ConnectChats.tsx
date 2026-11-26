@@ -11,7 +11,7 @@ import { RcButton } from '@/components/rc-ui';
  */
 export const ONE_TIME_LINE =
   // ECOSYSTEM_V2_PLAN stage 12, the live hour (11-20): the old line ("Leave work details in the chat") logged no work at all.
-  'I use the Recollect connector as my memory and work log. At the start of every chat, call its get_brief, and during the chat quietly pass on anything I say about my own life (habits, plans, progress, changes) and log what I finish or decide in my work, with its tools. Leave the details of the work in the chat.';
+  'I use the Kaaga connector as my memory and work log. At the start of every chat, call its get_brief, and during the chat quietly pass on anything I say about my own life (habits, plans, progress, changes) and log what I finish or decide in my work, with its tools. Leave the details of the work in the chat.';
 
 export function CopyRow({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -40,12 +40,13 @@ export function CopyRow({ text, label }: { text: string; label: string }) {
  */
 export function SetUpComputer({ apiUrl }: { apiUrl: string }) {
   const url = apiUrl.replace(/\/+$/, '');
-  const command = /^https:\/\/api\.re-collect\.in$/i.test(url) ? 'npx recollect-setup' : `npx recollect-setup --url ${url}`;
+  // kaaga-setup's own default is https://api.kaaga.in; any other server is named (KAAGA_REBRAND_PLAN D7).
+  const command = /^https:\/\/api\.kaaga\.in$/i.test(url) ? 'npx kaaga-setup' : `npx kaaga-setup --url ${url}`;
   return (
     <div className="set-field mt-5">
       <p className="rc-field-label">Use it in your coding tools</p>
       <p className="rc-field-help">
-        Run this in a terminal on your computer (Node.js 22 or newer). It opens Recollect here to approve, then adds Recollect to Claude Code, Antigravity and Cursor. Each new folder asks you once what it is; Settings › Tracking changes it.
+        Run this in a terminal on your computer (Node.js 22 or newer). It opens Kaaga here to approve, then adds Kaaga to Claude Code, Antigravity and Cursor. Each new folder asks you once what it is; Settings › Tracking changes it.
       </p>
       <CopyRow text={command} label="The setup command" />
     </div>

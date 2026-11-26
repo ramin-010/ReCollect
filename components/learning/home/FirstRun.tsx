@@ -10,7 +10,7 @@ import { useSettingsStore } from '@/lib/store/settingsStore';
 import { firstRunApi, type FirstRun as FirstRunData, type FirstRunStep } from '@/lib/api/firstRunApi';
 
 /**
- * Home's first run (ECOSYSTEM_V2_PLAN stage 11, §9.6 item 2): a new account's few steps to make Recollect its own,
+ * Home's first run (ECOSYSTEM_V2_PLAN stage 11, §9.6 item 2): a new account's few steps to make Kaaga its own,
  * each ticked by what the person really did (the time zone by their "Looks right"). Gone once every step is done,
  * after "Hide this", or 30 days after the account was made. Nothing shows for anyone else.
  */
@@ -58,17 +58,17 @@ export function FirstRun({ className }: { className?: string }) {
       ),
     },
     buddy: {
-      title: 'Tell your buddy something',
+      title: 'Tell Kaaga something',
       text: 'What you’re learning, what’s coming up. It remembers, and follows up when it helps.',
       action: (
         <Link href="/ask" className="rc-btn rc-btn--outline rc-btn--sm">
-          Open Ask AI
+          Open Ask Kaaga
         </Link>
       ),
     },
     connect: {
       title: 'Connect your own Claude',
-      text: 'Claude Code, claude.ai or ChatGPT read and write here through Recollect’s tools, and save what matters as you talk.',
+      text: 'Claude Code, claude.ai or ChatGPT read and write here through Kaaga’s tools, and save what matters as you talk.',
       action: (
         <RcButton size="sm" variant="outline" onClick={() => openSettings('agents')}>
           Show me how
@@ -77,7 +77,7 @@ export function FirstRun({ className }: { className?: string }) {
     },
     import: {
       title: 'Bring in your other chats',
-      text: 'A fast start: an export from Claude or ChatGPT, and your buddy reads your own messages with their dates.',
+      text: 'A fast start: an export from Claude or ChatGPT, and Kaaga reads your own messages with their dates.',
       action: (
         <Link href="/you?tab=settings#you-import"className="rc-btn rc-btn--quiet rc-btn--sm">
           Bring them in

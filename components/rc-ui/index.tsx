@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Recollect UI shared parts (DESIGN.md "Shared parts"). Styles live in rc-ui.css; every part
+ * Kaaga UI shared parts (DESIGN.md "Shared parts"). Styles live in rc-ui.css; every part
  * expects to render inside an `.rc` scope (portals add it themselves via `rcScope`).
  */
 import React, { forwardRef, useEffect, useId, useMemo, useRef, useState } from 'react';

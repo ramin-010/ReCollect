@@ -1,9 +1,10 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { KaagaMark } from '@/components/brand/kaaga';
 
 interface AuthSplitLayoutProps {
   children: ReactNode;
@@ -13,108 +14,26 @@ interface AuthSplitLayoutProps {
 
 const SLIDES = [
   {
-    tagline: 'Your intelligent second brain',
-    description: 'A unified workspace where your documents, tasks, and ideas seamlessly connect.',
+    tagline: 'One memory for all your AIs',
+    description: 'Claude, ChatGPT and your coding agents read and save to the same place, so no chat starts from zero.',
   },
   {
-    tagline: 'Real-time multiplayer collaboration',
-    description: 'Co-write documents with your team using live cursors and instant cloud sync.',
+    tagline: 'It remembers, then it speaks first',
+    description: 'Kaaga connects what you said over weeks and follows up at the right moment, like a friend who was there.',
   },
   {
-    tagline: 'Work offline, sync effortlessly',
-    description: 'Keep typing even when the internet drops. Changes are saved locally and synced automatically.',
+    tagline: 'Learning that sticks',
+    description: 'Lessons with real diagrams, reviews after 1, 3, 7 and 21 days, and a tutor that remembers your weak spots.',
   },
   {
-    tagline: 'Deeply integrated AI assistance',
-    description: 'Generate, rewrite, and summarize content instantly with intelligent inline AI.',
+    tagline: 'An honest picture of your weeks',
+    description: 'Learning, building and work kept apart, so a busy office week never hides that you stopped learning.',
   },
 ];
 
-/**
- * BrandLogo — faithful port of the AbstractDash.tsx brand reveal animation.
- */
+/** The mark arriving (the logo set's reveal: the slices come in from both sides and lock in), once, as the page opens. */
 function BrandLogo() {
-  const [showLogo, setShowLogo] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    // Wait 1 full second after the container appears before mounting the SVG.
-    timerRef.current = setTimeout(() => setShowLogo(true), 1000);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return (
-    <motion.div
-      className="flex items-center justify-center mb-2 overflow-visible"
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
-    >
-      <AnimatePresence mode="wait">
-        {showLogo && (
-          <motion.div
-            key="logo-intro"
-            className="flex items-center justify-center overflow-visible"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.5, filter: 'blur(20px)', transition: { duration: 0.6 } }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
-            {/* Large logo with expanded viewBox so glow spreads freely */}
-            <svg width="130" height="130" viewBox="6 6 44 44" className="bg-transparent relative top-6 overflow-visible" style={{ overflow: 'visible' }}>
-              <defs>
-                <filter id="auth-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <linearGradient id="auth-infinity-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#a855f7" />
-                  <stop offset="50%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#ec4899" />
-                </linearGradient>
-              </defs>
-
-              {/* Infinity path — draws itself over 2.8s */}
-              <motion.path
-                d="M16 24C16 19 19 16 22 16C25 16 26.5 17.5 28 19.5M28 19.5C29.5 17.5 31 16 34 16C37 16 40 19 40 24C40 29 37 32 34 32C31 32 29.5 30.5 28 28.5M28 28.5C26.5 30.5 25 32 22 32C19 32 16 29 16 24M28 19.5V28.5"
-                stroke="url(#auth-infinity-grad)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                filter="url(#auth-glow)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 2.8, ease: 'easeInOut' }}
-              />
-
-              {/* Node dots — staggered pop-in */}
-              <motion.circle cx="22" cy="16" r="1.5" fill="#a855f7"
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ delay: 0.6, duration: 0.5, ease: 'backOut' }} />
-              <motion.circle cx="34" cy="16" r="1.5" fill="#3b82f6"
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ delay: 1.0, duration: 0.5, ease: 'backOut' }} />
-              <motion.circle cx="28" cy="24" r="2" fill="#ec4899"
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ delay: 1.4, duration: 0.5, ease: 'backOut' }} />
-              <motion.circle cx="22" cy="32" r="1.5" fill="#a855f7"
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ delay: 1.8, duration: 0.5, ease: 'backOut' }} />
-              <motion.circle cx="34" cy="32" r="1.5" fill="#3b82f6"
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ delay: 2.2, duration: 0.5, ease: 'backOut' }} />
-            </svg>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
+  return <KaagaMark size={84} state="reveal" label="Kaaga" className="text-[#141416] dark:text-[#ECE9E2]" />;
 }
 
 export function AuthSplitLayout({ children, heading, subheading }: AuthSplitLayoutProps) {

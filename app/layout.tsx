@@ -1,5 +1,5 @@
-// Recollect - Root Layout
-import type { Metadata } from 'next';
+// Kaaga: the root layout
+import type { Metadata, Viewport } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
 // Theme v2 (Notion-grade tokens + the OS font). Unlayered, so it wins over the legacy blocks in globals.css.
@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister';
+import { SITE_URL } from '@/lib/brand';
 
 // Using Outfit for a modern, clean look
 const outfit = Outfit({ 
@@ -25,59 +26,41 @@ const inter = Inter({
   display: 'swap',
 });
 
+const DESCRIPTION = 'One memory for all your AIs: Kaaga keeps what you learn, build and plan, and brings it back at the right moment.';
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://re-collect.in'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Recollect',
-    template: '%s | Recollect',
+    default: 'Kaaga',
+    template: '%s | Kaaga',
   },
-  description:
-    'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion for notes, ideas, and productivity.',
-  keywords: [
-    'knowledge management',
-    'notes',
-    'productivity',
-    'organization',
-    'second brain',
-    'note taking',
-    'personal wiki',
-    'knowledge base',
-    'dashboard',
-  ],
-  authors: [{ name: 'Recollect' }],
-  creator: 'Recollect',
-  publisher: 'Recollect',
+  description: DESCRIPTION,
+  keywords: ['memory for AI', 'MCP', 'learning', 'spaced repetition', 'notes', 'study planner', 'second brain', 'Claude', 'ChatGPT'],
+  authors: [{ name: 'Kaaga' }],
+  creator: 'Kaaga',
+  publisher: 'Kaaga',
+  // The logo set (KAAGA_REBRAND_PLAN): the .ico for old browsers, the SVG that follows the browser's light or dark.
   icons: {
     icon: [
-      { url: '/logo3.webp', type: 'image/webp' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
-    apple: [
-      { url: '/icons/apple-touch-icon.png', type: 'image/png', sizes: '180x180' },
-    ],
-    shortcut: '/logo3.webp',
+    apple: [{ url: '/icons/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
   },
   openGraph: {
-    title: 'Recollect',
-    description:
-      'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion.',
-    siteName: 'Recollect',
+    title: 'Kaaga',
+    description: 'One memory for all your AIs.',
+    siteName: 'Kaaga',
+    url: SITE_URL,
     type: 'website',
-    locale: 'en_US',
-    images: [
-      {
-        url: '/logo3.webp',
-        width: 512,
-        height: 512,
-        alt: 'Recollect Logo',
-      },
-    ],
+    locale: 'en_IN',
+    images: [{ url: '/brand/og-image-dark-1200x630.png', width: 1200, height: 630, alt: 'Kaaga: one memory for all your AIs' }],
   },
   twitter: {
-    card: 'summary',
-    title: 'Recollect',
-    description:
-      'Organize, connect, and recall your thoughts with Recollect — your professional knowledge companion.',
-    images: ['/logo3.webp'],
+    card: 'summary_large_image',
+    title: 'Kaaga',
+    description: 'One memory for all your AIs.',
+    images: ['/brand/og-image-dark-1200x630.png'],
   },
   robots: {
     index: true,
@@ -90,8 +73,15 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  applicationName: 'Recollect',
+  applicationName: 'Kaaga',
   category: 'productivity',
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#191919' },
+  ],
 };
 
 export default function RootLayout({

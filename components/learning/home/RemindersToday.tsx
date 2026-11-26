@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import axiosInstance from '@/lib/utils/axios';
 import { LabelLine } from './parts';
+import { buddyName } from '@/lib/brand';
 
 /** One of today's reminders (GET /api/reminders/today, stage 7). */
 interface HomeReminder {
@@ -51,7 +52,7 @@ export function RemindersToday() {
       <ul className="flex flex-col">
         {data.items.map((r) => {
           const Icon = r.ring ? Bell : BellOff;
-          const meta = [r.ring ? 'Rings' : 'Silent', r.repeat ? repeatWords(r.repeat) : null, r.by === 'buddy' ? `set by ${data.name ?? 'your buddy'}` : null, r.past ? 'earlier' : null]
+          const meta = [r.ring ? 'Rings' : 'Silent', r.repeat ? repeatWords(r.repeat) : null, r.by === 'buddy' ? `set by ${buddyName(data.name)}` : null, r.past ? 'earlier' : null]
             .filter(Boolean)
             .join(' · ');
           return (

@@ -96,8 +96,8 @@ export function PhoneAppSettings() {
           <p className="rc-field-label">Get the app</p>
           <a
             className="rc-btn rc-btn--outline mt-2 inline-flex items-center gap-2"
-            href={`${(addresses.find((a) => a.kind === 'public') ?? addresses[0]!).url}/phone/recollect.apk`}
-            download="recollect.apk"
+            href={`${(addresses.find((a) => a.kind === 'public') ?? addresses[0]!).url}/phone/kaaga.apk`}
+            download="kaaga.apk"
           >
             <Download className="h-4 w-4" aria-hidden />
             Download the Android app{app.size ? ` (${Math.max(1, Math.round(app.size / 1024))} KB)` : ''}
@@ -111,7 +111,7 @@ export function PhoneAppSettings() {
         <p className="rc-meta mt-4">This server&apos;s address couldn&apos;t be read. Check that it is running.</p>
       ) : (
         <>
-          <p className="rc-field-label mt-4">Where the phone finds Recollect</p>
+          <p className="rc-field-label mt-4">Where the phone finds Kaaga</p>
           <div className="phone-app-addresses" role="radiogroup" aria-label="Server address">
             {addresses.map((a) => (
               <label key={a.url} className="phone-app-address">

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/brand';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://re-collect.in';
+  const baseUrl = SITE_URL;
 
   return [
     {

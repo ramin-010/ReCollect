@@ -1,7 +1,8 @@
-/* Recollect's service worker (ALWAYS_ON_SPEC 6.2–6.3): makes the app installable, shows a calm
+/* Kaaga's service worker (ALWAYS_ON_SPEC 6.2–6.3): makes the app installable, shows a calm
    offline page when a page can't load, and shows the morning notification. It never caches /api
    (data is always live) and never caches pages (network first; only the offline page is kept). */
-const CACHE = 'recollect-shell-v1';
+// v2 (11-26): the Kaaga icon and offline page replace the cached ones.
+const CACHE = 'kaaga-shell-v2';
 const OFFLINE = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -29,7 +30,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let msg = { title: 'Recollect', body: '', url: '/' };
+  let msg = { title: 'Kaaga', body: '', url: '/' };
   try {
     msg = { ...msg, ...event.data.json() };
   } catch {

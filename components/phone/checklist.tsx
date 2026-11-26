@@ -15,9 +15,9 @@ import { ownerApi } from '@/lib/api/ownerApi';
 
 const ROWS: Array<{ kind: PermissionKind; title: string; why: string }> = [
   { kind: 'exactAlarms', title: 'Alarms on the minute', why: 'Reminders ring at their time, not a few minutes late' },
-  { kind: 'notifications', title: 'Notifications', why: 'Reminders and the buddy’s questions can reach you' },
+  { kind: 'notifications', title: 'Notifications', why: 'Reminders and Kaaga’s questions can reach you' },
   { kind: 'battery', title: 'Not optimised for battery', why: 'The pictures and alarms keep running in the background' },
-  { kind: 'autoStart', title: 'Start by itself', why: 'Your phone’s maker may stop apps after a restart: allow Recollect' },
+  { kind: 'autoStart', title: 'Start by itself', why: 'Your phone’s maker may stop apps after a restart: allow Kaaga' },
   { kind: 'notificationAccess', title: 'Notification access', why: 'Only for the live lock screen’s notification icons' },
 ];
 

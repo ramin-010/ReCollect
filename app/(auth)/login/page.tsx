@@ -175,7 +175,7 @@ function LoginForm() {
 
   // Compute Layout Headings
   const heading = authMethod === 'select'
-    ? "Let's get started"
+    ? "Welcome back"
     : step === 'login'
     ? "Welcome back"
     : step === 'forgot'
@@ -183,7 +183,7 @@ function LoginForm() {
     : "Reset Password";
 
   const subheading = authMethod === 'select'
-    ? "Sign in to get things done - your tasks, notes, and meetings all in one place."
+    ? "Sign in to Kaaga: one memory for all your AIs."
     : step === 'login'
     ? "Sign in with your email to continue."
     : step === 'forgot'

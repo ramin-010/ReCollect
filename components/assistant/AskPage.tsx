@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, LoaderCircle, MessageSquareText, RotateCw, Square, CircleAlert } from 'lucide-react';
+import { ArrowUp, CalendarCheck, ChartNoAxesColumn, FilePlus2, MessageSquareText, RotateCw, Square, CircleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RcButton, RcSkel, rcScope } from '@/components/rc-ui';
 import { SectionFailed } from '@/components/learning/home/parts';
@@ -22,6 +22,7 @@ import { AskMarkdown } from './AskMarkdown';
 import { ActionCard, ToolRow } from './AskTools';
 import { costWords, money } from './askFormat';
 import './ask.css';
+import { KaagaMark } from '@/components/brand/kaaga';
 
 /** The turn in flight: his words, the tools as they finish, and a failure when there is one. */
 interface Pending {
@@ -77,7 +78,7 @@ const FIRST_STARTERS = [
 
 
 /**
- * Ask AI (MANAGER_AND_DOCS_PLAN §3.4): he asks, the manager acts through the same tools his agents
+ * Ask Kaaga (MANAGER_AND_DOCS_PLAN §3.4): he asks, the manager acts through the same tools his agents
  * use. The conversations are in the main sidebar (Chats, as in Notion); the open one in a 720 column;
  * each tool call as a row (changes with Undo, actions that need his tap as cards); what each answer
  * cost under it.
@@ -168,9 +169,9 @@ export function AskPage() {
 
   const activeThread = Array.isArray(threads) ? threads.find((t) => t._id === activeId) ?? null : null;
 
-  // The top bar: "Ask AI / <the conversation>".
+  // The top bar: "Ask Kaaga / <the conversation>".
   useEffect(() => {
-    setTopBar({ crumbs: activeThread ? [{ label: 'Ask AI', href: '/ask' }, { label: activeThread.title }] : [{ label: 'Ask AI' }] });
+    setTopBar({ crumbs: activeThread ? [{ label: 'Ask Kaaga', href: '/ask' }, { label: activeThread.title }] : [{ label: 'Ask Kaaga' }] });
   }, [setTopBar, activeThread]);
   useEffect(() => clearTopBar, [clearTopBar]);
 
@@ -345,7 +346,8 @@ export function AskPage() {
         {isEmpty ? (
           <div className="ask-scroll">
             <div className="ask-empty">
-              <h1 className="rc-h1">{buddyName ?? 'Ask AI'}</h1>
+              {/* Ask Kaaga (KAAGA_REBRAND_PLAN D2); a buddy the user named keeps its name. */}
+              <h1 className="rc-h1">Ask {buddyName?.trim() || 'Kaaga'}</h1>
               {opening ? (
                 <p className="ask-empty-sub text-[var(--rc-ink-1)]">{opening.text}</p>
               ) : firstWords ? (
@@ -425,7 +427,7 @@ export function AskPage() {
                           ) : (
                             <>
                               <div className="ask-working">
-                                <LoaderCircle className="ask-working-icon" strokeWidth={1.75} aria-hidden />
+                                <KaagaMark size={16} state="thinking" className="ask-working-mark" />
                                 <span className="ask-working-words">{pending.stopping ? 'Stopping…' : 'Working…'}</span>
                                 {pending.threadId && (
                                   <RcButton size="sm" variant="quiet" icon={<Square fill="currentColor" />} disabled={!!pending.stopping} onClick={() => stopTurn(pending.threadId!)}>
@@ -565,7 +567,7 @@ function Composer({
   if (noAi) {
     return (
       <div className="ask-composer-wrap">
-        <NoAiNotice what="Ask AI" />
+        <NoAiNotice what="Ask Kaaga" />
       </div>
     );
   }
@@ -573,6 +575,8 @@ function Composer({
     <div className="ask-composer-wrap">
       <AiPausedNotice className="mb-2" />
       <div className="ask-composer">
+        {/* The logo set's AI input: the mark at the box's start, rippling while Kaaga answers. */}
+        <KaagaMark size={16} state={disabled ? 'thinking' : 'still'} className="ask-composer-mark" />
         <textarea
           ref={inputRef}
           rows={1}

@@ -1,4 +1,4 @@
-// ReCollect - Custom Hook for Managing Create Note Dialog State
+// Kaaga - Custom Hook for Managing Create Note Dialog State
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

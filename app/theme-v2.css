@@ -1,5 +1,5 @@
 /*
- * Recollect theme v2: the app-wide token layer (2026-11-14). It is Notion-grade calm in light and dark.
+ * Kaaga theme v2: the app-wide token layer (2026-11-14). It is Notion-grade calm in light and dark.
  *
  * The values follow Notion's live design system, reverse-engineered from its CSS. See
  * context/research/design-v2/notion-tokens.md:
@@ -203,7 +203,7 @@ body {
   mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
 }
 
-/* ── The phone's bottom bar (ALWAYS_ON_SPEC 6.1): Home, Docs, Ask AI and capture. Under 768 px. ── */
+/* ── The phone's bottom bar (ALWAYS_ON_SPEC 6.1): Home, Docs, Ask Kaaga and capture. Under 768 px. ── */
 .phone-tabs {
   display: none;
 }

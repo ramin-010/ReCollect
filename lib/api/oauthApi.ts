@@ -1,6 +1,6 @@
 import axiosInstance from '@/lib/utils/axios';
 
-/** An app's sign-in to Recollect (ALWAYS_ON_SPEC 6.5): what the consent page shows, and his answer. */
+/** An app's sign-in to Kaaga (ALWAYS_ON_SPEC 6.5): what the consent page shows, and his answer. */
 
 export interface ConsentInfo {
   client: { name: string; kind: 'dcr' | 'cimd' | string; redirectHost: string };

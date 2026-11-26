@@ -12,11 +12,12 @@ import { toast } from 'sonner';
 import { buddyApi, type BuddyThread, type BuddyThreadDetail, type ThreadPatch, type YouData } from '@/lib/api/buddyApi';
 import { SOURCE_WORDS, agoWords, dayWords } from '@/components/phone/parts';
 import { useKept } from '@/components/phone/kept';
+import { buddyName } from '@/lib/brand';
 
 type Pane = 'mind' | 'mem' | 'hears';
 const OPEN = new Set(['noticed', 'active', 'committed', 'paused']);
 const SOURCE_ICON: Record<string, typeof Terminal> = { hook: Terminal, ask_ai: MessageCircle, doc_ask: MessageCircle, answer: Smartphone, connector: Globe, import: Upload, pocket: StickyNote, agent: Bot, tell: MessageCircle };
-const VIA_WORDS: Record<string, string> = { hook: 'in Claude Code', ask_ai: 'in Ask AI', doc_ask: 'in a doc', answer: 'answering a question', tell: 'by Tell', agent: 'passed on by an agent', connector: 'from your other AI apps', import: 'in an old chat', pocket: 'in your pocket notes', app: 'in the app', you: 'by you' };
+const VIA_WORDS: Record<string, string> = { hook: 'in Claude Code', ask_ai: 'in Ask Kaaga', doc_ask: 'in a doc', answer: 'answering a question', tell: 'by Tell', agent: 'passed on by an agent', connector: 'from your other AI apps', import: 'in an old chat', pocket: 'in your pocket notes', app: 'in the app', you: 'by you' };
 const KIND_WORDS: Record<string, string> = { progress: 'did some', done: 'did it', skipped: 'skipped it', changed: 'changed the plan', paused: 'paused it', resumed: 'took it up again', dropped: 'let it go', finished: 'finished it', answered: 'answered', steer: 'said how to treat it' };
 const shortDate = (day: string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(`${day}T12:00:00`));
 const todayLocal = () => {
@@ -100,8 +101,8 @@ export default function YouScreen() {
     };
   }, [setThreads, setYou]);
 
-  const title = you?.settings.name ?? 'Your buddy';
-  const inText = you?.settings.name ?? 'your buddy';
+  const title = buddyName(you?.settings.name);
+  const inText = buddyName(you?.settings.name);
   const mind = (threads ?? []).filter((t) => OPEN.has(t.stage));
   const memories = (you?.memories ?? []).filter((m) => m.status === 'active');
   const lasting = memories.filter((m) => m.lasting);

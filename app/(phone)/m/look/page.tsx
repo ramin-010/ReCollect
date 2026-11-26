@@ -15,6 +15,7 @@ import { useLook, type LookMode, type LookTheme } from '@/components/phone/look'
 import { Switch } from '@/components/phone/parts';
 import { bridge, screenLook, setScreenLook, useShell, type ShellState } from '@/components/phone/shell';
 import { useKept } from '@/components/phone/kept';
+import { buddyName } from '@/lib/brand';
 
 const LOOKS: Array<{ theme: LookTheme; name: string; meta: string; ground: string; card: string; ink: string; line: string; ring?: boolean }> = [
   { theme: 'paper', name: 'Paper', meta: 'Warm, like a notebook', ground: '#F5F0E6', card: '#ECE4D4', ink: '#23201B', line: '#CEC2AB' },
@@ -119,8 +120,8 @@ function ScreensGroup({ shell, name }: { shell: ShellState; name: string }) {
       ) : (
         <p className="meta" style={{ marginTop: 12 }}>
           {screen === 'lock'
-            ? 'Your own lock screen wallpaper stays as it is. Recollect leaves it alone.'
-            : 'Your own home screen wallpaper stays as it is. Recollect leaves it alone.'}
+            ? 'Your own lock screen wallpaper stays as it is. Kaaga leaves it alone.'
+            : 'Your own home screen wallpaper stays as it is. Kaaga leaves it alone.'}
         </p>
       )}
     </div>
@@ -269,7 +270,7 @@ export default function LookScreen() {
       alive = false;
     };
   }, [shell, setName]);
-  const buddy = name?.trim() || 'your buddy';
+  const buddy = buddyName(name);
 
   return (
     <>

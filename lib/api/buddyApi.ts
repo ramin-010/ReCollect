@@ -1,7 +1,7 @@
 import axiosInstance from '@/lib/utils/axios';
 
 /**
- * The buddy (context/specs/BUDDY_MEMORY_PLAN.md): what Recollect knows about the user, from his chats
+ * The buddy (context/specs/BUDDY_MEMORY_PLAN.md): what Kaaga knows about the user, from his chats
  * and his own words, and its settings. The page /you draws it; only he can change his memories.
  */
 

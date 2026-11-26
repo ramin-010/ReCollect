@@ -104,7 +104,7 @@ function sourceWords(m: Memory): string {
     case 'feedback':
       return 'from your thumbs';
     case 'buddy':
-      return 'your buddy’s own';
+      return 'Kaaga’s own';
     default:
       return m.agentName ? `from ${m.agentName}` : 'from an agent';
   }
@@ -189,7 +189,7 @@ export function YouPage() {
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         <h1 className="rc-h1">About you</h1>
-        <p className="rc-meta mt-1.5 max-w-[560px]">What your buddy knows, from your chats and your own words. Only you see this, and you can change any of it.</p>
+        <p className="rc-meta mt-1.5 max-w-[560px]">What Kaaga knows, from your chats and your own words. Only you see this, and you can change any of it.</p>
       </div>
       {ready && current === 'knows' && (
         <RcButton variant="main" icon={<Plus />} onClick={() => setAdding(true)}>
@@ -201,7 +201,7 @@ export function YouPage() {
 
   const pausedNotice = ready?.settings.paused && (
     <div role="status" className="rc-card mt-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <p className="text-[15px] rc-ink-2">Paused: your buddy keeps nothing new and doesn’t think until you turn learning back on.</p>
+      <p className="text-[15px] rc-ink-2">Paused: Kaaga keeps nothing new and doesn’t think until you turn learning back on.</p>
       <RcButton size="sm" onClick={() => void setPaused(false)}>
         Turn learning on
       </RcButton>
@@ -275,7 +275,7 @@ export function YouPage() {
               />
               <label className="you-search">
                 <Search aria-hidden className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} />
-                <input className="rc-input" type="search" value={query} placeholder="Search what it knows" aria-label="Search what your buddy knows" onChange={(e) => setQuery(e.target.value)} />
+                <input className="rc-input" type="search" value={query} placeholder="Search what it knows" aria-label="Search what Kaaga knows" onChange={(e) => setQuery(e.target.value)} />
               </label>
             </div>
 
@@ -324,7 +324,7 @@ export function YouPage() {
       <div className={frame}>
         {header}
         {data === null && <YouSkeleton />}
-        {data === 'failed' && <SectionFailed className="mt-8" what="what your buddy knows" onRetry={reload} />}
+        {data === 'failed' && <SectionFailed className="mt-8" what="what Kaaga knows" onRetry={reload} />}
         {ready && (
           <>
             {pausedNotice}
@@ -369,7 +369,7 @@ const EMPTY_VIEW: Record<View, string> = {
 function EmptyAll({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="you-empty">
-      <p className="rc-body rc-ink-1">Your buddy doesn’t know anything yet.</p>
+      <p className="rc-body rc-ink-1">Kaaga doesn’t know anything yet.</p>
       <p className="rc-meta mt-1 max-w-[520px]">Your agents save what they learn about you here as you work with them. You can also tell it something yourself.</p>
       <RcButton className="mt-4" icon={<Plus />} onClick={onAdd}>
         Add a memory
@@ -564,11 +564,11 @@ function WorkLog({ on }: { on: boolean }) {
 /** Whether it follows what is going on and asks about it (ECOSYSTEM_V2_PLAN stage 3: threads and questions). */
 const SOURCE_WORD: Record<string, string> = {
   hook: 'Claude Code',
-  ask_ai: 'Ask AI',
-  doc_ask: 'Ask AI in a doc',
+  ask_ai: 'Ask Kaaga',
+  doc_ask: 'Ask Kaaga in a doc',
   answer: 'Your answers to its questions',
   agent: 'Notes your agents saved',
-  tell: 'Tell your buddy',
+  tell: 'Tell Kaaga',
   app: 'This page',
   pocket: 'Your pocket notes',
   import: 'Chats you brought in',
@@ -696,10 +696,10 @@ function AsksSwitch({ on, onChanged }: { on: boolean; onChanged: () => void }) {
   return (
     <div className="you-setting">
       <div className="min-w-0">
-        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">The buddy may ask me questions</p>
+        <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Kaaga may ask me questions</p>
         <p className="rc-meta mt-0.5">Two a day at most, about plans and habits you came back to. Off: it still follows along, it just never asks.</p>
       </div>
-      <RcSwitch checked={on} disabled={busy} onChange={(v) => void toggle(v)} label="The buddy may ask me questions" />
+      <RcSwitch checked={on} disabled={busy} onChange={(v) => void toggle(v)} label="Kaaga may ask me questions" />
     </div>
   );
 }
@@ -722,7 +722,7 @@ function LoopSwitch({ on, onChanged }: { on: boolean; onChanged: () => void }) {
     <div className="you-setting">
       <div className="min-w-0">
         <p className="text-[15px] font-medium text-[var(--rc-ink-1)]">Follow what I have going on (new)</p>
-        <p className="rc-meta mt-0.5">It notices plans and habits you mention, links your updates to them, and may ask about one now and then: two questions a day at most, never about something you mentioned only once. It reads your Ask AI chats too.</p>
+        <p className="rc-meta mt-0.5">It notices plans and habits you mention, links your updates to them, and may ask about one now and then: two questions a day at most, never about something you mentioned only once. It reads your Ask Kaaga chats too.</p>
       </div>
       <RcSwitch checked={on} disabled={busy} onChange={(v) => void toggle(v)} label="Follow what I have going on" />
     </div>
@@ -789,7 +789,7 @@ function Portrait({ portrait }: { portrait: YouData['settings']['portrait'] }) {
   ].filter((p): p is { title: string; text: string } => !!p.text);
   if (!parts.length) return null;
   return (
-    <section aria-label="Your buddy’s portrait of you" className="rc-card mt-6 grid gap-4 px-5 py-4">
+    <section aria-label="Kaaga’s portrait of you" className="rc-card mt-6 grid gap-4 px-5 py-4">
       {parts.map((p) => (
         <div key={p.title}>
           <h2 className="rc-h2">{p.title}</h2>
@@ -920,7 +920,7 @@ function MemoryRow({ memory: m, onChange, onForget }: { memory: Memory; onChange
         open={confirm}
         onOpenChange={setConfirm}
         title="Forget this for good?"
-        body={<>“{m.text}” and the notes behind it are deleted. Your buddy won’t have it any more, and this can’t be undone.</>}
+        body={<>“{m.text}” and the notes behind it are deleted. Kaaga won’t have it any more, and this can’t be undone.</>}
         confirmLabel="Forget for good"
         danger
         busy={busy}
@@ -988,7 +988,7 @@ function AddSheet({ open, onOpenChange, onAdded }: { open: boolean; onOpenChange
         onOpenChange(o);
       }}
       title="Add a memory"
-      description="Something your buddy should know about you. It’s yours: no agent can change it."
+      description="Something Kaaga should know about you. It’s yours: no agent can change it."
       initialFocusId="you-add-text"
       footer={
         <>
@@ -1177,7 +1177,7 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `recollect-buddy-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `kaaga-memory-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -1284,7 +1284,7 @@ function Learning({ data, onPaused, onChanged }: { data: YouData; onPaused: (pau
 
 function YouSkeleton() {
   return (
-    <div className="mt-8 flex flex-col gap-3" aria-busy aria-label="Loading what your buddy knows">
+    <div className="mt-8 flex flex-col gap-3" aria-busy aria-label="Loading what Kaaga knows">
       <RcSkel className="h-8 w-[340px] max-w-full rounded-[8px]" />
       <RcSkel className="mt-4 h-[52px] w-full rounded-[6px]" />
       <RcSkel className="h-[52px] w-full rounded-[6px]" />

@@ -47,9 +47,9 @@ export function PathMark({ status, className }: { status: PathStatus; className?
 /**
  * The prompt that starts a study chat on a topic (Home's Next up, the path's menu). The chat's
  * first call is get_brief (where the user stands, the topic's last session and weak spots, a session
- * key); the recollect-study skill takes it from there (SYNC_SPINE_SPEC 1.3).
+ * key); the kaaga-study skill takes it from there (SYNC_SPINE_SPEC 1.3).
  */
 export function studyPrompt(subject: string, topic: { position: number; title: string }, nextStep: string | null): string {
   const step = nextStep ? ` (next step: ${nextStep})` : '';
-  return `Study with me using Recollect: start with get_brief, then continue ${subject}, topic ${topic.position}. ${topic.title}${step}. Checkpoint as we go.`;
+  return `Study with me using Kaaga: start with get_brief, then continue ${subject}, topic ${topic.position}. ${topic.title}${step}. Checkpoint as we go.`;
 }

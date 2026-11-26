@@ -1,16 +1,16 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * The installable app (ALWAYS_ON_SPEC 6.2, 6.7): Recollect's name, the page colours of theme v2,
- * the monochrome mark (public/icons, drawn by scratchpad/scripts/make-icons.js), and a share target
+ * The installable app (ALWAYS_ON_SPEC 6.2, 6.7): Kaaga's name, the page colours of theme v2,
+ * the Kaaga app icon (public/icons, from the logo set: KAAGA_REBRAND_PLAN), and a share target
  * so a link or text shared from another app becomes a capture (/share).
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Recollect',
-    short_name: 'Recollect',
-    description: 'Keep what you are learning alive: today’s reviews, your notes and your plan, on your laptop and phone.',
+    name: 'Kaaga',
+    short_name: 'Kaaga',
+    description: 'One memory for all your AIs: what you learn, build and plan, brought back at the right moment.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

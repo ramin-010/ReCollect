@@ -249,8 +249,8 @@ function SignupForm() {
 
   const subheading = authMethod === 'select'
     ? openInvite
-      ? `${openInvite.from} invited you to Recollect${openInvite.allowanceUsd > 0 ? `, with $${openInvite.allowanceUsd.toFixed(0)} of free AI to start` : ''}. Use ${openInvite.email} to make your account.`
-      : inviteProblem ?? "Sign up to get things done - your tasks, notes, and meetings all in one place."
+      ? `${openInvite.from} invited you to Kaaga${openInvite.allowanceUsd > 0 ? `, with $${openInvite.allowanceUsd.toFixed(0)} of free AI to start` : ''}. Use ${openInvite.email} to make your account.`
+      : inviteProblem ?? "Make your Kaaga: one memory for all your AIs."
     : step === 'signup'
     ? openInvite ? `The invite is for ${openInvite.email}.` : "Start organizing your knowledge today."
     : `We sent a code to ${signupData?.email}`;

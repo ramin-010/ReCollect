@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy',
-  description: 'What Recollect keeps about you, what its AI reads, who can see what, and how to download or delete it all.',
+  description: 'What Kaaga keeps about you, what its AI reads, who can see what, and how to download or delete it all.',
   robots: {
     index: true,
     follow: true,

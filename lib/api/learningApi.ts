@@ -1,5 +1,5 @@
 /**
- * Learning API (Revise's dashboard inside Recollect): one function per endpoint of
+ * Learning API (Revise's dashboard inside Kaaga): one function per endpoint of
  * LEARNING_SPEC §2, plus `uploadLearningFile` and the task helpers the Home page uses.
  *
  * Wire conventions: `{ success: true, data }` on success, `{ message, code? }` on error,

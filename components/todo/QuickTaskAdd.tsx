@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, Pin, RefreshCw, Sparkles } from 'lucide-react';
+import { Paperclip, Pin, RefreshCw } from 'lucide-react';
 import { NoteFinder } from '@/components/learning/NoteFinder';
 import { toast } from 'sonner';
 import { TaskInput } from './task_Input';
@@ -18,6 +18,7 @@ import { SubjectPicker } from '@/components/learning/SubjectPicker';
 import { takePaletteMode } from '@/lib/capturePalette';
 import { cn } from '@/lib/utils';
 import { formatMinutes, parseSessionLog, SESSIONS_CHANGED_EVENT } from '@/lib/learning/sessionLog';
+import { KaagaIcon } from '@/components/brand/kaaga';
 
 interface QuickTaskAddProps {
   isOpen: boolean;
@@ -433,7 +434,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   );
 }
 
-/** Ask mode: one message for Ask AI; Enter opens the page with it (MANAGER_AND_DOCS_PLAN §3.4). */
+/** Ask mode: one message for Ask Kaaga; Enter opens the page with it (MANAGER_AND_DOCS_PLAN §3.4). */
 function AskBox({ onAsk }: { onAsk: (text: string) => void }) {
   const [text, setText] = useState('');
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -444,12 +445,12 @@ function AskBox({ onAsk }: { onAsk: (text: string) => void }) {
   return (
     <div className="rounded-xl bg-[hsl(var(--popover))] shadow-[0_0_0_1px_var(--border-subtle),0_10px_30px_-5px_rgba(0,0,0,0.3)]">
       <div className="flex items-start gap-3 px-4 pt-3 pb-2">
-        <Sparkles className="mt-[3px] h-[18px] w-[18px] shrink-0 text-[var(--ui-icon)]" strokeWidth={1.75} aria-hidden />
+        <KaagaIcon className="mt-[3px] h-[18px] w-[18px] shrink-0 text-[var(--ui-icon)]" />
         <textarea
           ref={ref}
           rows={1}
           value={text}
-          aria-label="Ask AI"
+          aria-label="Ask Kaaga"
           placeholder="Ask, or tell it what to do"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -461,7 +462,7 @@ function AskBox({ onAsk }: { onAsk: (text: string) => void }) {
           className="max-h-[160px] min-h-[24px] flex-1 resize-none bg-transparent text-[16px] leading-[1.5] [field-sizing:content] text-[var(--ui-ink-1)] outline-none placeholder:text-[var(--ui-ink-3)]"
         />
       </div>
-      <p className="px-4 pb-3 pl-[46px] text-[12.5px] text-[var(--ui-ink-3)]">Opens Ask AI and sends it. A message costs a few cents.</p>
+      <p className="px-4 pb-3 pl-[46px] text-[12.5px] text-[var(--ui-ink-3)]">Opens Ask Kaaga and sends it. A message costs a few cents.</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import axiosInstance from '@/lib/utils/axios';
 
-/** EASY_SETUP_PLAN §3.2: a computer signing in by approval (`npx recollect-setup`): what the page shows, and the answer. */
+/** EASY_SETUP_PLAN §3.2: a computer signing in by approval (`npx kaaga-setup`): what the page shows, and the answer. */
 export interface PcSignIn {
   /** "BCDF-GHJK": the code the terminal shows. */
   code: string;

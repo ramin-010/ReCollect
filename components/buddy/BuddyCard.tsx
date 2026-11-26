@@ -13,6 +13,8 @@ import { WhyNot } from './WhyNot';
 import { NoAiNotice, useNoAi } from '@/components/ai/NoAiNotice';
 import { voice } from './voice';
 import './you.css';
+import { BuddyAvatar } from './BuddyAvatar';
+import { buddyName } from '@/lib/brand';
 
 /**
  * The buddy on Home (BUDDY_MEMORY_PLAN §3.4), the day's opening under the date (the owner, 11-21; a
@@ -81,14 +83,14 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
   if (noAi) {
     return (
       <section aria-labelledby="buddy-h">
-        <LabelLine id="buddy-h" title={data.name ? `From ${data.name}` : 'From your buddy'} />
-        <NoAiNotice what="Your buddy" />
+        <LabelLine id="buddy-h" title={`From ${buddyName(data.name)}`} />
+        <NoAiNotice what={buddyName(data.name)} />
       </section>
     );
   }
   const day = data.day;
   const line = data.line;
-  const title = data.name ? `From ${data.name}` : 'From your buddy';
+  const title = `From ${buddyName(data.name)}`;
 
   const thumb = async (target: string, verdict: 'more' | 'less') => {
     if (!day) return;
@@ -132,7 +134,7 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
     try {
       const res = (await buddyApi.tell(clean)) as { paused?: boolean } | null;
       if (res?.paused) {
-        toast.error('Your buddy is paused. Resume it in Settings to tell it things.');
+        toast.error('Kaaga is paused. Resume it in Settings to tell it things.');
         return;
       }
       setText('');
@@ -175,8 +177,8 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
         className={lead ? 'rc-input flex-1' : 'h-[34px] min-w-0 flex-1 border-0 bg-transparent text-[var(--rc-fs-body)] text-[var(--rc-ink-1)] placeholder:text-[var(--rc-ink-3)] focus-visible:!outline-none'}
         value={text}
         maxLength={1000}
-        placeholder={data.loop ? `Tell ${data.name || 'your buddy'} something…` : 'Tell your buddy something…'}
-        aria-label="Tell your buddy something"
+        placeholder={`Tell ${buddyName(data.name)} something…`}
+        aria-label={`Tell ${buddyName(data.name)} something`}
         onChange={(e) => setText(e.target.value)}
       />
       {(lead || text.trim()) && (
@@ -225,9 +227,7 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
       {lead && inline ? (
         // Inside Home's year card (the owner's placement options, 11-22): one quiet line, no bubble; thumbs and Reply at its end.
         <div className="flex flex-wrap items-start gap-x-2.5">
-          <span className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-[var(--rc-main)] text-[11px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
-            {(data.name || 'B').charAt(0).toUpperCase()}
-          </span>
+          <BuddyAvatar name={data.name} size={22} className="mt-[2px]" state="call" once />
           <p className={cn('min-w-0 flex-1 text-[15px] leading-[1.5] text-[var(--rc-ink-1)]', voice.className)}>{lead.text}</p>
           {/* On a phone the thumbs and Reply drop under the words, so the words keep the width. */}
           <div className="-my-0.5 -mr-1.5 flex shrink-0 items-center max-sm:-ml-1.5 max-sm:mt-1 max-sm:w-full max-sm:pl-[32px]">
@@ -241,9 +241,7 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
       ) : lead ? (
         <div className="grid grid-cols-[28px_minmax(0,1fr)] items-end gap-x-2.5">
           {/* A chat message (the owner, 11-21): the avatar at the bubble's foot, the bubble's corner toward it. */}
-          <span className="mb-[30px] grid h-7 w-7 place-items-center rounded-full bg-[var(--rc-main)] text-[12px] font-[700] text-[var(--rc-on-main)]" aria-hidden>
-            {(data.name || 'B').charAt(0).toUpperCase()}
-          </span>
+          <BuddyAvatar name={data.name} size={28} className="mb-[30px]" state="call" once />
           <div className="min-w-0">
             <p
               className={cn(
@@ -255,7 +253,7 @@ export function BuddyCard({ inline = false }: { inline?: boolean } = {}) {
               {lead.text}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-x-1 text-[13px] text-[var(--rc-ink-3)]">
-              <span className="px-1">{data.name || 'Buddy'}</span>
+              <span className="px-1">{buddyName(data.name)}</span>
               {lead.target && <Thumbs target={lead.target} />}
               <RcButton size="sm" variant="quiet" aria-expanded={more} onClick={() => setMore((x) => !x)}>
                 {more ? 'Less' : noteBelow ? 'Its note' : 'Reply'}

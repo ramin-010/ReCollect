@@ -15,7 +15,7 @@ import { lx } from './styles';
 const pickedDay = (d: Date): DayString => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /**
- * Revise RescheduleModal, with Recollect's SmartDatePicker instead of the 589-line calendar.
+ * Revise RescheduleModal, with Kaaga's SmartDatePicker instead of the 589-line calendar.
  * Revisions take the date part only (a day ≥ today in the user's zone; later cycles shift
  * with it server side); tasks take date + time.
  */

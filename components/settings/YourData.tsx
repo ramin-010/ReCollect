@@ -35,7 +35,7 @@ export function YourData() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `recollect-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `kaaga-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -76,7 +76,7 @@ export function YourData() {
           Download everything
         </h2>
         <p className="rc-meta mt-1">
-          One file with all that is yours: your docs as Markdown, tasks, reminders, plans and reviews, Ask AI’s conversations, everything your buddy keeps, and
+          One file with all that is yours: your docs as Markdown, tasks, reminders, plans and reviews, Ask Kaaga’s conversations, everything Kaaga keeps, and
           the AI you used. No passwords or keys.
         </p>
         <RcButton className="mt-3" variant="outline" icon={<Download />} busy={busy} onClick={() => void download()}>
@@ -117,7 +117,7 @@ export function YourData() {
         open={deleting}
         onOpenChange={(o) => !gone && setDeleting(o)}
         title="Delete your account?"
-        description="Your docs, tasks, plans, chats and everything your buddy keeps are removed at once. This can’t be undone."
+        description="Your docs, tasks, plans, chats and everything Kaaga keeps are removed at once. This can’t be undone."
         initialFocusId="delete-confirm"
         footer={
           <>

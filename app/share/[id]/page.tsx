@@ -1,4 +1,4 @@
-// ReCollect - Public Shared Note Page (No Login Required)
+// Kaaga - Public Shared Note Page (No Login Required)
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -113,7 +113,7 @@ export default function SharedNotePage() {
           </p>
           <Link href="/">
             <Button variant="primary">
-              Go to ReCollect
+              Go to Kaaga
             </Button>
           </Link>
         </div>
@@ -232,7 +232,7 @@ export default function SharedNotePage() {
           <div className="max-w-md mx-auto">
             <h3 className="text-xl font-semibold mb-2">Like what you see?</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">
-              Create your own knowledge base with ReCollect. Organize your thoughts, 
+              Create your own knowledge base with Kaaga. Organize your thoughts, 
               share your ideas, and build your second brain.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">

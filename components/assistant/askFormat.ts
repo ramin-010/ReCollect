@@ -1,4 +1,4 @@
-/** Ask AI's money words, shared by the page and the box inside a doc. */
+/** Ask Kaaga's money words, shared by the page and the box inside a doc. */
 
 /** "$50" for whole dollars, "$3.20" otherwise. */
 export const money = (usd: number) => (Number.isInteger(usd) ? `$${usd}` : `$${usd.toFixed(2)}`);

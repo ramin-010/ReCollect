@@ -1,4 +1,4 @@
-// ReCollect - Reminder Dialog Component - Simplified
+// Kaaga - Reminder Dialog Component - Simplified
 'use client';
 
 import React, { useState } from 'react';

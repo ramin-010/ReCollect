@@ -1,4 +1,4 @@
-// ReCollect - Create Dashboard Dialog with Custom Components
+// Kaaga - Create Dashboard Dialog with Custom Components
 'use client';
 
 import { useState } from 'react';

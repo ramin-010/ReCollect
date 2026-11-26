@@ -35,7 +35,7 @@ const SCOPES = [
 ] as const;
 
 /**
- * Settings → Agents: personal access tokens for the Recollect MCP server (Claude Code and other
+ * Settings → Agents: personal access tokens for the Kaaga MCP server (Claude Code and other
  * agents). A token is shown once; revoking it cuts the agent off at once.
  */
 export function AgentTokens() {
@@ -104,14 +104,14 @@ export function AgentTokens() {
 
   const active = (tokens ?? []).filter((t) => !t.revokedAt);
   // The MCP server lives in mcp/ (built to dist/); NEXT_PUBLIC_MCP_SERVER_PATH says where on this computer. `-s user` makes it available in every project.
-  const serverPath = process.env.NEXT_PUBLIC_MCP_SERVER_PATH ?? '/path/to/recollect/mcp/dist/index.js';
+  const serverPath = process.env.NEXT_PUBLIC_MCP_SERVER_PATH ?? '/path/to/kaaga/mcp/dist/index.js';
   const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8002';
-  const setup = fresh ? `claude mcp add recollect -s user -e RECOLLECT_URL=${apiUrl} -e RECOLLECT_TOKEN=${fresh.token} -- node ${serverPath}` : '';
+  const setup = fresh ? `claude mcp add kaaga -s user -e KAAGA_URL=${apiUrl} -e KAAGA_TOKEN=${fresh.token} -- node ${serverPath}` : '';
 
   return (
     <div className={cn(rcScope, 'set-section')}>
       <p className="rc-body rc-ink-2">
-        Let a coding agent write learning docs, set goals and plan your week through the Recollect MCP server. Its changes are labelled “From your agent” on Home, and each one can be undone.
+        Let a coding agent write learning docs, set goals and plan your week through the Kaaga MCP server. Its changes are labelled “From your agent” on Home, and each one can be undone.
       </p>
       <SetUpComputer apiUrl={apiUrl} />
       <ConnectChats apiUrl={apiUrl} />

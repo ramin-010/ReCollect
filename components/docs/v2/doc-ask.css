@@ -1,5 +1,5 @@
-/* Ask AI inside a doc (DOCS_EDITOR_V2_PLAN phase 5): the box under the block he is in, on the float
-   layer (12 radius, the float shadow), as wide as the text column. Its rows reuse Ask AI's tool rows.
+/* Ask Kaaga inside a doc (DOCS_EDITOR_V2_PLAN phase 5): the box under the block he is in, on the float
+   layer (12 radius, the float shadow), as wide as the text column. Its rows reuse Ask Kaaga's tool rows.
    The one authored moment: what the AI wrote takes the selection tint and lets it go (1.6 s). */
 
 .lab-editor {
@@ -130,6 +130,11 @@
 .doc-ask-answer--streaming {
   margin-top: 6px;
 }
+/* Kaaga writing: the mark's ripple (KAAGA_REBRAND_PLAN D4). */
+.doc-ask-thinking {
+  flex-shrink: 0;
+  color: var(--rc-ink-2);
+}
 .doc-ask-spin {
   width: 16px;
   height: 16px;
@@ -215,7 +220,7 @@
   display: none;
 }
 
-/* The format bar's Ask AI: the mark and the words, a hairline before the marks. */
+/* The format bar's Ask Kaaga: the mark and the words, a hairline before the marks. */
 .lab-bar-btn.lab-bar-ask {
   display: flex;
   width: auto;

@@ -30,7 +30,7 @@ const AGENT_POINTS = [
   {
     icon: Network,
     title: 'Notes with real diagrams',
-    text: 'Agents write Mermaid; Recollect lays out the boxes and arrows, and keeps your own changes when they edit again.',
+    text: 'Agents write Mermaid; Kaaga lays out the boxes and arrows, and keeps your own changes when they edit again.',
   },
   {
     icon: LayoutList,
@@ -127,7 +127,7 @@ export default function WelcomePage() {
                  </h1>
 
                  <p className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] max-w-3xl mx-auto mb-12 leading-relaxed">
-                   Recollect brings your notes back on a short daily list, keeps your goals honest and works with the
+                   Kaaga brings your notes back on a short daily list, keeps your goals honest and works with the
                    coding agents you already use. The commands you reach for every day are one click away.
                  </p>
 
@@ -185,7 +185,7 @@ export default function WelcomePage() {
                     style={caveat.style}
                     className="text-2xl tracking-wide text-indigo-400/90 font-semibold whitespace-nowrap"
                     >
-                    Ask AI in any doc
+                    Ask Kaaga in any doc
                     </span>
 
                     {/* Minimal heart */}
@@ -323,7 +323,7 @@ export default function WelcomePage() {
               Your agents keep it up to date.
             </h2>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Recollect has its own MCP server. Claude Code and other agents read your plan, write notes with real diagrams and log what
+              Kaaga has its own MCP server. Claude Code and other agents read your plan, write notes with real diagrams and log what
               you studied, through a token you can end at any time. Every change they make shows on Home and can be undone.
             </p>
           </div>
@@ -383,7 +383,7 @@ export default function WelcomePage() {
                 </Button>
             </div>
             <div className="pt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground font-medium">
-                <span>© 2026 Recollect</span>
+                <span>© 2026 Kaaga</span>
                 <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             </div>

@@ -69,7 +69,7 @@ export function OnMyMind() {
       <h2 id="you-mind" className="rc-h2">
         On my mind
       </h2>
-      <p className="rc-meta mt-1.5 max-w-[560px]">Plans and habits your buddy noticed in what you said. It may ask about one now and then; you decide how much.</p>
+      <p className="rc-meta mt-1.5 max-w-[560px]">Plans and habits Kaaga noticed in what you said. It may ask about one now and then; you decide how much.</p>
       <form
         className="mt-3 flex max-w-[560px] items-center gap-2"
         onSubmit={(e) => {
@@ -77,7 +77,7 @@ export function OnMyMind() {
           void add();
         }}
       >
-        <input className="rc-input flex-1" value={adding} maxLength={120} placeholder="Something to keep an eye on" aria-label="Something for your buddy to keep an eye on" onChange={(e) => setAdding(e.target.value)} />
+        <input className="rc-input flex-1" value={adding} maxLength={120} placeholder="Something to keep an eye on" aria-label="Something for Kaaga to keep an eye on" onChange={(e) => setAdding(e.target.value)} />
         <RcButton type="submit" variant="outline" size="sm" disabled={busy || adding.trim().length < 2}>
           <Plus aria-hidden className="h-4 w-4" /> Add
         </RcButton>

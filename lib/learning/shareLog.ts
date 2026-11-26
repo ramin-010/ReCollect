@@ -1,5 +1,5 @@
-// Share to log (11-22, the owner: "how would I track a LeetCode problem or a YouTube video that isn't in Recollect?"):
-// a link shared to Recollect from another app can be logged as time in one tap. What it reads from the share: a title,
+// Share to log (11-22, the owner: "how would I track a LeetCode problem or a YouTube video that isn't in Kaaga?"):
+// a link shared to Kaaga from another app can be logged as time in one tap. What it reads from the share: a title,
 // the kind (a problem site is practice, anything else study) and, for a problem, its name.
 import type { SessionKind } from './types';
 

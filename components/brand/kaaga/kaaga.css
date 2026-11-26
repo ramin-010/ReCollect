@@ -1,0 +1,97 @@
+/* The Kaaga mark's motion (KAAGA_REBRAND_PLAN D3, D4). Transforms in the mark's own units (transform-box: view-box),
+   so the motion is the same at 16 px and at 200 px. The violet is Kaaga's voice: the call, and a flash when it saves. */
+:root {
+  --kaaga-ink: #141416;
+  --kaaga-bone: #ece9e2;
+  --kaaga-paper: #f1eee7;
+  --kaaga-violet: #8e95ff;
+}
+
+.kaaga-mark {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.kaaga-s {
+  fill: currentColor;
+  transform-box: view-box;
+}
+.kaaga-s2 {
+  transform: translateX(40px);
+}
+
+/* idle: the pulled slice breathes */
+.kaaga-idle .kaaga-s2 {
+  animation: kaaga-breathe 4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes kaaga-breathe {
+  0%, 100% { transform: translateX(40px); }
+  50% { transform: translateX(30px); }
+}
+
+/* thinking: a ripple runs down the slices */
+.kaaga-thinking .kaaga-s0 { animation: kaaga-ripple 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.kaaga-thinking .kaaga-s1 { animation: kaaga-ripple 1.6s cubic-bezier(0.45, 0, 0.55, 1) -0.19s infinite; }
+.kaaga-thinking .kaaga-s2 { animation: kaaga-ripple-out 1.6s cubic-bezier(0.45, 0, 0.55, 1) -0.38s infinite; }
+.kaaga-thinking .kaaga-s3 { animation: kaaga-ripple 1.6s cubic-bezier(0.45, 0, 0.55, 1) -0.57s infinite; }
+@keyframes kaaga-ripple {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(20px); }
+  75% { transform: translateX(-20px); }
+}
+@keyframes kaaga-ripple-out {
+  0%, 100% { transform: translateX(40px); }
+  25% { transform: translateX(52px); }
+  75% { transform: translateX(28px); }
+}
+
+/* noted: the slice files back in, the one above flashes violet (something was saved) */
+.kaaga-noted .kaaga-s2 { animation: kaaga-file 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.kaaga-noted .kaaga-s1 { animation: kaaga-flash 1.8s ease-in-out infinite; }
+@keyframes kaaga-file {
+  0%, 10% { transform: translateX(40px); }
+  30%, 55% { transform: translateX(0); }
+  80%, 100% { transform: translateX(40px); }
+}
+@keyframes kaaga-flash {
+  0%, 15%, 85%, 100% { fill: currentColor; }
+  40% { fill: var(--kaaga-violet); }
+}
+
+/* call: the slice slides out and lights violet (Kaaga has something to say) */
+.kaaga-call .kaaga-s2 { animation: kaaga-call 2.4s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+@keyframes kaaga-call {
+  0%, 8% { transform: translateX(40px); fill: currentColor; }
+  28%, 72% { transform: translateX(92px); fill: var(--kaaga-violet); }
+  92%, 100% { transform: translateX(40px); fill: currentColor; }
+}
+
+.kaaga-once .kaaga-s {
+  animation-iteration-count: 1;
+}
+
+/* reveal: the slices arrive from alternate sides and lock in, then the third pulls out */
+.kaaga-reveal .kaaga-s0 { animation: kaaga-from-left 0.9s cubic-bezier(0.34, 1.32, 0.64, 1) 0.15s both; }
+.kaaga-reveal .kaaga-s1 { animation: kaaga-from-right 0.9s cubic-bezier(0.34, 1.32, 0.64, 1) 0.29s both; }
+.kaaga-reveal .kaaga-s2 { animation: kaaga-from-left-pull 2.5s linear both; }
+.kaaga-reveal .kaaga-s3 { animation: kaaga-from-right 0.9s cubic-bezier(0.34, 1.32, 0.64, 1) 0.57s both; }
+@keyframes kaaga-from-left {
+  from { transform: translateX(-520px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes kaaga-from-right {
+  from { transform: translateX(520px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes kaaga-from-left-pull {
+  0%, 17% { transform: translateX(-520px); opacity: 0; animation-timing-function: cubic-bezier(0.34, 1.32, 0.64, 1); }
+  53% { transform: translateX(0); opacity: 1; }
+  76% { transform: translateX(0); opacity: 1; animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
+  100% { transform: translateX(40px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kaaga-mark .kaaga-s {
+    animation: none !important;
+  }
+}

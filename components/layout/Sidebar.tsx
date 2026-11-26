@@ -1,4 +1,4 @@
-// Recollect sidebar, theme v2 (2026-11-14). It follows Notion's pattern: a workspace row, a search
+// Kaaga sidebar, theme v2 (2026-11-14). It follows Notion's pattern: a workspace row, a search
 // row, 30px rows of grey icons and medium text, a quiet "Recent" section and settings at the foot.
 // Nothing bounces. Tokens come from app/theme-v2.css (--ui-*).
 'use client';
@@ -25,7 +25,6 @@ import {
   PanelLeft,
   Search,
   Settings,
-  Sparkles,
   UserRound,
   Users,
   X,
@@ -38,6 +37,7 @@ import { getRecentVisitsFromCache, RecentVisit } from '@/lib/services/recentVisi
 import { features, type FeatureName } from '@/lib/features';
 import { useYearStand } from '@/components/learning/home/YearGrid';
 import { cellLevel } from '@/lib/learning/stand';
+import { KaagaLogo, KaagaMark } from '@/components/brand/kaaga';
 
 const ICON = 'h-[18px] w-[18px]';
 const STROKE = 1.75;
@@ -57,7 +57,8 @@ interface NavItem {
 const allPrimaryNav: NavItem[] = [
   { id: 'home', route: '/', label: 'Home', icon: <Home className={ICON} strokeWidth={STROKE} /> },
   { id: 'docs', route: '/docs', label: 'Docs', icon: <FileText className={ICON} strokeWidth={STROKE} /> },
-  { id: 'ask', route: '/ask', label: 'Ask AI', icon: <Sparkles className={ICON} strokeWidth={STROKE} /> },
+  // Ask Kaaga (KAAGA_REBRAND_PLAN D2): the buddy is Kaaga, so its row wears the mark, in the icons' grey.
+  { id: 'ask', route: '/ask', label: 'Ask Kaaga', icon: <KaagaMark size={17} className="mx-[0.5px]" /> },
   {
     id: 'todo',
     route: '/todo',
@@ -207,23 +208,10 @@ interface SidebarContentProps {
 }
 
 /**
- * The sidebar is Recollect's own (the owner, 11-22: "a friend said it's a Notion replica"; his pick of the options):
- * Recollect's mark on top, "Search or capture", the open page in the plain grey selection, this week's seven days under
- * the menu, you and Settings at the foot. Same width and colours as before.
+ * The sidebar is the app's own (the owner, 11-22: "a friend said it's a Notion replica"; his pick of the options): the
+ * Kaaga logo on top (11-26: the mark alone when collapsed), "Search or capture", the open page in the plain grey
+ * selection, this week's seven days under the menu, you and Settings at the foot. Same width and colours as before.
  */
-
-/** Recollect's mark (the app icon's two rings and three dots), in the ink colour. */
-function RecollectMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <ellipse cx="7.6" cy="13" rx="4.6" ry="5.6" fill="none" stroke="currentColor" strokeWidth="2.3" />
-      <ellipse cx="16.4" cy="13" rx="4.6" ry="5.6" fill="none" stroke="currentColor" strokeWidth="2.3" />
-      <circle cx="7.6" cy="7.4" r="1.9" fill="currentColor" />
-      <circle cx="16.4" cy="7.4" r="1.9" fill="currentColor" />
-      <circle cx="12" cy="13" r="1.9" fill="currentColor" />
-    </svg>
-  );
-}
 
 /** The year card's heat steps (the sidebar sits outside the .rc scope: --ui-heat-* in app/theme-v2.css and theme-paper.css). */
 const WEEK_FILL = ['var(--ui-heat-0)', 'var(--ui-heat-1)', 'var(--ui-heat-2)', 'var(--ui-heat-3)', 'var(--ui-heat-4)'] as const;
@@ -273,7 +261,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
     };
   }, []);
   const nav = isOwner ? [...primaryNav, PEOPLE_ITEM] : primaryNav;
-  // The lower list: Chats while in Ask AI, Recent elsewhere; a click on the other tab holds until he navigates.
+  // The lower list: Chats while in Ask Kaaga, Recent elsewhere; a click on the other tab holds until he navigates.
   const [choice, setChoice] = useState<{ path: string; tab: 'recent' | 'chats' } | null>(null);
   const onAsk = pathname === '/ask' || !!pathname?.startsWith('/ask/');
   const section: 'recent' | 'chats' = choice && choice.path === pathname ? choice.tab : onAsk ? 'chats' : 'recent';
@@ -300,8 +288,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
           title="Home"
           className={cn('flex h-[32px] min-w-0 items-center gap-2 rounded-[6px] px-1.5 text-[var(--ui-ink-1)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)]', isCollapsed ? 'w-[30px] justify-center px-0' : 'flex-1')}
         >
-          <RecollectMark className="h-[20px] w-[20px] shrink-0" />
-          {!isCollapsed && <span className="text-[15px] font-[650] tracking-[-0.01em]">Recollect</span>}
+          {isCollapsed ? <KaagaMark size={20} label="Kaaga" /> : <KaagaLogo height={23} variant="sidebar" />}
         </Link>
         <button
           type="button"
@@ -378,7 +365,7 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
 
       {!isCollapsed && <WeekStrip onNavigate={onNavigate} />}
 
-      {/* ── Recent · Chats (Notion's way: Ask AI's conversations live here, not in a column of its own) ── */}
+      {/* ── Recent · Chats (Notion's way: Ask Kaaga's conversations live here, not in a column of its own) ── */}
       {!isCollapsed ? (
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-2 pb-2 custom-scrollbar">
           <div

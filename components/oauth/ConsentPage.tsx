@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * An app asks to use Recollect (ALWAYS_ON_SPEC 6.5): claude.ai's connector or Claude Code signing in
+ * An app asks to use Kaaga (ALWAYS_ON_SPEC 6.5): claude.ai's connector or Claude Code signing in
  * through OAuth. One quiet column on the page colour: who asks, what it will be able to do (the
  * words Settings → Agents uses), where Allow sends him (the redirect's host, as the MCP spec asks),
  * and Allow (the one dark button) or Deny. Signed out, he signs in first and comes back here.
@@ -15,6 +15,7 @@ import { RcButton, RcSkel, rcScope } from '@/components/rc-ui';
 import { useAuthStore } from '@/lib/store/authStore';
 import { oauthApi, type ConsentInfo } from '@/lib/api/oauthApi';
 import './consent.css';
+import { KaagaLogo } from '@/components/brand/kaaga';
 
 /** The same words as Settings → Agents (one name for one thing). */
 const SCOPE_WORDS: Record<string, string> = {
@@ -75,9 +76,8 @@ export function ConsentPage() {
   return (
     <div className={cn(rcScope, 'oauth-page')}>
       <main className="oauth-col">
-        <Link href="/" className="oauth-brand" aria-label="Recollect">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a local icon */}
-          <img src="/icons/icon-192.png" alt="" width={32} height={32} />
+        <Link href="/" className="oauth-brand" aria-label="Kaaga">
+          <KaagaLogo height={26} variant="header" />
         </Link>
 
         {view.kind === 'loading' && (
@@ -99,7 +99,7 @@ export function ConsentPage() {
             </p>
             <div className="oauth-actions">
               <RcButton variant="outline" onClick={() => router.push('/')}>
-                Go to Recollect
+                Go to Kaaga
               </RcButton>
             </div>
           </>
@@ -115,7 +115,7 @@ export function ConsentPage() {
         {view.kind === 'ready' && (
           <>
             <h1 className="oauth-title">
-              Allow <b>{view.info.client.name}</b> to use Recollect?
+              Allow <b>{view.info.client.name}</b> to use Kaaga?
             </h1>
             {user?.email && (
               <p className="oauth-sub">

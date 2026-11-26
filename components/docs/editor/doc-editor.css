@@ -1,6 +1,6 @@
 /*
  * The doc page and editor (Docs round, 2026-11-14). Notion's measured editor metrics
- * (context/research/design-v2/notion-editor-rea.md) on Recollect's `.rc` tokens:
+ * (context/research/design-v2/notion-editor-rea.md) on Kaaga's `.rc` tokens:
  * a 720 px column, title 40/700, H1 30, H2 24, H3 20 (600, 1.3), body 16/24,
  * blocks 3 px padding with 1 px margins, the handle and "+" in the left gutter.
  * Everything here lives under `.rc` (the page and its portals), so light and dark both work.

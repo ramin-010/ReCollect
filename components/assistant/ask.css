@@ -1,5 +1,5 @@
 /*
- * Ask AI (MANAGER_AND_DOCS_PLAN §3.4), theme v2. A quiet chat: the conversations live in the main
+ * Ask Kaaga (MANAGER_AND_DOCS_PLAN §3.4), theme v2. A quiet chat: the conversations live in the main
  * sidebar (Chats), the conversation in a 720 column like a doc, the composer docked below.
  * The one authored moment: a tool row settles in as the manager finishes it (4 px rise, 220 ms).
  */
@@ -190,6 +190,15 @@
     color: var(--rc-icon);
     animation: ask-spin 900ms linear infinite;
   }
+  /* Kaaga at work: the mark's ripple in place of a spinner (KAAGA_REBRAND_PLAN D4). */
+  .ask-working-mark {
+    color: var(--rc-ink-2);
+  }
+  .ask-composer-mark {
+    align-self: flex-end;
+    margin: 0 2px 9px 0;
+    color: var(--rc-ink-3);
+  }
   /* The words while it works, and Stop at the line's end. */
   .ask-working-words {
     flex: 1;
@@ -331,7 +340,7 @@
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    padding: 8px 8px 8px 14px;
+    padding: 8px 8px 8px 13px;
     border-radius: var(--rc-r-xl);
     background: var(--rc-surface);
     box-shadow: var(--rc-card-shadow), 0 8px 24px -12px rgba(0, 0, 0, 0.16);

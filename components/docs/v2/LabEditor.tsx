@@ -51,7 +51,6 @@ import {
   PanelsTopLeft,
   Plus,
   Quote,
-  Sparkles,
   Strikethrough,
   Table,
   Trash2,
@@ -75,10 +74,11 @@ import { NoCellHandle, RcTableExtend, RcTableHandle } from './RcTableHandles';
 import { DocAsk, type AskFocus, type DocAskEditor } from './DocAsk';
 import { PhoneBlockBar, type PhoneBarEditor } from './PhoneBlockBar';
 import { uploadToCloud } from '@/lib/utils/upload';
+import { KaagaIcon } from '@/components/brand/kaaga';
 
 type Editor = typeof docSchema.BlockNoteEditor;
 
-/** Opens Ask AI on what he is pointing at (null where the doc can't be changed: read-only, the public page). */
+/** Opens Ask Kaaga on what he is pointing at (null where the doc can't be changed: read-only, the public page). */
 const AskContext = createContext<(() => void) | null>(null);
 
 /** An id for an uploaded image (the old editor's format). */
@@ -377,7 +377,7 @@ function BlockMenu({ onTurnInto, onDuplicate, onDelete, onClose }: { onTurnInto:
 
 // ── The slash menu: Notion's rows, our icons, the Markdown shortcut as the hint ────────────
 
-const ICONS: Record<string, typeof Type> = {
+const ICONS: Record<string, React.ComponentType<{ 'aria-hidden'?: boolean; className?: string }>> = {
   paragraph: Type,
   heading: Heading1,
   heading_2: Heading2,
@@ -398,7 +398,7 @@ const ICONS: Record<string, typeof Type> = {
   canvas: PanelsTopLeft,
   callout: Lightbulb,
   diagram: Workflow,
-  ask_ai: Sparkles,
+  ask_ai: KaagaIcon,
 };
 
 function RcSlashMenu({ items, selectedIndex, onItemClick }: SuggestionMenuProps<SlashItem>) {
@@ -457,9 +457,9 @@ function RcFormatBar() {
     <div className={cn(rcScope, 'lab-bar')} role="toolbar" aria-label="Format">
       {openAsk && (
         <>
-          <button type="button" className="lab-bar-btn lab-bar-ask" title="Ask AI (Ctrl+J)" onMouseDown={(e) => e.preventDefault()} onClick={openAsk}>
-            <Sparkles aria-hidden />
-            <span>Ask AI</span>
+          <button type="button" className="lab-bar-btn lab-bar-ask" title="Ask Kaaga (Ctrl+J)" onMouseDown={(e) => e.preventDefault()} onClick={openAsk}>
+            <KaagaIcon />
+            <span>Ask Kaaga</span>
           </button>
           <span className="lab-bar-sep" aria-hidden />
         </>
@@ -687,7 +687,7 @@ export function LabEditor({
   const rootRef = useRef<HTMLDivElement>(null);
   const blockSelection = useBlockSelection(editor as never, rootRef, editable);
 
-  // Ask AI inside the doc (DOCS_EDITOR_V2_PLAN phase 5): Ctrl+J, the format bar, or /ai. What he
+  // Ask Kaaga inside the doc (DOCS_EDITOR_V2_PLAN phase 5): Ctrl+J, the format bar, or /ai. What he
   // points at is read when the box opens: selected blocks, a text selection, or the cursor's block.
   const [ask, setAsk] = useState<(AskFocus & { key: number }) | null>(null);
   const canAsk = editable && !!docId;
@@ -809,7 +809,7 @@ export function LabEditor({
     };
     const askAi: SlashItem = {
       key: 'ask_ai',
-      title: 'Ask AI',
+      title: 'Ask Kaaga',
       subtext: 'Write, edit or explain with AI',
       aliases: ['ai', 'ask', 'write', 'claude', 'assistant'],
       group: 'AI',

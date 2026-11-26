@@ -1,5 +1,5 @@
 /**
- * Revise's dashboard classes mapped onto Recollect's theme tokens (LEARNING_SPEC §3 "Look"):
+ * Revise's dashboard classes mapped onto Kaaga's theme tokens (LEARNING_SPEC §3 "Look"):
  *   bg-sidebar → --surface-elevated · hover:bg-hover → --surface-raised · border-divider → --border-subtle
  *   text-foreground / text-muted → --foreground / --muted-foreground · accent → --primary
  *   emerald / amber / red → --success / --warning / --destructive

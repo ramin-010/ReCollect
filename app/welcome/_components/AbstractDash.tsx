@@ -485,7 +485,7 @@ export const AbstractDash = () => {
                  animate={{ opacity: 1, y: 0 }}
                  transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
                >
-                 ReCollect
+                 Kaaga
                </motion.h1>
                
                <motion.p 

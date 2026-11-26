@@ -9,7 +9,7 @@ export interface FirstRun {
   steps: Array<{ id: FirstRunStep; done: boolean }>;
   zone: string;
   ai: boolean;
-  /** The buddy's first words in Ask AI, while the person has never talked to it. */
+  /** The buddy's first words in Ask Kaaga, while the person has never talked to it. */
   opening: string | null;
 }
 

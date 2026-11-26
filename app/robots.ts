@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/brand';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/print/', '/draw/share/', '/email/callback'],
       },
     ],
-    sitemap: 'https://re-collect.in/sitemap.xml',
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

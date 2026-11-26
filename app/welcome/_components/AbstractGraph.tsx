@@ -77,7 +77,7 @@ export const AbstractGraph = () => {
           >
              {i === 0 && (
                 <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 bg-zinc-900/90 border border-amber-500/20 rounded-lg text-amber-200 text-xs font-medium">
-                   Project: ReCollect
+                   Project: Kaaga
                 </div>
              )}
           </motion.div>

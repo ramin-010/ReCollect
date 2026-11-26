@@ -16,6 +16,7 @@
   .oauth-brand {
     display: inline-flex;
     margin-bottom: 20px;
+    color: var(--rc-ink-1);
     border-radius: 8px;
   }
   .oauth-brand img {

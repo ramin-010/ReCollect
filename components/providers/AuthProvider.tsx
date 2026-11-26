@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { authApi } from '@/lib/api/auth';
+import { clearAuthHint as clearHintCookie } from '@/lib/brand';
 
 function hasAuthHint(): boolean {
   if (typeof window === 'undefined') return false;
@@ -18,8 +19,7 @@ function clearAuthHint() {
   if (typeof window === 'undefined') return;
   
   // Clear Cookie
-  document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
-  document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  clearHintCookie();
   
   // Clear LocalStorage
   localStorage.removeItem('auth_hint');

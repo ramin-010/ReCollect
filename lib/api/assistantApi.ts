@@ -1,6 +1,6 @@
 import axiosInstance from '@/lib/utils/axios';
 
-/** Ask AI, the manager (MANAGER_AND_DOCS_PLAN §3.4): threads, and a message answered as a stream. */
+/** Ask Kaaga, the manager (MANAGER_AND_DOCS_PLAN §3.4): threads, and a message answered as a stream. */
 
 export type ToolLevel = 1 | 2 | 3;
 
@@ -75,7 +75,7 @@ const data = <T>(r: { data: { data?: T } }) => r.data.data as T;
 /** Words for an HTTP failure before the stream began. */
 function failureWords(status: number, body: { message?: string; code?: string } | null): string {
   if (body?.code === 'AI_PAUSED') return body.message || 'The AI is paused right now. Everything else works.';
-  if (body?.code === 'AI_NOT_CONFIGURED' || status === 503) return 'Ask AI needs the Claude key on the server (CLAUDE_API_KEY), and it is not set.';
+  if (body?.code === 'AI_NOT_CONFIGURED' || status === 503) return 'Ask Kaaga needs the Claude key on the server (CLAUDE_API_KEY), and it is not set.';
   if (body?.code === 'AI_CAP_REACHED' || status === 402) return "This month's AI spend has reached your cap. Raise it in Settings → AI.";
   if (status === 401) return 'You were signed out. Sign in again, then send it again.';
   if (status === 404) return 'This conversation is gone (deleted, or unused for 90 days). Start a new chat to ask it.';

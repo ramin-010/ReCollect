@@ -2,7 +2,7 @@
    (the phone routes /m/…), made by scripts/port-phone-css.py. The mock-up stays the source of truth: change it there first,
    then port again. Paper is the default look (his pick, 11-18); Slate is the web app's theme v2. */
 
-/* Recollect on the phone: design tokens (the part the build ports as-is).
+/* Kaaga on the phone: design tokens (the part the build ports as-is).
    World: a pocket notebook a friend also writes in. His pages are set in the sans;
    whatever the buddy says is set in the serif, on every screen.
    Two looks, each light and dark: Paper (warm) and Slate (the web app's Notion-grade greys). */
@@ -171,7 +171,7 @@ html[data-pw-theme="slate"][data-pw-mode="dark"] .pw {
   color-scheme: dark;
 }
 
-/* Recollect on the phone: the parts (buttons, rows, the buddy's card, sheets, the bottom bar) and the screens.
+/* Kaaga on the phone: the parts (buttons, rows, the buddy's card, sheets, the bottom bar) and the screens.
    Everything reads tokens.css; nothing here names a colour of its own, except the review page around the phone. */
 
 .pw * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }

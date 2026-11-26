@@ -472,7 +472,7 @@ export function buildFixtures(today: DayString, nowInstant: Date, scenario: Mock
   }
   if (!scenario.empty && scenario.goals === 3) {
     addGoal(
-      { _id: 'goal-ship', title: 'Ship Recollect to 10 friends', why: null, deadline: addDays(today, 78), subjectIds: [], createdDay: addDays(today, -74) },
+      { _id: 'goal-ship', title: 'Ship Kaaga to 10 friends', why: null, deadline: addDays(today, 78), subjectIds: [], createdDay: addDays(today, -74) },
       [
         ['Daily loop works for me for 3 weeks', addDays(today, -40), 33],
         ['Fix every bug I hit in a week', addDays(today, -10), null],

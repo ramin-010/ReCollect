@@ -1,4 +1,4 @@
-// ReCollect Landing Page - Minimalist Premium Design
+// Kaaga Landing Page - Minimalist Premium Design
 'use client';
 
 import React from 'react';
@@ -99,7 +99,7 @@ export default function WelcomePage() {
             </h1>
             
             <p className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] max-w-3xl mx-auto mb-12 leading-relaxed">
-              ReCollect is your professional companion for capturing ideas, organizing knowledge, 
+              Kaaga is your professional companion for capturing ideas, organizing knowledge, 
               and building connections between your thoughts. Never lose a brilliant idea again.
             </p>
             
@@ -386,7 +386,7 @@ export default function WelcomePage() {
             </motion.div>
             <div className="mt-32 pt-8 border-t border-[hsl(var(--border))] flex justify-between items-center text-sm text-[hsl(var(--muted-foreground))]">
                <Logo size="sm" />
-               <span>© {new Date().getFullYear()} ReCollect Labs</span>
+               <span>© {new Date().getFullYear()} Kaaga Labs</span>
             </div>
          </div>
       </footer>

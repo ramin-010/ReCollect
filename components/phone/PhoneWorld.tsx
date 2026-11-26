@@ -14,7 +14,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { BookOpen, MessageCircle, Sun, User } from 'lucide-react';
+import { BookOpen, Sun, User } from 'lucide-react';
+import { KaagaIcon } from '@/components/brand/kaaga';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useLook } from './look';
 import { CompareSwitch } from './CompareSwitch';
@@ -22,7 +23,8 @@ import { bridge, hex6 } from './shell';
 
 const TABS = [
   { href: '/m/today', label: 'Today', icon: Sun },
-  { href: '/m/buddy', label: 'Buds', icon: MessageCircle },
+  // The chat with the buddy, which is Kaaga (KAAGA_REBRAND_PLAN D2): its name and its mark (11-26; was "Buds").
+  { href: '/m/buddy', label: 'Kaaga', icon: KaagaIcon },
   { href: '/m/library', label: 'Library', icon: BookOpen },
   { href: '/m/you', label: 'You', icon: User },
 ] as const;

@@ -1,4 +1,4 @@
-// ReCollect - Professional Note Card Component
+// Kaaga - Professional Note Card Component
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';

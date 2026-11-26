@@ -274,7 +274,7 @@ export function TodayHome({ data }: { data: TodayPayload }) {
             <Link href="/you" className="rc-row rc-hoverable flex w-full items-center gap-2 rounded-[6px] px-2 py-[7px] text-left">
               <UserRound className="h-4 w-4 shrink-0 text-[var(--rc-icon)]" strokeWidth={1.75} aria-hidden />
               <span className="text-[14px] font-medium text-[var(--rc-ink-1)]">About you</span>
-              <span className="rc-meta">what your buddy knows</span>
+              <span className="rc-meta">what Kaaga knows</span>
             </Link>
           </div>
           <PocketRail notes={data.quickNotes} onOpenAll={() => setNotesOpen(true)} />

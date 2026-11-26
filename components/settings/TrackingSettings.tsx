@@ -23,13 +23,13 @@ const KIND_SAID: Record<ProjectKind, string> = { personal: 'for building', study
 
 /** EASY_SETUP_PLAN: what is logged in a folder (its kind's default unless it has its own). */
 const TRACKING: Array<{ value: FolderTracking; label: string; help: string }> = [
-  { value: 'full', label: 'Everything', help: 'Time, your words for your buddy, the work log' },
+  { value: 'full', label: 'Everything', help: 'Time, your words for Kaaga, the work log' },
   { value: 'light', label: 'Time only', help: 'How long you worked; nothing you type is read' },
-  { value: 'off', label: 'Nothing', help: 'Recollect leaves this folder alone' },
+  { value: 'off', label: 'Nothing', help: 'Kaaga leaves this folder alone' },
 ];
 const trackingLabel = (t: FolderTracking | undefined) => TRACKING.find((x) => x.value === t)?.label ?? 'Everything';
 
-/** EASY_SETUP_PLAN §3.5: what a folder Recollect has never seen is. */
+/** EASY_SETUP_PLAN §3.5: what a folder Kaaga has never seen is. */
 const NEW_FOLDERS: Array<{ value: NewFolders; label: string }> = [
   { value: 'ask', label: 'Ask' },
   { value: 'personal', label: 'Building' },
@@ -187,7 +187,7 @@ export function TrackingSettings() {
           What counts as progress
         </h2>
         <p className="rc-field-help">
-          What makes a day active, fills Home’s year and week, and what your buddy and the coach judge your progress on. What
+          What makes a day active, fills Home’s year and week, and what Kaaga and the coach judge your progress on. What
           doesn’t count is still kept: its own view on Where you stand, and your work log.
         </p>
         <ul className={cn('set-list mt-3', saving === 'counts' && 'pointer-events-none opacity-70')} aria-label="What counts as progress">
@@ -219,7 +219,7 @@ export function TrackingSettings() {
           Where Claude Code and your chats worked. Building: your own projects. Learning: a folder you learn in. Work: your job, tracked for time and your work log. A change moves the folder’s past with it.
         </p>
         {shown.length === 0 ? (
-          <p className="rc-meta mt-4">No folders yet. A folder shows here once Claude Code works in it with Recollect’s hooks, or a chat logs a session there.</p>
+          <p className="rc-meta mt-4">No folders yet. A folder shows here once Claude Code works in it with Kaaga’s hooks, or a chat logs a session there.</p>
         ) : (
           <ul className="set-list mt-3" aria-label="Folders">
             {shown.map((p) => {
@@ -264,7 +264,7 @@ export function TrackingSettings() {
           </ul>
         )}
         <p className="rc-meta mt-4 text-[13px]">
-          What is logged: everything (the time, your words for your buddy, the work log), the time only, or nothing. What you pick here holds on every computer and in every chat; a chat can still say it is learning, building or work (/study, /build, /work).
+          What is logged: everything (the time, your words for Kaaga, the work log), the time only, or nothing. What you pick here holds on every computer and in every chat; a chat can still say it is learning, building or work (/study, /build, /work).
         </p>
       </section>
 
@@ -274,10 +274,10 @@ export function TrackingSettings() {
         </h2>
         <p className="rc-field-help">
           {newFolders === 'ask'
-            ? 'The first chat in a folder Recollect hasn’t seen asks you once what it is. Until you answer, only its time is kept, on your computer.'
+            ? 'The first chat in a folder Kaaga hasn’t seen asks you once what it is. Until you answer, only its time is kept, on your computer.'
             : newFolders === 'off'
-              ? 'A folder Recollect hasn’t seen is ignored until you pick what it is here.'
-              : `A folder Recollect hasn’t seen starts as ${KIND_SAID[newFolders]}; change it here any time.`}
+              ? 'A folder Kaaga hasn’t seen is ignored until you pick what it is here.'
+              : `A folder Kaaga hasn’t seen starts as ${KIND_SAID[newFolders]}; change it here any time.`}
         </p>
         <RcSegmented className={cn('mt-3', saving === 'new' && 'pointer-events-none opacity-70')} label="New folders" options={NEW_FOLDERS} value={newFolders} onChange={(v) => void pickNewFolders(v)} />
       </section>

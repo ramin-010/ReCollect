@@ -13,7 +13,7 @@ import { lx } from './styles';
 /**
  * Revise ResourcePreviewModal + the Quick Notes expanded views: images full size, PDFs in an
  * <object>, Markdown / text rendered with the notes parser (Revise used react-markdown, which
- * Recollect does not ship), anything else as a download / open link.
+ * Kaaga does not ship), anything else as a download / open link.
  */
 function TextPreview({ url }: { url: string }) {
   const [text, setText] = useState<string | null>(null);

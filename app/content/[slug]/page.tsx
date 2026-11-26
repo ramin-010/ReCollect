@@ -204,7 +204,7 @@ export default function SharedContentPage() {
         <div className="px-5 py-2 border-t border-[hsl(var(--border))] flex items-center justify-center shrink-0">
           <Logo size="md" className="p-0 m-0" showText={false} />
           <span className="text-sm text-[hsl(var(--muted-foreground))]">
-            Shared via <span className="font-medium">Recollect </span>
+            Shared via <span className="font-medium">Kaaga </span>
             
           </span>
           

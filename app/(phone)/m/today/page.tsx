@@ -15,6 +15,9 @@ import { useLearningStore } from '@/lib/store/learningStore';
 import { THUMB_REASONS, buddyApi, type BuddyThread, type BuddyToday, type ThumbReason } from '@/lib/api/buddyApi';
 import { Dial, clockWords, hhmmWords, reviewWords } from '@/components/phone/parts';
 import { useKept } from '@/components/phone/kept';
+import { buddyName } from '@/lib/brand';
+import { isKaaga } from '@/lib/brand';
+import { KaagaMark } from '@/components/brand/kaaga';
 
 interface Row {
   key: string;
@@ -85,9 +88,9 @@ export default function TodayScreen() {
   const left = rows.filter((r) => !r.done);
   const minutes = left.reduce((sum, r) => sum + (r.minutes ?? 0), 0);
   // Its own name, or "Your buddy" heading a card and "your buddy" inside a sentence.
-  const title = buddy?.name ?? 'Your buddy';
-  const inText = buddy?.name ?? 'your buddy';
-  const mark = (buddy?.name ?? 'Buddy').charAt(0).toUpperCase();
+  const title = buddyName(buddy?.name);
+  const inText = buddyName(buddy?.name);
+  const mark = buddyName(buddy?.name).charAt(0).toUpperCase();
   const ask = buddy?.enabled && !buddy.paused ? buddy.asks?.[0] : undefined;
   const line = buddy?.enabled && !buddy.paused && !ask && buddy.line && !buddy.line.fallback ? buddy.line : null;
   const lineKey = line ? `${line.dayId}:${line.key ?? line.slot}` : null;
@@ -160,7 +163,7 @@ export default function TodayScreen() {
         <article className="buddy">
           <div className="buddy-head">
             <span className="mark" aria-hidden>
-              {mark}
+              {isKaaga(buddy?.name) ? <KaagaMark size={16} state={ask ? 'call' : 'still'} once /> : mark}
             </span>
             <span>
               <b>{title}</b> is asking
@@ -191,7 +194,7 @@ export default function TodayScreen() {
         <article className="buddy">
           <div className="buddy-head">
             <span className="mark" aria-hidden>
-              {mark}
+              {isKaaga(buddy?.name) ? <KaagaMark size={16} state={ask ? 'call' : 'still'} once /> : mark}
             </span>
             <span>
               <b>{title}</b>

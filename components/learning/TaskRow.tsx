@@ -7,7 +7,7 @@ import { useLearningStore } from '@/lib/store/learningStore';
 import { ItemActionMenu } from './ItemActionMenu';
 import { lx } from './styles';
 
-/** Recollect task descriptions are HTML; rows show them as plain text. */
+/** Kaaga task descriptions are HTML; rows show them as plain text. */
 export function plainText(html: string | undefined | null): string {
   if (!html) return '';
   return html

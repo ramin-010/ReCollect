@@ -19,6 +19,7 @@ import { Switch, agoWords } from '@/components/phone/parts';
 import { bridge, connectThisPhone, minutesWords, useShell, type ShellState } from '@/components/phone/shell';
 import { useKept } from '@/components/phone/kept';
 import { PhoneChecklist, PhoneFeedback } from '@/components/phone/checklist';
+import { buddyName, clearAuthHint } from '@/lib/brand';
 
 type Patch = Partial<Pick<BuddySettings, 'name' | 'tone' | 'asksOn' | 'paused'>>;
 type SheetKind = 'quiet' | 'notify' | 'disconnect';
@@ -90,8 +91,7 @@ export default function SettingsScreen() {
   // sign-in and opens the login. An older app (no full sign-out of its own) is sent to the login by the page.
   const signOutAndDisconnect = async () => {
     try {
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.re-collect.in';
-      document.cookie = 'auth_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      clearAuthHint();
       localStorage.removeItem('auth_hint');
       await authApi.logout();
     } catch {
@@ -104,7 +104,7 @@ export default function SettingsScreen() {
   };
 
   const buddyOn = !!settings?.enabled;
-  const buddyName = settings?.name?.trim() || 'your buddy';
+  const buddyCalled = buddyName(settings?.name);
   const close = () => setSheet(null);
   return (
     <>
@@ -183,7 +183,7 @@ export default function SettingsScreen() {
 
         {settings && buddyOn ? (
           <div className="group">
-            <h2>Your buddy</h2>
+            <h2>Kaaga</h2>
             <div className="set" style={{ display: 'block' }}>
               <label className="row-title" htmlFor="pw-buddy-name">
                 Name
@@ -226,8 +226,8 @@ export default function SettingsScreen() {
           </div>
         ) : settings ? (
           <div className="group">
-            <h2>Your buddy</h2>
-            <p className="meta">Your buddy is off. Turn it on in the web app, under You.</p>
+            <h2>Kaaga</h2>
+            <p className="meta">Kaaga is off. Turn it on in the web app, under You.</p>
           </div>
         ) : null}
 
@@ -320,10 +320,10 @@ export default function SettingsScreen() {
                 </div>
                 <div className="set">
                   <div className="row-main">
-                    <p className="row-title">Questions and notes from {buddyName}</p>
+                    <p className="row-title">Questions and notes from {buddyCalled}</p>
                     <p className="meta">At most two a day, never in quiet hours</p>
                   </div>
-                  <Switch on={shell.notes} label={`Questions and notes from ${buddyName}`} onChange={(next) => bridge()?.setSwitch('notes', next)} />
+                  <Switch on={shell.notes} label={`Questions and notes from ${buddyCalled}`} onChange={(next) => bridge()?.setSwitch('notes', next)} />
                 </div>
                 <div className="set">
                   <div className="row-main">
