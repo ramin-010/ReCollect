@@ -15,7 +15,7 @@ const READ: Record<string, string> = {
   get_brief: 'Read where you stand',
   list_sessions: 'Looked at your sessions',
   get_week: 'Looked at your week',
-  get_mirror: 'Looked at your pace',
+  get_standing: 'Looked at your pace',
   list_tasks: 'Looked at your tasks',
   list_decisions: 'Looked at your decisions',
   get_today: 'Looked at today',
@@ -31,7 +31,7 @@ const READ: Record<string, string> = {
   get_settings: 'Looked at your settings',
   list_suggestions: 'Looked at what waits for you',
   list_reminders: 'Looked at your reminders',
-  get_recall: 'Looked at your Recall results',
+  get_quiz_results: 'Looked at your quiz results',
   get_sharing: 'Looked at who can see a doc',
 };
 
