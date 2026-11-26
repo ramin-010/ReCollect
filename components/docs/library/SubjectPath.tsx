@@ -12,6 +12,7 @@ import type { PathStatus, PathTopic, SubjectPath, TopicPathPatch, TopicStatus } 
 import { RcButton, RcConfirm, RcIconButton, RcMenu, RcSkel, rcScope, type MenuAction } from '@/components/rc-ui';
 import { PATH_STATUS_WORD, PathMark, studyPrompt } from '@/components/learning/PathMark';
 import { StatusCell } from './StatusCell';
+import { useDocStore } from '@/lib/store/docStore';
 import { SubjectNotes } from '@/components/docs/page/DocNotes';
 import { EditCaptureDialog } from '@/components/learning/EditCaptureDialog';
 
@@ -32,6 +33,13 @@ const renumbered = (topics: PathTopic[]): PathTopic[] => topics.map((t, i) => ({
  */
 export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectId: string; subjectName: string; statuses: TopicStatus[] | null }) {
   const router = useRouter();
+  // DOC_PAGES_PLAN §8.6: how many live pages each doc holds (from the library's list), for "· 3 pages".
+  const libraryDocs = useDocStore((st) => st.docs);
+  const pageCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of libraryDocs) if (d.parentId && !d.trashedAt) m.set(d.parentId, (m.get(d.parentId) ?? 0) + 1);
+    return m;
+  }, [libraryDocs]);
   const [path, setPath] = useState<SubjectPath | null>(null);
   const [failed, setFailed] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -256,6 +264,8 @@ export function SubjectPathView({ subjectId, subjectName, statuses }: { subjectI
                     {t.docId ? (
                       <Link href={`/docs/${encodeURIComponent(t.docId)}`} className="path-title">
                         {t.title}
+                        {/* DOC_PAGES_PLAN §8.6: a lesson with pages says how many. */}
+                        {(pageCounts.get(t.docId) ?? 0) > 0 && <span className="path-pages"> · {pageCounts.get(t.docId)} {pageCounts.get(t.docId) === 1 ? 'page' : 'pages'}</span>}
                       </Link>
                     ) : (
                       <span className="path-title">{t.title}</span>

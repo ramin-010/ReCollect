@@ -982,3 +982,9 @@ body.path-grabbing * {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* DOC_PAGES_PLAN §8.6: a lesson with pages, on its subject's path. */
+.path-pages {
+  font-weight: 400;
+  color: var(--rc-ink-3);
+}
