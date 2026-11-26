@@ -9,6 +9,7 @@ import { rcScope, RcButton, RcConfirm, RcSkel } from '@/components/rc-ui';
 import { agentApi, type ApiToken } from '@/lib/api/agentApi';
 import { formatRelative } from '@/components/docs/page/format';
 import { AgentProfile } from './AgentProfile';
+import { PocketForAgents } from './PocketForAgents';
 import './settings.css';
 
 /** A token's scopes in plain words for the list ("can read, write docs, log sessions"). */
@@ -186,6 +187,7 @@ export function AgentTokens() {
       )}
 
       <AgentProfile />
+      <PocketForAgents />
 
       <RcConfirm
         open={!!revoke}

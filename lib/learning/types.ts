@@ -378,11 +378,13 @@ export interface LearningSettings {
   progressIncludesBuilding?: boolean;
   /** EASY_SETUP_PLAN: what a folder the server has never seen is (absent from an older server). */
   newFolders?: NewFolders;
+  /** TOOL_ACCESS_PLAN §4.7: chats may read and change their pocket notes (off by default; absent from an older server). */
+  pocketForAgents?: boolean;
 }
 
 /** `PATCH /api/learning/settings` accepts any subset. */
 export type LearningSettingsPatch = Partial<
-  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork' | 'progressIncludesBuilding' | 'newFolders'>
+  Pick<LearningSettings, 'dailyBudgetMin' | 'routineEnabled' | 'busyUntil' | 'nudgeEmailEnabled' | 'nudgeTime' | 'timezone' | 'routineMode' | 'agentProfile' | 'progressIncludesWork' | 'progressIncludesBuilding' | 'newFolders' | 'pocketForAgents'>
 >;
 
 /** EASY_SETUP_PLAN: what a new folder is: ask (the agent asks once), a kind, or off (not logged). */
