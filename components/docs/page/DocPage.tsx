@@ -11,6 +11,7 @@ import { DocPages, useNewPage, type PageRow } from '@/components/docs/pages/DocP
 import { MoveDocDialog } from '@/components/docs/pages/MoveDocDialog';
 import { PageFooterNav } from '@/components/docs/pages/PageFooterNav';
 import { useDocTreeStore } from '@/lib/store/docTreeStore';
+import { childrenOf } from '@/lib/docs/tree';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSheet, RcSkel } from '@/components/rc-ui';
@@ -329,6 +330,14 @@ function DocSurface({
   const [moveOpen, setMoveOpen] = useState(false);
   // §5: the pages that have a block in the text (live from the editor).
   const [blockPages, setBlockPages] = useState<string[]>([]);
+  // The pages inside it follow the tree store once it has this doc (a move, a new page or the trash from the sidebar
+  // shows at once); until then, the server's list from GET /api/docs/:id.
+  const treeNodes = useDocTreeStore((s) => (s.docId === doc._id && s.nodes.length ? s.nodes : null));
+  const livePages = useMemo<PageRow[]>(() => {
+    if (!treeNodes) return tree.pages;
+    const kids = childrenOf(treeNodes);
+    return (kids.get(doc._id) ?? []).map((n) => ({ _id: n._id, title: n.title, pages: kids.get(n._id)?.length ?? 0 }));
+  }, [treeNodes, tree.pages, doc._id]);
   // §4.8: Ctrl+Shift+U opens the doc above (Notion's key); not at the top level, not from a field outside the editor.
   const parentId = (doc as { parentId?: string | null }).parentId ?? null;
   useEffect(() => {
@@ -697,7 +706,7 @@ function DocSurface({
           />
         )}
         {/* §5: a page that has a block in the text is not repeated here. */}
-        <DocPages docId={doc._id} pages={tree.pages.filter((p) => !blockPages.includes(p._id))} isOwner={isOwner && !trashedAt} />
+        <DocPages docId={doc._id} pages={livePages.filter((p) => !blockPages.includes(p._id))} isOwner={isOwner && !trashedAt} />
         {!trashedAt && <PageFooterNav docId={doc._id} />}
       </div>
       <MoveDocDialog

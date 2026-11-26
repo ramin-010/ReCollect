@@ -6,7 +6,7 @@
  * above the open page start open; what else is open is kept per tree (localStorage). The owner's row hover: "+" makes a
  * page inside and opens it, "···" moves it (to another doc, up, down), copies its link or moves it to the trash.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ChevronRight, FileText, Files, FolderInput, Link2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
@@ -40,11 +40,22 @@ function writeOpen(rootId: string, ids: Set<string>) {
 
 const titleOf = (n: { title?: string | null }) => n.title?.trim() || 'Untitled';
 
+/** DOC_PAGES_PLAN §8.1: where a dragged page would land: before or after a row, or inside it. */
+type DropAt = { targetId: string; where: 'before' | 'after' | 'inside' };
+/** How far the pointer moves before a press becomes a drag (a click stays a click). */
+const DRAG_START_PX = 5;
+
 export function SidebarPages({ docId, onNavigate }: { docId: string; onNavigate: () => void }) {
   const router = useRouter();
   const { rootId, nodes, canManage, refresh } = useDocTreeStore();
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   const [moving, setMoving] = useState<DocTreeNode | null>(null);
+  // §8.1: drag a page to another place in the tree (the owner's). A line between rows: among those pages; a
+  // highlighted row: inside that page. Pointer events, no package (the editor's block drag is the house pattern).
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<DropAt | null>(null);
+  const press = useRef<{ id: string; x: number; y: number; active: boolean } | null>(null);
+  const dropRef = useRef<DropAt | null>(null);
 
   // The saved open rows of this tree, plus the branches above the open page.
   useEffect(() => {
@@ -99,6 +110,86 @@ export function SidebarPages({ docId, onNavigate }: { docId: string; onNavigate:
     }
   };
 
+  /** Where the pointer would drop the dragged page, or null (itself, inside itself, beside the root). */
+  const dropUnder = (x: number, y: number, dragId: string): DropAt | null => {
+    const row = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-tree-row]');
+    const targetId = row?.dataset['treeRow'];
+    if (!row || !targetId || targetId === dragId || insideOf(nodes, dragId).has(targetId)) return null;
+    const box = row.getBoundingClientRect();
+    const edge = box.height * 0.28;
+    const isRoot = targetId === rootId;
+    const where: DropAt['where'] = isRoot ? 'inside' : y < box.top + edge ? 'before' : y > box.bottom - edge ? 'after' : 'inside';
+    return { targetId, where };
+  };
+
+  const dropTo = async (dragId: string, at: DropAt) => {
+    const target = nodes.find((n) => n._id === at.targetId);
+    const dragged = nodes.find((n) => n._id === dragId);
+    if (!target || !dragged) return;
+    let to: { parentId: string | null; after?: string };
+    if (at.where === 'inside') to = { parentId: target._id };
+    else {
+      const sibs = siblingsOf(nodes, target._id).filter((s) => s._id !== dragId);
+      const i = sibs.findIndex((s) => s._id === target._id);
+      to = { parentId: target.parentId ?? null, after: at.where === 'after' ? target._id : i > 0 ? sibs[i - 1]!._id : 'start' };
+    }
+    try {
+      await docApi.moveDoc(dragId, to);
+      if (at.where === 'inside')
+        setOpen((cur) => {
+          const next = new Set(cur).add(target._id);
+          if (rootId) writeOpen(rootId, next);
+          return next;
+        });
+      await refresh();
+      toast.success(at.where === 'inside' ? `Moved “${titleOf(dragged)}” into “${titleOf(target)}”` : `Moved “${titleOf(dragged)}”`);
+    } catch (err) {
+      const said = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      toast.error(said ?? 'It did not move. Try again.');
+    }
+  };
+
+  const startPress = (e: React.PointerEvent, id: string) => {
+    if (!canManage || e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
+    press.current = { id, x: e.clientX, y: e.clientY, active: false };
+    const move = (ev: PointerEvent) => {
+      const p = press.current;
+      if (!p) return;
+      if (!p.active) {
+        if (Math.hypot(ev.clientX - p.x, ev.clientY - p.y) < DRAG_START_PX) return;
+        p.active = true;
+        setDragging(p.id);
+      }
+      ev.preventDefault();
+      const at = dropUnder(ev.clientX, ev.clientY, p.id);
+      dropRef.current = at;
+      setDropAt(at);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const p = press.current;
+      const at = dropRef.current;
+      press.current = null;
+      dropRef.current = null;
+      setDragging(null);
+      setDropAt(null);
+      if (!p?.active) return;
+      // The click that follows a drag never opens the row.
+      const swallow = (ev: MouseEvent) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      };
+      window.addEventListener('click', swallow, { capture: true, once: true });
+      window.setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 300);
+      if (at) void dropTo(p.id, at);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+
   const trash = async (n: DocTreeNode) => {
     const parent = n.parentId;
     const withOpen = n._id === docId || insideOf(nodes, n._id).has(docId);
@@ -130,11 +221,21 @@ export function SidebarPages({ docId, onNavigate }: { docId: string; onNavigate:
           return (
             <li key={node._id} className="group/pg relative">
               <div
+                data-tree-row={node._id}
+                onPointerDown={(e) => startPress(e, node._id)}
                 className={cn(
                   'flex h-[28px] items-center gap-1 rounded-[6px] pr-1 text-[14px] leading-none transition-colors duration-100',
                   here ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' : 'hover:bg-[var(--ui-hover)]',
+                  dragging === node._id && 'opacity-50',
+                  dropAt?.targetId === node._id && dropAt.where === 'inside' && 'bg-[var(--ui-selected)] ring-2 ring-inset ring-[var(--ui-accent-fill)]',
                 )}
-                style={{ paddingLeft: 2 + depth * 14 }}
+                style={{
+                  paddingLeft: 2 + depth * 14,
+                  ...(dropAt?.targetId === node._id && dropAt.where !== 'inside'
+                    ? { boxShadow: `inset 0 ${dropAt.where === 'before' ? '2px' : '-2px'} 0 var(--ui-accent-fill)` }
+                    : {}),
+                  ...(dragging ? { cursor: 'grabbing' } : {}),
+                }}
               >
                 {hasKids ? (
                   <button
@@ -152,6 +253,7 @@ export function SidebarPages({ docId, onNavigate }: { docId: string; onNavigate:
                 <Link
                   href={`/docs/${node._id}`}
                   onClick={onNavigate}
+                  draggable={false}
                   aria-current={here ? 'page' : undefined}
                   title={titleOf(node)}
                   className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-accent-fill)] rounded-[4px]"
