@@ -330,6 +330,15 @@ function DocSurface({
   const [moveOpen, setMoveOpen] = useState(false);
   // §5: the pages that have a block in the text (live from the editor).
   const [blockPages, setBlockPages] = useState<string[]>([]);
+  // §4.2: under 640 px the trail is one link, "‹ Parent" (the page's own title is right below it).
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const read = () => setNarrow(mq.matches);
+    read();
+    mq.addEventListener('change', read);
+    return () => mq.removeEventListener('change', read);
+  }, []);
   // The pages inside it follow the tree store once it has this doc (a move, a new page or the trash from the sidebar
   // shows at once); until then, the server's list from GET /api/docs/:id.
   const treeNodes = useDocTreeStore((s) => (s.docId === doc._id && s.nodes.length ? s.nodes : null));
@@ -557,7 +566,10 @@ function DocSurface({
   useEffect(() => {
     setTopBar({
       // DOC_PAGES_PLAN §4.2: Docs / A / … / Parent / This page (the docs above it the user can open).
-      crumbs: [{ label: 'Docs', href: '/docs' }, ...trailCrumbs(tree.trail), { label: title.trim() || 'Untitled' }],
+      crumbs:
+        narrow && tree.trail.length
+          ? [{ label: `‹ ${tree.trail[tree.trail.length - 1]!.title.trim() || 'Untitled'}`, href: `/docs/${tree.trail[tree.trail.length - 1]!._id}` }]
+          : [{ label: 'Docs', href: '/docs' }, ...trailCrumbs(tree.trail), { label: title.trim() || 'Untitled' }],
       actions: (
         <div className={cn(rcScope, 'flex items-center gap-1')}>
           <span className="doc-sync" data-state={synced ? 'saved' : 'saving'} aria-live="polite">
@@ -604,7 +616,7 @@ function DocSurface({
         </div>
       ),
     });
-  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart, notesPlace, notesOpen, notesCount, toggleNotes, tree.trail, makePage]);
+  }, [setTopBar, title, synced, others.length, isOwner, editable, cover, copyLink, copyMarkdown, others, trashedAt, moveToTrash, doc._id, me.id, shareAtStart, notesPlace, notesOpen, notesCount, toggleNotes, tree.trail, makePage, narrow]);
 
   useEffect(() => () => clearTopBar(), [clearTopBar]);
 
