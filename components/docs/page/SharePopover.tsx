@@ -12,7 +12,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronDown, Copy, ExternalLink, Globe, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { RcButton, RcSkel, RcSwitch, rcScope } from '@/components/rc-ui';
+import { RcButton, RcSkel, RcSwitch, rcScope, RcCheck } from '@/components/rc-ui';
 import { sharingApi, shareError, type DocPeople, type DocPerson, type ShareRole, type ShareUser } from '@/lib/api/sharingApi';
 import './share-popover.css';
 
@@ -115,19 +115,40 @@ export function SharePopover({ docId, isOwner, meId, openAtStart = false }: { do
 
 function ShareBody({ state, meId, onChange, onLeft }: { state: DocPeople; meId: string | null; onChange: (s: DocPeople) => void; onLeft: () => void }) {
   const owner = state.you === 'owner';
+  // DOC_PAGES_PLAN D6: on a doc with pages, sharing and publishing offer "also the N pages inside" (ticked).
+  const pages = owner ? state.pages ?? 0 : 0;
+  const [sharePages, setSharePages] = useState(true);
+  const [publishPages, setPublishPages] = useState(true);
   return (
     <>
-      {owner && <InviteRow docId={state.docId} onChange={onChange} />}
+      {owner && <InviteRow docId={state.docId} onChange={onChange} withPages={pages > 0 && sharePages} />}
+      {pages > 0 && <AlsoPages pages={pages} checked={sharePages} onToggle={() => setSharePages((v) => !v)} note />}
       {owner && state.requests.length > 0 && <Requests state={state} onChange={onChange} />}
-      <People state={state} meId={meId} onChange={onChange} onLeft={onLeft} />
-      <PublishRow state={state} onChange={onChange} />
+      <People state={state} meId={meId} onChange={onChange} onLeft={onLeft} withPages={pages > 0 && sharePages} />
+      <PublishRow state={state} onChange={onChange} withPages={pages > 0 && publishPages} />
+      {pages > 0 && <AlsoPages pages={pages} checked={publishPages} onToggle={() => setPublishPages((v) => !v)} />}
     </>
   );
 }
 
 // ── Invite by email ─────────────────────────────────────────────────────────────────────
 
-function InviteRow({ docId, onChange }: { docId: string; onChange: (s: DocPeople) => void }) {
+/** "Also the N pages inside" (DOC_PAGES_PLAN D6): one quiet checkbox line; the first says how sharing works with pages. */
+function AlsoPages({ pages, checked, onToggle, note }: { pages: number; checked: boolean; onToggle: () => void; note?: boolean }) {
+  return (
+    <div className="sh-section sh-pages">
+      <label className="sh-pages-row">
+        <RcCheck checked={checked} onToggle={onToggle} label={`Also the ${pages} ${pages === 1 ? 'page' : 'pages'} inside`} />
+        <span onClick={onToggle}>
+          Also the {pages} {pages === 1 ? 'page' : 'pages'} inside
+        </span>
+      </label>
+      {note && <p className="sh-note">Sharing is per page. A page is open to the people listed on it.</p>}
+    </div>
+  );
+}
+
+function InviteRow({ docId, onChange, withPages = false }: { docId: string; onChange: (s: DocPeople) => void; withPages?: boolean }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<ShareRole>('editor');
   const [busy, setBusy] = useState(false);
@@ -141,7 +162,7 @@ function InviteRow({ docId, onChange }: { docId: string; onChange: (s: DocPeople
     setBusy(true);
     setError(null);
     try {
-      const { people, already, name } = await sharingApi.add(docId, email.trim(), role);
+      const { people, already, name } = await sharingApi.add(docId, email.trim(), role, withPages);
       onChange(people);
       setEmail('');
       toast.success(already ? `${name} ${ROLE[role].label.toLowerCase()} now` : `Shared with ${name}`);
@@ -241,12 +262,12 @@ function Requests({ state, onChange }: { state: DocPeople; onChange: (s: DocPeop
 
 // ── People with access ──────────────────────────────────────────────────────────────────
 
-function People({ state, meId, onChange, onLeft }: { state: DocPeople; meId: string | null; onChange: (s: DocPeople) => void; onLeft: () => void }) {
+function People({ state, meId, onChange, onLeft, withPages = false }: { state: DocPeople; meId: string | null; onChange: (s: DocPeople) => void; onLeft: () => void; withPages?: boolean }) {
   const owner = state.you === 'owner';
   const change = async (p: DocPerson, role: ShareRole) => {
     if (role === p.role) return;
     try {
-      onChange(await sharingApi.setRole(state.docId, p._id, role));
+      onChange(await sharingApi.setRole(state.docId, p._id, role, withPages));
       toast.success(`${p.name} ${ROLE[role].label.toLowerCase()} now`);
     } catch (err) {
       toast.error(shareError(err, 'The role did not change. Try again.'));
@@ -254,7 +275,7 @@ function People({ state, meId, onChange, onLeft }: { state: DocPeople; meId: str
   };
   const remove = async (p: DocPerson, self: boolean) => {
     try {
-      const next = await sharingApi.remove(state.docId, p._id);
+      const next = await sharingApi.remove(state.docId, p._id, withPages && !self);
       if (next) onChange(next);
       if (self) {
         toast.success('You left the doc');
@@ -311,7 +332,7 @@ function People({ state, meId, onChange, onLeft }: { state: DocPeople; meId: str
 
 // ── Publish to the web ──────────────────────────────────────────────────────────────────
 
-function PublishRow({ state, onChange }: { state: DocPeople; onChange: (s: DocPeople) => void }) {
+function PublishRow({ state, onChange, withPages = false }: { state: DocPeople; onChange: (s: DocPeople) => void; withPages?: boolean }) {
   const owner = state.you === 'owner';
   const [busy, setBusy] = useState(false);
   const link = state.published;
@@ -319,7 +340,7 @@ function PublishRow({ state, onChange }: { state: DocPeople; onChange: (s: DocPe
   const toggle = async (on: boolean) => {
     setBusy(true);
     try {
-      const published = await sharingApi.publish(state.docId, on);
+      const published = await sharingApi.publish(state.docId, on, withPages);
       onChange({ ...state, published });
       if (!on) toast.success('Not published any more: the link stopped working');
     } catch (err) {

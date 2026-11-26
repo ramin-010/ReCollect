@@ -85,3 +85,15 @@
     }
   }
 }
+
+/* DOC_PAGES_PLAN §7: the published doc this one is a page of, a quiet link above the title. */
+.pub-parent {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--rc-ink-3);
+}
+
+.pub-parent:hover {
+  color: var(--rc-ink-1);
+}

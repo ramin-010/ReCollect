@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as Y from 'yjs';
-import { Check, PencilLine } from 'lucide-react';
+import { Check, PencilLine, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { RcButton, RcSkel, rcScope } from '@/components/rc-ui';
@@ -20,6 +20,8 @@ import { publicDocApi, shareError, type PublicDoc } from '@/lib/api/sharingApi';
 import '@/components/docs/editor/doc-editor.css';
 import './public-doc.css';
 import { KaagaLogo } from '@/components/brand/kaaga';
+import '@/components/docs/pages/doc-pages.css';
+
 
 const LabEditor = dynamic(() => import('@/components/docs/v2/LabEditor').then((m) => m.LabEditor), {
   ssr: false,
@@ -96,11 +98,33 @@ export function PublicDocPage({ slug }: { slug: string }) {
         </div>
       )}
       <article className={cn('doc-column pub-column', doc.coverImage && 'pub-column--cover')}>
+        {/* DOC_PAGES_PLAN §7: the doc it is a page of, when that one is published too. */}
+        {doc.parent && (
+          <Link href={`/p/${doc.parent.slug}`} className="pub-parent">
+            ← {doc.parent.title}
+          </Link>
+        )}
         <h1 className="doc-title pub-title">{doc.title}</h1>
         <p className="pub-meta">
           By {doc.owner.name} · updated {new Date(doc.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
         <PublicBody state={doc.state} />
+        {/* The published pages inside it that the text doesn't place. */}
+        {doc.pages && doc.pages.length > 0 && (
+          <section className="dp" aria-label="Pages inside this doc">
+            <p className="dp-label">Pages</p>
+            <ul className="dp-list">
+              {doc.pages.map((pg) => (
+                <li key={pg.slug}>
+                  <Link href={`/p/${pg.slug}`} className="dp-row">
+                    <FileText aria-hidden strokeWidth={1.75} className="dp-glyph" />
+                    <span className="dp-title">{pg.title}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </article>
     </Frame>
   );

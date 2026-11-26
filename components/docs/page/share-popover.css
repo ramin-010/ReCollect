@@ -284,3 +284,18 @@
     }
   }
 }
+
+/* DOC_PAGES_PLAN D6: "Also the N pages inside", a quiet checkbox line under the people field and under Publish. */
+.sh-pages {
+  padding-top: 0;
+}
+
+.sh-pages-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--rc-ink-2);
+  cursor: pointer;
+  user-select: none;
+}

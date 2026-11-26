@@ -38,6 +38,8 @@ export interface DocPeople {
   people: DocPerson[];
   requests: DocRequest[];
   published: Published | null;
+  /** DOC_PAGES_PLAN D6: how many pages are inside it (the owner's: "also the N pages inside"). */
+  pages?: number;
 }
 
 /** What a reader of a published doc may do besides reading. */
@@ -54,6 +56,9 @@ export interface PublicDoc {
   access: PublicAccess;
   /** Only when the reader has the doc in the app. */
   docId: string | null;
+  /** DOC_PAGES_PLAN §7: the published pages inside it (not placed in the text) and its parent, when published. */
+  pages?: Array<{ title: string; slug: string }>;
+  parent?: { title: string; slug: string } | null;
 }
 
 /** The message the server gave, else a fallback in the same voice. */
@@ -66,19 +71,20 @@ export const sharingApi = {
   async people(docId: string): Promise<DocPeople> {
     return (await axiosInstance.get(`/api/docs/${docId}/people`)).data.data;
   },
-  async publish(docId: string, on: boolean): Promise<Published | null> {
-    return (await axiosInstance.put(`/api/docs/${docId}/publish`, { on })).data.data.published;
+  // DOC_PAGES_PLAN D6: `withPages` does the same to every page inside.
+  async publish(docId: string, on: boolean, withPages = false): Promise<Published | null> {
+    return (await axiosInstance.put(`/api/docs/${docId}/publish`, { on, ...(withPages ? { withPages } : {}) })).data.data.published;
   },
-  async add(docId: string, email: string, role: ShareRole): Promise<{ people: DocPeople; already: boolean; name: string }> {
-    const body = (await axiosInstance.post(`/api/docs/${docId}/people`, { email, role })).data;
+  async add(docId: string, email: string, role: ShareRole, withPages = false): Promise<{ people: DocPeople; already: boolean; name: string }> {
+    const body = (await axiosInstance.post(`/api/docs/${docId}/people`, { email, role, ...(withPages ? { withPages } : {}) })).data;
     return { people: body.data, already: !!body.already, name: String(body.name ?? '') };
   },
-  async setRole(docId: string, userId: string, role: ShareRole): Promise<DocPeople> {
-    return (await axiosInstance.patch(`/api/docs/${docId}/people/${userId}`, { role })).data.data;
+  async setRole(docId: string, userId: string, role: ShareRole, withPages = false): Promise<DocPeople> {
+    return (await axiosInstance.patch(`/api/docs/${docId}/people/${userId}`, { role, ...(withPages ? { withPages } : {}) })).data.data;
   },
   /** The owner removes someone (the new state), or someone leaves (null). */
-  async remove(docId: string, userId: string): Promise<DocPeople | null> {
-    const body = (await axiosInstance.delete(`/api/docs/${docId}/people/${userId}`)).data;
+  async remove(docId: string, userId: string, withPages = false): Promise<DocPeople | null> {
+    const body = (await axiosInstance.delete(`/api/docs/${docId}/people/${userId}${withPages ? '?withPages=1' : ''}`)).data;
     return body.left ? null : body.data;
   },
   async answer(docId: string, requestId: string, answer: 'approve' | 'decline'): Promise<DocPeople> {
