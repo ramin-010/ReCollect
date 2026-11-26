@@ -16,6 +16,7 @@ import { NOTES_CHANGED, notesChanged } from '@/lib/learning/notesEvents';
 import type { Capture } from '@/lib/learning/types';
 import { NoteBody } from '@/components/learning/home/NoteBody';
 import { openCapturePalette } from '@/components/learning/home/parts';
+import Link from 'next/link';
 import { NoteFileRows, type PendingFile } from './NoteFiles';
 import './doc-notes.css';
 
@@ -35,6 +36,18 @@ export interface NotesPlace {
   topicId: string | null;
   subjectId: string;
   subjectName: string;
+  /** DOC_PAGES_PLAN D4: the open page and the lesson's own doc (a page inside a lesson shows its notes first). */
+  pageId?: string;
+  lessonDocId?: string;
+  /** The lesson's own doc's title (a note on no page sits there). */
+  lessonTitle?: string;
+}
+
+/** The notes written on the open page (on the lesson's own doc: those on no page too). */
+export function isOnPage(place: NotesPlace, n: Capture): boolean {
+  if (!place.pageId) return true;
+  if (place.pageId === place.lessonDocId) return !n.docId || n.docId === place.pageId;
+  return n.docId === place.pageId;
 }
 
 /** The notes of a lesson and of its subject, read again when the app changes one and while open (a chat's). */
@@ -84,11 +97,13 @@ export function useNotes(place: NotesPlace | null, live: boolean) {
   return { lesson, subject, failed, reload: load };
 }
 
-function NoteRow({ note }: { note: Capture }) {
+function NoteRow({ note, showPage, lessonDoc }: { note: Capture; showPage?: boolean; lessonDoc?: { id: string; title: string } | null }) {
   const [open, setOpen] = useState(false);
   const link = isLink(note);
   const byApp = note.createdBy === 'agent' ? note.agentName || 'a chat' : null;
   const meta = [link ? siteOf(note.url) : dayWords(note.createdAt), byApp ? `from ${byApp}` : null].filter(Boolean).join(' · ');
+  // DOC_PAGES_PLAN D4: elsewhere in the lesson, the page it was written on (a link to it).
+  const page = showPage ? note.page ?? lessonDoc ?? null : null;
   const files = note.attachments ?? [];
   const edit = () =>
     useLearningStore.getState().openEditCapture({ captureId: note._id, title: note.title ?? '', content: note.content ?? '', attachments: files });
@@ -139,6 +154,11 @@ function NoteRow({ note }: { note: Capture }) {
           </RcMenu>
         </span>
       </div>
+      {page && (
+        <Link href={`/docs/${page.id}`} className="dn-page">
+          on {page.title.trim() || 'Untitled'}
+        </Link>
+      )}
       {open && !link && (note.content || files.length > 0) && (
         <div className="dn-body">
           {note.content && <NoteBody content={note.content} />}
@@ -189,7 +209,7 @@ function useDropToNotes(place: NotesPlace) {
       setPending((p) => [...p, { key, name: file.name, error: null }]);
       try {
         const stored = await learningApi.uploadLearningFile(file);
-        await learningApi.createCapture({ type: 'NOTE', title: file.name, subjectId: place.subjectId, ...(place.topicId ? { topicId: place.topicId } : {}), attachments: [stored] });
+        await learningApi.createCapture({ type: 'NOTE', title: file.name, subjectId: place.subjectId, ...(place.topicId ? { topicId: place.topicId, ...(place.pageId ? { docId: place.pageId } : {}) } : {}), attachments: [stored] });
         setPending((p) => p.filter((x) => x.key !== key));
         notesChanged();
       } catch (err) {
@@ -227,8 +247,10 @@ export function DocNotes({ place, lesson, subject, failed }: { place: NotesPlace
   // Ctrl K on this page saves to this lesson (the palette takes the open doc's subject and topic).
   const addNote = place.topicId ? () => openCapturePalette('note') : undefined;
   const addLink = place.topicId ? () => openCapturePalette('link') : undefined;
-  const notes = lesson.filter((n) => !isLink(n));
-  const links = lesson.filter(isLink);
+  const here = lesson.filter((n) => isOnPage(place, n));
+  const elsewhere = lesson.filter((n) => !isOnPage(place, n));
+  const notes = here.filter((n) => !isLink(n));
+  const links = here.filter(isLink);
   return (
     <div className={cn('dn', drop.over && 'nf-drop')} {...drop.zone}>
       <NoteFileRows files={[]} pending={drop.pending} onDismiss={drop.dismiss} />
@@ -236,6 +258,18 @@ export function DocNotes({ place, lesson, subject, failed }: { place: NotesPlace
         <>
           <Group label="Notes" notes={notes} empty="Notes on this lesson show here: ask your chat to add one, or press Ctrl K." onAdd={addNote} />
           <Group label="Links" notes={links} empty="Links you keep for this lesson show here." onAdd={addLink} />
+          {elsewhere.length > 0 && (
+            <section className="dn-group" aria-label="Elsewhere in this lesson">
+              <div className="dn-label">
+                <span>Elsewhere in this lesson</span>
+              </div>
+              <ul className="dn-list">
+                {elsewhere.map((n) => (
+                  <NoteRow key={n._id} note={n} showPage lessonDoc={place.lessonDocId ? { id: place.lessonDocId, title: place.lessonTitle ?? 'the lesson' } : null} />
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
       <section className="dn-group" aria-label={`From ${place.subjectName}`}>

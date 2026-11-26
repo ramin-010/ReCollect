@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bot, CalendarClock, CheckCircle2, Clock3, Folder, Target, X } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Bot, CalendarClock, CheckCircle2, Clock3, Folder, Target, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { RcButton, RcConfirm, RcSkel, RcStamp } from '@/components/rc-ui';
 import { RcPicker } from '@/components/rc-ui/RcPicker';
@@ -90,8 +91,10 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
       await fn();
       await load();
       if (ok) toast.success(ok);
-    } catch {
-      toast.error('That did not save. Check your connection and try again.');
+    } catch (err) {
+      // The server's own words when it refuses (DOC_PAGES_PLAN D5: one lesson per branch).
+      const said = (err as { response?: { status?: number; data?: { message?: string } } }).response;
+      toast.error(said?.status === 409 && said.data?.message ? said.data.message : 'That did not save. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
@@ -144,9 +147,29 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
 
   const next = info.nextAction;
   const done = info.chain.filter((r) => r.status === 'done').length;
+  // DOC_PAGES_PLAN §4.8: a page inside a lesson is revised with it: one "Lesson" row instead of Subject, Revision, Goal.
+  const lessonAbove = !topic && info.lesson ? info.lesson : null;
+  const lessonSubject = lessonAbove ? subjects.find((s) => s._id === lessonAbove.subjectId) ?? null : null;
 
   return (
     <div className="doc-props">
+      {lessonAbove && (
+        <div className="doc-prop">
+          <span className="doc-prop-label">
+            <BookOpen aria-hidden strokeWidth={1.75} />
+            Lesson
+          </span>
+          <span className="doc-prop-value doc-prop-wrap">
+            <Link href={`/docs/${lessonAbove.docId}`} className="doc-prop-btn">
+              <span className="rc-swatch" style={{ background: lessonSubject?.color ?? 'var(--rc-icon)' }} aria-hidden />
+              {lessonAbove.title.trim() || 'Untitled'}
+            </Link>
+            <span className="doc-prop-hint">revised with it · {lessonAbove.subjectName}</span>
+          </span>
+        </div>
+      )}
+      {!lessonAbove && (
+      <>
       <div className="doc-prop">
         <span className="doc-prop-label">
           <Folder aria-hidden strokeWidth={1.75} />
@@ -262,6 +285,8 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
             </span>
           </span>
         </div>
+      )}
+      </>
       )}
 
       {agentEdit && (

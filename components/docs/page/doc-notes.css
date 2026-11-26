@@ -396,3 +396,17 @@ button.dn-row-main > .dn-meta {
   outline-offset: 2px;
   border-radius: var(--rc-r-md, 8px);
 }
+
+/* DOC_PAGES_PLAN D4: elsewhere in the lesson, the page a note was written on (a quiet link under its line). */
+.dn-page {
+  display: block;
+  margin: -2px 0 4px;
+  padding: 0 8px 0 26px;
+  font-size: 12px;
+  color: var(--rc-ink-3, #8a8985);
+}
+
+.dn-page:hover {
+  color: var(--rc-ink-2, #5f5e5b);
+  text-decoration: underline;
+}

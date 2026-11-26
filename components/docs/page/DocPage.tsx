@@ -6,8 +6,11 @@ import type { HocuspocusProvider } from '@hocuspocus/provider';
 import type * as Y from 'yjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, FilePlus2, ImagePlus, Link2, MoreHorizontal, PanelRight, RotateCcw, Trash2 } from 'lucide-react';
+import { FileDown, FilePlus2, FolderInput, ImagePlus, Link2, MoreHorizontal, PanelRight, RotateCcw, Trash2 } from 'lucide-react';
 import { DocPages, useNewPage, type PageRow } from '@/components/docs/pages/DocPages';
+import { MoveDocDialog } from '@/components/docs/pages/MoveDocDialog';
+import { PageFooterNav } from '@/components/docs/pages/PageFooterNav';
+import { useDocTreeStore } from '@/lib/store/docTreeStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSheet, RcSkel } from '@/components/rc-ui';
@@ -24,7 +27,7 @@ import { CoverPicker } from '@/components/docs/doc_editor/CoverPicker';
 import { SharePopover } from './SharePopover';
 import { useLiveDocEditor } from '@/components/docs/editor/useLiveDocEditor';
 import { DocProperties } from './DocProperties';
-import { DocNotes, useNotes, type NotesPlace } from './DocNotes';
+import { DocNotes, isOnPage, useNotes, type NotesPlace } from './DocNotes';
 import type { DocEditor } from '@/lib/blocks/schema';
 import '@/components/docs/editor/doc-editor.css';
 
@@ -241,6 +244,8 @@ function DocSurface({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // In the trash: the bar at the top says so (Restore, Delete for good); the doc still opens.
   const [trashedAt, setTrashedAt] = useState<string | null>(doc.trashedAt ?? null);
+  // DOC_PAGES_PLAN §4.8: a page that went to the trash with a doc above it says which.
+  const trashedWithId = (doc as { trashedWithId?: string | null }).trashedWithId ?? null;
   const [deleting, setDeleting] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -274,11 +279,14 @@ function DocSurface({
     return () => meta.unobserve(observe);
   }, [meta]);
 
+  const renameInTree = useDocTreeStore((s) => s.rename);
   const changeTitle = (value: string) => {
     const v = value.replace(/\n/g, ' ');
     setTitle(v);
     meta.set('title', v);
     updateStoreDoc(doc._id, { title: v });
+    // DOC_PAGES_PLAN §4.4: the sidebar's tree follows the typing.
+    renameInTree(doc._id, v);
   };
 
   // The sidebar's Recent list follows a renamed doc (it keeps the title from the visit otherwise).
@@ -308,7 +316,32 @@ function DocSurface({
   const router = useRouter();
   // DOC_PAGES_PLAN §4.2-4.3: the docs above this one (the trail) and the pages inside it, from GET /api/docs/:id.
   const tree = useMemo(() => treeOf(doc), [doc]);
+  const trashedWithTitle = trashedWithId ? useDocStore.getState().docs.find((d) => d._id === trashedWithId)?.title?.trim() : undefined;
+  const trashedWith = trashedWithId ? (trashedWithTitle ? `“${trashedWithTitle}”` : 'the doc it was in') : null;
   const { make: makePage } = useNewPage(doc._id);
+  // §4.4: the tree this page is in, for the sidebar's Pages tab and previous/next.
+  const loadTree = useDocTreeStore((s) => s.load);
+  const refreshTree = useDocTreeStore((s) => s.refresh);
+  useEffect(() => {
+    void loadTree(doc._id, isOwner);
+  }, [doc._id, isOwner, loadTree]);
+  // §4.7: "Move to…" from the ··· menu.
+  const [moveOpen, setMoveOpen] = useState(false);
+  // §4.8: Ctrl+Shift+U opens the doc above (Notion's key); not at the top level, not from a field outside the editor.
+  const parentId = (doc as { parentId?: string | null }).parentId ?? null;
+  useEffect(() => {
+    if (!parentId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.key.toLowerCase() !== 'u') return;
+      const t = e.target as HTMLElement | null;
+      const inField = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && !t.closest('.doc-column');
+      if (inField) return;
+      e.preventDefault();
+      router.push(`/docs/${parentId}`);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [parentId, router]);
   // ?share=1 (a request's notification or email) opens the Share popover once; the address drops it.
   const [shareAtStart] = useState(() => params.get('share') === '1');
   useEffect(() => {
@@ -363,15 +396,20 @@ function DocSurface({
     const at = new Date().toISOString();
     setTrashedAt(at);
     try {
-      await docApi.trashDoc(doc._id);
-      toast('Moved to the trash', {
+      const done = await docApi.trashDoc(doc._id);
+      void refreshTree();
+      // DOC_PAGES_PLAN §4.8: the pages inside it went with it.
+      toast(done.pages ? `Moved to the trash with ${done.pages} ${done.pages === 1 ? 'page' : 'pages'} inside` : 'Moved to the trash', {
         description: 'Deleted for good after 30 days.',
         action: {
           label: 'Undo',
           onClick: () =>
             void docApi
               .restoreDoc(doc._id)
-              .then(() => setTrashedAt(null))
+              .then(() => {
+                setTrashedAt(null);
+                void refreshTree();
+              })
               .catch(() => toast.error('It did not come back. Try again.')),
         },
       });
@@ -379,14 +417,15 @@ function DocSurface({
       setTrashedAt(null);
       toast.error('It did not move to the trash. Try again.');
     }
-  }, [doc._id]);
+  }, [doc._id, refreshTree]);
 
   const restore = async () => {
     const was = trashedAt;
     setTrashedAt(null);
     try {
-      await docApi.restoreDoc(doc._id);
-      toast.success('Restored');
+      const back = await docApi.restoreDoc(doc._id);
+      toast.success(back.detached ? 'Restored at the top level' : back.pages ? `Restored with ${back.pages} ${back.pages === 1 ? 'page' : 'pages'} inside` : 'Restored');
+      void refreshTree();
     } catch {
       setTrashedAt(was);
       toast.error('It did not come back. Try again.');
@@ -400,9 +439,14 @@ function DocSurface({
     let cancelled = false;
     Promise.all([learningApi.getTopicByDoc(doc._id), learningApi.getSubjects()])
       .then(([t, subjects]) => {
-        if (cancelled || !t.topic) return;
-        const subject = subjects.find((s) => s._id === t.topic!.subjectId);
-        setNotesPlace({ topicId: t.topic._id, subjectId: t.topic.subjectId, subjectName: subject?.name ?? 'its subject' });
+        if (cancelled) return;
+        // DOC_PAGES_PLAN D4: every page of a lesson has its notes panel (a page inside one: its lesson's).
+        if (t.topic) {
+          const subject = subjects.find((s) => s._id === t.topic!.subjectId);
+          setNotesPlace({ topicId: t.topic._id, subjectId: t.topic.subjectId, subjectName: subject?.name ?? 'its subject', pageId: doc._id, lessonDocId: doc._id });
+        } else if (t.lesson) {
+          setNotesPlace({ topicId: t.lesson.topicId, subjectId: t.lesson.subjectId, subjectName: t.lesson.subjectName || 'its subject', pageId: doc._id, lessonDocId: t.lesson.docId, lessonTitle: t.lesson.title });
+        }
       })
       .catch(() => {});
     return () => {
@@ -495,7 +539,8 @@ function DocSurface({
     setSideW(w);
     keepW(w);
   };
-  const notesCount = notes.lesson?.length ?? 0;
+  // On a page inside a lesson the count is this page's notes; on the lesson, the lesson's.
+  const notesCount = notesPlace && notesPlace.pageId !== notesPlace.lessonDocId ? (notes.lesson ?? []).filter((n) => isOnPage(notesPlace, n)).length : notes.lesson?.length ?? 0;
 
   // Fill the top bar: breadcrumb and the page's actions.
   useEffect(() => {
@@ -525,6 +570,7 @@ function DocSurface({
               ...(editable ? [{ label: cover ? 'Change cover' : 'Add cover', icon: <ImagePlus className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => setCoverOpen(true) }] : []),
               // DOC_PAGES_PLAN §4.3: a page inside this doc (the owner's).
               ...(isOwner && !trashedAt ? [{ label: 'Add a page inside', icon: <FilePlus2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void makePage() }] : []),
+              ...(isOwner && !trashedAt ? [{ label: 'Move to…', icon: <FolderInput className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => setMoveOpen(true) }] : []),
               ...(isOwner && !trashedAt ? [{ label: 'Move to trash', icon: <Trash2 className="h-4 w-4" strokeWidth={1.75} />, onSelect: () => void moveToTrash(), danger: true, separatorBefore: true }] : []),
             ]}
           >
@@ -558,9 +604,11 @@ function DocSurface({
         <div className="doc-trash-bar" role="status">
           <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
           <p className="min-w-0 flex-1">
-            {isOwner
-              ? `In the trash. It is deleted for good on ${new Date(new Date(trashedAt).getTime() + 30 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`
-              : 'The owner moved this doc to the trash.'}
+            {!isOwner
+              ? 'The owner moved this doc to the trash.'
+              : trashedWith
+                ? `In the trash with ${trashedWith}. Restore brings this page back on its own, at the top level.`
+                : `In the trash. It is deleted for good on ${new Date(new Date(trashedAt).getTime() + 30 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.`}
           </p>
           {isOwner && (
             <>
@@ -638,7 +686,17 @@ function DocSurface({
           <NewBody ydoc={ydoc} provider={provider} user={{ name: me.name, color: me.color }} docId={doc._id} editable={editable && !trashedAt} onReady={setBody} />
         )}
         <DocPages docId={doc._id} pages={tree.pages} isOwner={isOwner && !trashedAt} />
+        {!trashedAt && <PageFooterNav docId={doc._id} />}
       </div>
+      <MoveDocDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        doc={{ _id: doc._id, title: title.trim() || 'Untitled' }}
+        onMoved={() => {
+          void refreshTree();
+          router.refresh();
+        }}
+      />
 
       <CoverPicker
         show={coverOpen}

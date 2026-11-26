@@ -937,3 +937,48 @@ body.path-grabbing * {
   gap: 2px;
   transform: translateY(-50%);
 }
+
+/* DOC_PAGES_PLAN §4.6: the tree in All. A chevron before the icon opens a doc's pages beneath it, 20 px a level. The
+   column shows only when some doc here holds pages, so a library without pages looks as it did. */
+.lib-row--tree .lib-row-link {
+  padding-left: calc(32px + var(--lib-depth, 0) * 20px);
+}
+
+.lib-chev {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  left: calc(8px + var(--lib-depth, 0) * 20px);
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--rc-icon);
+}
+
+.lib-chev:hover {
+  background: var(--rc-hover);
+  color: var(--rc-ink-1);
+}
+
+.lib-chev svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--rc-fast) ease;
+}
+
+.lib-chev[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+/* Flat views: where a page sits, after its title. */
+.lib-row-path {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--rc-ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

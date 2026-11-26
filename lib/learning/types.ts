@@ -170,6 +170,9 @@ export interface RawCapture {
   agentName?: string | null;
   /** The lesson it belongs to (lists by subject with `lessons`). */
   lesson?: { docId: string | null; title: string } | null;
+  /** DOC_PAGES_PLAN D4: the page it was written on (its lesson stays topicId), and that page's title in lists. */
+  docId?: string | null;
+  page?: { id: string; title: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -873,6 +876,8 @@ export interface TopicByDoc {
   nextAction: NextRevisionAction;
   /** STUDY_FLOW_PLAN §4.4: the doc has a revision card (older servers leave it out). */
   hasCard?: boolean;
+  /** DOC_PAGES_PLAN D5: a page inside a lesson has no topic of its own; this is the lesson it is revised with. */
+  lesson?: { topicId: string; docId: string; title: string; subjectId: string; subjectName: string } | null;
 }
 
 // ─── Request bodies ─────────────────────────────────────────────────────────
@@ -889,6 +894,8 @@ export interface CreateCaptureBody {
   attachments?: Attachment[];
   /** Start the +1/+3/+7/+21 cycles in the same transaction. */
   revise?: boolean;
+  /** DOC_PAGES_PLAN D4: the page it is written on (kept when that page is revised with `topicId`'s lesson). */
+  docId?: string;
 }
 
 export interface UpdateCaptureBody {

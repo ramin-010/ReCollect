@@ -36,6 +36,25 @@ export interface DocSearchHit {
   snippet: string;
   /** [start, end) of each matched word in `snippet`; none when only the title matched. */
   marks: Array<[number, number]>;
+  /** DOC_PAGES_PLAN: the titles of the docs above it, root first (an older server sends none). */
+  path?: string[];
+}
+
+/** GET /api/docs/:id/tree: the tree a doc is in, as this user sees it (root first, depth-first). */
+export interface DocTreeNode {
+  _id: string;
+  parentId: string | null;
+  title: string;
+  position: number;
+}
+
+/** What trash and restore answer (DOC_PAGES_PLAN D8: the pages that went or came back with it). */
+export interface TrashAnswer {
+  _id: string;
+  title?: string;
+  trashedAt: string | null;
+  pages?: number;
+  detached?: boolean;
 }
 
 export const docApi = {
@@ -77,13 +96,25 @@ export const docApi = {
     }
   },
 
-  async trashDoc(id: string): Promise<{ _id: string; trashedAt: string | null }> {
+  async trashDoc(id: string): Promise<TrashAnswer> {
     const response = await axiosInstance.post(`/api/docs/${id}/trash`);
     return response.data.data;
   },
 
-  async restoreDoc(id: string): Promise<{ _id: string; trashedAt: string | null }> {
+  async restoreDoc(id: string): Promise<TrashAnswer> {
     const response = await axiosInstance.post(`/api/docs/${id}/restore`);
+    return response.data.data;
+  },
+
+  /** DOC_PAGES_PLAN §4.9: the tree a doc is in. */
+  async fetchTree(id: string): Promise<{ rootId: string; nodes: DocTreeNode[] }> {
+    const response = await axiosInstance.get(`/api/docs/${id}/tree`);
+    return response.data.data;
+  },
+
+  /** Inside another doc (null: the top level), after one of its pages or at the 'start'; `after` alone reorders. */
+  async moveDoc(id: string, to: { parentId?: string | null; after?: string }): Promise<ServerDoc> {
+    const response = await axiosInstance.patch(`/api/docs/${id}`, to);
     return response.data.data;
   },
 

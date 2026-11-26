@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ArrowDownUp, FileText, Globe, Link2, MoreHorizontal, Pin, PinOff, Plus, RotateCcw, Search, Trash2, Users } from 'lucide-react';
+import { ArrowDownUp, ChevronRight, FilePlus2, FileText, Files, FolderInput, Globe, Link2, MoreHorizontal, Pin, PinOff, Plus, RotateCcw, Search, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { rcScope, RcButton, RcConfirm, RcIconButton, RcMenu, RcSegmented, RcSkel } from '@/components/rc-ui';
@@ -17,6 +17,8 @@ import { formatRelative } from '@/components/docs/page/format';
 import { NewDocDialog } from './NewDocDialog';
 import { StatusCell } from './StatusCell';
 import { SubjectPathView } from './SubjectPath';
+import { MoveDocDialog } from '@/components/docs/pages/MoveDocDialog';
+import { pathOf } from '@/lib/docs/tree';
 import './docs-library.css';
 
 type View = 'all' | 'due' | 'pinned' | 'shared' | 'agents' | 'path' | 'trash';
@@ -72,6 +74,17 @@ export function DocsLibrary() {
   const [toDelete, setToDelete] = useState<Doc | null>(null);
   const [emptyOpen, setEmptyOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // DOC_PAGES_PLAN §4.6: top-level docs unfold their pages in place (kept for the visit); "Move to…" from a row's menu.
+  const [openRows, setOpenRows] = useState<Set<string>>(() => readOpenRows());
+  const [moving, setMoving] = useState<Doc | null>(null);
+  const toggleRow = (id: string) =>
+    setOpenRows((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      writeOpenRows(next);
+      return next;
+    });
 
   // Old deep links (/docs?id=…) open the doc page.
   useEffect(() => {
@@ -149,29 +162,56 @@ export function DocsLibrary() {
       });
   }, [docs, statuses, subjects]);
 
+  // DOC_PAGES_PLAN §4.6: the tree among the live docs. A doc whose parent is gone, in the trash or not his to open is
+  // top-level; each doc's pages in their order.
+  const { topRows, kidsOf, liveDocs } = useMemo(() => {
+    const byId = new Map(rows.map((r) => [r.doc._id, r]));
+    const kids = new Map<string, Row[]>();
+    for (const r of rows) {
+      const p = r.doc.parentId;
+      if (!p || !byId.has(p)) continue;
+      kids.set(p, [...(kids.get(p) ?? []), r]);
+    }
+    for (const list of kids.values()) list.sort((a, b) => (a.doc.position ?? 0) - (b.doc.position ?? 0) || a.doc._id.localeCompare(b.doc._id));
+    return { topRows: rows.filter((r) => !r.doc.parentId || !byId.has(r.doc.parentId)), kidsOf: kids, liveDocs: rows.map((r) => r.doc) };
+  }, [rows]);
+  /** "System Design › Caching": the docs above a page (flat views say where a page sits). */
+  const pathText = (id: string) =>
+    pathOf(liveDocs, id)
+      .map((d) => d.title?.trim() || 'Untitled')
+      .join(' › ');
+
   const isDue = (r: Row) => r.status?.state === 'due';
   const isShared = (r: Row) => (r.doc.role ?? 'owner') !== 'owner' || !!r.doc.publishedAt || (r.doc.collaborators?.length ?? 0) > 0;
   // The trash: his own docs only (a shared doc is left, not trashed), last moved first.
   const trashRows: Row[] = useMemo(
     () =>
       docs
-        // A deleted subject's docs come back with it: listed under it, not here.
-        .filter((d) => !!d.trashedAt && (d.role ?? 'owner') === 'owner' && !d._id.startsWith('local_') && !deletions.some((x) => x.docIds?.includes(d._id)))
+        // A deleted subject's docs come back with it: listed under it, not here. A page that went with a doc is in that
+        // doc's row (DOC_PAGES_PLAN §4.6: one row per set).
+        .filter((d) => !!d.trashedAt && !d.trashedWithId && (d.role ?? 'owner') === 'owner' && !d._id.startsWith('local_') && !deletions.some((x) => x.docIds?.includes(d._id)))
         .sort((a, b) => new Date(b.trashedAt!).getTime() - new Date(a.trashedAt!).getTime())
         .map((doc) => ({ doc, status: null, subject: null })),
     [docs, deletions],
   );
 
+  /** How many pages went to the trash with each doc. */
+  const setSizes = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of docs) if (d.trashedAt && d.trashedWithId) m.set(d.trashedWithId, (m.get(d.trashedWithId) ?? 0) + 1);
+    return m;
+  }, [docs]);
+
   const counts = useMemo(
     () => ({
-      all: rows.length,
+      all: topRows.length,
       due: rows.filter(isDue).length,
       pinned: rows.filter((r) => r.doc.isPinned).length,
       shared: rows.filter(isShared).length,
       agents: rows.filter((r) => agentDocs.has(r.doc._id)).length,
       trash: trashRows.length,
     }),
-    [rows, trashRows, agentDocs],
+    [rows, topRows, trashRows, agentDocs],
   );
 
   const subjectCounts = useMemo(() => {
@@ -186,9 +226,11 @@ export function DocsLibrary() {
   // The text search's answer, while it is for what the box says now.
   const hitsNow = textHits && searchText.length >= TEXT_SEARCH_MIN && textHits.q === searchText ? textHits.byId : null;
 
+  // §4.6: All without a search or a subject is the tree; every other view is flat, each page saying its path.
+  const treeMode = view === 'all' && !searchText && !subjectFilter;
   const visible = useMemo(() => {
     const q = searchText.toLowerCase();
-    const list = rows.filter((r) => {
+    const list = (treeMode ? topRows : rows).filter((r) => {
       if (view === 'due' && !isDue(r)) return false;
       if (view === 'pinned' && !r.doc.isPinned) return false;
       if (view === 'shared' && !isShared(r)) return false;
@@ -211,8 +253,20 @@ export function DocsLibrary() {
       if (sort === 'created') return time(b.doc.createdAt) - time(a.doc.createdAt);
       return time(b.doc.updatedAt) - time(a.doc.updatedAt);
     });
-    return list;
-  }, [rows, view, subjectFilter, searchText, hitsNow, sort, agentDocs]);
+    if (!treeMode) return list.map((row) => ({ row, depth: 0 }));
+    const out: Array<{ row: Row; depth: number }> = [];
+    const seen = new Set<string>();
+    const walk = (r: Row, depth: number) => {
+      if (seen.has(r.doc._id) || depth > 64) return;
+      seen.add(r.doc._id);
+      out.push({ row: r, depth });
+      if (openRows.has(r.doc._id)) for (const k of kidsOf.get(r.doc._id) ?? []) walk(k, depth + 1);
+    };
+    for (const r of list) walk(r, 0);
+    return out;
+  }, [rows, topRows, kidsOf, openRows, treeMode, view, subjectFilter, searchText, hitsNow, sort, agentDocs]);
+  // The chevron column only when some doc here holds pages (a library without pages looks as it did).
+  const treeColumn = treeMode && visible.some(({ row }) => (kidsOf.get(row.doc._id)?.length ?? 0) > 0);
 
   const togglePin = async (doc: Doc) => {
     updateDoc(doc._id, { isPinned: !doc.isPinned });
@@ -238,6 +292,8 @@ export function DocsLibrary() {
     setDeleting(true);
     try {
       await docApi.deleteDoc(toDelete._id);
+      // The pages that went to the trash with it go with it.
+      for (const d of docs) if (d.trashedWithId === toDelete._id) removeDoc(d._id);
       removeDoc(toDelete._id);
       toast.success('Deleted for good');
       setToDelete(null);
@@ -286,7 +342,9 @@ export function DocsLibrary() {
   const restore = async (doc: Doc) => {
     updateDoc(doc._id, { trashedAt: null });
     try {
-      await docApi.restoreDoc(doc._id);
+      const back = await docApi.restoreDoc(doc._id);
+      // A set (or a page back at the top level): read the list again.
+      if (back.pages || back.detached) await load();
     } catch {
       updateDoc(doc._id, { trashedAt: doc.trashedAt ?? null });
       toast.error('It did not come back. Try again.');
@@ -297,8 +355,10 @@ export function DocsLibrary() {
     const at = new Date().toISOString();
     updateDoc(doc._id, { trashedAt: at });
     try {
-      await docApi.trashDoc(doc._id);
-      toast.success(`Moved “${doc.title || 'Untitled'}” to the trash`, { action: { label: 'Undo', onClick: () => void restore({ ...doc, trashedAt: at }) } });
+      const done = await docApi.trashDoc(doc._id);
+      const pages = done.pages ? ` with ${plural(done.pages, 'page')} inside` : '';
+      if (done.pages) await load();
+      toast.success(`Moved “${doc.title || 'Untitled'}” to the trash${pages}`, { action: { label: 'Undo', onClick: () => void restore({ ...doc, trashedAt: at }) } });
     } catch {
       updateDoc(doc._id, { trashedAt: null });
       toast.error('It did not move. Try again.');
@@ -317,6 +377,16 @@ export function DocsLibrary() {
       toast.error('The trash was not emptied. Try again.');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  /** "Add a page inside": an Untitled page, opened with the caret in its title. */
+  const addPageInside = async (doc: Doc) => {
+    try {
+      const made = await docApi.createDoc({ title: 'Untitled', parentId: doc._id });
+      if (made.data?._id) router.push(`/docs/${made.data._id}?new=1`);
+    } catch {
+      toast.error('The page was not made. Try again.');
     }
   };
 
@@ -442,7 +512,7 @@ export function DocsLibrary() {
             ) : view === 'trash' ? (
               <>
                 {deletions.length > 0 && <DeletedSubjects rows={deletions} onUndo={(id) => void undoSubject(id)} />}
-                {trashRows.length > 0 && <TrashList rows={trashRows} onRestore={(d) => void restore(d)} onDelete={setToDelete} />}
+                {trashRows.length > 0 && <TrashList rows={trashRows} sizes={setSizes} onRestore={(d) => void restore(d)} onDelete={setToDelete} />}
               </>
             ) : rows.length === 0 ? (
               <div className="lib-empty">
@@ -474,15 +544,20 @@ export function DocsLibrary() {
               </div>
             ) : (
               <ul>
-                {visible.map((r) => (
+                {visible.map(({ row: r, depth }) => (
                   <DocRow
                     key={r.doc._id}
                     row={r}
                     hit={hitsNow?.get(r.doc._id)}
                     showSubject={!subjectFilter}
+                    tree={treeColumn ? { depth, kids: kidsOf.get(r.doc._id)?.length ?? 0, open: openRows.has(r.doc._id), onToggle: () => toggleRow(r.doc._id) } : null}
+                    path={treeMode ? '' : pathText(r.doc._id)}
+                    pages={kidsOf.get(r.doc._id)?.length ?? 0}
                     onPin={() => void togglePin(r.doc)}
                     onCopy={() => void copyLink(r.doc)}
                     onDelete={() => void moveToTrash(r.doc)}
+                    onAddPage={() => void addPageInside(r.doc)}
+                    onMove={() => setMoving(r.doc)}
                   />
                 ))}
               </ul>
@@ -498,11 +573,12 @@ export function DocsLibrary() {
         defaultSubjectId={subjectFilter && subjectFilter !== UNFILED ? subjectFilter : null}
         onSubjectCreated={(s) => setSubjects((cur) => [...cur, { ...s, topics: [] }])}
       />
+      <MoveDocDialog open={!!moving} onOpenChange={(o) => !o && setMoving(null)} doc={moving ? { _id: moving._id, title: moving.title } : null} onMoved={() => void load()} />
       <RcConfirm
         open={!!toDelete}
         onOpenChange={(o) => !o && setToDelete(null)}
         title={`Delete “${toDelete?.title || 'Untitled'}” for good?`}
-        body="It can't be brought back. It leaves Docs for everyone it is shared with; its revision history stays."
+        body={`It can't be brought back${toDelete && setSizes.get(toDelete._id) ? `, nor the ${plural(setSizes.get(toDelete._id)!, 'page')} inside it` : ''}. It leaves Docs for everyone it is shared with; its revision history stays.`}
         confirmLabel="Delete for good"
         danger
         busy={deleting}
@@ -533,6 +609,25 @@ export function DocsLibrary() {
 }
 
 const TRASH_DAYS = 30;
+
+/** Which top-level docs are unfolded, for the visit (DOC_PAGES_PLAN §4.6). */
+const OPEN_KEY = 'rc-lib-open';
+function readOpenRows(): Set<string> {
+  try {
+    const raw = typeof window === 'undefined' ? null : window.sessionStorage.getItem(OPEN_KEY);
+    const ids = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+function writeOpenRows(ids: Set<string>) {
+  try {
+    window.sessionStorage.setItem(OPEN_KEY, JSON.stringify([...ids]));
+  } catch {
+    // No storage: open rows last until the page is left.
+  }
+}
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -587,7 +682,7 @@ function DeletedSubjects({ rows, onUndo }: { rows: SubjectDeletion[]; onUndo: (i
 }
 
 /** The Trash view: when each doc goes for good, with Restore and Delete for good on every row. */
-function TrashList({ rows, onRestore, onDelete }: { rows: Row[]; onRestore: (d: Doc) => void; onDelete: (d: Doc) => void }) {
+function TrashList({ rows, sizes, onRestore, onDelete }: { rows: Row[]; sizes: Map<string, number>; onRestore: (d: Doc) => void; onDelete: (d: Doc) => void }) {
   return (
     <>
       <p className="rc-meta lib-trash-note">Docs in the trash are deleted for good {TRASH_DAYS} days after they were moved here.</p>
@@ -600,6 +695,7 @@ function TrashList({ rows, onRestore, onDelete }: { rows: Row[]; onRestore: (d: 
                 <FileText className="lib-row-icon" strokeWidth={1.75} aria-hidden />
                 <span className="lib-row-title">
                   <span className={cn(!doc.title && 'rc-ink-3')}>{doc.title || 'Untitled'}</span>
+                  {sizes.get(doc._id) ? <span className="rc-meta ml-2">with {plural(sizes.get(doc._id)!, 'page')} inside</span> : null}
                 </span>
                 <span className="lib-edited" title={gone.toLocaleString()}>
                   Moved {formatRelative(doc.trashedAt!)} · goes {gone.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -655,20 +751,62 @@ function SharedMark({ doc }: { doc: Doc }) {
   return null;
 }
 
-function DocRow({ row, hit, showSubject, onPin, onCopy, onDelete }: { row: Row; hit?: TextHit; showSubject: boolean; onPin: () => void; onCopy: () => void; onDelete: () => void }) {
+interface RowTree {
+  depth: number;
+  kids: number;
+  open: boolean;
+  onToggle: () => void;
+}
+
+function DocRow({
+  row,
+  hit,
+  showSubject,
+  tree,
+  path,
+  pages,
+  onPin,
+  onCopy,
+  onDelete,
+  onAddPage,
+  onMove,
+}: {
+  row: Row;
+  hit?: TextHit;
+  showSubject: boolean;
+  /** DOC_PAGES_PLAN §4.6: its place in the unfolding tree (null: a flat list). */
+  tree: RowTree | null;
+  /** The docs above it, in words (flat views). */
+  path: string;
+  /** How many pages it holds (the stacked-pages glyph). */
+  pages: number;
+  onPin: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+  onAddPage: () => void;
+  onMove: () => void;
+}) {
   const { doc, subject, status } = row;
   const owner = (doc.role ?? 'owner') === 'owner';
   // Only when the words were found in the text (a title match shows no snippet).
   const snippet = hit && hit.marks.length > 0 ? hit : null;
+  const Glyph = pages > 0 ? Files : FileText;
+  const title = doc.title || 'Untitled';
   return (
-    <li className={cn('lib-row rc-row', snippet && 'lib-row--hit')}>
+    <li className={cn('lib-row rc-row', snippet && 'lib-row--hit', tree && 'lib-row--tree')} style={tree ? ({ '--lib-depth': tree.depth } as React.CSSProperties) : undefined}>
+      {tree && tree.kids > 0 && (
+        <button type="button" className="lib-chev" aria-expanded={tree.open} aria-label={tree.open ? `Close the pages of ${title}` : `Show the pages of ${title}`} onClick={tree.onToggle}>
+          <ChevronRight strokeWidth={2} aria-hidden />
+        </button>
+      )}
       <Link href={`/docs/${doc._id}`} className="lib-row-link">
-        <FileText className="lib-row-icon" strokeWidth={1.75} aria-hidden />
+        <Glyph className="lib-row-icon" strokeWidth={1.75} aria-hidden />
         <span className="lib-row-main">
           <span className="lib-row-title">
-            <span className={cn(!doc.title && 'rc-ink-3')}>{doc.title || 'Untitled'}</span>
+            <span className={cn(!doc.title && 'rc-ink-3')}>{title}</span>
             {doc.isPinned && <Pin className="lib-pin" strokeWidth={1.75} aria-label="Pinned" />}
             <SharedMark doc={doc} />
+            {path && <span className="lib-row-path">in {path}</span>}
           </span>
           {snippet && (
             <span className="lib-row-snippet">
@@ -697,6 +835,13 @@ function DocRow({ row, hit, showSubject, onPin, onCopy, onDelete }: { row: Row; 
           actions={[
             { label: doc.isPinned ? 'Unpin' : 'Pin to top', icon: doc.isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />, onSelect: onPin },
             { label: 'Copy link', icon: <Link2 className="h-4 w-4" />, onSelect: onCopy },
+            // DOC_PAGES_PLAN §4.6: pages (the owner's).
+            ...(owner
+              ? [
+                  { label: 'Add a page inside', icon: <FilePlus2 className="h-4 w-4" />, onSelect: onAddPage },
+                  { label: 'Move to…', icon: <FolderInput className="h-4 w-4" />, onSelect: onMove },
+                ]
+              : []),
             ...(owner ? [{ label: 'Move to trash', icon: <Trash2 className="h-4 w-4" />, onSelect: onDelete, danger: true, separatorBefore: true }] : []),
           ]}
         >

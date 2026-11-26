@@ -32,6 +32,8 @@ import {
 import { ownerApi } from '@/lib/api/ownerApi';
 import { NotificationsPopover } from './NotificationsPopover';
 import { SidebarChats } from './SidebarChats';
+import { SidebarPages } from '@/components/docs/pages/SidebarPages';
+import { useDocTreeStore } from '@/lib/store/docTreeStore';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { getRecentVisitsFromCache, RecentVisit } from '@/lib/services/recentVisits';
 import { features, type FeatureName } from '@/lib/features';
@@ -262,9 +264,16 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
   }, []);
   const nav = isOwner ? [...primaryNav, PEOPLE_ITEM] : primaryNav;
   // The lower list: Chats while in Ask Kaaga, Recent elsewhere; a click on the other tab holds until he navigates.
-  const [choice, setChoice] = useState<{ path: string; tab: 'recent' | 'chats' } | null>(null);
+  // DOC_PAGES_PLAN §4.4: on a doc whose tree has more than one page, a third tab "Pages" is the default there.
+  const [choice, setChoice] = useState<{ path: string; tab: 'recent' | 'chats' | 'pages' } | null>(null);
   const onAsk = pathname === '/ask' || !!pathname?.startsWith('/ask/');
-  const section: 'recent' | 'chats' = choice && choice.path === pathname ? choice.tab : onAsk ? 'chats' : 'recent';
+  const treeDocId = useDocTreeStore((s) => s.docId);
+  const treeSize = useDocTreeStore((s) => s.nodes.length);
+  const openDocId = pathname?.startsWith('/docs/') ? decodeURIComponent(pathname.slice('/docs/'.length).split('/')[0] ?? '') : null;
+  const hasPages = !!openDocId && treeDocId === openDocId && treeSize > 1;
+  const tabs: Array<'recent' | 'chats' | 'pages'> = hasPages ? ['pages', 'recent', 'chats'] : ['recent', 'chats'];
+  const chosen = choice && choice.path === pathname && tabs.includes(choice.tab) ? choice.tab : null;
+  const section: 'recent' | 'chats' | 'pages' = chosen ?? (onAsk ? 'chats' : hasPages ? 'pages' : 'recent');
 
   // Recents update whenever the path changes (a navigation).
   useEffect(() => {
@@ -375,12 +384,13 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
             onKeyDown={(e) => {
               if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
               e.preventDefault();
-              const next = section === 'recent' ? 'chats' : 'recent';
+              const at = tabs.indexOf(section);
+              const next = tabs[(at + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]!;
               setChoice({ path: pathname, tab: next });
               e.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)?.focus();
             }}
           >
-            {(['recent', 'chats'] as const).map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -394,11 +404,13 @@ function SidebarContent({ isCollapsed, isMobile, onCollapse, onNavigate, user, p
                   section === t ? 'bg-[var(--ui-selected)] text-[var(--ui-ink-1)]' : 'text-[var(--ui-ink-3)] hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-2)]',
                 )}
               >
-                {t === 'recent' ? 'Recent' : 'Chats'}
+                {t === 'recent' ? 'Recent' : t === 'chats' ? 'Chats' : 'Pages'}
               </button>
             ))}
           </div>
-          {section === 'chats' ? (
+          {section === 'pages' && openDocId ? (
+            <SidebarPages docId={openDocId} onNavigate={onNavigate} />
+          ) : section === 'chats' ? (
             <div className="mt-1">
               <Suspense fallback={null}>
                 <SidebarChats onNavigate={onNavigate} />

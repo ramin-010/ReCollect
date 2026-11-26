@@ -25,6 +25,8 @@ interface CaptureComposerProps {
   revise: boolean;
   subjectId: string | null;
   topicId: string | null;
+  /** DOC_PAGES_PLAN D4: the doc page it was opened on (the server keeps it when that page is revised with this lesson). */
+  pageDocId?: string | null;
   isPinned: boolean;
   attachments: Attachment[];
   isUploading: boolean;
@@ -46,7 +48,7 @@ const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).pad
  *     `revise: true` when ↻ is on (server starts +1/+3/+7/+21 in the same transaction).
  */
 export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposerProps>(function CaptureComposer(
-  { mode, revise, subjectId, topicId, isPinned, attachments, isUploading, onRemoveAttachment, onPasteFile, onSaved },
+  { mode, revise, subjectId, topicId, pageDocId, isPinned, attachments, isUploading, onRemoveAttachment, onPasteFile, onSaved },
   ref,
 ) {
   const [title, setTitle] = useState('');
@@ -125,6 +127,7 @@ export const CaptureComposer = forwardRef<CaptureComposerHandle, CaptureComposer
           category,
           subjectId: subjectId ?? undefined,
           topicId: topicId ?? undefined,
+          ...(topicId && pageDocId ? { docId: pageDocId } : {}),
           isPinned,
           attachments: attachments.length ? attachments : undefined,
           revise,

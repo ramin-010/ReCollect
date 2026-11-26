@@ -90,6 +90,8 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const [subjects, setSubjects] = useState<SubjectWithTopics[]>([]);
   const [subjectId, setSubjectId] = useState<string | null>(null);
   const [topicId, setTopicId] = useState<string | null>(null);
+  // DOC_PAGES_PLAN D4: the doc page it was opened on (a note remembers its page).
+  const [pageDocId, setPageDocId] = useState<string | null>(null);
   const [wasOpen, setWasOpen] = useState(false);
 
   // Reset on every open (adjusting state while rendering, not in an effect).
@@ -134,13 +136,17 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
     // On a doc page (/docs/:id), a capture defaults to that doc's subject and topic.
     const pageDocId = pathname?.startsWith('/docs/') ? decodeURIComponent(pathname.split('/')[2] ?? '') : null;
     const contextDocId = pageDocId || (pathname === '/docs' && currentDoc?._id && !currentDoc._id.startsWith('local_') ? currentDoc._id : null);
+    setPageDocId(pageDocId);
     if (contextDocId) {
       learningApi
         .getTopicByDoc(contextDocId)
         .then((r) => {
-          if (cancelled || !r.topic) return;
-          setSubjectId(r.topic.subjectId);
-          setTopicId(r.topic._id);
+          if (cancelled) return;
+          // A page inside a lesson saves to that lesson (DOC_PAGES_PLAN D5).
+          const place = r.topic ? { subjectId: r.topic.subjectId, topicId: r.topic._id } : r.lesson ? { subjectId: r.lesson.subjectId, topicId: r.lesson.topicId } : null;
+          if (!place) return;
+          setSubjectId(place.subjectId);
+          setTopicId(place.topicId);
         })
         .catch(() => {});
     }
@@ -386,6 +392,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                 revise={revise}
                 subjectId={subjectId}
                 topicId={topicId}
+                pageDocId={pageDocId}
                 isPinned={isPinned}
                 attachments={attachments}
                 isUploading={uploading > 0}

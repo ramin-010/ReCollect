@@ -61,3 +61,142 @@
   font-size: 13px;
   color: var(--ui-ink-3, #8a8985);
 }
+
+/* "Move to…" (MoveDocDialog.tsx, §4.7): a search line, then quiet rows indented by depth. */
+.mv-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.mv-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--rc-line, rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
+  color: var(--rc-ink-3, #8a8985);
+}
+
+.mv-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--rc-ink-1, inherit);
+  outline: none;
+}
+
+.mv-error {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--rc-danger, #c4554d);
+}
+
+.mv-list {
+  max-height: min(420px, 60vh);
+  margin: 10px -6px 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mv-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--rc-ink-1, inherit);
+  text-align: left;
+}
+
+.mv-row:hover:not(:disabled) {
+  background: var(--rc-hover, rgba(0, 0, 0, 0.04));
+}
+
+.mv-row:disabled {
+  cursor: default;
+}
+
+.mv-row--off .mv-title {
+  color: var(--rc-ink-3, #8a8985);
+}
+
+.mv-glyph {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--rc-ink-3, #8a8985);
+}
+
+.mv-title {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mv-path,
+.mv-meta {
+  flex: none;
+  font-size: 12px;
+  color: var(--rc-ink-3, #8a8985);
+}
+
+.mv-path {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mv-empty {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: var(--rc-ink-3, #8a8985);
+}
+
+/* Previous and next at the foot of a page (PageFooterNav.tsx, §4.5): one quiet line, two links. */
+.pf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 0 32px;
+  padding: 0 8px;
+  font-size: 14px;
+}
+
+.pf a {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 45%;
+  align-items: center;
+  gap: 6px;
+  color: var(--ui-ink-2, #5f5e5b);
+  border-radius: 4px;
+}
+
+.pf a:hover {
+  color: var(--ui-ink-1, inherit);
+}
+
+.pf a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-next {
+  margin-left: auto;
+}

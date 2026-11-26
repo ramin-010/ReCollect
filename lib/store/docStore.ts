@@ -13,6 +13,10 @@ export interface Doc {
   trashedAt?: string | null;
   /** Published to the web since then (the library's Shared view), or null. */
   publishedAt?: string | null;
+  /** DOC_PAGES_PLAN: the doc it is a page of (null: top level), its place there, the doc whose trashing took it along. */
+  parentId?: string | null;
+  position?: number;
+  trashedWithId?: string | null;
   /** Who owns it (GET /api/docs). */
   owner?: { _id: string; name: string; email: string; avatar?: string };
   createdAt: string;
