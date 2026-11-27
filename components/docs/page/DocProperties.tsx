@@ -176,7 +176,12 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
           Subject
         </span>
         <span className="doc-prop-value">
-          {editable ? (
+          {!topic && info.lessonsInside ? (
+            // DOC_PAGES_PLAN §4.8: a hub can't be filed (one lesson per branch): the row says why instead of offering it.
+            <span className="doc-prop-empty" title="One lesson per branch: a doc that holds lessons can't be one">
+              Pages inside are lessons ({info.lessonsInside})
+            </span>
+          ) : editable ? (
             <RcPicker
               label="Subject"
               options={[
@@ -225,7 +230,7 @@ export function DocProperties({ docId, docTitle = '', updatedAt, editable }: { d
                   Start revising
                 </RcButton>
               )}
-              {editable && !topic && <span className="doc-prop-hint">Add it to a subject first</span>}
+              {editable && !topic && <span className="doc-prop-hint">{info.lessonsInside ? 'Its lessons are revised each on its own' : 'Add it to a subject first'}</span>}
             </>
           )}
           {next.kind === 'wait' && (

@@ -878,6 +878,8 @@ export interface TopicByDoc {
   hasCard?: boolean;
   /** DOC_PAGES_PLAN D5: a page inside a lesson has no topic of its own; this is the lesson it is revised with. */
   lesson?: { topicId: string; docId: string; title: string; subjectId: string; subjectName: string } | null;
+  /** D5 the other way: a doc that holds lessons (a hub) can't be one; how many are inside. */
+  lessonsInside?: number;
 }
 
 // ─── Request bodies ─────────────────────────────────────────────────────────
