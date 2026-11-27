@@ -203,3 +203,100 @@
     padding: 10px 0;
   }
 }
+
+/* Your data (TRUST_PLAN T3, T4): what Kaaga keeps, who can see it, and what the app showed the owner. Plain sentences. */
+.data-keeps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 4px 20px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--rc-ink-2);
+}
+
+.data-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--rc-ink-1);
+}
+
+.data-who dt {
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rc-ink-1);
+}
+
+.data-who dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rc-ink-2);
+}
+
+.data-who a {
+  color: var(--rc-accent);
+}
+
+.data-who a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.data-docs {
+  display: block;
+  margin-top: 2px;
+}
+
+.data-quiet {
+  color: var(--rc-ink-3);
+}
+
+.data-log {
+  margin-top: 12px;
+}
+
+.data-log-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rc-ink-2);
+}
+
+.data-log ul {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.data-log li {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--rc-ink-2);
+}
+
+.data-log time {
+  color: var(--rc-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-skel {
+  height: 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  background: var(--rc-surface-2);
+}
+
+@media (max-width: 520px) {
+  .data-log ul {
+    gap: 10px;
+  }
+
+  .data-log li {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

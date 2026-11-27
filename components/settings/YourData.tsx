@@ -10,11 +10,13 @@ import { rcScope, RcButton, RcSheet } from '@/components/rc-ui';
 import axiosInstance from '@/lib/utils/axios';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useSettingsStore } from '@/lib/store/settingsStore';
+import { DataTrust } from './DataTrust';
 import './settings.css';
 
 /**
  * Settings › Your data (ECOSYSTEM_V2_PLAN stage 11, §9.6 item 6): everything that is yours in one file, and deleting
  * the account. An account made with Google has no password here: it confirms with its typed email instead.
+ * TRUST_PLAN T3, T4 (11-27): above them, what Kaaga keeps, who can see it, and what the app showed the owner.
  */
 export function YourData() {
   const router = useRouter();
@@ -71,7 +73,8 @@ export function YourData() {
 
   return (
     <div className={cn(rcScope, 'set-section')}>
-      <section aria-labelledby="data-download">
+      <DataTrust />
+      <section aria-labelledby="data-download" className="border-t border-[var(--rc-line)] pt-6">
         <h2 id="data-download" className="text-[15px] font-[600] text-[var(--rc-ink-1)]">
           Download everything
         </h2>

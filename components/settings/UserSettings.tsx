@@ -293,7 +293,7 @@ export function UserSettings() {
                         {activeTab === 'ai' && 'Recall questions and grading, and what they cost'}
                         {activeTab === 'phone' && 'Your day on your Android home and lock screen'}
                         {activeTab === 'feedback' && 'Tell the person who runs this server what you think'}
-                        {activeTab === 'data' && 'Everything that is yours, in one file, and deleting your account'}
+                        {activeTab === 'data' && 'What Kaaga keeps, who can see it, your copy of it, and deleting your account'}
                         {activeTab === 'archived' && `${archivedNotes.length} ${archivedNotes.length === 1 ? 'note' : 'notes'} archived`}
                         {activeTab === 'favorites' && `${favoriteNotes.length} ${favoriteNotes.length === 1 ? 'note' : 'notes'} pinned`}
                       </p>
