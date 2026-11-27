@@ -62,7 +62,9 @@ import {
   Workflow,
   Image as ImageIcon,
   FileText,
+  FileSymlink,
 } from 'lucide-react';
+import { LinkPageDialog } from '@/components/docs/pages/LinkPageDialog';
 import { cn } from '@/lib/utils';
 import { rcScope } from '@/components/rc-ui';
 import { newCanvasId, sanitizeBoard, writeBoard } from '@/lib/editor/canvasBoard';
@@ -403,8 +405,9 @@ const ICONS: Record<string, React.ComponentType<{ 'aria-hidden'?: boolean; class
   callout: Lightbulb,
   diagram: Workflow,
   ask_ai: KaagaIcon,
-  // DOC_PAGES_PLAN §5: a page inside this doc.
+  // DOC_PAGES_PLAN §5: a page inside this doc, and a block for a doc he already has.
   page: FileText,
+  link_page: FileSymlink,
 };
 
 function RcSlashMenu({ items, selectedIndex, onItemClick }: SuggestionMenuProps<SlashItem>) {
@@ -715,6 +718,45 @@ export function LabEditor({
   }, [editor, onPages]);
   const router = useRouter();
 
+  // DOC_PAGES_PLAN §5 "Link to page": the line the slash menu was on, while the picker is open.
+  const [linkAt, setLinkAt] = useState<{ blockId: string; empty: boolean } | null>(null);
+  const placeLink = useCallback(
+    (doc: { _id: string }) => {
+      const at = linkAt;
+      setLinkAt(null);
+      if (!at) return;
+      const block = { type: 'page', props: { docId: doc._id } } as never;
+      let made: string | undefined;
+      try {
+        if (at.empty) {
+          editor.updateBlock(at.blockId, block);
+          made = at.blockId;
+        } else made = (editor.insertBlocks([block], at.blockId, 'after') as { id: string }[])[0]?.id;
+      } catch {
+        // The line went meanwhile (another tab): the block goes at the end.
+        const last = editor.document[editor.document.length - 1];
+        if (last) made = (editor.insertBlocks([block], last.id, 'after') as { id: string }[])[0]?.id;
+      }
+      if (!made) {
+        toast.error('The link was not added. Try again.');
+        return;
+      }
+      // The caret on the line after the block (a new empty one when the next isn't a text line).
+      const placed = made;
+      requestAnimationFrame(() => {
+        try {
+          const next = editor.getNextBlock(placed) as { id: string; type: string } | undefined;
+          const line = next && next.type === 'paragraph' ? next.id : (editor.insertBlocks([{ type: 'paragraph' } as never], placed, 'after') as { id: string }[])[0]?.id;
+          if (line) editor.setTextCursorPosition(line, 'start');
+          editor.focus();
+        } catch {
+          editor.focus();
+        }
+      });
+    },
+    [editor, linkAt],
+  );
+
   // Tests read the block tree and the live doc from here (tests/editor/ and the QA scripts).
   useEffect(() => {
     Object.assign(window as unknown as Record<string, unknown>, { __labEditor: editor, __labYdoc: ydoc, __labProvider: provider });
@@ -870,6 +912,19 @@ export function LabEditor({
           .catch(() => toast.error('The page was not made. Try again.'));
       },
     };
+    // "Link to page": a block for a doc he already has (a picker of his docs; the doc stays where it is).
+    const linkItem: SlashItem = {
+      key: 'link_page',
+      title: 'Link to page',
+      subtext: 'A doc you already have, shown here',
+      aliases: ['link', 'link to doc', 'page link', 'existing page', 'mention page'],
+      group: 'Basic blocks',
+      onItemClick: () => {
+        const at = editor.getTextCursorPosition().block;
+        const empty = Array.isArray((at as { content?: unknown }).content) && (at as { content: unknown[] }).content.length === 0;
+        setLinkAt({ blockId: at.id, empty });
+      },
+    };
     const askAi: SlashItem = {
       key: 'ask_ai',
       title: 'Ask Kaaga',
@@ -881,7 +936,7 @@ export function LabEditor({
     };
     const items = [
       ...(canAsk ? [askAi] : []),
-      ...(canAddPages && docId ? [pageItem] : []),
+      ...(canAddPages && docId ? [pageItem, linkItem] : []),
       ...take('paragraph', 'Text', 'Basic blocks', undefined, ['text', 'plain']),
       ...take('heading', 'Heading 1', 'Basic blocks', '#', ['h1', 'title']),
       ...take('heading_2', 'Heading 2', 'Basic blocks', '##', ['h2']),
@@ -917,6 +972,18 @@ export function LabEditor({
             <FilePanelController filePanel={RcFilePanel} />
             {editable && <TableHandlesController tableHandle={RcTableHandle as never} extendButton={RcTableExtend as never} tableCellHandle={NoCellHandle} />}
           </BlockNoteViewRaw>
+          {docId && canAddPages && (
+            <LinkPageDialog
+              open={!!linkAt}
+              onOpenChange={(o) => {
+                if (o) return;
+                setLinkAt(null);
+                editor.focus();
+              }}
+              docId={docId}
+              onPick={placeLink}
+            />
+          )}
           {ask && docId && <DocAsk key={ask.key} editor={editor as unknown as DocAskEditor} ydoc={ydoc} docId={docId} focus={ask} onClose={closeAsk} />}
           {editable && !ask && (
             <PhoneBlockBar

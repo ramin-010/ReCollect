@@ -33,7 +33,8 @@
   transition: background-color 100ms ease;
 }
 
-.dp-row:hover {
+.dp-row:hover,
+.dp-item:hover > .dp-row {
   background: var(--ui-hover, rgba(0, 0, 0, 0.04));
 }
 
@@ -48,18 +49,64 @@
   color: var(--ui-ink-3, #8a8985);
 }
 
+/* A long title wraps (DESIGN: never "…"). */
 .dp-title {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .dp-count {
   flex: none;
   font-size: 13px;
   color: var(--ui-ink-3, #8a8985);
+}
+
+/* The owner's row menu: "···" at the row's right end on hover (always shown on touch screens). */
+.dp-item {
+  position: relative;
+}
+
+.dp-row--menu {
+  padding-right: 40px;
+}
+
+.dp-more {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--ui-icon, #8e8b86);
+  opacity: 0;
+  transition: opacity 100ms ease, background-color 100ms ease;
+}
+
+.dp-more svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dp-item:hover .dp-more,
+.dp-more:focus-visible,
+.dp-more[data-state='open'] {
+  opacity: 1;
+}
+
+.dp-more:hover,
+.dp-more[data-state='open'] {
+  background: var(--ui-hover-strong, var(--ui-hover, rgba(0, 0, 0, 0.06)));
+  color: var(--ui-ink-1, inherit);
+}
+
+@media (hover: none) {
+  .dp-more {
+    opacity: 1;
+  }
 }
 
 /* "Move to…" (MoveDocDialog.tsx, §4.7): a search line, then quiet rows indented by depth. */
@@ -116,7 +163,8 @@
   text-align: left;
 }
 
-.mv-row:hover:not(:disabled) {
+.mv-row:hover:not(:disabled),
+.mv-row--active {
   background: var(--rc-hover, rgba(0, 0, 0, 0.04));
 }
 
@@ -135,15 +183,16 @@
   color: var(--rc-ink-3, #8a8985);
 }
 
+/* A long title or path wraps (DESIGN: never "…"). */
 .mv-title {
   display: flex;
   min-width: 0;
   flex: 1;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  column-gap: 8px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .mv-path,
@@ -155,9 +204,7 @@
 
 .mv-path {
   min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .mv-empty {

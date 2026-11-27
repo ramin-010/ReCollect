@@ -102,3 +102,20 @@ export function visibleRows<T extends TreeDoc>(nodes: readonly T[], roots: reado
   for (const r of roots) walk(r, 0);
   return rows;
 }
+
+/**
+ * The rows of a doc picker ("Move to…", "Link to page"): with words typed, the docs whose title holds them, flat, each
+ * with the titles above it ("System Design › Caching"); without, every root by title and everything inside it.
+ */
+export function pickerRows<T extends TreeDoc>(nodes: readonly T[], query: string, limit = 60): Array<TreeRow<T> & { path: string }> {
+  const titleOf = (d: TreeDoc) => d.title?.trim() || 'Untitled';
+  const q = query.trim().toLowerCase();
+  if (q) {
+    return nodes
+      .filter((d) => titleOf(d).toLowerCase().includes(q))
+      .slice(0, limit)
+      .map((d) => ({ node: d, depth: 0, kids: 0, path: pathOf(nodes, d._id).map(titleOf).join(' › ') }));
+  }
+  const roots = rootsOf(nodes).sort((a, b) => titleOf(a).localeCompare(titleOf(b)));
+  return visibleRows(nodes, roots, new Set(nodes.map((d) => d._id))).map((r) => ({ ...r, path: '' }));
+}

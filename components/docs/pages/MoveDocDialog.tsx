@@ -14,7 +14,7 @@ import { RcDialog } from '@/components/rc-ui';
 import { docApi } from '@/lib/api/docApi';
 import { learningApi } from '@/lib/api/learningApi';
 import type { Doc } from '@/lib/store/docStore';
-import { childrenOf, insideOf, pathOf, rootsOf, siblingsOf, visibleRows } from '@/lib/docs/tree';
+import { childrenOf, insideOf, pathOf, pickerRows, siblingsOf } from '@/lib/docs/tree';
 import './doc-pages.css';
 
 export interface MovedTo {
@@ -73,17 +73,7 @@ export function MoveDocDialog({
   };
 
   const q = query.trim().toLowerCase();
-  const rows = useMemo(() => {
-    if (q) {
-      return own
-        .filter((d) => titleOf(d).toLowerCase().includes(q))
-        .slice(0, 60)
-        .map((d) => ({ node: d, depth: 0, kids: 0, path: pathOf(own, d._id).map(titleOf).join(' › ') }));
-    }
-    const roots = rootsOf(own).sort((a, b) => titleOf(a).localeCompare(titleOf(b)));
-    const all = new Set(own.map((d) => d._id));
-    return visibleRows(own, roots, all).map((r) => ({ ...r, path: '' }));
-  }, [own, q]);
+  const rows = useMemo(() => pickerRows(own, q), [own, q]);
   const kids = useMemo(() => childrenOf(own), [own]);
 
   const move = async (parentId: string | null) => {
