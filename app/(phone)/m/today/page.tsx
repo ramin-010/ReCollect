@@ -18,6 +18,8 @@ import { useKept } from '@/components/phone/kept';
 import { buddyName } from '@/lib/brand';
 import { isKaaga } from '@/lib/brand';
 import { KaagaMark } from '@/components/brand/kaaga';
+import { useShell } from '@/components/phone/shell';
+import { UpdateBanner } from '@/components/phone/UpdateParts';
 
 interface Row {
   key: string;
@@ -54,6 +56,8 @@ export default function TodayScreen() {
   const [whyKept, setWhy] = useKept<{ key: string; said: string } | null>('today:why', null);
   const [reminders, setReminders] = useKept<HomeReminder[]>('today:reminders', []);
   const [threads, setThreads] = useKept<BuddyThread[]>('today:threads', []);
+  // Inside the phone app: its own update, when a newer version waits (PHONE_UPDATE_PLAN §4).
+  const shell = useShell();
 
   useEffect(() => {
     let alive = true;
@@ -158,6 +162,8 @@ export default function TodayScreen() {
           </div>
         ) : null}
       </header>
+
+      <UpdateBanner shell={shell} />
 
       {ask ? (
         <article className="buddy">

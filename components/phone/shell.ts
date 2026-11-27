@@ -59,6 +59,30 @@ export interface ShellState {
   homeLayout?: 'classic' | 'glass' | 'stack';
   liveAllowed?: boolean;
   liveActive?: boolean;
+  /** App 0.9.0 (PHONE_UPDATE_PLAN): this build's number and the updater's state; an older app has neither. */
+  versionCode?: number;
+  update?: ShellUpdate;
+}
+
+/** What the app's updater knows and is doing (Updates.java's state()). */
+export interface ShellUpdate {
+  /** A newer build than this one is on the server. */
+  available: boolean;
+  version?: string;
+  versionCode?: number;
+  size?: number;
+  notes?: string[];
+  /** When the server last answered (ms; 0: never). */
+  checkedAt: number;
+  stage: 'idle' | 'checking' | 'downloading' | 'installing' | 'failed';
+  /** 0-100 while downloading. */
+  progress: number;
+  /** After a failure: what went wrong (update.ts words it). */
+  error: string | null;
+  /** Android lets the app install updates ("Install unknown apps" is on for it). */
+  canInstall: boolean;
+  /** Today's row was closed for this version. */
+  hidden: boolean;
 }
 
 export type ShellSwitch = 'lock' | 'home' | 'hideTitles' | 'notes' | 'reminders' | 'quiet' | 'live';
@@ -87,6 +111,14 @@ interface Bridge {
   addWidget?(): void;
   /** 11-22: one screen's layout with its style and colour (Look's Apply). */
   setScreenDesign?(screen: 'lock' | 'home', layout: 'classic' | 'glass' | 'stack', style: string, color: string | null): void;
+  /** App 0.9.0: asks the server for the app's release (`now` false: only when the last answer is over an hour old). */
+  checkUpdate?(api: string, now: boolean): void;
+  /** Downloads and checks the newer app, then Android's installer asks the person to confirm. */
+  startUpdate?(): void;
+  /** Android's "Install unknown apps" switch for this app. */
+  allowInstalls?(): void;
+  /** Closes Today's row for this version. */
+  hideUpdate?(): void;
   listen(): void;
 }
 

@@ -32,8 +32,8 @@ export function PhoneAppSettings() {
   const [chosen, setChosen] = useState<string>('');
   const [link, setLink] = useState<string | null>(null);
   const [making, setMaking] = useState(false);
-  // The app's file on this server (GET /api/ambient/app): a download button when it is there.
-  const [app, setApp] = useState<{ available: boolean; size: number | null } | null>(null);
+  // The app's file on this server (GET /api/ambient/app): a download button when it is there, with its version (0.9.0+).
+  const [app, setApp] = useState<{ available: boolean; size: number | null; version?: string | null } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -100,9 +100,11 @@ export function PhoneAppSettings() {
             download="kaaga.apk"
           >
             <Download className="h-4 w-4" aria-hidden />
-            Download the Android app{app.size ? ` (${Math.max(1, Math.round(app.size / 1024))} KB)` : ''}
+            Download the Android app{app.size ? ` (${[app.version ? `version ${app.version}` : null, `${Math.max(1, Math.round(app.size / 1024))} KB`].filter(Boolean).join(', ')})` : ''}
           </a>
-          <p className="rc-meta mt-2">Open this page on your Android phone and tap it: Android installs it after you allow installs from your browser once. Then make the connect code below.</p>
+          <p className="rc-meta mt-2">
+            Open this page on your Android phone and tap it: Android installs it after you allow installs from your browser once. Then make the connect code below. From version 0.9.0 the app installs its own updates.
+          </p>
         </div>
       )}
       {addresses === null ? (

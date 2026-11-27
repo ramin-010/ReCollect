@@ -19,6 +19,7 @@ import { Switch, agoWords } from '@/components/phone/parts';
 import { bridge, connectThisPhone, minutesWords, useShell, type ShellState } from '@/components/phone/shell';
 import { useKept } from '@/components/phone/kept';
 import { PhoneChecklist, PhoneFeedback } from '@/components/phone/checklist';
+import { UpdateRow } from '@/components/phone/UpdateParts';
 import { buddyName, clearAuthHint } from '@/lib/brand';
 
 type Patch = Partial<Pick<BuddySettings, 'name' | 'tone' | 'asksOn' | 'paused'>>;
@@ -158,6 +159,8 @@ export default function SettingsScreen() {
                 </button>
               </div>
             )}
+            {/* App 0.9.0 (PHONE_UPDATE_PLAN §4): the app's version, and its update when one is out. */}
+            <UpdateRow shell={shell} />
           </div>
         ) : null}
 
@@ -266,14 +269,12 @@ export default function SettingsScreen() {
           ) : null}
         </div>
 
-        {shell ? (
+        {/* The version moved into This phone's update row (0.9.0). */}
+        {shell?.connected ? (
           <div className="group">
-            {shell.connected ? (
-              <button type="button" className="danger-text" onClick={() => setSheet('disconnect')}>
-                Disconnect this phone
-              </button>
-            ) : null}
-            <p className="meta">Your day {shell.version} for Android</p>
+            <button type="button" className="danger-text" onClick={() => setSheet('disconnect')}>
+              Disconnect this phone
+            </button>
           </div>
         ) : null}
       </div>

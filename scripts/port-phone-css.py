@@ -115,6 +115,23 @@ app += (".pw .lock-shot.is-real img { position: absolute; inset: 0; width: 100%;
         ".pw .screen .sheet-layer { position: fixed; }\n"
         # A real answer keeps its line breaks (a numbered list, steps); the mock-up's words had none.
         ".pw .say p { white-space: pre-line; }\n")
+# Stage 11: Settings › Send feedback's field (added to phone.css by hand then; kept here so a new port keeps it).
+app += ("\n/* Stage 11: a quiet field for a few words (Settings › Send feedback). */\n"
+        ".pw .note-field { display: block; width: 100%; min-height: 96px; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--tint); color: var(--ink-1); font: inherit; font-size: 16px; line-height: 1.45; resize: none; }\n"
+        ".pw .note-field::placeholder { color: var(--ink-3); }\n"
+        ".pw .note-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }\n")
+# App 0.9.0 (PHONE_UPDATE_PLAN §4): a newer app is out. Today's slim row has the Tell row's shape, filled with the quiet
+# tint instead of its ring, so it reads as news and not as a second field; Settings' row has a download's line and notes.
+app += ("\n/* 0.9.0: the app's own update (Today's slim row, a download's line, what's new). */\n"
+        ".pw .update-pill { width: 100%; min-height: 50px; margin-top: 16px; padding: 3px 3px 3px 16px; border-radius: var(--r-pill); display: flex; align-items: center; gap: 10px; background: var(--tint); }\n"
+        ".pw .update-pill > .i { color: var(--ink-2); }\n"
+        ".pw .update-pill .words { flex: 1; min-width: 0; font-size: var(--t-body); line-height: 1.35; color: var(--ink-1); }\n"
+        ".pw .update-pill .words:last-child { padding-right: 14px; }\n"
+        ".pw .update-pill .link { padding: 10px 6px; }\n"
+        ".pw .update-line { display: block; height: 3px; margin-top: 9px; border-radius: 2px; background: var(--line); overflow: hidden; }\n"
+        ".pw .update-line > i { display: block; height: 100%; border-radius: 2px; background: var(--ink-2); transition: width var(--quick) linear; }\n"
+        ".pw .update-notes { display: grid; gap: 2px; margin-top: 4px; }\n"
+        "@media (prefers-reduced-motion: reduce) { .pw .update-line > i { transition: none; } }\n")
 head = ('/* The phone world (PHONE_APP_REDESIGN_PLAN §7 step 2): mockups/phone-app/tokens.css + app.css, scoped under .pw\n'
         '   (the phone routes /m/…), made by scripts/port-phone-css.py. The mock-up stays the source of truth: change it there first,\n'
         '   then port again. Paper is the default look (his pick, 11-18); Slate is the web app\'s theme v2. */\n\n')
