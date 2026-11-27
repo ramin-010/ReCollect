@@ -24,6 +24,8 @@ export interface AgentEdit {
   createdAt: string;
   undoneAt: string | null;
   seenAt: string | null;
+  /** The app that took its own change back (TOOL_ACCESS_PLAN §12.3); null when the user undid it, or nobody has. */
+  undoneBy: string | null;
   /** False when it can no longer be undone (e.g. the revision it scheduled is already done). */
   canUndo: boolean;
 }
@@ -60,6 +62,7 @@ const toEdit = (e: Raw): AgentEdit => ({
   createdAt: String(e.createdAt ?? ''),
   undoneAt: (e.undoneAt as string | null) ?? null,
   seenAt: (e.seenAt as string | null) ?? null,
+  undoneBy: typeof e.undoneBy === 'string' ? e.undoneBy : null,
   canUndo: e.canUndo !== false,
 });
 
