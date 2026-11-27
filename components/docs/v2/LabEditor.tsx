@@ -685,11 +685,12 @@ export function LabEditor({
         return true;
       },
       // Pasted or dropped images go to Cloudinary through the app's upload route, as in the old editor. A file block's
-      // file (any kind but a video, 10 MB; the notes' own upload) keeps its own bytes and name.
+      // file (any kind but a video, 10 MB; the notes' own upload) keeps its own bytes and name, and is recorded on the
+      // doc, so it leaves storage once nothing in the doc points at it (as its images do).
       uploadFile: async (file: File, blockId?: string) => {
         const kind = blockId ? editorRef.current?.getBlock(blockId)?.type : file.type.startsWith('image/') ? 'image' : 'file';
         if (kind !== 'image') {
-          const att = await learningApi.uploadLearningFile(file);
+          const att = await learningApi.uploadLearningFile(file, docId);
           if (!att?.url) throw new Error('The file did not upload.');
           return { url: att.url, name: att.fileName || file.name };
         }

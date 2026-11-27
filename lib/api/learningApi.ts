@@ -641,11 +641,13 @@ export const learningApi = {
     return call(() => axiosInstance.delete(`/api/captures/${id}`));
   },
 
-  // #21
-  async uploadLearningFile(file: File): Promise<Attachment> {
+  // #21. `docId`: a doc's File block (11-27): the server records the file on the doc, so it leaves storage once no block
+  // or link in the doc points at it (as the doc's images do).
+  async uploadLearningFile(file: File, docId?: string): Promise<Attachment> {
     const m = await mock();
     if (m) return m.uploadFile(file);
     const form = new FormData();
+    if (docId) form.append('docId', docId);
     form.append('file', file);
     return call(() => axiosInstance.post('/api/learning/uploads', form, { headers: { 'Content-Type': 'multipart/form-data' } }));
   },
