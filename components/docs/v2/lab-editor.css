@@ -1063,3 +1063,59 @@ body.doc-block-bar .phone-tabs {
   width: 15px;
   height: 15px;
 }
+
+/* Files in docs (11-27): a file block, and the empty image and file blocks' "Add …" row, in the doc's own tokens
+   (BlockNote's greys are fixed colours). A file reads as a quiet link: its glyph, its name; a click opens it. */
+.lab-editor [data-file-block] .bn-add-file-button {
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--rc-r-sm, 6px);
+  background: var(--rc-surface-2);
+  color: var(--rc-ink-3);
+  font-size: 14px;
+}
+
+.lab-editor [data-file-block] .bn-add-file-button:hover {
+  background: var(--rc-hover-strong, var(--rc-hover));
+  color: var(--rc-ink-2);
+}
+
+.lab-editor [data-file-block] .bn-add-file-button-text {
+  font-size: 14px;
+}
+
+.lab-editor [data-file-block] .bn-add-file-button-icon,
+.lab-editor [data-file-block] .bn-file-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--rc-icon);
+}
+
+.lab-editor [data-file-block] .bn-file-name-with-icon {
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  color: var(--rc-ink-1);
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.lab-editor [data-content-type='file'] .bn-file-name-with-icon {
+  text-decoration: underline;
+  text-decoration-color: var(--rc-line-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.lab-editor [data-file-block] .bn-file-name-with-icon:hover,
+.lab-editor .ProseMirror-selectednode .bn-file-name-with-icon {
+  background: var(--rc-hover);
+}
+
+.lab-editor [data-file-block] .bn-file-caption {
+  color: var(--rc-ink-3);
+  font-size: 13px;
+}

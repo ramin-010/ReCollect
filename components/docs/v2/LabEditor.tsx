@@ -63,6 +63,7 @@ import {
   Image as ImageIcon,
   FileText,
   FileSymlink,
+  Paperclip,
 } from 'lucide-react';
 import { LinkPageDialog } from '@/components/docs/pages/LinkPageDialog';
 import { cn } from '@/lib/utils';
@@ -80,6 +81,7 @@ import { NoCellHandle, RcTableExtend, RcTableHandle } from './RcTableHandles';
 import { DocAsk, type AskFocus, type DocAskEditor } from './DocAsk';
 import { PhoneBlockBar, type PhoneBarEditor } from './PhoneBlockBar';
 import { uploadToCloud } from '@/lib/utils/upload';
+import { learningApi } from '@/lib/api/learningApi';
 import { KaagaIcon } from '@/components/brand/kaaga';
 
 type Editor = typeof docSchema.BlockNoteEditor;
@@ -408,6 +410,7 @@ const ICONS: Record<string, React.ComponentType<{ 'aria-hidden'?: boolean; class
   // DOC_PAGES_PLAN §5: a page inside this doc, and a block for a doc he already has.
   page: FileText,
   link_page: FileSymlink,
+  file: Paperclip,
 };
 
 function RcSlashMenu({ items, selectedIndex, onItemClick }: SuggestionMenuProps<SlashItem>) {
@@ -654,6 +657,8 @@ export function LabEditor({
   onPages?: (ids: string[]) => void;
 }) {
   const fragment = useMemo(() => ydoc.getXmlFragment('blocks'), [ydoc]);
+  // The editor, for uploadFile (which runs after it is made): a file block's file goes another way than an image.
+  const editorRef = useRef<Editor | null>(null);
   // Spike only: let the QA script look at the Y.Doc and the provider.
   // Notion's drop rules (NB-09 to NB-11): above/below by the row's half, nesting by the drag's offset.
   // One instance per editor: the editor below is re-created when these change, so this is too.
@@ -679,8 +684,15 @@ export function LabEditor({
         void pasteMarkdown(ed as Editor, fragment.doc!, text);
         return true;
       },
-      // Pasted or dropped images go to Cloudinary through the app's upload route, as in the old editor.
-      uploadFile: async (file: File) => {
+      // Pasted or dropped images go to Cloudinary through the app's upload route, as in the old editor. A file block's
+      // file (any kind but a video, 10 MB; the notes' own upload) keeps its own bytes and name.
+      uploadFile: async (file: File, blockId?: string) => {
+        const kind = blockId ? editorRef.current?.getBlock(blockId)?.type : file.type.startsWith('image/') ? 'image' : 'file';
+        if (kind !== 'image') {
+          const att = await learningApi.uploadLearningFile(file);
+          if (!att?.url) throw new Error('The file did not upload.');
+          return { url: att.url, name: att.fileName || file.name };
+        }
         const res = await uploadToCloud(file, docId, newImageId());
         if (!res?.url) throw new Error('The image did not upload.');
         return res.url;
@@ -688,6 +700,9 @@ export function LabEditor({
     }),
     [fragment, provider],
   ) as unknown as Editor;
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => {
     onEditor?.(editor);
@@ -765,6 +780,24 @@ export function LabEditor({
   // Notion's block selection (Esc, arrows, Shift+arrows, Ctrl+D, Backspace) over the editor.
   const rootRef = useRef<HTMLDivElement>(null);
   const blockSelection = useBlockSelection(editor as never, rootRef, editable);
+
+  // Files in docs: a click on a file block's name opens the file in a new tab (as a link would).
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onClick = (e: MouseEvent) => {
+      const name = (e.target as HTMLElement | null)?.closest('.bn-file-name-with-icon');
+      const id = name?.closest('[data-id]')?.getAttribute('data-id');
+      const block = id ? (editor.getBlock(id) as { type: string; props?: { url?: string } } | undefined) : undefined;
+      const url = block?.type === 'file' ? block.props?.url : undefined;
+      if (!url || !/^https?:\/\//i.test(url)) return;
+      e.preventDefault();
+      window.open(url, '_blank', 'noopener,noreferrer');
+    };
+    // Capture: BlockNote's file block handles its own clicks (it selects the block) before they bubble here.
+    root.addEventListener('click', onClick, true);
+    return () => root.removeEventListener('click', onClick, true);
+  }, [editor]);
 
   // Ask Kaaga inside the doc (DOCS_EDITOR_V2_PLAN phase 5): Ctrl+J, the format bar, or /ai. What he
   // points at is read when the box opens: selected blocks, a text selection, or the cursor's block.
@@ -953,6 +986,8 @@ export function LabEditor({
       ...take('divider', 'Divider', 'Basic blocks', '---', ['hr', 'line', 'separator']),
       callout,
       ...take('image', 'Image', 'Media', undefined, ['picture', 'photo', 'img']),
+      // Files in docs (his list, 11-27): any file but a video, up to 10 MB, as notes take them.
+      ...take('file', 'File', 'Media', undefined, ['upload', 'attachment', 'attach', 'pdf', 'document', 'spreadsheet']),
       ...take('table', 'Table', 'Advanced', undefined, ['grid', 'rows', 'columns']),
       ...take('code_block', 'Code', 'Advanced', '```', ['code block', 'snippet']),
       diagram,

@@ -8,7 +8,7 @@
 import { useRef, useState } from 'react';
 import { useBlockNoteEditor, useExtension } from '@blocknote/react';
 import { FilePanelExtension } from '@blocknote/core/extensions';
-import { ImageUp, Link2 } from 'lucide-react';
+import { ImageUp, Link2, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { rcScope } from '@/components/rc-ui';
 
@@ -29,6 +29,9 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
   const input = useRef<HTMLInputElement>(null);
   const block = editor.getBlock(blockId);
   if (!block) return null;
+  // Files in docs (11-27): a file block takes any file but a video (the notes' rule); an image block an image.
+  const isFile = block.type === 'file';
+  const thing = isFile ? 'file' : 'image';
 
   const close = () => {
     panel.closeMenu();
@@ -44,9 +47,12 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
       editor.updateBlock(blockId, { props: typeof res === 'string' ? { name: file.name, url: res } : res });
       close();
     } catch (e) {
-      // The server says what was wrong with the file (400); anything else is the connection.
-      const said = (e as { response?: { status?: number; data?: { error?: string } } }).response;
-      setProblem(said?.status === 400 && said.data?.error ? said.data.error : 'The image did not upload. Check the connection and try again.');
+      // The server says what was wrong with the file (a 4xx: too big, a video, a kind not served yet); anything else is the connection.
+      // (An image's upload throws axios's error; a file's, the learning API's, which carries status and message itself.)
+      const err = e as { response?: { status?: number; data?: { error?: string; message?: string } }; status?: number; message?: string };
+      const status = err.response?.status ?? err.status ?? 0;
+      const words = err.response ? (err.response.data?.message ?? err.response.data?.error) : err.message;
+      setProblem(status >= 400 && status < 500 && words ? words : `The ${thing} did not upload. Check the connection and try again.`);
     } finally {
       setBusy(false);
     }
@@ -62,7 +68,7 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
   };
 
   return (
-    <div className={cn(rcScope, 'lab-menu lab-file-panel')} role="dialog" aria-label="Add an image">
+    <div className={cn(rcScope, 'lab-menu lab-file-panel')} role="dialog" aria-label={isFile ? 'Add a file' : 'Add an image'}>
       <div className="lab-file-tabs" role="tablist">
         {(['upload', 'link'] as const).map((t) => (
           <button
@@ -82,12 +88,12 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
       </div>
       {tab === 'upload' ? (
         <div className="lab-file-body">
-          <input ref={input} type="file" accept="image/*" hidden onChange={(e) => void upload(e.target.files?.[0])} />
+          <input ref={input} type="file" accept={isFile ? undefined : 'image/*'} hidden onChange={(e) => void upload(e.target.files?.[0])} />
           <button type="button" className="rc-btn rc-btn--outline lab-file-main" disabled={busy} onClick={() => input.current?.click()}>
-            <ImageUp className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-            {busy ? 'Uploading…' : 'Choose an image'}
+            {isFile ? <Paperclip className="h-4 w-4" strokeWidth={1.75} aria-hidden /> : <ImageUp className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
+            {busy ? 'Uploading…' : isFile ? 'Choose a file' : 'Choose an image'}
           </button>
-          <p className="lab-file-note">Or paste or drop an image straight into the doc.</p>
+          <p className="lab-file-note">{isFile ? 'Any file up to 10 MB, except videos. Or drop it straight into the doc.' : 'Or paste or drop an image straight into the doc.'}</p>
         </div>
       ) : (
         <form
@@ -100,8 +106,8 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
           <input
             autoFocus
             className="lab-menu-search lab-file-url"
-            placeholder="Paste the image link…"
-            aria-label="Image link"
+            placeholder={isFile ? 'Paste the file’s link…' : 'Paste the image link…'}
+            aria-label={isFile ? 'File link' : 'Image link'}
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
@@ -116,7 +122,7 @@ export function RcFilePanel({ blockId }: { blockId: string }) {
           />
           <button type="submit" className="rc-btn lab-file-main">
             <Link2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-            Use this image
+            {isFile ? 'Use this link' : 'Use this image'}
           </button>
         </form>
       )}
