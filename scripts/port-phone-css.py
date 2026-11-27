@@ -132,6 +132,11 @@ app += ("\n/* 0.9.0: the app's own update (Today's slim row, a download's line, 
         ".pw .update-line > i { display: block; height: 100%; border-radius: 2px; background: var(--ink-2); transition: width var(--quick) linear; }\n"
         ".pw .update-notes { display: grid; gap: 2px; margin-top: 4px; }\n"
         "@media (prefers-reduced-motion: reduce) { .pw .update-line > i { transition: none; } }\n")
+# TRUST_PLAN T1 (11-27): a sheet that says in plain words what a permission gives, before Android's own screen.
+app += ("\n/* Trust: plain words before Android asks (the live lock screen's notification access). */\n"
+        ".pw .consent { display: grid; gap: 8px; margin-top: 10px; font-size: var(--t-body); line-height: 1.5; color: var(--ink-2); }\n"
+        ".pw .consent-acts { display: flex; gap: 10px; margin-top: 20px; }\n"
+        ".pw .consent-acts .btn { flex: 1; }\n")
 head = ('/* The phone world (PHONE_APP_REDESIGN_PLAN §7 step 2): mockups/phone-app/tokens.css + app.css, scoped under .pw\n'
         '   (the phone routes /m/…), made by scripts/port-phone-css.py. The mock-up stays the source of truth: change it there first,\n'
         '   then port again. Paper is the default look (his pick, 11-18); Slate is the web app\'s theme v2. */\n\n')

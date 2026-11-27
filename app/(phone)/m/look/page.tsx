@@ -224,10 +224,22 @@ const PICTURE_THEMES: Array<{ id: 'light' | 'dark' | 'system'; label: string }> 
 /**
  * Notification icons on the lock screen (the live lock screen, app 0.4.0; on this page since 0.7.3): the app draws the
  * lock picture itself with your notifications' icons under the words. Android asks two things, one at a time.
+ * TRUST_PLAN T1 (11-27): before Android's own screen, which warns that the app could read every notification, one sheet
+ * says in plain words what Kaaga sees and keeps; nothing is asked of Android until Continue.
  */
 function LiveLock({ shell }: { shell: ShellState }) {
   const needAccess = shell.live && shell.liveAllowed === false;
   const needSet = shell.live && shell.liveAllowed !== false && shell.liveActive === false;
+  const [asking, setAsking] = useState(false);
+  const turn = (next: boolean) => {
+    if (next && shell.liveAllowed === false) setAsking(true);
+    else bridge()?.setSwitch('live', next);
+  };
+  const go = () => {
+    setAsking(false);
+    if (shell.live) bridge()?.openPermission?.('notificationAccess');
+    else bridge()?.setSwitch('live', true);
+  };
   return (
     <>
       <div className="set">
@@ -243,10 +255,10 @@ function LiveLock({ shell }: { shell: ShellState }) {
                   : 'On'}
           </p>
         </div>
-        <Switch on={shell.live} label="Notification icons on the lock screen" onChange={(next) => bridge()?.setSwitch('live', next)} />
+        <Switch on={shell.live} label="Notification icons on the lock screen" onChange={turn} />
       </div>
       {needAccess ? (
-        <button type="button" className="btn out" style={{ height: 38, padding: '0 14px', marginTop: 4 }} onClick={() => bridge()?.openPermission?.('notificationAccess')}>
+        <button type="button" className="btn out" style={{ height: 38, padding: '0 14px', marginTop: 4 }} onClick={() => setAsking(true)}>
           Allow notification access
         </button>
       ) : needSet ? (
@@ -254,6 +266,27 @@ function LiveLock({ shell }: { shell: ShellState }) {
           Set the live wallpaper
         </button>
       ) : null}
+      <div className={`sheet-layer${asking ? ' is-on' : ''}`} onClick={(e) => e.target === e.currentTarget && setAsking(false)}>
+        {asking ? (
+          <div className="sheet is-on" role="dialog" aria-label="Notification access">
+            <div className="grab" />
+            <p className="sheet-title">Notification access</p>
+            <div className="consent">
+              <p>To draw their icons, Android has to let Kaaga see your notifications. Its next screen says the app could read them all.</p>
+              <p>Kaaga keeps only which apps have some waiting and how many, on this phone. It never keeps what they say or who sent them, and sends nothing anywhere.</p>
+              <p>You can take it back any time in Settings › What this phone allows.</p>
+            </div>
+            <div className="consent-acts">
+              <button type="button" className="btn out" onClick={() => setAsking(false)}>
+                Not now
+              </button>
+              <button type="button" className="btn main" onClick={go}>
+                Continue
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </>
   );
 }

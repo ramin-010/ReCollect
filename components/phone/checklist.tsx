@@ -33,8 +33,10 @@ export function PhoneChecklist({ shell }: { shell: ShellState }) {
   const [sending, setSending] = useState(false);
   const perms = shell.permissions;
   if (!perms) return null;
-  // Notification access matters only with the live lock screen on.
-  const rows = ROWS.filter((r) => perms[r.kind] && perms[r.kind] !== 'not_asked' && (r.kind !== 'notificationAccess' || shell.live));
+  // Notification access matters only with the live lock screen on; while Android still grants it, the row stays so it can
+  // be taken back (TRUST_PLAN T2: Kaaga shows what it holds).
+  const idleAccess = !shell.live && perms.notificationAccess === 'ok';
+  const rows = ROWS.filter((r) => perms[r.kind] && perms[r.kind] !== 'not_asked' && (r.kind !== 'notificationAccess' || shell.live || idleAccess));
 
   const send = async () => {
     setSending(true);
@@ -58,7 +60,7 @@ export function PhoneChecklist({ shell }: { shell: ShellState }) {
                   <StateIcon state={state} />
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  {STATE_WORDS[state]} · {r.why}
+                  {STATE_WORDS[state]} · {r.kind === 'notificationAccess' && idleAccess ? 'Not needed now: the live lock screen is off. Tap to turn it off' : r.why}
                 </span>
               </p>
             </div>
