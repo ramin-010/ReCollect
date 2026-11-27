@@ -854,6 +854,29 @@ html:not(.light) .rc.rc-btn--danger-solid {
   background: var(--rc-line);
 }
 
+/* A menu row that is a link reads like the others (not the accent of `.rc a`). */
+.rc-menu a.rc-menu-item {
+  color: var(--rc-ink-1);
+  text-decoration: none;
+}
+
+/* The top bar's "…" (DOC_PAGES_PLAN §4.2): the docs in between, long titles wrapping. */
+.rc-menu--trail {
+  max-width: min(340px, calc(100vw - 24px));
+}
+
+.rc-menu--trail .rc-menu-item {
+  align-items: flex-start;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.4;
+}
+
+.rc-menu--trail .rc-menu-item svg {
+  flex: none;
+  margin-top: 2px;
+}
+
 .rc-pop {
   border-radius: 10px;
   padding: 5px;

@@ -45,11 +45,25 @@ html:not(.light) .rc {
   background: var(--rc-ground);
 }
 
+/* The top is set apart: the doc page's (below) and the public page's own. A top padding here (0) beat the page's layered
+   classes since 11-14, so the hover row ("Add cover", "Add a page") sat under the top bar and the title jumped up after
+   loading. */
 .doc-column {
   width: 100%;
   max-width: calc(720px + 192px);
   margin: 0 auto;
-  padding: 0 96px 30vh;
+  padding-right: 96px;
+  padding-bottom: 30vh;
+  padding-left: 96px;
+}
+
+/* The doc page: room above the title for the hover row; less under a cover. */
+.doc-column--top {
+  padding-top: 72px;
+}
+
+.doc-column--cover {
+  padding-top: 32px;
 }
 
 @media (max-width: 1024px) {
@@ -123,7 +137,8 @@ html:not(.light) .rc {
   transition: opacity var(--rc-fast) ease;
 }
 
-.doc-column:hover .doc-page-actions,
+/* Notion's header: the row shows while the pointer is on the title or on the row (the head holds both), or a key is on it. */
+.doc-head:hover .doc-page-actions,
 .doc-page-actions:focus-within {
   opacity: 1;
 }
@@ -1213,7 +1228,13 @@ button.doc-callout-kind[data-state='open'] {
    pass comes with the rebuild. ─────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .doc-column {
-    padding: 0 16px 30vh;
+    padding-right: 16px;
+    padding-bottom: 30vh;
+    padding-left: 16px;
+  }
+
+  .doc-column--top {
+    padding-top: 40px;
   }
 
   .doc-title {

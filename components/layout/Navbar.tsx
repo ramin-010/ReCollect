@@ -14,6 +14,7 @@ import { features } from '@/lib/features';
 import Link from 'next/link';
 import { useTopBar } from '@/lib/store/topBarStore';
 import { FadeText } from '@/components/rc-ui/FadeText';
+import { RcMenu } from '@/components/rc-ui';
 import { KaagaIcon } from '@/components/brand/kaaga';
 
 /** The breadcrumb's page icon (Notion shows the page's own icon, never the brand mark). */
@@ -76,12 +77,34 @@ export function Navbar() {
               <PageIcon pathname={pathname} />
               {crumbs.map((c, i) => {
                 const last = i === crumbs.length - 1;
+                const crumbCls =
+                  'flex h-[28px] min-w-0 items-center rounded-[6px] px-1.5 text-[14px] text-[var(--ui-ink-2)] transition-colors duration-100 hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]';
                 return (
                   <span key={`${c.label}-${i}`} className={`flex items-center gap-0.5 ${last ? 'min-w-0' : 'shrink-0'}`}>
                     {i > 0 && <span aria-hidden className="px-0.5 text-[14px] text-[var(--ui-ink-3)]">/</span>}
-                    {c.href && !last ? (
-                      <Link href={c.href} className="flex h-[28px] items-center rounded-[6px] px-1.5 text-[14px] text-[var(--ui-ink-2)] transition-colors duration-100 hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink-1)]">
-                        {c.label}
+                    {c.menu?.length ? (
+                      // DOC_PAGES_PLAN §4.2: the docs between the top one and the parent, a step in for each level.
+                      <RcMenu
+                        label="The docs in between"
+                        align="start"
+                        className="rc-menu--trail"
+                        actions={c.menu.map((m, depth) => ({
+                          label: m.label,
+                          href: m.href,
+                          indent: depth,
+                          icon: <FileText strokeWidth={1.75} aria-hidden />,
+                        }))}
+                      >
+                        <button type="button" className={crumbCls} title="The docs in between">
+                          {c.label}
+                        </button>
+                      </RcMenu>
+                    ) : c.href ? (
+                      // A doc above this one (24 characters, then it fades); at phone width the one link "‹ Parent".
+                      <Link href={c.href} className={crumbCls}>
+                        <FadeText title={c.label} className={last ? 'max-w-[48ch]' : 'max-w-[24ch]'}>
+                          {c.label}
+                        </FadeText>
                       </Link>
                     ) : (
                       <h2 aria-current={last ? 'page' : undefined} className="min-w-0 max-w-[48ch] px-1.5 text-[14px] font-[400] leading-[28px] text-[var(--ui-ink-1)]">

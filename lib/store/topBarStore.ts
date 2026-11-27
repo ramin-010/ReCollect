@@ -5,6 +5,8 @@ import { create } from 'zustand';
 export interface Crumb {
   label: string;
   href?: string;
+  /** DOC_PAGES_PLAN §4.2: drawn as "…", a menu of these links (the docs in between, top level first). */
+  menu?: Array<{ label: string; href: string }>;
 }
 
 interface TopBarState {

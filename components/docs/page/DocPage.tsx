@@ -19,7 +19,7 @@ import { learningApi } from '@/lib/api/learningApi';
 import { EditCaptureDialog } from '@/components/learning/EditCaptureDialog';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useDocStore, type Doc } from '@/lib/store/docStore';
-import { useTopBar } from '@/lib/store/topBarStore';
+import { useTopBar, type Crumb } from '@/lib/store/topBarStore';
 import { docApi } from '@/lib/api/docApi';
 import { agentApi } from '@/lib/api/agentApi';
 import { trackVisit } from '@/lib/services/recentVisits';
@@ -93,11 +93,11 @@ function treeOf(doc: unknown): { trail: Array<{ _id: string; title: string }>; p
   return { trail: d.trail ?? [], pages: d.pages ?? [] };
 }
 
-/** The trail's crumbs: every doc above when there are two or fewer, else the root, "…" (the one above the parent), the parent. */
-function trailCrumbs(trail: Array<{ _id: string; title: string }>): Array<{ label: string; href: string }> {
+/** The trail's crumbs: every doc above when there are two or fewer, else the root, "…" (a menu of the docs in between), the parent. */
+function trailCrumbs(trail: Array<{ _id: string; title: string }>): Crumb[] {
   const crumb = (t: { _id: string; title: string }) => ({ label: t.title.trim() || 'Untitled', href: `/docs/${t._id}` });
   if (trail.length <= 2) return trail.map(crumb);
-  return [crumb(trail[0]!), { label: '…', href: `/docs/${trail[trail.length - 2]!._id}` }, crumb(trail[trail.length - 1]!)];
+  return [crumb(trail[0]!), { label: '…', menu: trail.slice(1, -1).map(crumb) }, crumb(trail[trail.length - 1]!)];
 }
 
 export function DocPage({ id }: { id: string }) {
@@ -174,8 +174,8 @@ export function DocPage({ id }: { id: string }) {
   if (!doc || !ydoc || !provider) {
     return (
       <div className={cn(rcScope, 'doc-page')} aria-busy>
-        <div className="doc-column">
-          <RcSkel className="mt-[72px] h-10 w-2/3" />
+        <div className="doc-column doc-column--top">
+          <RcSkel className="h-10 w-2/3" />
           <div className="doc-props">
             {[0, 1, 2].map((i) => (
               <div key={i} className="doc-prop">
@@ -662,42 +662,54 @@ function DocSurface({
         </div>
       )}
 
-      <div className={cn('doc-column', cover ? 'pt-8' : 'pt-[72px]')}>
-        {editable && !cover && (
-          <div className="doc-page-actions">
-            <button type="button" className="doc-ghost-btn" onClick={() => setCoverOpen(true)}>
-              <ImagePlus className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-              Add cover
-            </button>
-          </div>
-        )}
-        <textarea
-          ref={titleRef}
-          className="doc-title"
-          value={title}
-          rows={1}
-          placeholder="Untitled"
-          aria-label="Title"
-          readOnly={!editable || !!trashedAt}
-          onChange={(e) => changeTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (!body) return;
-            const el = e.currentTarget;
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-              // As in Notion: Enter starts a new first line (taking any text after the caret with
-              // it), unless the body already starts with an empty one. Focus moves synchronously, so
-              // the very next keystroke lands in the body, not the title.
-              e.preventDefault();
-              const at = el.selectionStart ?? el.value.length;
-              const tail = el.value.slice(at);
-              if (tail) changeTitle(el.value.slice(0, at).trimEnd());
-              body.enterFromTitle(tail.trim());
-            } else if (e.key === 'ArrowDown' && el.selectionStart === el.value.length) {
-              e.preventDefault();
-              body.focusStart();
-            }
-          }}
-        />
+      <div className={cn('doc-column', cover ? 'doc-column--cover' : 'doc-column--top')}>
+        {/* The head: the hover row (Add cover, Add a page) shows while the pointer is on the title or on the row. */}
+        <div className="doc-head">
+          {((editable && !cover) || (isOwner && !trashedAt)) && (
+            <div className="doc-page-actions">
+              {editable && !cover && (
+                <button type="button" className="doc-ghost-btn" onClick={() => setCoverOpen(true)}>
+                  <ImagePlus className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                  Add cover
+                </button>
+              )}
+              {/* DOC_PAGES_PLAN §4.3: a page inside this one, opened with the caret in its title (the owner's). */}
+              {isOwner && !trashedAt && (
+                <button type="button" className="doc-ghost-btn" onClick={() => void makePage()}>
+                  <FilePlus2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                  Add a page
+                </button>
+              )}
+            </div>
+          )}
+          <textarea
+            ref={titleRef}
+            className="doc-title"
+            value={title}
+            rows={1}
+            placeholder="Untitled"
+            aria-label="Title"
+            readOnly={!editable || !!trashedAt}
+            onChange={(e) => changeTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (!body) return;
+              const el = e.currentTarget;
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                // As in Notion: Enter starts a new first line (taking any text after the caret with
+                // it), unless the body already starts with an empty one. Focus moves synchronously, so
+                // the very next keystroke lands in the body, not the title.
+                e.preventDefault();
+                const at = el.selectionStart ?? el.value.length;
+                const tail = el.value.slice(at);
+                if (tail) changeTitle(el.value.slice(0, at).trimEnd());
+                body.enterFromTitle(tail.trim());
+              } else if (e.key === 'ArrowDown' && el.selectionStart === el.value.length) {
+                e.preventDefault();
+                body.focusStart();
+              }
+            }}
+          />
+        </div>
 
         <DocProperties docId={doc._id} docTitle={title} updatedAt={doc.updatedAt} editable={editable} />
 

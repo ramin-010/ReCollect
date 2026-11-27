@@ -5,6 +5,7 @@
  * expects to render inside an `.rc` scope (portals add it themselves via `rcScope`).
  */
 import React, { forwardRef, useEffect, useId, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
@@ -477,26 +478,56 @@ export function RcConfirm({
 export interface MenuAction {
   label: string;
   icon?: React.ReactNode;
-  onSelect: () => void;
+  /** What it does; an item with `href` is a link instead (Ctrl+click opens a new tab). */
+  onSelect?: () => void;
+  href?: string;
+  /** Steps in from the left (a path's levels, 12 px each). */
+  indent?: number;
   danger?: boolean;
   separatorBefore?: boolean;
 }
 
-export function RcMenu({ label, actions, children, align = 'end' }: { label: string; actions: MenuAction[]; children: React.ReactNode; align?: 'start' | 'end' }) {
+export function RcMenu({
+  label,
+  actions,
+  children,
+  align = 'end',
+  className,
+}: {
+  label: string;
+  actions: MenuAction[];
+  children: React.ReactNode;
+  align?: 'start' | 'end';
+  className?: string;
+}) {
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild aria-label={label}>
         {children}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align={align} sideOffset={4} collisionPadding={12} className={cn(rcScope, 'rc-float rc-menu')}>
-          {actions.map((a) => (
-            <React.Fragment key={a.label}>
+        <DropdownMenu.Content align={align} sideOffset={4} collisionPadding={12} className={cn(rcScope, 'rc-float rc-menu', className)}>
+          {actions.map((a, i) => (
+            <React.Fragment key={`${i}-${a.label}`}>
               {a.separatorBefore && <DropdownMenu.Separator className="rc-menu-sep" />}
-              <DropdownMenu.Item className="rc-menu-item" data-danger={a.danger || undefined} onSelect={a.onSelect}>
-                {a.icon}
-                {a.label}
-              </DropdownMenu.Item>
+              {a.href ? (
+                <DropdownMenu.Item asChild className="rc-menu-item" onSelect={a.onSelect}>
+                  <Link href={a.href} style={a.indent ? { paddingLeft: 8 + a.indent * 12 } : undefined}>
+                    {a.icon}
+                    <span className="min-w-0">{a.label}</span>
+                  </Link>
+                </DropdownMenu.Item>
+              ) : (
+                <DropdownMenu.Item
+                  className="rc-menu-item"
+                  data-danger={a.danger || undefined}
+                  onSelect={a.onSelect}
+                  style={a.indent ? { paddingLeft: 8 + a.indent * 12 } : undefined}
+                >
+                  {a.icon}
+                  {a.label}
+                </DropdownMenu.Item>
+              )}
             </React.Fragment>
           ))}
         </DropdownMenu.Content>
