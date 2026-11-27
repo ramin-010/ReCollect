@@ -103,7 +103,9 @@ export function PeoplePage() {
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
           <div className="min-w-0">
             <h1 className="rc-h1">People</h1>
-            <p className="rc-meta mt-1.5 max-w-[560px]">Who uses this server, and the free AI you give your friends. Only you see this page.</p>
+            <p className="rc-meta mt-1.5 max-w-[560px]">
+              Who uses this server, and the free AI you give your friends. Only you see this page; each person sees in Settings › Your data when it showed them and what you changed.
+            </p>
           </div>
           {ready && (
             <RcButton variant="main" icon={<Plus />} onClick={() => setAdding(true)}>
