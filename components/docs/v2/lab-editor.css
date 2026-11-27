@@ -990,20 +990,21 @@ body.doc-block-bar .phone-tabs {
   height: 10px;
   padding: 1px;
   border-radius: 3px;
-  background: var(--rc-bg, #fff);
+  /* The page's ground (there is no --rc-bg: the white fallback showed as a light square in dark). */
+  background: var(--rc-ground, #fff);
   color: var(--rc-ink-2);
 }
 
+/* A long title wraps (DESIGN: never "…"). */
 .doc-page-block-title {
   min-width: 0;
-  overflow: hidden;
   font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
   text-decoration: underline;
   text-decoration-color: var(--rc-line-strong);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .doc-page-block-meta {
@@ -1016,4 +1017,49 @@ body.doc-block-bar .phone-tabs {
   color: var(--rc-ink-3);
   font-weight: 400;
   text-decoration: none;
+}
+
+/* A page in the trash: the row still opens it; its owner gets Restore at the right end. */
+.doc-page-block--trash {
+  cursor: default;
+}
+
+/* Two classes: the editor's own `.tiptap a` would underline the whole row. */
+.doc-page-block .doc-page-block-link {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.doc-page-block-restore {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--rc-r-sm, 6px);
+  font-size: 13px;
+  color: var(--rc-ink-2);
+  transition: background-color var(--rc-fast, 100ms) ease, color var(--rc-fast, 100ms) ease;
+}
+
+.doc-page-block-restore:hover {
+  background: var(--rc-hover-strong, var(--rc-hover));
+  color: var(--rc-ink-1);
+}
+
+.doc-page-block-restore:disabled {
+  opacity: 0.6;
+}
+
+.doc-page-block-restore svg {
+  width: 15px;
+  height: 15px;
 }
