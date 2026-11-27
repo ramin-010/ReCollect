@@ -10,6 +10,7 @@ import { Check, ChevronRight, Search } from 'lucide-react';
 import { useDocStore } from '@/lib/store/docStore';
 import { useLearningStore } from '@/lib/store/learningStore';
 import { agoWords, reviewWords } from '@/components/phone/parts';
+import { pathOf } from '@/lib/docs/tree';
 
 export default function LibraryScreen() {
   const docs = useDocStore((s) => s.docs);
@@ -23,14 +24,18 @@ export default function LibraryScreen() {
   }, []);
 
   const words = q.trim().toLowerCase();
+  // Live docs only (the trash stays on the web's library).
+  const live = useMemo(() => docs.filter((d) => !d.trashedAt), [docs]);
   const recent = useMemo(
     () =>
-      [...docs]
+      [...live]
         .filter((d) => !words || (d.title || '').toLowerCase().includes(words))
         .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
         .slice(0, words ? 50 : 20),
-    [docs, words],
+    [live, words],
   );
+  // DOC_PAGES_PLAN §8.4: a page says the docs above it.
+  const pathWords = (id: string) => pathOf(live, id).map((a) => a.title.trim() || 'Untitled').join(' › ');
   const due = [...(plan?.planned ?? []).map((r) => ({ r, done: false })), ...(plan?.doneToday ?? []).map((r) => ({ r, done: true }))].filter(({ r }) => !words || r.title.toLowerCase().includes(words));
   const left = (plan?.planned ?? []).length;
   const minutes = (plan?.planned ?? []).reduce((s, r) => s + (r.minutes ?? 0), 0);
@@ -91,17 +96,20 @@ export default function LibraryScreen() {
         </div>
       ) : recent.length ? (
         <ul>
-          {recent.map((d) => (
-            <li key={d._id}>
-              <Link href={`/docs/${d._id}`} className="row tap">
-                <div className="row-main">
-                  <p className="row-title">{d.title || 'Untitled'}</p>
-                  <p className="meta">Edited {agoWords(d.updatedAt)}</p>
-                </div>
-                <ChevronRight className="i chev" strokeWidth={1.75} aria-hidden />
-              </Link>
-            </li>
-          ))}
+          {recent.map((d) => {
+            const above = pathWords(d._id);
+            return (
+              <li key={d._id}>
+                <Link href={`/docs/${d._id}`} className="row tap">
+                  <div className="row-main">
+                    <p className="row-title">{d.title || 'Untitled'}</p>
+                    <p className="meta">{above ? `in ${above} · ` : ''}Edited {agoWords(d.updatedAt)}</p>
+                  </div>
+                  <ChevronRight className="i chev" strokeWidth={1.75} aria-hidden />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="meta">{words ? 'Nothing by that name.' : 'No notes yet.'}</p>

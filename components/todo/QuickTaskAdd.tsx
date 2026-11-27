@@ -64,7 +64,8 @@ function pillKeys<T extends string>(e: React.KeyboardEvent<HTMLElement>, list: r
  * unchanged) plus a This week / This month chip; Note / Link mode is the capture composer;
  * ↻ "Revise this" saves a capture and starts its revisions (switching Task → Note, since todos
  * can't be revised). Find (loop v2 §8) searches the quick notes and the saved notes and links,
- * and copies one; Ctrl+K again inside the palette switches to it.
+ * and copies one, and the docs (each page with its path), and opens one; Ctrl+K again inside
+ * the palette switches to it.
  */
 export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
   const [mounted, setMounted] = useState(false);
@@ -407,7 +408,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
               <div className={cn(floatPill, 'gap-5 px-3 h-[32px] text-[12.5px] text-[var(--ui-ink-3)]')}>
                 <span className="flex items-center gap-1.5">
                   <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded-[4px] bg-[var(--ui-kbd)] px-1 font-[inherit] text-[12px] text-[var(--ui-ink-2)]">↵</kbd>
-                  {mode === 'task' ? 'Create' : mode === 'find' ? 'Copy' : mode === 'ask' ? 'Ask' : 'Save'}
+                  {mode === 'task' ? 'Create' : mode === 'find' ? 'Copy or open' : mode === 'ask' ? 'Ask' : 'Save'}
                 </span>
                 {mode === 'find' && (
                   <span className="flex items-center gap-1.5">
@@ -418,7 +419,7 @@ export function QuickTaskAdd({ isOpen, onClose }: QuickTaskAddProps) {
                 {mode === 'task' && (
                   <span className="flex items-center gap-1.5">
                     <kbd className="grid h-[18px] place-items-center rounded-[4px] bg-[var(--ui-kbd)] px-1 font-[inherit] text-[12px] text-[var(--ui-ink-2)]">Ctrl K</kbd>
-                    Find a note
+                    Find a note or doc
                   </span>
                 )}
                 {(isCapture || mode === 'ask') && (
